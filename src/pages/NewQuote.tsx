@@ -59,6 +59,7 @@ export default function NewQuote() {
         quantity: 1,
         price: item.finalPrice,
         total: item.finalPrice,
+        units: item.units,
       };
       setQuoteItems([...quoteItems, newQuoteItem]);
     }
@@ -88,7 +89,7 @@ export default function NewQuote() {
   };
 
   const updateItemQuantity = (itemId: string, quantity: number) => {
-    if (quantity < 1) return;
+    if (quantity < 0.01) return;
     setQuoteItems(quoteItems.map(item =>
       item.itemId === itemId
         ? { ...item, quantity, total: calculateItemTotal(quantity, item.price) }
@@ -107,8 +108,16 @@ export default function NewQuote() {
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
 
   const saveDraft = () => {
-    if (!selectedCustomerId || !quoteTitle || quoteItems.length === 0) {
-      toast.error('Please select customer, add title, and add at least one item');
+    if (!selectedCustomerId) {
+      toast.error('Please select a customer');
+      return;
+    }
+    if (!quoteTitle.trim()) {
+      toast.error('Please add a quote title');
+      return;
+    }
+    if (quoteItems.length === 0) {
+      toast.error('Please add at least one item to the quote');
       return;
     }
 
@@ -134,8 +143,16 @@ export default function NewQuote() {
   };
 
   const sendQuote = () => {
-    if (!selectedCustomerId || !quoteTitle || quoteItems.length === 0) {
-      toast.error('Please select customer, add title, and add at least one item');
+    if (!selectedCustomerId) {
+      toast.error('Please select a customer');
+      return;
+    }
+    if (!quoteTitle.trim()) {
+      toast.error('Please add a quote title');
+      return;
+    }
+    if (quoteItems.length === 0) {
+      toast.error('Please add at least one item to the quote');
       return;
     }
 
@@ -229,7 +246,8 @@ export default function NewQuote() {
 
     quote.items.forEach(item => {
       doc.text(item.name, 20, yPos);
-      doc.text(item.quantity.toString(), 100, yPos);
+      const qtyText = item.units ? `${item.quantity} ${item.units}` : item.quantity.toString();
+      doc.text(qtyText, 100, yPos);
       doc.text(`$${item.price.toFixed(2)}`, 130, yPos);
       doc.text(`$${item.total.toFixed(2)}`, 170, yPos);
       yPos += 5;
@@ -353,7 +371,14 @@ export default function NewQuote() {
                         >
                           -
                         </Button>
-                        <span className="w-12 text-center">{item.quantity}</span>
+                        <Input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={item.quantity}
+                          onChange={(e) => updateItemQuantity(item.itemId, parseFloat(e.target.value) || 1)}
+                          className="w-20 text-center"
+                        />
                         <Button
                           variant="outline"
                           size="icon"
@@ -361,6 +386,9 @@ export default function NewQuote() {
                         >
                           +
                         </Button>
+                        {item.units && (
+                          <span className="text-sm text-muted-foreground">{item.units}</span>
+                        )}
                       </div>
                       <div className="text-right min-w-[80px]">
                         <p className="font-semibold">${item.total.toFixed(2)}</p>
@@ -420,6 +448,9 @@ export default function NewQuote() {
                               {item.description}
                             </p>
                           )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {item.units}
+                          </p>
                         </div>
                         <Badge variant="secondary" className="shrink-0">
                           ${item.finalPrice.toFixed(2)}
@@ -489,9 +520,10 @@ export default function NewQuote() {
                 <Input
                   id="customQuantity"
                   type="number"
-                  min="1"
+                  min="0.01"
+                  step="0.01"
                   value={customItem.quantity}
-                  onChange={(e) => setCustomItem({ ...customItem, quantity: parseInt(e.target.value) || 1 })}
+                  onChange={(e) => setCustomItem({ ...customItem, quantity: parseFloat(e.target.value) || 1 })}
                 />
               </div>
               <div className="space-y-2">

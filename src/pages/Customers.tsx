@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, Mail, Phone } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Mail, Phone, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from '@/lib/storage';
+import { getCustomers, addCustomer, updateCustomer, deleteCustomer, saveCustomers } from '@/lib/storage';
 import { Customer } from '@/types';
 import { toast } from 'sonner';
 
@@ -99,6 +99,69 @@ export default function Customers() {
     });
   };
 
+  const exportToCSV = () => {
+    const headers = ['Name', 'Email', 'Phone', 'Address', 'City', 'State', 'ZIP'];
+    const rows = customers.map(customer => [
+      customer.name,
+      customer.email,
+      customer.phone || '',
+      customer.address || '',
+      customer.city || '',
+      customer.state || '',
+      customer.zip || ''
+    ]);
+    
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `customers-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    toast.success('Customers exported successfully');
+  };
+
+  const importFromCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const lines = text.split('\n');
+      const importedCustomers: Customer[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        const [name, email, phone, address, city, state, zip] = line.split(',');
+        
+        if (name && email) {
+          importedCustomers.push({
+            id: crypto.randomUUID(),
+            name: name.trim(),
+            email: email.trim(),
+            phone: phone?.trim() || '',
+            address: address?.trim() || '',
+            city: city?.trim() || '',
+            state: state?.trim() || '',
+            zip: zip?.trim() || '',
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
+
+      if (importedCustomers.length > 0) {
+        saveCustomers([...customers, ...importedCustomers]);
+        loadCustomers();
+        toast.success(`Imported ${importedCustomers.length} customers`);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -108,109 +171,127 @@ export default function Customers() {
             Manage your customer database
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="lg">
-              <Plus className="mr-2 h-5 w-5" />
-              Add Customer
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingCustomer ? 'Edit Customer' : 'Add New Customer'}
-              </DialogTitle>
-              <DialogDescription>
-                Fill in the customer information below
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportToCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+          <Button variant="outline" asChild>
+            <label className="cursor-pointer">
+              <Upload className="h-4 w-4 mr-2" />
+              Import
+              <input
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={importFromCSV}
+              />
+            </label>
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Customer
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingCustomer ? 'Edit Customer' : 'Add New Customer'}
+                </DialogTitle>
+                <DialogDescription>
+                  Fill in the customer information below
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Name *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="John Doe"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="john@example.com"
+                      required
+                    />
+                  </div>
+                </div>
+                
                 <div className="space-y-2">
-                  <Label htmlFor="name">Name *</Label>
+                  <Label htmlFor="phone">Phone</Label>
                   <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="John Doe"
-                    required
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="(555) 123-4567"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="john@example.com"
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="(555) 123-4567"
-                />
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="address">Street Address</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="123 Main St"
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Street Address</Label>
+                  <Input
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="123 Main St"
+                  />
+                </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="New York"
-                  />
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      placeholder="New York"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="state">State</Label>
+                    <Input
+                      id="state"
+                      value={formData.state}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      placeholder="NY"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="zip">ZIP Code</Label>
+                    <Input
+                      id="zip"
+                      value={formData.zip}
+                      onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
+                      placeholder="10001"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    placeholder="NY"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zip">ZIP Code</Label>
-                  <Input
-                    id="zip"
-                    value={formData.zip}
-                    onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
-                    placeholder="10001"
-                  />
-                </div>
-              </div>
 
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  {editingCustomer ? 'Update' : 'Add'} Customer
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    {editingCustomer ? 'Update' : 'Add'} Customer
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Card>

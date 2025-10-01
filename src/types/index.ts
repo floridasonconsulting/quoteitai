@@ -16,9 +16,10 @@ export interface Item {
   description: string;
   category: string;
   basePrice: number;
-  markup: number;
   markupType: 'percentage' | 'fixed';
+  markup: number;
   finalPrice: number;
+  units: string;
   createdAt: string;
 }
 
@@ -29,6 +30,7 @@ export interface QuoteItem {
   quantity: number;
   price: number;
   total: number;
+  units?: string;
 }
 
 export interface Quote {
@@ -42,11 +44,20 @@ export interface Quote {
   tax: number;
   total: number;
   status: 'draft' | 'sent' | 'accepted' | 'declined';
-  notes: string;
-  followUpDate?: string;
+  notes?: string;
   sentDate?: string;
+  followUpDate?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export type QuoteAge = 'fresh' | 'warm' | 'aging' | 'stale';
+
+export interface AgingSummary {
+  fresh: number;
+  warm: number;
+  aging: number;
+  stale: number;
 }
 
 export interface CompanySettings {
@@ -57,13 +68,4 @@ export interface CompanySettings {
   website: string;
   logo?: string;
   terms: string;
-}
-
-export type QuoteAge = 'fresh' | 'warm' | 'aging' | 'stale';
-
-export interface AgingSummary {
-  fresh: number;
-  warm: number;
-  aging: number;
-  stale: number;
 }

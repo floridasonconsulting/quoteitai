@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, DollarSign } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { getItems, addItem, updateItem, deleteItem } from '@/lib/storage';
+import { getItems, addItem, updateItem, deleteItem, saveItems } from '@/lib/storage';
 import { Item } from '@/types';
 import { toast } from 'sonner';
 
@@ -36,6 +36,7 @@ export default function Items() {
     basePrice: '',
     markup: '',
     markupType: 'percentage' as 'percentage' | 'fixed',
+    units: 'Each',
   });
 
   useEffect(() => {
@@ -108,6 +109,7 @@ export default function Items() {
       basePrice: item.basePrice.toString(),
       markup: item.markup.toString(),
       markupType: item.markupType,
+      units: item.units || 'Each',
     });
     setIsDialogOpen(true);
   };
@@ -130,7 +132,73 @@ export default function Items() {
       basePrice: '',
       markup: '',
       markupType: 'percentage',
+      units: 'Each',
     });
+  };
+
+  const exportToCSV = () => {
+    const headers = ['Name', 'Description', 'Category', 'Base Price', 'Markup Type', 'Markup', 'Final Price', 'Units'];
+    const rows = items.map(item => [
+      item.name,
+      item.description,
+      item.category,
+      item.basePrice,
+      item.markupType,
+      item.markup,
+      item.finalPrice,
+      item.units
+    ]);
+    
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `items-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    toast.success('Items exported successfully');
+  };
+
+  const importFromCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const lines = text.split('\n');
+      const importedItems: Item[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        const [name, description, category, basePrice, markupType, markup, finalPrice, units] = line.split(',');
+        
+        if (name && category && basePrice) {
+          importedItems.push({
+            id: crypto.randomUUID(),
+            name: name.trim(),
+            description: description?.trim() || '',
+            category: category.trim(),
+            basePrice: parseFloat(basePrice),
+            markupType: (markupType?.trim() as 'percentage' | 'fixed') || 'percentage',
+            markup: parseFloat(markup) || 0,
+            finalPrice: parseFloat(finalPrice) || parseFloat(basePrice),
+            units: units?.trim() || 'Each',
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
+
+      if (importedItems.length > 0) {
+        saveItems([...items, ...importedItems]);
+        loadItems();
+        toast.success(`Imported ${importedItems.length} items`);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
   };
 
   return (
@@ -142,126 +210,163 @@ export default function Items() {
             Manage your products and services
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="lg">
-              <Plus className="mr-2 h-5 w-5" />
-              Add Item
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingItem ? 'Edit Item' : 'Add New Item'}
-              </DialogTitle>
-              <DialogDescription>
-                Fill in the item information below
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Item Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Professional Service"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Detailed description of the item..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map(cat => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportToCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+          <Button variant="outline" asChild>
+            <label className="cursor-pointer">
+              <Upload className="h-4 w-4 mr-2" />
+              Import
+              <input
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={importFromCSV}
+              />
+            </label>
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Item
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingItem ? 'Edit Item' : 'Add New Item'}
+                </DialogTitle>
+                <DialogDescription>
+                  Fill in the item information below
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="basePrice">Base Price *</Label>
+                  <Label htmlFor="name">Item Name *</Label>
                   <Input
-                    id="basePrice"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.basePrice}
-                    onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
-                    placeholder="0.00"
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Professional Service"
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="markup">Markup</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="markup"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.markup}
-                      onChange={(e) => setFormData({ ...formData, markup: e.target.value })}
-                      placeholder="0"
-                    />
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Detailed description of the item..."
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
                     <Select
-                      value={formData.markupType}
-                      onValueChange={(value: 'percentage' | 'fixed') =>
-                        setFormData({ ...formData, markupType: value })
-                      }
+                      value={formData.category}
+                      onValueChange={(value) => setFormData({ ...formData, category: value })}
                     >
-                      <SelectTrigger className="w-24">
+                      <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="percentage">%</SelectItem>
-                        <SelectItem value="fixed">$</SelectItem>
+                        {CATEGORIES.map(cat => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="units">Units *</Label>
+                    <Select value={formData.units} onValueChange={(value) => setFormData({ ...formData, units: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Each">Each</SelectItem>
+                        <SelectItem value="Per SF">Per SF</SelectItem>
+                        <SelectItem value="Per LF">Per LF</SelectItem>
+                        <SelectItem value="Hour">Hour</SelectItem>
+                        <SelectItem value="Day">Day</SelectItem>
+                        <SelectItem value="Set">Set</SelectItem>
+                        <SelectItem value="Box">Box</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-              </div>
 
-              <div className="rounded-lg bg-muted p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Final Price:</span>
-                  <span className="text-2xl font-bold text-primary">
-                    ${calculateFinalPrice().toFixed(2)}
-                  </span>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="basePrice">Base Price *</Label>
+                    <Input
+                      id="basePrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.basePrice}
+                      onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
+                      placeholder="0.00"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="markup">Markup</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="markup"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.markup}
+                        onChange={(e) => setFormData({ ...formData, markup: e.target.value })}
+                        placeholder="0"
+                      />
+                      <Select
+                        value={formData.markupType}
+                        onValueChange={(value: 'percentage' | 'fixed') =>
+                          setFormData({ ...formData, markupType: value })
+                        }
+                      >
+                        <SelectTrigger className="w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="percentage">%</SelectItem>
+                          <SelectItem value="fixed">$</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  {editingItem ? 'Update' : 'Add'} Item
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div className="rounded-lg bg-muted p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Final Price:</span>
+                    <span className="text-2xl font-bold text-primary">
+                      ${calculateFinalPrice().toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    {editingItem ? 'Update' : 'Add'} Item
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Card>
@@ -321,6 +426,10 @@ export default function Items() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Units:</span>
+                        <span>{item.units}</span>
+                      </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Base Price:</span>
                         <span>${item.basePrice.toFixed(2)}</span>
