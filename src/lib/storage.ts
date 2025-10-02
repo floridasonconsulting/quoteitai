@@ -101,9 +101,14 @@ export const getSettings = (): CompanySettings =>
   getStorageItem(STORAGE_KEYS.SETTINGS, {
     name: '',
     address: '',
+    city: '',
+    state: '',
+    zip: '',
     phone: '',
     email: '',
     website: '',
+    license: '',
+    insurance: '',
     terms: 'Payment due within 30 days. Thank you for your business!',
   });
 

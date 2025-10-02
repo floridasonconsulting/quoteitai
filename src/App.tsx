@@ -29,6 +29,7 @@ const App = () => (
               <Route path="/quotes" element={<Quotes />} />
               <Route path="/quotes/new" element={<NewQuote />} />
               <Route path="/quotes/:id" element={<QuoteDetail />} />
+              <Route path="/quotes/:id/edit" element={<NewQuote />} />
               <Route path="/customers" element={<Customers />} />
               <Route path="/items" element={<Items />} />
               <Route path="/settings" element={<Settings />} />

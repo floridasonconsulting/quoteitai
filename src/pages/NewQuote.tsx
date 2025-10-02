@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, X, FileText, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { getCustomers, getItems, addQuote, getSettings } from '@/lib/storage';
+import { getCustomers, getItems, addQuote, getSettings, getQuotes } from '@/lib/storage';
 import { generateQuoteNumber, calculateItemTotal, calculateQuoteTotal } from '@/lib/quote-utils';
 import { Customer, Item, Quote, QuoteItem } from '@/types';
 import { toast } from 'sonner';
@@ -17,8 +17,10 @@ import jsPDF from 'jspdf';
 
 export default function NewQuote() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [quoteTitle, setQuoteTitle] = useState('');
   const [quoteNotes, setQuoteNotes] = useState('');
@@ -35,7 +37,22 @@ export default function NewQuote() {
   useEffect(() => {
     setCustomers(getCustomers());
     setItems(getItems());
-  }, []);
+    
+    // Load quote for editing if id is provided
+    if (id) {
+      const quotes = getQuotes();
+      const quoteToEdit = quotes.find(q => q.id === id);
+      if (quoteToEdit) {
+        setIsEditMode(true);
+        setSelectedCustomerId(quoteToEdit.customerId);
+        setQuoteTitle(quoteToEdit.title);
+        setQuoteItems(quoteToEdit.items);
+        setQuoteNotes(quoteToEdit.notes || '');
+      } else {
+        navigate('/quotes');
+      }
+    }
+  }, [id, navigate]);
 
   const categories = ['all', ...new Set(items.map(item => item.category))];
   const filteredItems = selectedCategory === 'all' 
@@ -121,24 +138,48 @@ export default function NewQuote() {
       return;
     }
 
-    const quote: Quote = {
-      id: crypto.randomUUID(),
-      quoteNumber: generateQuoteNumber(),
-      customerId: selectedCustomerId,
-      customerName: selectedCustomer?.name || '',
-      title: quoteTitle,
-      items: quoteItems,
-      subtotal,
-      tax,
-      total,
-      status: 'draft',
-      notes: quoteNotes,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    if (isEditMode && id) {
+      const quotes = getQuotes();
+      const existingQuote = quotes.find(q => q.id === id);
+      const updatedQuote: Quote = {
+        id,
+        quoteNumber: existingQuote?.quoteNumber || generateQuoteNumber(),
+        customerId: selectedCustomerId,
+        customerName: selectedCustomer?.name || '',
+        title: quoteTitle,
+        items: quoteItems,
+        subtotal,
+        tax,
+        total,
+        status: 'draft',
+        notes: quoteNotes,
+        createdAt: existingQuote?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      const updatedQuotes = quotes.map(q => q.id === id ? updatedQuote : q);
+      localStorage.setItem('quotes', JSON.stringify(updatedQuotes));
+      toast.success('Quote updated');
+    } else {
+      const quote: Quote = {
+        id: crypto.randomUUID(),
+        quoteNumber: generateQuoteNumber(),
+        customerId: selectedCustomerId,
+        customerName: selectedCustomer?.name || '',
+        title: quoteTitle,
+        items: quoteItems,
+        subtotal,
+        tax,
+        total,
+        status: 'draft',
+        notes: quoteNotes,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-    addQuote(quote);
-    toast.success('Quote saved as draft');
+      addQuote(quote);
+      toast.success('Quote saved as draft');
+    }
     navigate('/quotes');
   };
 
@@ -156,29 +197,52 @@ export default function NewQuote() {
       return;
     }
 
-    const quote: Quote = {
-      id: crypto.randomUUID(),
-      quoteNumber: generateQuoteNumber(),
-      customerId: selectedCustomerId,
-      customerName: selectedCustomer?.name || '',
-      title: quoteTitle,
-      items: quoteItems,
-      subtotal,
-      tax,
-      total,
-      status: 'sent',
-      notes: quoteNotes,
-      sentDate: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    if (isEditMode && id) {
+      const quotes = getQuotes();
+      const existingQuote = quotes.find(q => q.id === id);
+      const updatedQuote: Quote = {
+        id,
+        quoteNumber: existingQuote?.quoteNumber || generateQuoteNumber(),
+        customerId: selectedCustomerId,
+        customerName: selectedCustomer?.name || '',
+        title: quoteTitle,
+        items: quoteItems,
+        subtotal,
+        tax,
+        total,
+        status: 'sent',
+        notes: quoteNotes,
+        sentDate: new Date().toISOString(),
+        createdAt: existingQuote?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      const updatedQuotes = quotes.map(q => q.id === id ? updatedQuote : q);
+      localStorage.setItem('quotes', JSON.stringify(updatedQuotes));
+      generatePDF(updatedQuote);
+      toast.success('Quote updated and sent');
+    } else {
+      const quote: Quote = {
+        id: crypto.randomUUID(),
+        quoteNumber: generateQuoteNumber(),
+        customerId: selectedCustomerId,
+        customerName: selectedCustomer?.name || '',
+        title: quoteTitle,
+        items: quoteItems,
+        subtotal,
+        tax,
+        total,
+        status: 'sent',
+        notes: quoteNotes,
+        sentDate: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-    addQuote(quote);
-    
-    // Generate PDF preview
-    generatePDF(quote);
-    
-    toast.success('Quote sent successfully');
+      addQuote(quote);
+      generatePDF(quote);
+      toast.success('Quote sent successfully');
+    }
     navigate('/quotes');
   };
 
@@ -271,7 +335,9 @@ export default function NewQuote() {
     <div className="space-y-6 max-w-7xl">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Create New Quote</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            {isEditMode ? 'Edit Quote' : 'Create New Quote'}
+          </h2>
           <p className="text-muted-foreground">Build a professional quote for your customer</p>
         </div>
         <div className="flex gap-2">

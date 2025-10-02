@@ -13,9 +13,14 @@ export default function Settings() {
   const [formData, setFormData] = useState<CompanySettings>({
     name: '',
     address: '',
+    city: '',
+    state: '',
+    zip: '',
     phone: '',
     email: '',
     website: '',
+    license: '',
+    insurance: '',
     terms: '',
   });
 
@@ -92,13 +97,43 @@ export default function Settings() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="address">Street Address</Label>
               <Input
                 id="address"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="123 Business St, City, State ZIP"
+                placeholder="123 Business St"
               />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  placeholder="City"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="state">State</Label>
+                <Input
+                  id="state"
+                  value={formData.state}
+                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                  placeholder="State"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="zip">Zip Code</Label>
+                <Input
+                  id="zip"
+                  value={formData.zip}
+                  onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
+                  placeholder="ZIP"
+                />
+              </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -133,6 +168,27 @@ export default function Settings() {
                 onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                 placeholder="https://www.yourcompany.com"
               />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="license">License Number</Label>
+                <Input
+                  id="license"
+                  value={formData.license}
+                  onChange={(e) => setFormData({ ...formData, license: e.target.value })}
+                  placeholder="License #"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="insurance">Insurance Policy</Label>
+                <Input
+                  id="insurance"
+                  value={formData.insurance}
+                  onChange={(e) => setFormData({ ...formData, insurance: e.target.value })}
+                  placeholder="Insurance Policy #"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">

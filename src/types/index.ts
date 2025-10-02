@@ -63,9 +63,14 @@ export interface AgingSummary {
 export interface CompanySettings {
   name: string;
   address: string;
+  city: string;
+  state: string;
+  zip: string;
   phone: string;
   email: string;
   website: string;
   logo?: string;
+  license?: string;
+  insurance?: string;
   terms: string;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Mail, Trash2, FileText, Calendar, DollarSign } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Trash2, FileText, Calendar, DollarSign, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -53,58 +53,106 @@ export default function QuoteDetail() {
     const settings = getSettings();
     const pdf = new jsPDF();
     
-    // Header
+    let yPos = 20;
+    
+    // Logo
+    if (settings.logo) {
+      try {
+        pdf.addImage(settings.logo, 'PNG', 20, yPos, 40, 20);
+        yPos += 25;
+      } catch (e) {
+        console.error('Error adding logo:', e);
+      }
+    }
+    
+    // Company Header
     pdf.setFontSize(20);
-    pdf.text(settings.name || 'Your Company', 20, 20);
-    pdf.setFontSize(10);
-    pdf.text(settings.address || '', 20, 28);
-    pdf.text(`${settings.phone || ''} | ${settings.email || ''}`, 20, 34);
+    pdf.setFont(undefined, 'bold');
+    pdf.text(settings.name || 'Your Company', 20, yPos);
+    yPos += 6;
     
-    // Quote Info
-    pdf.setFontSize(16);
-    pdf.text('QUOTE', 150, 20);
-    pdf.setFontSize(10);
-    pdf.text(`Quote #: ${quote.quoteNumber}`, 150, 28);
-    pdf.text(`Date: ${new Date(quote.createdAt).toLocaleDateString()}`, 150, 34);
-    pdf.text(`Status: ${quote.status.toUpperCase()}`, 150, 40);
+    pdf.setFontSize(9);
+    pdf.setFont(undefined, 'normal');
+    if (settings.address) {
+      pdf.text(settings.address, 20, yPos);
+      yPos += 4;
+    }
+    if (settings.city || settings.state || settings.zip) {
+      pdf.text(`${settings.city || ''}, ${settings.state || ''} ${settings.zip || ''}`.trim(), 20, yPos);
+      yPos += 4;
+    }
+    if (settings.phone || settings.email) {
+      pdf.text(`${settings.phone || ''} | ${settings.email || ''}`, 20, yPos);
+      yPos += 4;
+    }
+    if (settings.license) {
+      pdf.text(`License: ${settings.license}`, 20, yPos);
+      yPos += 4;
+    }
+    if (settings.insurance) {
+      pdf.text(`Insurance: ${settings.insurance}`, 20, yPos);
+    }
     
-    pdf.line(20, 45, 190, 45);
+    // Quote Info (top right)
+    yPos = 20;
+    pdf.setFontSize(18);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('PROPOSAL', 150, yPos);
+    yPos += 8;
+    
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(`Quote #: ${quote.quoteNumber}`, 150, yPos);
+    yPos += 5;
+    pdf.text(`Date: ${new Date(quote.createdAt).toLocaleDateString()}`, 150, yPos);
+    
+    yPos = 60;
+    pdf.line(20, yPos, 190, yPos);
+    yPos += 10;
     
     // Customer Info
     pdf.setFontSize(12);
-    pdf.text('Bill To:', 20, 55);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Prepared For:', 20, yPos);
+    yPos += 7;
+    
     pdf.setFontSize(10);
-    pdf.text(quote.customerName, 20, 62);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(quote.customerName, 20, yPos);
+    yPos += 15;
     
     // Quote Title
     pdf.setFontSize(14);
-    pdf.text(quote.title, 20, 75);
+    pdf.setFont(undefined, 'bold');
+    pdf.text(quote.title, 20, yPos);
+    yPos += 10;
     
     // Items Table Header
-    let yPos = 85;
     pdf.setFontSize(10);
     pdf.setFont(undefined, 'bold');
-    pdf.text('Item', 20, yPos);
-    pdf.text('Qty', 100, yPos);
-    pdf.text('Unit', 120, yPos);
-    pdf.text('Price', 145, yPos);
-    pdf.text('Total', 170, yPos);
-    pdf.line(20, yPos + 2, 190, yPos + 2);
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(20, yPos, 170, 7, 'F');
+    pdf.text('Description', 22, yPos + 5);
+    pdf.text('Quantity', 120, yPos + 5);
+    pdf.text('Total', 170, yPos + 5);
+    yPos += 10;
     
     // Items
     pdf.setFont(undefined, 'normal');
-    yPos += 8;
     quote.items.forEach(item => {
       if (yPos > 270) {
         pdf.addPage();
         yPos = 20;
       }
-      pdf.text(item.name, 20, yPos);
-      pdf.text(item.quantity.toString(), 100, yPos);
-      pdf.text(item.units || 'Each', 120, yPos);
-      pdf.text(`$${item.price.toFixed(2)}`, 145, yPos);
+      
+      const itemText = pdf.splitTextToSize(item.name + (item.description ? ` - ${item.description}` : ''), 95);
+      pdf.text(itemText, 22, yPos);
+      
+      const textHeight = itemText.length * 5;
+      pdf.text(`${item.quantity} ${item.units || 'Each'}`, 120, yPos);
       pdf.text(`$${(item.quantity * item.price).toFixed(2)}`, 170, yPos);
-      yPos += 6;
+      
+      yPos += Math.max(textHeight, 6) + 2;
     });
     
     // Total
@@ -135,9 +183,11 @@ export default function QuoteDetail() {
 
   const handleEmail = () => {
     if (!quote) return;
+    const settings = getSettings();
     const subject = encodeURIComponent(`Quote ${quote.quoteNumber}: ${quote.title}`);
     const body = encodeURIComponent(`Please find attached quote ${quote.quoteNumber} for ${quote.title}.\n\nTotal: $${quote.total.toFixed(2)}`);
-    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+    const cc = settings.email ? `&cc=${encodeURIComponent(settings.email)}` : '';
+    window.open(`mailto:?subject=${subject}&body=${body}${cc}`, '_blank');
   };
 
   if (loading) {
@@ -174,6 +224,10 @@ export default function QuoteDetail() {
       </div>
 
       <div className="flex flex-wrap gap-2">
+        <Button onClick={() => navigate(`/quotes/${quote.id}/edit`)}>
+          <Edit className="mr-2 h-4 w-4" />
+          Edit
+        </Button>
         <Button onClick={generatePDF}>
           <Download className="mr-2 h-4 w-4" />
           Download PDF
