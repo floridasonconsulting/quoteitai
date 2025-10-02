@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { getQuotes, deleteQuote, getSettings } from '@/lib/storage';
-import { Quote } from '@/types';
+import { getQuotes, deleteQuote, getSettings, getCustomers } from '@/lib/storage';
+import { Quote, Customer } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -16,6 +16,7 @@ export default function QuoteDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [quote, setQuote] = useState<Quote | null>(null);
+  const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,7 +33,11 @@ export default function QuoteDetail() {
       return;
     }
 
+    const customers = getCustomers();
+    const foundCustomer = customers.find(c => c.id === foundQuote.customerId);
+
     setQuote(foundQuote);
+    setCustomer(foundCustomer || null);
     setLoading(false);
   }, [id, navigate]);
 
@@ -119,7 +124,22 @@ export default function QuoteDetail() {
     pdf.setFontSize(10);
     pdf.setFont(undefined, 'normal');
     pdf.text(quote.customerName, 20, yPos);
-    yPos += 15;
+    yPos += 5;
+    
+    if (customer?.address) {
+      pdf.text(customer.address, 20, yPos);
+      yPos += 5;
+    }
+    if (customer?.city || customer?.state || customer?.zip) {
+      pdf.text(`${customer.city || ''}, ${customer.state || ''} ${customer.zip || ''}`.trim(), 20, yPos);
+      yPos += 5;
+    }
+    if (customer?.phone) {
+      pdf.text(customer.phone, 20, yPos);
+      yPos += 5;
+    }
+    
+    yPos += 5;
     
     // Quote Title
     pdf.setFontSize(14);
@@ -127,14 +147,12 @@ export default function QuoteDetail() {
     pdf.text(quote.title, 20, yPos);
     yPos += 10;
     
-    // Items Table Header
+    // Items Header
     pdf.setFontSize(10);
     pdf.setFont(undefined, 'bold');
     pdf.setFillColor(240, 240, 240);
     pdf.rect(20, yPos, 170, 7, 'F');
     pdf.text('Description', 22, yPos + 5);
-    pdf.text('Quantity', 120, yPos + 5);
-    pdf.text('Total', 170, yPos + 5);
     yPos += 10;
     
     // Items
@@ -145,14 +163,11 @@ export default function QuoteDetail() {
         yPos = 20;
       }
       
-      const itemText = pdf.splitTextToSize(item.name + (item.description ? ` - ${item.description}` : ''), 95);
+      const itemText = pdf.splitTextToSize(item.name + (item.description ? ` - ${item.description}` : ''), 160);
       pdf.text(itemText, 22, yPos);
       
       const textHeight = itemText.length * 5;
-      pdf.text(`${item.quantity} ${item.units || 'Each'}`, 120, yPos);
-      pdf.text(`$${(item.quantity * item.price).toFixed(2)}`, 170, yPos);
-      
-      yPos += Math.max(textHeight, 6) + 2;
+      yPos += Math.max(textHeight, 5) + 3;
     });
     
     // Total
@@ -186,8 +201,9 @@ export default function QuoteDetail() {
     const settings = getSettings();
     const subject = encodeURIComponent(`Quote ${quote.quoteNumber}: ${quote.title}`);
     const body = encodeURIComponent(`Please find attached quote ${quote.quoteNumber} for ${quote.title}.\n\nTotal: $${quote.total.toFixed(2)}`);
+    const to = customer?.email ? encodeURIComponent(customer.email) : '';
     const cc = settings.email ? `&cc=${encodeURIComponent(settings.email)}` : '';
-    window.open(`mailto:?subject=${subject}&body=${body}${cc}`, '_blank');
+    window.open(`mailto:${to}?subject=${subject}&body=${body}${cc}`, '_blank');
   };
 
   if (loading) {
@@ -247,30 +263,37 @@ export default function QuoteDetail() {
           <CardTitle>Quote Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Customer</p>
               <p className="font-medium">{quote.customerName}</p>
+              {customer?.address && <p className="text-sm">{customer.address}</p>}
+              {(customer?.city || customer?.state || customer?.zip) && (
+                <p className="text-sm">{`${customer.city || ''}, ${customer.state || ''} ${customer.zip || ''}`.trim()}</p>
+              )}
+              {customer?.phone && <p className="text-sm">{customer.phone}</p>}
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Created</p>
-              <p className="font-medium flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                {new Date(quote.createdAt).toLocaleDateString()}
-              </p>
-            </div>
-            {quote.sentDate && (
+            <div className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">Sent</p>
-                <p className="font-medium">{new Date(quote.sentDate).toLocaleDateString()}</p>
+                <p className="text-sm text-muted-foreground">Created</p>
+                <p className="font-medium flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  {new Date(quote.createdAt).toLocaleDateString()}
+                </p>
               </div>
-            )}
-            <div>
-              <p className="text-sm text-muted-foreground">Total</p>
-              <p className="font-bold text-xl text-primary flex items-center gap-1">
-                <DollarSign className="h-5 w-5" />
-                {quote.total.toFixed(2)}
-              </p>
+              {quote.sentDate && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Sent</p>
+                  <p className="font-medium">{new Date(quote.sentDate).toLocaleDateString()}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="font-bold text-xl text-primary flex items-center gap-1">
+                  <DollarSign className="h-5 w-5" />
+                  {quote.total.toFixed(2)}
+                </p>
+              </div>
             </div>
           </div>
           {quote.notes && (
@@ -292,21 +315,11 @@ export default function QuoteDetail() {
         <CardContent>
           <div className="space-y-3">
             {quote.items.map((item, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex-1">
-                  <p className="font-medium">{item.name}</p>
-                  {item.description && (
-                    <p className="text-sm text-muted-foreground">{item.description}</p>
-                  )}
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {item.quantity} {item.units || 'Each'} × ${item.price.toFixed(2)}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-primary">
-                    ${(item.quantity * item.price).toFixed(2)}
-                  </p>
-                </div>
+              <div key={index} className="p-3 border rounded-lg">
+                <p className="font-medium">{item.name}</p>
+                {item.description && (
+                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                )}
               </div>
             ))}
           </div>

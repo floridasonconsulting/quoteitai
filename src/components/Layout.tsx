@@ -47,7 +47,7 @@ export function Layout({ children }: LayoutProps) {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 container px-4 py-6">
+      <main className="flex-1 container px-4 py-6 md:ml-64 w-full max-w-full overflow-x-hidden">
         {children}
       </main>
 
@@ -97,14 +97,6 @@ export function Layout({ children }: LayoutProps) {
         </div>
       </nav>
 
-      {/* Desktop Content Adjustment */}
-      <style>{`
-        @media (min-width: 768px) {
-          main {
-            margin-left: 16rem;
-          }
-        }
-      `}</style>
     </div>
   );
 }
