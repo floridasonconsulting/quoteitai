@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { Layout } from "@/components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Quotes from "./pages/Quotes";
+import QuoteDetail from "./pages/QuoteDetail";
 import NewQuote from "./pages/NewQuote";
 import Customers from "./pages/Customers";
 import Items from "./pages/Items";
@@ -27,6 +28,7 @@ const App = () => (
               <Route path="/" element={<Dashboard />} />
               <Route path="/quotes" element={<Quotes />} />
               <Route path="/quotes/new" element={<NewQuote />} />
+              <Route path="/quotes/:id" element={<QuoteDetail />} />
               <Route path="/customers" element={<Customers />} />
               <Route path="/items" element={<Items />} />
               <Route path="/settings" element={<Settings />} />
