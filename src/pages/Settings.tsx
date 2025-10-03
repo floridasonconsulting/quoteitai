@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Building2, Save } from 'lucide-react';
+import { Building2, Save, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { getSettings, saveSettings } from '@/lib/storage';
 import { CompanySettings } from '@/types';
 import { toast } from 'sonner';
+import { generateSampleData } from '@/lib/sample-data';
 
 export default function Settings() {
   const [formData, setFormData] = useState<CompanySettings>({
@@ -21,6 +23,7 @@ export default function Settings() {
     website: '',
     license: '',
     insurance: '',
+    logoDisplayOption: 'both',
     terms: '',
   });
 
@@ -46,13 +49,24 @@ export default function Settings() {
     }
   };
 
+  const handleGenerateSampleData = () => {
+    const result = generateSampleData();
+    toast.success(`Generated ${result.quotesAdded} sample quotes${result.customersAdded > 0 ? ` and ${result.customersAdded} customers` : ''}`);
+  };
+
   return (
     <div className="space-y-6 max-w-4xl">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
-        <p className="text-muted-foreground">
-          Configure your company information and preferences
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
+          <p className="text-muted-foreground">
+            Configure your company information and preferences
+          </p>
+        </div>
+        <Button variant="outline" onClick={handleGenerateSampleData}>
+          <Sparkles className="mr-2 h-4 w-4" />
+          Generate Sample Data
+        </Button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -84,6 +98,29 @@ export default function Settings() {
                   />
                 </div>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Logo Display on Quotes</Label>
+              <RadioGroup 
+                value={formData.logoDisplayOption || 'both'}
+                onValueChange={(value: 'logo' | 'name' | 'both') => 
+                  setFormData({ ...formData, logoDisplayOption: value })
+                }
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="logo" id="logo-only" />
+                  <Label htmlFor="logo-only" className="font-normal cursor-pointer">Logo only</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="name" id="name-only" />
+                  <Label htmlFor="name-only" className="font-normal cursor-pointer">Company name only</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="both" id="both" />
+                  <Label htmlFor="both" className="font-normal cursor-pointer">Both logo and name</Label>
+                </div>
+              </RadioGroup>
             </div>
 
             <div className="space-y-2">

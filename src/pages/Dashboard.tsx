@@ -130,7 +130,10 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-4">
-            <div className="space-y-2">
+            <div 
+              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+              onClick={() => navigate('/quotes?status=sent&age=fresh')}
+            >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Fresh (≤7 days)</span>
                 <Badge variant="outline" className={getAgeColor('fresh')}>
@@ -145,7 +148,10 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div 
+              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+              onClick={() => navigate('/quotes?status=sent&age=warm')}
+            >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Warm (8-14 days)</span>
                 <Badge variant="outline" className={getAgeColor('warm')}>
@@ -160,7 +166,10 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div 
+              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+              onClick={() => navigate('/quotes?status=sent&age=aging')}
+            >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Aging (15-30 days)</span>
                 <Badge variant="outline" className={getAgeColor('aging')}>
@@ -175,7 +184,10 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div 
+              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+              onClick={() => navigate('/quotes?status=sent&age=stale')}
+            >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Stale (&gt;30 days)</span>
                 <Badge variant="outline" className={getAgeColor('stale')}>

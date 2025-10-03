@@ -57,135 +57,195 @@ export default function QuoteDetail() {
 
     const settings = getSettings();
     const pdf = new jsPDF();
+    const displayOption = settings.logoDisplayOption || 'both';
     
-    let yPos = 20;
+    const MARGIN = 20;
+    const LINE_HEIGHT = 5;
+    const SECTION_GAP = 8;
+    let yPos = MARGIN;
     
-    // Logo
-    if (settings.logo) {
+    // Header Section - Logo and/or Company Name
+    const showLogo = (displayOption === 'logo' || displayOption === 'both') && settings.logo;
+    const showName = displayOption === 'name' || displayOption === 'both';
+    
+    if (showLogo) {
       try {
-        pdf.addImage(settings.logo, 'PNG', 20, yPos, 40, 20);
-        yPos += 25;
+        pdf.addImage(settings.logo, 'PNG', MARGIN, yPos, 40, 20);
+        if (showName) {
+          // Logo with name - put name next to logo
+          pdf.setFontSize(20);
+          pdf.setFont(undefined, 'bold');
+          pdf.text(settings.name || 'Your Company', 65, yPos + 10);
+          yPos += 25;
+        } else {
+          // Logo only
+          yPos += 25;
+        }
       } catch (e) {
         console.error('Error adding logo:', e);
+        // Fallback to name if logo fails and name should be shown
+        if (showName) {
+          pdf.setFontSize(20);
+          pdf.setFont(undefined, 'bold');
+          pdf.text(settings.name || 'Your Company', MARGIN, yPos);
+          yPos += SECTION_GAP;
+        }
       }
+    } else if (showName) {
+      // Name only (no logo or logo not available)
+      pdf.setFontSize(20);
+      pdf.setFont(undefined, 'bold');
+      pdf.text(settings.name || 'Your Company', MARGIN, yPos);
+      yPos += SECTION_GAP;
     }
     
-    // Company Header
-    pdf.setFontSize(20);
-    pdf.setFont(undefined, 'bold');
-    pdf.text(settings.name || 'Your Company', 20, yPos);
-    yPos += 6;
-    
+    // Company Contact Info
     pdf.setFontSize(9);
     pdf.setFont(undefined, 'normal');
     if (settings.address) {
-      pdf.text(settings.address, 20, yPos);
-      yPos += 4;
+      pdf.text(settings.address, MARGIN, yPos);
+      yPos += LINE_HEIGHT;
     }
     if (settings.city || settings.state || settings.zip) {
-      pdf.text(`${settings.city || ''}, ${settings.state || ''} ${settings.zip || ''}`.trim(), 20, yPos);
-      yPos += 4;
+      const cityStateZip = `${settings.city || ''}${settings.city && settings.state ? ', ' : ''}${settings.state || ''} ${settings.zip || ''}`.trim();
+      if (cityStateZip) {
+        pdf.text(cityStateZip, MARGIN, yPos);
+        yPos += LINE_HEIGHT;
+      }
     }
     if (settings.phone || settings.email) {
-      pdf.text(`${settings.phone || ''} | ${settings.email || ''}`, 20, yPos);
-      yPos += 4;
+      const contact = [settings.phone, settings.email].filter(Boolean).join(' | ');
+      pdf.text(contact, MARGIN, yPos);
+      yPos += LINE_HEIGHT;
     }
     if (settings.license) {
-      pdf.text(`License: ${settings.license}`, 20, yPos);
-      yPos += 4;
+      pdf.text(`License: ${settings.license}`, MARGIN, yPos);
+      yPos += LINE_HEIGHT;
     }
     if (settings.insurance) {
-      pdf.text(`Insurance: ${settings.insurance}`, 20, yPos);
+      pdf.text(`Insurance: ${settings.insurance}`, MARGIN, yPos);
+      yPos += LINE_HEIGHT;
     }
     
-    // Quote Info (top right)
-    yPos = 20;
+    // Quote Info (top right) - Reset yPos for right side
+    let rightYPos = MARGIN;
     pdf.setFontSize(18);
     pdf.setFont(undefined, 'bold');
-    pdf.text('PROPOSAL', 150, yPos);
-    yPos += 8;
+    pdf.text('PROPOSAL', 150, rightYPos);
+    rightYPos += 8;
     
     pdf.setFontSize(10);
     pdf.setFont(undefined, 'normal');
-    pdf.text(`Quote #: ${quote.quoteNumber}`, 150, yPos);
-    yPos += 5;
-    pdf.text(`Date: ${new Date(quote.createdAt).toLocaleDateString()}`, 150, yPos);
+    pdf.text(`Quote #: ${quote.quoteNumber}`, 150, rightYPos);
+    rightYPos += LINE_HEIGHT + 1;
+    pdf.text(`Date: ${new Date(quote.createdAt).toLocaleDateString()}`, 150, rightYPos);
     
-    yPos = 60;
-    pdf.line(20, yPos, 190, yPos);
-    yPos += 10;
+    // Move yPos to after header section
+    yPos = Math.max(yPos, rightYPos) + SECTION_GAP;
     
-    // Customer Info
+    // Separator line
+    pdf.line(MARGIN, yPos, 190, yPos);
+    yPos += SECTION_GAP + 2;
+    
+    // Customer Info Section
     pdf.setFontSize(12);
     pdf.setFont(undefined, 'bold');
-    pdf.text('Prepared For:', 20, yPos);
+    pdf.text('Prepared For:', MARGIN, yPos);
     yPos += 7;
     
     pdf.setFontSize(10);
     pdf.setFont(undefined, 'normal');
-    pdf.text(quote.customerName, 20, yPos);
-    yPos += 5;
+    pdf.text(quote.customerName, MARGIN, yPos);
+    yPos += LINE_HEIGHT;
     
     if (customer?.address) {
-      pdf.text(customer.address, 20, yPos);
-      yPos += 5;
+      pdf.text(customer.address, MARGIN, yPos);
+      yPos += LINE_HEIGHT;
     }
     if (customer?.city || customer?.state || customer?.zip) {
-      pdf.text(`${customer.city || ''}, ${customer.state || ''} ${customer.zip || ''}`.trim(), 20, yPos);
-      yPos += 5;
+      const custCityStateZip = `${customer.city || ''}${customer.city && customer.state ? ', ' : ''}${customer.state || ''} ${customer.zip || ''}`.trim();
+      if (custCityStateZip) {
+        pdf.text(custCityStateZip, MARGIN, yPos);
+        yPos += LINE_HEIGHT;
+      }
     }
     if (customer?.phone) {
-      pdf.text(customer.phone, 20, yPos);
-      yPos += 5;
+      pdf.text(customer.phone, MARGIN, yPos);
+      yPos += LINE_HEIGHT;
     }
     
-    yPos += 5;
+    yPos += SECTION_GAP;
     
     // Quote Title
     pdf.setFontSize(14);
     pdf.setFont(undefined, 'bold');
-    pdf.text(quote.title, 20, yPos);
-    yPos += 10;
+    const titleLines = pdf.splitTextToSize(quote.title, 170);
+    pdf.text(titleLines, MARGIN, yPos);
+    yPos += titleLines.length * 6 + SECTION_GAP;
     
     // Items Header
     pdf.setFontSize(10);
     pdf.setFont(undefined, 'bold');
     pdf.setFillColor(240, 240, 240);
-    pdf.rect(20, yPos, 170, 7, 'F');
-    pdf.text('Description', 22, yPos + 5);
+    pdf.rect(MARGIN, yPos - 2, 170, 8, 'F');
+    pdf.text('Description', MARGIN + 2, yPos + 3);
     yPos += 10;
     
-    // Items
+    // Items List
     pdf.setFont(undefined, 'normal');
-    quote.items.forEach(item => {
-      if (yPos > 270) {
+    pdf.setFontSize(9);
+    
+    quote.items.forEach((item, index) => {
+      // Check if we need a new page (leave room for total and terms)
+      if (yPos > 240) {
         pdf.addPage();
-        yPos = 20;
+        yPos = MARGIN;
       }
       
-      const itemText = pdf.splitTextToSize(item.name + (item.description ? ` - ${item.description}` : ''), 160);
-      pdf.text(itemText, 22, yPos);
+      const itemDescription = item.name + (item.description ? ` - ${item.description}` : '');
+      const itemLines = pdf.splitTextToSize(itemDescription, 165);
       
-      const textHeight = itemText.length * 5;
-      yPos += Math.max(textHeight, 5) + 3;
+      pdf.text(itemLines, MARGIN + 2, yPos);
+      const itemHeight = itemLines.length * LINE_HEIGHT;
+      yPos += itemHeight + 4;
     });
     
-    // Total
-    pdf.line(20, yPos + 2, 190, yPos + 2);
-    yPos += 10;
+    // Ensure space for total section
+    if (yPos > 250) {
+      pdf.addPage();
+      yPos = MARGIN;
+    }
+    
+    yPos += 5;
+    
+    // Total Section
+    pdf.line(MARGIN, yPos, 190, yPos);
+    yPos += 8;
+    
     pdf.setFont(undefined, 'bold');
     pdf.setFontSize(12);
-    pdf.text('TOTAL:', 145, yPos);
-    pdf.text(`$${quote.total.toFixed(2)}`, 170, yPos);
+    pdf.text('TOTAL:', 140, yPos);
+    pdf.text(`$${quote.total.toFixed(2)}`, 170, yPos, { align: 'right' });
     
-    // Terms
+    yPos += 12;
+    
+    // Terms & Conditions
     if (settings.terms) {
-      yPos += 15;
-      pdf.setFont(undefined, 'normal');
+      // Check if we need a new page for terms
+      if (yPos > 240) {
+        pdf.addPage();
+        yPos = MARGIN;
+      }
+      
+      pdf.setFont(undefined, 'bold');
       pdf.setFontSize(9);
-      pdf.text('Terms & Conditions:', 20, yPos);
-      const terms = pdf.splitTextToSize(settings.terms, 170);
-      pdf.text(terms, 20, yPos + 5);
+      pdf.text('Terms & Conditions:', MARGIN, yPos);
+      yPos += 6;
+      
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(8);
+      const termsLines = pdf.splitTextToSize(settings.terms, 170);
+      pdf.text(termsLines, MARGIN, yPos);
     }
     
     pdf.save(`quote-${quote.quoteNumber}.pdf`);

@@ -70,6 +70,7 @@ export interface CompanySettings {
   email: string;
   website: string;
   logo?: string;
+  logoDisplayOption?: 'logo' | 'name' | 'both';
   license?: string;
   insurance?: string;
   terms: string;

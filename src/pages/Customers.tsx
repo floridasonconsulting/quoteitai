@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { getCustomers, addCustomer, updateCustomer, deleteCustomer, saveCustomers } from '@/lib/storage';
 import { Customer } from '@/types';
@@ -14,6 +15,7 @@ export default function Customers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -30,6 +32,7 @@ export default function Customers() {
 
   const loadCustomers = () => {
     setCustomers(getCustomers());
+    setSelectedCustomers([]);
   };
 
   const filteredCustomers = customers.filter(customer =>
@@ -37,6 +40,33 @@ export default function Customers() {
     customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.phone.includes(searchTerm)
   );
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedCustomers(filteredCustomers.map(c => c.id));
+    } else {
+      setSelectedCustomers([]);
+    }
+  };
+
+  const handleSelectCustomer = (customerId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedCustomers([...selectedCustomers, customerId]);
+    } else {
+      setSelectedCustomers(selectedCustomers.filter(id => id !== customerId));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedCustomers.length === 0) return;
+    
+    if (confirm(`Are you sure you want to delete ${selectedCustomers.length} customer${selectedCustomers.length > 1 ? 's' : ''}?`)) {
+      const remainingCustomers = customers.filter(c => !selectedCustomers.includes(c.id));
+      saveCustomers(remainingCustomers);
+      loadCustomers();
+      toast.success(`Deleted ${selectedCustomers.length} customer${selectedCustomers.length > 1 ? 's' : ''}`);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -294,6 +324,26 @@ export default function Customers() {
         </div>
       </div>
 
+      {selectedCustomers.length > 0 && (
+        <Card className="border-primary/50 bg-primary/5">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">
+                {selectedCustomers.length} customer{selectedCustomers.length > 1 ? 's' : ''} selected
+              </span>
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={handleBulkDelete}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Selected
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
@@ -307,6 +357,15 @@ export default function Customers() {
               />
             </div>
           </div>
+          {filteredCustomers.length > 0 && (
+            <div className="flex items-center gap-2 pt-2">
+              <Checkbox
+                checked={selectedCustomers.length === filteredCustomers.length}
+                onCheckedChange={handleSelectAll}
+              />
+              <span className="text-sm text-muted-foreground">Select All</span>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {filteredCustomers.length === 0 ? (
@@ -325,57 +384,67 @@ export default function Customers() {
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredCustomers.map((customer) => (
-                <Card key={customer.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">{customer.name}</CardTitle>
-                    <CardDescription className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-3 w-3" />
-                        <a href={`mailto:${customer.email}`} className="hover:underline">
-                          {customer.email}
-                        </a>
-                      </div>
-                      {customer.phone && (
+              {filteredCustomers.map((customer) => {
+                const isSelected = selectedCustomers.includes(customer.id);
+                return (
+                  <Card key={customer.id} className="hover:shadow-lg transition-shadow relative">
+                    <div className="absolute top-3 left-3 z-10">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked) => handleSelectCustomer(customer.id, checked as boolean)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    <CardHeader className="pb-3 pl-10">
+                      <CardTitle className="text-lg">{customer.name}</CardTitle>
+                      <CardDescription className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <Phone className="h-3 w-3" />
-                          <a href={`tel:${customer.phone}`} className="hover:underline">
-                            {customer.phone}
+                          <Mail className="h-3 w-3" />
+                          <a href={`mailto:${customer.email}`} className="hover:underline">
+                            {customer.email}
                           </a>
                         </div>
+                        {customer.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-3 w-3" />
+                            <a href={`tel:${customer.phone}`} className="hover:underline">
+                              {customer.phone}
+                            </a>
+                          </div>
+                        )}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      {(customer.address || customer.city) && (
+                        <p className="text-sm text-muted-foreground mb-3">
+                          {[customer.address, customer.city, customer.state, customer.zip]
+                            .filter(Boolean)
+                            .join(', ')}
+                        </p>
                       )}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    {(customer.address || customer.city) && (
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {[customer.address, customer.city, customer.state, customer.zip]
-                          .filter(Boolean)
-                          .join(', ')}
-                      </p>
-                    )}
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(customer)}
-                        className="flex-1"
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(customer.id)}
-                        className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(customer)}
+                          className="flex-1"
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(customer.id)}
+                          className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </CardContent>
