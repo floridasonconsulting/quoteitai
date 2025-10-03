@@ -432,21 +432,21 @@ export default function Items() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Base Price:</span>
-                        <span>${item.basePrice.toFixed(2)}</span>
+                        <span>${(item.basePrice || 0).toFixed(2)}</span>
                       </div>
-                      {item.markup > 0 && (
+                      {(item.markup || 0) > 0 && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Markup:</span>
                           <span>
                             {item.markupType === 'percentage'
-                              ? `${item.markup}%`
-                              : `$${item.markup.toFixed(2)}`}
+                              ? `${item.markup || 0}%`
+                              : `$${(item.markup || 0).toFixed(2)}`}
                           </span>
                         </div>
                       )}
                       <div className="flex justify-between font-semibold pt-1 border-t">
                         <span>Final Price:</span>
-                        <span className="text-primary">${item.finalPrice.toFixed(2)}</span>
+                        <span className="text-primary">${(item.finalPrice || 0).toFixed(2)}</span>
                       </div>
                     </div>
                     <div className="flex gap-2 pt-2">
