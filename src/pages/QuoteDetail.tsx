@@ -224,8 +224,8 @@ export default function QuoteDetail() {
     
     pdf.setFont(undefined, 'bold');
     pdf.setFontSize(12);
-    pdf.text('TOTAL:', 140, yPos);
-    pdf.text(`$${quote.total.toFixed(2)}`, 170, yPos, { align: 'right' });
+    pdf.text('TOTAL:', 120, yPos);
+    pdf.text(`$${quote.total.toFixed(2)}`, 185, yPos, { align: 'right' });
     
     yPos += 12;
     

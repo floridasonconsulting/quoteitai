@@ -1,5 +1,5 @@
-import { Quote, Customer } from '@/types';
-import { getCustomers, getQuotes, saveQuotes, saveCustomers } from './storage';
+import { Quote, Customer, Item } from '@/types';
+import { getCustomers, getQuotes, saveQuotes, saveCustomers, getItems, saveItems } from './storage';
 import { generateQuoteNumber } from './quote-utils';
 
 export const generateSampleData = () => {
@@ -65,14 +65,162 @@ export const generateSampleData = () => {
     },
   ];
 
-  // Only add customers if we have fewer than 3
-  const customersToUse = existingCustomers.length < 3 
-    ? [...existingCustomers, ...sampleCustomers] 
-    : existingCustomers;
-  
-  if (existingCustomers.length < 3) {
-    saveCustomers(customersToUse);
-  }
+  // Always generate new customers
+  const newCustomers = [...existingCustomers, ...sampleCustomers];
+  saveCustomers(newCustomers);
+  const customersToUse = newCustomers;
+
+  // Generate sample items
+  const existingItems = getItems();
+  const sampleItems: Item[] = [
+    {
+      id: crypto.randomUUID(),
+      name: 'Consulting Services',
+      description: 'Professional consulting and advisory services',
+      category: 'Consulting',
+      basePrice: 150,
+      markupType: 'percentage',
+      markup: 30,
+      finalPrice: 195,
+      units: 'Hour',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: crypto.randomUUID(),
+      name: 'Web Design Package',
+      description: 'Complete website design and branding',
+      category: 'Services',
+      basePrice: 5000,
+      markupType: 'fixed',
+      markup: 1500,
+      finalPrice: 6500,
+      units: 'Each',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: crypto.randomUUID(),
+      name: 'Cloud Storage',
+      description: 'Monthly cloud storage subscription',
+      category: 'Services',
+      basePrice: 50,
+      markupType: 'percentage',
+      markup: 20,
+      finalPrice: 60,
+      units: 'Each',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: crypto.randomUUID(),
+      name: 'Technical Support',
+      description: 'On-demand technical support and troubleshooting',
+      category: 'Services',
+      basePrice: 100,
+      markupType: 'percentage',
+      markup: 25,
+      finalPrice: 125,
+      units: 'Hour',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: crypto.randomUUID(),
+      name: 'Software License',
+      description: 'Annual software license subscription',
+      category: 'Products',
+      basePrice: 1200,
+      markupType: 'percentage',
+      markup: 15,
+      finalPrice: 1380,
+      units: 'Each',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: crypto.randomUUID(),
+      name: 'Hardware Installation',
+      description: 'Professional hardware setup and configuration',
+      category: 'Labor',
+      basePrice: 200,
+      markupType: 'fixed',
+      markup: 50,
+      finalPrice: 250,
+      units: 'Day',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: crypto.randomUUID(),
+      name: 'Network Equipment',
+      description: 'Enterprise-grade networking hardware',
+      category: 'Equipment',
+      basePrice: 800,
+      markupType: 'percentage',
+      markup: 35,
+      finalPrice: 1080,
+      units: 'Each',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: crypto.randomUUID(),
+      name: 'Training Session',
+      description: 'On-site or remote training sessions',
+      category: 'Services',
+      basePrice: 300,
+      markupType: 'percentage',
+      markup: 20,
+      finalPrice: 360,
+      units: 'Day',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: crypto.randomUUID(),
+      name: 'Security Audit',
+      description: 'Comprehensive security assessment and report',
+      category: 'Consulting',
+      basePrice: 2500,
+      markupType: 'fixed',
+      markup: 500,
+      finalPrice: 3000,
+      units: 'Each',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: crypto.randomUUID(),
+      name: 'Data Migration',
+      description: 'Secure data transfer and migration services',
+      category: 'Services',
+      basePrice: 1800,
+      markupType: 'percentage',
+      markup: 25,
+      finalPrice: 2250,
+      units: 'Each',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: crypto.randomUUID(),
+      name: 'Premium Materials',
+      description: 'High-quality construction and building materials',
+      category: 'Materials',
+      basePrice: 500,
+      markupType: 'percentage',
+      markup: 40,
+      finalPrice: 700,
+      units: 'Set',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: crypto.randomUUID(),
+      name: 'Project Management',
+      description: 'Full-service project planning and execution',
+      category: 'Consulting',
+      basePrice: 180,
+      markupType: 'percentage',
+      markup: 30,
+      finalPrice: 234,
+      units: 'Hour',
+      createdAt: new Date().toISOString(),
+    },
+  ];
+
+  const newItems = [...existingItems, ...sampleItems];
+  saveItems(newItems);
 
   // Generate sample quotes
   const sampleQuotes: Quote[] = [];
@@ -299,7 +447,8 @@ export const generateSampleData = () => {
   saveQuotes([...existingQuotes, ...sampleQuotes]);
 
   return {
-    customersAdded: existingCustomers.length < 3 ? sampleCustomers.length : 0,
+    customersAdded: sampleCustomers.length,
+    itemsAdded: sampleItems.length,
     quotesAdded: sampleQuotes.length,
   };
 };

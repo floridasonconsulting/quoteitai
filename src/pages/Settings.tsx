@@ -1,12 +1,23 @@
 import { useEffect, useState } from 'react';
-import { Building2, Save, Sparkles } from 'lucide-react';
+import { Building2, Save, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { getSettings, saveSettings } from '@/lib/storage';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { getSettings, saveSettings, clearAllData } from '@/lib/storage';
 import { CompanySettings } from '@/types';
 import { toast } from 'sonner';
 import { generateSampleData } from '@/lib/sample-data';
@@ -51,7 +62,13 @@ export default function Settings() {
 
   const handleGenerateSampleData = () => {
     const result = generateSampleData();
-    toast.success(`Generated ${result.quotesAdded} sample quotes${result.customersAdded > 0 ? ` and ${result.customersAdded} customers` : ''}`);
+    toast.success(`Generated ${result.customersAdded} customers, ${result.itemsAdded} items, and ${result.quotesAdded} quotes`);
+  };
+
+  const handleClearAllData = () => {
+    clearAllData();
+    toast.success('All data cleared successfully');
+    window.location.reload(); // Refresh to show empty state
   };
 
   return (
@@ -63,10 +80,34 @@ export default function Settings() {
             Configure your company information and preferences
           </p>
         </div>
-        <Button variant="outline" onClick={handleGenerateSampleData}>
-          <Sparkles className="mr-2 h-4 w-4" />
-          Generate Sample Data
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleGenerateSampleData}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Generate Sample Data
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Clear All Data
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete all customers, items, and quotes from your application. Your company settings will be preserved.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleClearAllData} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Yes, clear all data
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

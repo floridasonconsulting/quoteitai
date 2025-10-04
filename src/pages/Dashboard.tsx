@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { Plus, Users, Package, FileText, Clock, TrendingUp } from 'lucide-react';
+import { Plus, Users, Package, FileText, Clock, TrendingUp, Target, DollarSign, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,10 @@ export default function Dashboard() {
     totalCustomers: 0,
     totalItems: 0,
     pendingValue: 0,
+    acceptanceRate: 0,
+    avgQuoteValue: 0,
+    totalRevenue: 0,
+    declinedValue: 0,
   });
 
   useEffect(() => {
@@ -28,12 +32,32 @@ export default function Dashboard() {
       .filter(q => q.status === 'sent')
       .reduce((sum, q) => sum + q.total, 0);
 
+    const sentQuotes = quotesData.filter(q => q.status === 'sent' || q.status === 'accepted' || q.status === 'declined');
+    const acceptedQuotes = quotesData.filter(q => q.status === 'accepted');
+    const acceptanceRate = sentQuotes.length > 0 
+      ? (acceptedQuotes.length / sentQuotes.length) * 100 
+      : 0;
+
+    const avgQuoteValue = quotesData.length > 0
+      ? quotesData.reduce((sum, q) => sum + q.total, 0) / quotesData.length
+      : 0;
+
+    const totalRevenue = acceptedQuotes.reduce((sum, q) => sum + q.total, 0);
+    
+    const declinedValue = quotesData
+      .filter(q => q.status === 'declined')
+      .reduce((sum, q) => sum + q.total, 0);
+
     setQuotes(quotesData);
     setStats({
       totalQuotes: quotesData.length,
       totalCustomers: customersData.length,
       totalItems: itemsData.length,
       pendingValue,
+      acceptanceRate,
+      avgQuoteValue,
+      totalRevenue,
+      declinedValue,
     });
   }, []);
 
@@ -76,7 +100,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Quotes</CardTitle>
@@ -113,11 +137,44 @@ export default function Dashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Value</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${stats.pendingValue.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">Awaiting approval</p>
+            <p className="text-xs text-muted-foreground">Awaiting approval</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Acceptance Rate</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.acceptanceRate.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground">Quote win rate</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Quote Value</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${stats.avgQuoteValue.toFixed(0)}</div>
+            <p className="text-xs text-muted-foreground">Per quote average</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-success">${stats.totalRevenue.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Accepted quotes</p>
           </CardContent>
         </Card>
       </div>
