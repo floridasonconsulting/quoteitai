@@ -398,17 +398,44 @@ export default function Items() {
         </div>
       </div>
 
+      {selectedItems.length > 0 && (
+        <div className="mb-4 p-4 bg-muted rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium">
+              {selectedItems.length} item{selectedItems.length > 1 ? 's' : ''} selected
+            </span>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkDelete}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Selected
+          </Button>
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search items..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex items-center gap-3 flex-1">
+              {filteredItems.length > 0 && (
+                <Checkbox
+                  checked={selectedItems.length === filteredItems.length}
+                  onCheckedChange={handleSelectAll}
+                  aria-label="Select all items"
+                />
+              )}
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search items..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-full md:w-48">
@@ -444,7 +471,15 @@ export default function Items() {
                 <Card key={item.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-lg">{item.name}</CardTitle>
+                      <div className="flex items-start gap-2 flex-1">
+                        <Checkbox
+                          checked={selectedItems.includes(item.id)}
+                          onCheckedChange={(checked) => handleSelectItem(item.id, checked as boolean)}
+                          aria-label={`Select ${item.name}`}
+                          className="mt-1"
+                        />
+                        <CardTitle className="text-lg">{item.name}</CardTitle>
+                      </div>
                       <Badge variant="secondary">{item.category}</Badge>
                     </div>
                     {item.description && (
