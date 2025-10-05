@@ -205,7 +205,7 @@ export default function Customers() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden max-w-full">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
@@ -413,18 +413,18 @@ export default function Customers() {
                       />
                     </div>
                     <CardHeader className="pb-3 pl-10">
-                      <CardTitle className="text-lg">{customer.name}</CardTitle>
+                      <CardTitle className="text-lg break-words">{customer.name}</CardTitle>
                       <CardDescription className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-3 w-3" />
-                          <a href={`mailto:${customer.email}`} className="hover:underline">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Mail className="h-3 w-3 flex-shrink-0" />
+                          <a href={`mailto:${customer.email}`} className="hover:underline truncate">
                             {customer.email}
                           </a>
                         </div>
                         {customer.phone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-3 w-3" />
-                            <a href={`tel:${customer.phone}`} className="hover:underline">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Phone className="h-3 w-3 flex-shrink-0" />
+                            <a href={`tel:${customer.phone}`} className="hover:underline truncate">
                               {customer.phone}
                             </a>
                           </div>
@@ -433,7 +433,7 @@ export default function Customers() {
                     </CardHeader>
                     <CardContent className="pt-0">
                       {(customer.address || customer.city) && (
-                        <p className="text-sm text-muted-foreground mb-3">
+                        <p className="text-sm text-muted-foreground mb-3 break-words">
                           {[customer.address, customer.city, customer.state, customer.zip]
                             .filter(Boolean)
                             .join(', ')}

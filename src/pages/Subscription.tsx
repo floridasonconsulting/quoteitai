@@ -114,7 +114,7 @@ export default function Subscription() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden max-w-full">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Subscription</h2>
         <p className="text-muted-foreground">
@@ -141,7 +141,7 @@ export default function Subscription() {
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {Object.entries(SUBSCRIPTION_TIERS).map(([key, tier]) => {
           const isActive = isCurrentPlan(tier.productId);
           const isLoading = loading === tier.priceId;

@@ -85,7 +85,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden max-w-full">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
@@ -196,7 +196,7 @@ export default function Dashboard() {
           <CardDescription>Track the status of your sent quotes</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <div 
               className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
               onClick={() => navigate('/quotes?status=sent&age=fresh')}
