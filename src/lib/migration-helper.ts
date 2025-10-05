@@ -7,6 +7,7 @@ import {
   getQuotes as getLocalQuotes,
   getSettings as getLocalSettings
 } from './storage';
+import { toSnakeCase } from './db-service';
 
 const MIGRATION_FLAG_KEY = 'data-migrated-to-db';
 
@@ -17,10 +18,9 @@ export const checkAndMigrateData = async (userId: string): Promise<void> => {
     // Migrate customers
     const localCustomers = getLocalCustomers();
     if (localCustomers.length > 0) {
-      const customersToInsert = localCustomers.map(customer => ({
-        ...customer,
-        user_id: userId,
-      }));
+      const customersToInsert = localCustomers.map(customer => 
+        toSnakeCase({ ...customer, user_id: userId })
+      );
       const { error: customersError } = await supabase
         .from('customers')
         .upsert(customersToInsert, { onConflict: 'id' });
@@ -31,19 +31,9 @@ export const checkAndMigrateData = async (userId: string): Promise<void> => {
     // Migrate items
     const localItems = getLocalItems();
     if (localItems.length > 0) {
-      const itemsToInsert = localItems.map(item => ({
-        id: item.id,
-        user_id: userId,
-        name: item.name,
-        description: item.description,
-        category: item.category,
-        base_price: item.basePrice,
-        markup: item.markup,
-        markup_type: item.markupType,
-        final_price: item.finalPrice,
-        units: item.units,
-        created_at: item.createdAt,
-      }));
+      const itemsToInsert = localItems.map(item => 
+        toSnakeCase({ ...item, user_id: userId })
+      );
       const { error: itemsError } = await supabase
         .from('items')
         .upsert(itemsToInsert, { onConflict: 'id' });
@@ -54,24 +44,9 @@ export const checkAndMigrateData = async (userId: string): Promise<void> => {
     // Migrate quotes
     const localQuotes = getLocalQuotes();
     if (localQuotes.length > 0) {
-      const quotesToInsert = localQuotes.map(quote => ({
-        id: quote.id,
-        user_id: userId,
-        customer_id: quote.customerId,
-        customer_name: quote.customerName,
-        quote_number: quote.quoteNumber,
-        title: quote.title,
-        notes: quote.notes,
-        items: quote.items as any, // Cast to any for JSON compatibility
-        subtotal: quote.subtotal,
-        tax: quote.tax,
-        total: quote.total,
-        status: quote.status,
-        sent_date: quote.sentDate,
-        follow_up_date: quote.followUpDate,
-        created_at: quote.createdAt,
-        updated_at: quote.updatedAt,
-      }));
+      const quotesToInsert = localQuotes.map(quote => 
+        toSnakeCase({ ...quote, user_id: userId })
+      );
       const { error: quotesError } = await supabase
         .from('quotes')
         .upsert(quotesToInsert, { onConflict: 'id' });
@@ -82,22 +57,10 @@ export const checkAndMigrateData = async (userId: string): Promise<void> => {
     // Migrate company settings
     const localSettings = getLocalSettings();
     if (localSettings.name || localSettings.email) {
-      const settingsToInsert = {
+      const settingsToInsert = toSnakeCase({
         user_id: userId,
-        name: localSettings.name,
-        address: localSettings.address,
-        city: localSettings.city,
-        state: localSettings.state,
-        zip: localSettings.zip,
-        phone: localSettings.phone,
-        email: localSettings.email,
-        website: localSettings.website,
-        license: localSettings.license,
-        insurance: localSettings.insurance,
-        logo: localSettings.logo,
-        logo_display_option: localSettings.logoDisplayOption,
-        terms: localSettings.terms,
-      };
+        ...localSettings
+      });
       const { error: settingsError } = await supabase
         .from('company_settings')
         .upsert(settingsToInsert, { onConflict: 'user_id' });

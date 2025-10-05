@@ -8,6 +8,41 @@ const CACHE_KEYS = {
   QUOTES: 'quotes-cache',
 } as const;
 
+// Transformation functions to convert between camelCase (frontend) and snake_case (database)
+export function toSnakeCase(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj;
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => toSnakeCase(item));
+  }
+  
+  const snakeCaseObj: any = {};
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      snakeCaseObj[snakeKey] = toSnakeCase(obj[key]);
+    }
+  }
+  return snakeCaseObj;
+}
+
+export function toCamelCase(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj;
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => toCamelCase(item));
+  }
+  
+  const camelCaseObj: any = {};
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+      camelCaseObj[camelKey] = toCamelCase(obj[key]);
+    }
+  }
+  return camelCaseObj;
+}
+
 // Generic fetch with cache
 async function fetchWithCache<T>(
   userId: string | undefined,
@@ -26,7 +61,8 @@ async function fetchWithCache<T>(
     
     if (error) throw error;
     
-    const result = (data as T[]) || [];
+    // Transform snake_case from DB to camelCase for frontend
+    const result = data ? data.map(item => toCamelCase(item)) as T[] : [];
     setStorageItem<T[]>(cacheKey, result);
     return result;
   } catch (error) {
@@ -49,15 +85,17 @@ async function createWithCache<T>(
     // Offline: update cache and queue
     const cached = getStorageItem<T[]>(cacheKey, []);
     setStorageItem<T[]>(cacheKey, [...cached, itemWithUser]);
-    queueChange?.({ type: 'create', table, data: itemWithUser });
+    queueChange?.({ type: 'create', table, data: toSnakeCase(itemWithUser) });
     return;
   }
 
   try {
-    const { error } = await supabase.from(table as any).insert(itemWithUser as any);
+    // Transform camelCase to snake_case for DB
+    const dbItem = toSnakeCase(itemWithUser);
+    const { error } = await supabase.from(table as any).insert(dbItem as any);
     if (error) throw error;
     
-    // Update cache
+    // Update cache with camelCase version
     const cached = getStorageItem<T[]>(cacheKey, []);
     setStorageItem<T[]>(cacheKey, [...cached, itemWithUser as T]);
   } catch (error) {
@@ -65,7 +103,7 @@ async function createWithCache<T>(
     // Fallback to cache
     const cached = getStorageItem<T[]>(cacheKey, []);
     setStorageItem<T[]>(cacheKey, [...cached, itemWithUser as T]);
-    queueChange?.({ type: 'create', table, data: itemWithUser });
+    queueChange?.({ type: 'create', table, data: toSnakeCase(itemWithUser) });
   }
 }
 
@@ -85,20 +123,22 @@ async function updateWithCache<T extends { id: string }>(
       item.id === id ? { ...item, ...updates } : item
     );
     setStorageItem<T[]>(cacheKey, updated);
-    queueChange?.({ type: 'update', table, data: { id, ...updates } });
+    queueChange?.({ type: 'update', table, data: toSnakeCase({ id, ...updates }) });
     return;
   }
 
   try {
+    // Transform camelCase to snake_case for DB
+    const dbUpdates = toSnakeCase(updates);
     const { error } = await supabase
       .from(table as any)
-      .update(updates as any)
+      .update(dbUpdates as any)
       .eq('id', id)
       .eq('user_id', userId);
     
     if (error) throw error;
     
-    // Update cache
+    // Update cache with camelCase version
     const cached = getStorageItem<T[]>(cacheKey, []);
     const updated = cached.map(item => 
       item.id === id ? { ...item, ...updates } : item
@@ -112,7 +152,7 @@ async function updateWithCache<T extends { id: string }>(
       item.id === id ? { ...item, ...updates } : item
     );
     setStorageItem<T[]>(cacheKey, updated);
-    queueChange?.({ type: 'update', table, data: { id, ...updates } });
+    queueChange?.({ type: 'update', table, data: toSnakeCase({ id, ...updates }) });
   }
 }
 
