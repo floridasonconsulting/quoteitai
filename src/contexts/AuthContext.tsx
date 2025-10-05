@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Set timeout to prevent infinite loading on slow networks
     timeoutId = setTimeout(() => {
-      console.log('Auth check timeout - assuming no session');
+      console.log('[AUTH DEBUG] Auth check timeout - assuming no session');
       setLoading(false);
       setUser(null);
       setSession(null);
@@ -60,10 +60,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         clearTimeout(timeoutId);
+        console.log('[AUTH DEBUG] Auth state change:', event, 'Session:', !!currentSession);
         
         // Handle token refresh failures
         if (event === 'TOKEN_REFRESHED' && !currentSession) {
-          console.log('Token refresh failed - clearing session');
+          console.log('[AUTH DEBUG] Token refresh failed - clearing session');
           await supabase.auth.signOut();
           setSession(null);
           setUser(null);
@@ -74,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Handle sign out
         if (event === 'SIGNED_OUT' || !currentSession) {
+          console.log('[AUTH DEBUG] Signed out or no session');
           setSession(null);
           setUser(null);
           setSubscription(null);
@@ -83,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
+        setLoading(false); // Critical: Set loading false immediately after setting user
         
         // Defer subscription check and data migration
         if (currentSession?.user) {
@@ -100,10 +103,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession()
       .then(async ({ data: { session: currentSession }, error }) => {
         clearTimeout(timeoutId);
+        console.log('[AUTH DEBUG] getSession completed. Error:', !!error, 'Session:', !!currentSession);
         
         if (error) {
           // Session restoration failed - clear everything
-          console.error('Session restoration error:', error);
+          console.error('[AUTH DEBUG] Session restoration error:', error);
           await supabase.auth.signOut();
           setSession(null);
           setUser(null);
@@ -125,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(async (err) => {
         clearTimeout(timeoutId);
-        console.error('Fatal auth error:', err);
+        console.error('[AUTH DEBUG] Fatal auth error:', err);
         await supabase.auth.signOut();
         setSession(null);
         setUser(null);

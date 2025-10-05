@@ -37,19 +37,15 @@ function AppContent() {
     }
   }, []);
   
-  // Show loading spinner during auth initialization
+  // Show Landing page immediately while auth loads to prevent blank screen
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <Landing />;
   }
   
   return (
     <Routes>
       {/* Public Routes */}
-      <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Landing />} />
+      <Route path="/" element={user !== null ? <Navigate to="/dashboard" /> : <Landing />} />
       <Route path="/help" element={<Help />} />
       <Route path="/auth" element={user ? <Navigate to="/dashboard" /> : <Auth />} />
       
