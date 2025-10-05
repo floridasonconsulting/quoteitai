@@ -76,6 +76,35 @@ export default function Items() {
     }
   };
 
+  const handleBulkMarkup = (markup: number, markupType: 'percentage' | 'fixed') => {
+    if (selectedItems.length === 0 || !markup) return;
+    
+    const updatedItems = items.map(item => {
+      if (selectedItems.includes(item.id)) {
+        const basePrice = item.basePrice;
+        const finalPrice = markupType === 'percentage' 
+          ? basePrice + (basePrice * markup / 100)
+          : basePrice + markup;
+        
+        return {
+          ...item,
+          markup,
+          markupType,
+          finalPrice
+        };
+      }
+      return item;
+    });
+    
+    saveItems(updatedItems);
+    loadItems();
+    toast.success(`Applied ${markup}${markupType === 'percentage' ? '%' : '$'} markup to ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}`);
+    
+    // Clear the markup input
+    const input = document.getElementById('bulk-markup') as HTMLInputElement;
+    if (input) input.value = '';
+  };
+
   const calculateFinalPrice = () => {
     const base = parseFloat(formData.basePrice) || 0;
     const markup = parseFloat(formData.markup) || 0;
@@ -400,21 +429,51 @@ export default function Items() {
       </div>
 
       {selectedItems.length > 0 && (
-        <div className="mb-4 p-4 bg-muted rounded-lg flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium">
-              {selectedItems.length} item{selectedItems.length > 1 ? 's' : ''} selected
-            </span>
-          </div>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleBulkDelete}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete Selected
-          </Button>
-        </div>
+        <Card className="border-primary/50 bg-primary/5">
+          <CardContent className="py-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span className="text-sm font-medium">
+                {selectedItems.length} item{selectedItems.length > 1 ? 's' : ''} selected
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Markup"
+                    className="w-24 h-9"
+                    id="bulk-markup"
+                  />
+                  <Select
+                    onValueChange={(value) => {
+                      const input = document.getElementById('bulk-markup') as HTMLInputElement;
+                      if (input && input.value) {
+                        handleBulkMarkup(parseFloat(input.value), value as 'percentage' | 'fixed');
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-20 h-9">
+                      <SelectValue placeholder="%" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">%</SelectItem>
+                      <SelectItem value="fixed">$</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                >
+                  <Trash2 className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Delete</span>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <Card>
