@@ -8,6 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import { validatePassword, getPasswordRequirements } from '@/lib/password-validation';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, Check } from 'lucide-react';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
@@ -48,8 +51,11 @@ export default function Auth() {
       return;
     }
 
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+    // Validate password strength
+    const validation = validatePassword(password);
+    if (!validation.isValid) {
+      toast.error('Password does not meet security requirements');
+      validation.errors.forEach(error => toast.error(error));
       return;
     }
 
@@ -136,11 +142,22 @@ export default function Auth() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    minLength={6}
+                    minLength={8}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Password must be at least 6 characters
-                  </p>
+                  <Alert className="mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      <p className="font-medium mb-1">Password must contain:</p>
+                      <ul className="space-y-1 text-xs">
+                        {getPasswordRequirements().map((req, idx) => (
+                          <li key={idx} className="flex items-center gap-1">
+                            <Check className="h-3 w-3" />
+                            {req}
+                          </li>
+                        ))}
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Creating account...' : 'Create Account'}
