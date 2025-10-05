@@ -62,7 +62,7 @@ export function Layout({ children }: LayoutProps) {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 container px-4 py-6 md:ml-64 w-full max-w-full overflow-x-hidden">
+      <main className="flex-1 px-4 py-6 md:ml-64 md:w-[calc(100%-16rem)] w-full overflow-x-hidden">
         {children}
       </main>
 
