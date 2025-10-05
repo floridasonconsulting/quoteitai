@@ -232,7 +232,7 @@ export default function Items() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Items Catalog</h2>
           <p className="text-muted-foreground">
@@ -241,13 +241,13 @@ export default function Items() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={exportToCSV}>
-            <Download className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Export</span>
+            <Download className="h-4 w-4" />
+            <span className="ml-2 hidden sm:inline">Export</span>
           </Button>
           <Button variant="outline" size="sm" asChild>
             <label className="cursor-pointer">
-              <Upload className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Import</span>
+              <Upload className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Import</span>
               <input
                 type="file"
                 accept=".csv"
@@ -259,9 +259,9 @@ export default function Items() {
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Add Item</span>
-                <span className="sm:hidden">Add</span>
+                <Plus className="h-4 w-4" />
+                <span className="ml-2 hidden sm:inline">Add Item</span>
+                <span className="ml-2 sm:hidden">Add</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

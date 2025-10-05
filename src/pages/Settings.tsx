@@ -73,23 +73,25 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
           <p className="text-muted-foreground">
             Configure your company information and preferences
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleGenerateSampleData}>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={handleGenerateSampleData} size="sm" className="sm:h-10">
             <Sparkles className="mr-2 h-4 w-4" />
-            Generate Sample Data
+            <span className="hidden sm:inline">Generate Sample Data</span>
+            <span className="sm:hidden">Sample Data</span>
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive">
+              <Button variant="destructive" size="sm" className="sm:h-10">
                 <Trash2 className="mr-2 h-4 w-4" />
-                Clear All Data
+                <span className="hidden sm:inline">Clear All Data</span>
+                <span className="sm:hidden">Clear Data</span>
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
