@@ -124,10 +124,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setSubscription(null);
-    toast.success('Signed out successfully');
-    navigate('/auth');
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Sign out error:', error);
+      // Continue with local cleanup even if API call fails
+    } finally {
+      // Always clear local state and navigate
+      setSession(null);
+      setUser(null);
+      setSubscription(null);
+      toast.success('Signed out successfully');
+      navigate('/auth', { replace: true });
+    }
   };
 
   return (

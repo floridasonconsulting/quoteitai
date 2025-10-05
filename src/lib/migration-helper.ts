@@ -11,12 +11,8 @@ import {
 const MIGRATION_FLAG_KEY = 'data-migrated-to-db';
 
 export const checkAndMigrateData = async (userId: string): Promise<void> => {
-  // Check if migration already happened
-  const migrated = localStorage.getItem(MIGRATION_FLAG_KEY);
-  if (migrated === 'true') return;
-
   try {
-    console.log('Starting data migration to database...');
+    console.log('Starting data migration check for user:', userId);
 
     // Migrate customers
     const localCustomers = getLocalCustomers();
@@ -109,11 +105,8 @@ export const checkAndMigrateData = async (userId: string): Promise<void> => {
       console.log('Migrated company settings');
     }
 
-    // Mark migration as complete
-    localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
     console.log('Data migration completed successfully');
   } catch (error) {
     console.error('Error during data migration:', error);
-    // Don't set the migration flag on error, so it can be retried
   }
 };
