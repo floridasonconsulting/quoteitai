@@ -45,9 +45,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Set up auth state listener
+    let timeoutId: NodeJS.Timeout;
+    
+    // Set timeout to prevent infinite loading on slow networks
+    timeoutId = setTimeout(() => {
+      console.log('Auth check timeout - assuming no session');
+      setLoading(false);
+      setUser(null);
+      setSession(null);
+      setSubscription(null);
+    }, 3000); // 3 second timeout
+    
+    // Set up auth state listener with error handling
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
+        clearTimeout(timeoutId);
+        
+        // Handle token refresh failures
+        if (event === 'TOKEN_REFRESHED' && !currentSession) {
+          console.log('Token refresh failed - clearing session');
+          await supabase.auth.signOut();
+          setSession(null);
+          setUser(null);
+          setSubscription(null);
+          setLoading(false);
+          return;
+        }
+        
+        // Handle sign out
+        if (event === 'SIGNED_OUT' || !currentSession) {
+          setSession(null);
+          setUser(null);
+          setSubscription(null);
+          setLoading(false);
+          return;
+        }
+        
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -63,21 +96,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setLoading(false);
-      
-      if (currentSession?.user) {
-        setTimeout(async () => {
-          await refreshSubscription();
-          await checkAndMigrateData(currentSession.user.id);
-        }, 0);
-      }
-    });
+    // Check for existing session with error handling
+    supabase.auth.getSession()
+      .then(async ({ data: { session: currentSession }, error }) => {
+        clearTimeout(timeoutId);
+        
+        if (error) {
+          // Session restoration failed - clear everything
+          console.error('Session restoration error:', error);
+          await supabase.auth.signOut();
+          setSession(null);
+          setUser(null);
+          setSubscription(null);
+          setLoading(false);
+          return;
+        }
+        
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        setLoading(false);
+        
+        if (currentSession?.user) {
+          setTimeout(async () => {
+            await refreshSubscription();
+            await checkAndMigrateData(currentSession.user.id);
+          }, 0);
+        }
+      })
+      .catch(async (err) => {
+        clearTimeout(timeoutId);
+        console.error('Fatal auth error:', err);
+        await supabase.auth.signOut();
+        setSession(null);
+        setUser(null);
+        setSubscription(null);
+        setLoading(false);
+      });
 
-    return () => authSubscription.unsubscribe();
+    return () => {
+      clearTimeout(timeoutId);
+      authSubscription.unsubscribe();
+    };
   }, []);
 
   // Auto-refresh subscription every minute

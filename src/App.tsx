@@ -22,12 +22,13 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
 import { Navigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
 function AppContent() {
   const notifications = useNotifications();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   
   useEffect(() => {
     // Register service worker for notifications
@@ -35,6 +36,15 @@ function AppContent() {
       navigator.serviceWorker.register('/service-worker.js');
     }
   }, []);
+  
+  // Show loading spinner during auth initialization
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
   
   return (
     <Routes>
