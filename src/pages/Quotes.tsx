@@ -204,37 +204,51 @@ export default function Quotes() {
                 return (
                   <div
                     key={quote.id}
-                    className="flex items-center gap-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    className={`flex items-start gap-3 p-3 md:p-4 border rounded-lg transition-all cursor-pointer ${
+                      isSelected 
+                        ? 'bg-primary/5 border-primary ring-2 ring-primary/20' 
+                        : 'hover:bg-muted/50 hover:shadow-md hover:border-primary/30'
+                    }`}
+                    onClick={() => navigate(`/quotes/${quote.id}`)}
                   >
                     <Checkbox
                       checked={isSelected}
                       onCheckedChange={(checked) => handleSelectQuote(quote.id, checked as boolean)}
                       onClick={(e) => e.stopPropagation()}
+                      className="mt-1"
                     />
-                    <div
-                      className="flex-1 flex items-center justify-between cursor-pointer"
-                      onClick={() => navigate(`/quotes/${quote.id}`)}
-                    >
-                      <div className="flex-1 min-w-0 space-y-2">
-                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-semibold">{quote.title}</p>
-                          <Badge variant="outline" className={getStatusColor(quote.status)}>
+                    <div className="flex-1 min-w-0 space-y-3">
+                      {/* Title Section */}
+                      <div className="space-y-2">
+                        <h3 className="text-base md:text-lg font-semibold leading-tight line-clamp-2 text-center md:text-left">
+                          {quote.title}
+                        </h3>
+                        <div className="flex items-center gap-2 flex-wrap justify-center md:justify-start">
+                          <Badge variant="outline" className={`text-xs whitespace-nowrap ${getStatusColor(quote.status)}`}>
                             {quote.status}
                           </Badge>
                           {quote.status === 'sent' && (
-                            <Badge variant="outline" className={getAgeColor(age)}>
+                            <Badge variant="outline" className={`text-xs whitespace-nowrap ${getAgeColor(age)}`}>
                               {age}
                             </Badge>
                           )}
                           {dueFollowUpIds.includes(quote.id) && (
-                            <Badge variant="default" className="bg-warning text-warning-foreground">
+                            <Badge variant="default" className="text-xs whitespace-nowrap bg-warning text-warning-foreground">
                               <Bell className="h-3 w-3 mr-1" />
                               Follow-up Due
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                          <span>{quote.customerName}</span>
+                      </div>
+                      
+                      {/* Separator */}
+                      <div className="border-t" />
+                      
+                      {/* Content Section */}
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        {/* Metadata */}
+                        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground">
+                          <span className="font-medium">{quote.customerName}</span>
                           <span className="flex items-center gap-1">
                             <FileText className="h-3 w-3" />
                             {quote.quoteNumber}
@@ -244,12 +258,14 @@ export default function Quotes() {
                             {new Date(quote.createdAt).toLocaleDateString()}
                           </span>
                         </div>
-                      </div>
-                      <div className="text-right ml-4">
-                        <p className="text-lg font-bold text-primary">{formatCurrency(quote.total)}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {quote.items.length} item{quote.items.length !== 1 ? 's' : ''}
-                        </p>
+                        
+                        {/* Price Section */}
+                        <div className="text-left md:text-right">
+                          <p className="text-xl md:text-2xl font-bold text-primary">{formatCurrency(quote.total)}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground">
+                            {quote.items.length} item{quote.items.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
