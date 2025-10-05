@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset } from 'lucide-react';
+import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset, AlertTriangle, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +30,8 @@ export default function Settings() {
   const { permission, requestPermission, isSupported } = useNotifications();
   const { themeMode, setThemeMode } = useTheme();
   const [clearCompanyInfo, setClearCompanyInfo] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const [dangerZoneOpen, setDangerZoneOpen] = useState(false);
   const [formData, setFormData] = useState<CompanySettings>({
     name: '',
     address: '',
@@ -105,46 +108,11 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 max-w-4xl overflow-x-hidden">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
-          <p className="text-muted-foreground">
-            Configure your company information and preferences
-          </p>
-        </div>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm" className="sm:h-10">
-              <Trash2 className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Clear All Data</span>
-              <span className="sm:hidden">Clear Data</span>
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete all customers, items, and quotes from your application.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="flex items-center space-x-2 py-4">
-              <Switch
-                id="clear-company"
-                checked={clearCompanyInfo}
-                onCheckedChange={setClearCompanyInfo}
-              />
-              <Label htmlFor="clear-company" className="cursor-pointer">
-                Also clear company information and settings
-              </Label>
-            </div>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setClearCompanyInfo(false)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleClearAllData} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Yes, clear {clearCompanyInfo ? 'all data' : 'data'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
+        <p className="text-muted-foreground">
+          Configure your company information and preferences
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -404,6 +372,106 @@ export default function Settings() {
           </Button>
         </div>
       </form>
+
+      <Collapsible open={dangerZoneOpen} onOpenChange={setDangerZoneOpen}>
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardHeader>
+            <CollapsibleTrigger className="flex w-full items-center justify-between [&[data-state=open]>svg]:rotate-180">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              </div>
+              <ChevronDown className="h-5 w-5 text-destructive transition-transform duration-200" />
+            </CollapsibleTrigger>
+            <CardDescription>
+              Irreversible actions that permanently delete your data
+            </CardDescription>
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg border border-destructive/20 bg-background p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <h4 className="font-semibold text-sm">Clear All Application Data</h4>
+                    <p className="text-sm text-muted-foreground">
+                      This will permanently delete:
+                    </p>
+                    <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1 ml-2">
+                      <li>All customers and their information</li>
+                      <li>All items and pricing</li>
+                      <li>All quotes and their history</li>
+                      <li>All local cache data</li>
+                    </ul>
+                    <p className="text-sm font-medium text-destructive">
+                      This action cannot be undone.
+                    </p>
+                  </div>
+                </div>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full" onClick={() => setConfirmText('')}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Clear All Data
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete all customers, items, and quotes from your application.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="confirm-text">
+                          Type <span className="font-mono font-bold">DELETE ALL</span> to confirm
+                        </Label>
+                        <Input
+                          id="confirm-text"
+                          value={confirmText}
+                          onChange={(e) => setConfirmText(e.target.value)}
+                          placeholder="DELETE ALL"
+                          className="font-mono"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="clear-company"
+                          checked={clearCompanyInfo}
+                          onCheckedChange={setClearCompanyInfo}
+                        />
+                        <Label htmlFor="clear-company" className="cursor-pointer text-sm">
+                          Also clear company information and settings
+                        </Label>
+                      </div>
+                    </div>
+                    
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => {
+                        setClearCompanyInfo(false);
+                        setConfirmText('');
+                      }}>
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleClearAllData} 
+                        disabled={confirmText !== 'DELETE ALL'}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Yes, clear {clearCompanyInfo ? 'all data' : 'data'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
     </div>
   );
 }
