@@ -37,6 +37,8 @@ export default function Settings() {
   const { themeMode, setThemeMode } = useTheme();
   const { user, userRole, isAdmin, updateUserRole, checkUserRole } = useAuth();
   const { queueChange } = useSyncManager();
+  
+  console.log('[Settings] Current userRole:', userRole, 'isAdmin:', isAdmin);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [clearCompanyInfo, setClearCompanyInfo] = useState(false);

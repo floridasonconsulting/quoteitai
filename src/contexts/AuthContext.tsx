@@ -41,21 +41,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = userRole === 'admin';
 
   const checkUserRole = async () => {
-    if (!session) return;
+    if (!session) {
+      console.log('[AuthContext] No session, setting role to null');
+      setUserRole(null);
+      return;
+    }
 
+    console.log('[AuthContext] Checking role for user:', session.user.id);
     try {
       const { data, error } = await supabase.rpc('get_user_role', {
         _user_id: session.user.id,
       });
 
       if (error) {
-        console.error('Error fetching user role:', error);
+        console.error('[AuthContext] Error fetching user role:', error);
+        setUserRole(null);
         return;
       }
 
+      console.log('[AuthContext] Role fetched:', data);
       setUserRole(data as UserRole);
     } catch (error) {
-      console.error('Error checking user role:', error);
+      console.error('[AuthContext] Error checking user role:', error);
+      setUserRole(null);
     }
   };
 
@@ -133,18 +141,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
-        setLoading(false); // Critical: Set loading false immediately after setting user
         
-        // Defer subscription check, role check, and data migration
+        // Check role immediately before setting loading to false
         if (currentSession?.user) {
+          await checkUserRole();
+          setLoading(false);
+          // Defer subscription check and data migration
           setTimeout(async () => {
-            await checkUserRole();
             await refreshSubscription();
             await checkAndMigrateData(currentSession.user.id);
           }, 0);
         } else {
           setSubscription(null);
           setUserRole(null);
+          setLoading(false);
         }
       }
     );
@@ -168,14 +178,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
-        setLoading(false);
         
         if (currentSession?.user) {
+          await checkUserRole();
+          setLoading(false);
+          // Defer subscription check and data migration
           setTimeout(async () => {
-            await checkUserRole();
             await refreshSubscription();
             await checkAndMigrateData(currentSession.user.id);
           }, 0);
+        } else {
+          setLoading(false);
         }
       })
       .catch(async (err) => {
