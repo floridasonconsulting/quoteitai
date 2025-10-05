@@ -1,8 +1,9 @@
 import { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, Package, FileText, Settings, Moon, Sun } from 'lucide-react';
+import { Home, Users, Package, FileText, Settings, Moon, Sun, CreditCard, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/components/ThemeProvider';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -14,6 +15,7 @@ const navigation = [
   { name: 'Quotes', path: '/quotes', icon: FileText },
   { name: 'Customers', path: '/customers', icon: Users },
   { name: 'Items', path: '/items', icon: Package },
+  { name: 'Subscription', path: '/subscription', icon: CreditCard },
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
 
@@ -21,6 +23,7 @@ export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { signOut } = useAuth();
 
   return (
     <div className="min-h-screen flex flex-col bg-background pb-16 md:pb-0">
@@ -31,18 +34,28 @@ export function Layout({ children }: LayoutProps) {
             <img src="/logo.jpg" alt="Quote-it AI" className="h-8 w-8 rounded" />
             <h1 className="text-xl font-bold">Quote-it AI</h1>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            className="rounded-full"
-          >
-            {theme === 'light' ? (
-              <Moon className="h-5 w-5" />
-            ) : (
-              <Sun className="h-5 w-5" />
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="rounded-full"
+            >
+              {theme === 'light' ? (
+                <Moon className="h-5 w-5" />
+              ) : (
+                <Sun className="h-5 w-5" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={signOut}
+              className="rounded-full"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </header>
 
