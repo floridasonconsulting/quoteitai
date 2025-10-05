@@ -20,15 +20,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { getSettings, saveSettings, clearAllData } from '@/lib/storage';
+import { getSettings, saveSettings } from '@/lib/db-service';
+import { clearAllData } from '@/lib/storage';
 import { CompanySettings } from '@/types';
 import { toast } from 'sonner';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/components/ThemeProvider';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSyncManager } from '@/hooks/useSyncManager';
 
 export default function Settings() {
   const { permission, requestPermission, isSupported } = useNotifications();
   const { themeMode, setThemeMode } = useTheme();
+  const { user } = useAuth();
+  const { queueChange } = useSyncManager();
+  const [loading, setLoading] = useState(true);
   const [clearCompanyInfo, setClearCompanyInfo] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [dangerZoneOpen, setDangerZoneOpen] = useState(false);
@@ -48,13 +54,19 @@ export default function Settings() {
   });
 
   useEffect(() => {
-    const settings = getSettings();
-    setFormData(settings);
-  }, []);
+    loadSettings();
+  }, [user]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const loadSettings = async () => {
+    setLoading(true);
+    const settings = await getSettings(user?.id);
+    setFormData(settings);
+    setLoading(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    saveSettings(formData);
+    await saveSettings(user?.id, formData, queueChange);
     toast.success('Company settings saved successfully');
   };
 
@@ -69,11 +81,11 @@ export default function Settings() {
     }
   };
 
-  const handleClearAllData = () => {
+  const handleClearAllData = async () => {
     clearAllData();
     
     if (clearCompanyInfo) {
-      saveSettings({
+      await saveSettings(user?.id, {
         name: '',
         address: '',
         city: '',
@@ -86,7 +98,7 @@ export default function Settings() {
         insurance: '',
         logoDisplayOption: 'both',
         terms: 'Payment due within 30 days. Thank you for your business!',
-      });
+      }, queueChange);
       toast.success('All data and company information cleared.');
     } else {
       toast.success('All data cleared from local cache. Company settings preserved.');

@@ -5,18 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { getQuotes, deleteQuote, getSettings, getCustomers } from '@/lib/storage';
+import { getQuotes, deleteQuote, getSettings, getCustomers } from '@/lib/db-service';
 import { Quote, Customer } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { FollowUpDialog } from '@/components/FollowUpDialog';
 import { formatCurrency } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSyncManager } from '@/hooks/useSyncManager';
 
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { queueChange } = useSyncManager();
   const [quote, setQuote] = useState<Quote | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +32,11 @@ export default function QuoteDetail() {
       return;
     }
 
-    const quotes = getQuotes();
+    loadQuote();
+  }, [id, navigate, user]);
+
+  const loadQuote = async () => {
+    const quotes = await getQuotes(user?.id);
     const foundQuote = quotes.find(q => q.id === id);
     
     if (!foundQuote) {
@@ -36,18 +44,18 @@ export default function QuoteDetail() {
       return;
     }
 
-    const customers = getCustomers();
+    const customers = await getCustomers(user?.id);
     const foundCustomer = customers.find(c => c.id === foundQuote.customerId);
 
     setQuote(foundQuote);
     setCustomer(foundCustomer || null);
     setLoading(false);
-  }, [id, navigate]);
+  };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!quote || !confirm('Are you sure you want to delete this quote?')) return;
     
-    deleteQuote(quote.id);
+    await deleteQuote(user?.id, quote.id, queueChange);
     toast({
       title: 'Quote deleted',
       description: 'The quote has been successfully deleted.',
@@ -58,7 +66,7 @@ export default function QuoteDetail() {
   const generatePDF = async () => {
     if (!quote) return;
 
-    const settings = getSettings();
+    const settings = await getSettings(user?.id);
     const pdf = new jsPDF();
     const displayOption = settings.logoDisplayOption || 'both';
     
@@ -259,7 +267,7 @@ export default function QuoteDetail() {
     });
   };
 
-  const handleEmail = () => {
+  const handleEmail = async () => {
     if (!quote) return;
     
     if (!customer?.email) {
@@ -271,7 +279,7 @@ export default function QuoteDetail() {
       return;
     }
     
-    const settings = getSettings();
+    const settings = await getSettings(user?.id);
     const subject = encodeURIComponent(`Quote ${quote.quoteNumber}: ${quote.title}`);
     const body = encodeURIComponent(`Please find attached quote ${quote.quoteNumber} for ${quote.title}.\n\nTotal: ${formatCurrency(quote.total)}`);
     const to = encodeURIComponent(customer.email);

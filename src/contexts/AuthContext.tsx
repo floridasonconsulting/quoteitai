@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { checkAndMigrateData } from '@/lib/migration-helper';
 
 interface SubscriptionData {
   subscribed: boolean;
@@ -50,10 +51,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
-        // Defer subscription check
+        // Defer subscription check and data migration
         if (currentSession?.user) {
-          setTimeout(() => {
-            refreshSubscription();
+          setTimeout(async () => {
+            await refreshSubscription();
+            await checkAndMigrateData(currentSession.user.id);
           }, 0);
         } else {
           setSubscription(null);
@@ -62,14 +64,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       setLoading(false);
       
       if (currentSession?.user) {
-        setTimeout(() => {
-          refreshSubscription();
+        setTimeout(async () => {
+          await refreshSubscription();
+          await checkAndMigrateData(currentSession.user.id);
         }, 0);
       }
     });

@@ -44,6 +44,66 @@ export type Database = {
         }
         Relationships: []
       }
+      company_settings: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          email: string | null
+          id: string
+          insurance: string | null
+          license: string | null
+          logo: string | null
+          logo_display_option: string | null
+          name: string | null
+          phone: string | null
+          state: string | null
+          terms: string | null
+          updated_at: string
+          user_id: string
+          website: string | null
+          zip: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          insurance?: string | null
+          license?: string | null
+          logo?: string | null
+          logo_display_option?: string | null
+          name?: string | null
+          phone?: string | null
+          state?: string | null
+          terms?: string | null
+          updated_at?: string
+          user_id: string
+          website?: string | null
+          zip?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          insurance?: string | null
+          license?: string | null
+          logo?: string | null
+          logo_display_option?: string | null
+          name?: string | null
+          phone?: string | null
+          state?: string | null
+          terms?: string | null
+          updated_at?: string
+          user_id?: string
+          website?: string | null
+          zip?: string | null
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null

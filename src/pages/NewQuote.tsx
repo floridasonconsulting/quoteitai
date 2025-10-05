@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { getCustomers, getItems, addQuote, getSettings, getQuotes } from '@/lib/storage';
+import { getCustomers, getItems, addQuote, updateQuote, getSettings, getQuotes } from '@/lib/db-service';
 import { generateQuoteNumber, calculateItemTotal, calculateQuoteTotal } from '@/lib/quote-utils';
 import { Customer, Item, Quote, QuoteItem } from '@/types';
 import { toast } from 'sonner';
@@ -17,12 +17,17 @@ import { formatCurrency } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import { AIButton } from '@/components/AIButton';
 import { useAI } from '@/hooks/useAI';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSyncManager } from '@/hooks/useSyncManager';
 
 export default function NewQuote() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const { queueChange } = useSyncManager();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [quoteTitle, setQuoteTitle] = useState('');
@@ -58,12 +63,22 @@ export default function NewQuote() {
   });
 
   useEffect(() => {
-    setCustomers(getCustomers());
-    setItems(getItems());
+    loadData();
+  }, [id, navigate, user]);
+
+  const loadData = async () => {
+    setLoading(true);
+    const [customersData, itemsData] = await Promise.all([
+      getCustomers(user?.id),
+      getItems(user?.id),
+    ]);
+    
+    setCustomers(customersData);
+    setItems(itemsData);
     
     // Load quote for editing if id is provided
     if (id) {
-      const quotes = getQuotes();
+      const quotes = await getQuotes(user?.id);
       const quoteToEdit = quotes.find(q => q.id === id);
       if (quoteToEdit) {
         setIsEditMode(true);
@@ -75,7 +90,8 @@ export default function NewQuote() {
         navigate('/quotes');
       }
     }
-  }, [id, navigate]);
+    setLoading(false);
+  };
 
   const categories = ['all', ...new Set(items.map(item => item.category))];
   const filteredItems = items.filter(item => {
@@ -152,7 +168,7 @@ export default function NewQuote() {
 
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
 
-  const saveDraft = () => {
+  const saveDraft = async () => {
     if (!selectedCustomerId) {
       toast.error('Please select a customer');
       return;
@@ -167,7 +183,7 @@ export default function NewQuote() {
     }
 
     if (isEditMode && id) {
-      const quotes = getQuotes();
+      const quotes = await getQuotes(user?.id);
       const existingQuote = quotes.find(q => q.id === id);
       const updatedQuote: Quote = {
         id,
@@ -185,8 +201,7 @@ export default function NewQuote() {
         updatedAt: new Date().toISOString(),
       };
       
-      const updatedQuotes = quotes.map(q => q.id === id ? updatedQuote : q);
-      localStorage.setItem('quotes', JSON.stringify(updatedQuotes));
+      await updateQuote(user?.id, id, updatedQuote, queueChange);
       toast.success('Quote updated');
     } else {
       const quote: Quote = {
@@ -205,13 +220,13 @@ export default function NewQuote() {
         updatedAt: new Date().toISOString(),
       };
 
-      addQuote(quote);
+      await addQuote(user?.id, quote, queueChange);
       toast.success('Quote saved as draft');
     }
     navigate('/quotes');
   };
 
-  const sendQuote = () => {
+  const sendQuote = async () => {
     if (!selectedCustomerId) {
       toast.error('Please select a customer');
       return;
@@ -226,7 +241,7 @@ export default function NewQuote() {
     }
 
     if (isEditMode && id) {
-      const quotes = getQuotes();
+      const quotes = await getQuotes(user?.id);
       const existingQuote = quotes.find(q => q.id === id);
       const updatedQuote: Quote = {
         id,
@@ -245,9 +260,8 @@ export default function NewQuote() {
         updatedAt: new Date().toISOString(),
       };
       
-      const updatedQuotes = quotes.map(q => q.id === id ? updatedQuote : q);
-      localStorage.setItem('quotes', JSON.stringify(updatedQuotes));
-      generatePDF(updatedQuote);
+      await updateQuote(user?.id, id, updatedQuote, queueChange);
+      await generatePDF(updatedQuote);
       toast.success('Quote updated and sent');
     } else {
       const quote: Quote = {
@@ -267,15 +281,15 @@ export default function NewQuote() {
         updatedAt: new Date().toISOString(),
       };
 
-      addQuote(quote);
-      generatePDF(quote);
+      await addQuote(user?.id, quote, queueChange);
+      await generatePDF(quote);
       toast.success('Quote sent successfully');
     }
     navigate('/quotes');
   };
 
-  const generatePDF = (quote: Quote) => {
-    const settings = getSettings();
+  const generatePDF = async (quote: Quote) => {
+    const settings = await getSettings(user?.id);
     const doc = new jsPDF();
     let yPos = 20;
 

@@ -191,3 +191,100 @@ export const updateQuote = (userId: string | undefined, id: string, updates: Par
 
 export const deleteQuote = (userId: string | undefined, id: string, queueChange?: (change: any) => void) =>
   deleteWithCache<Quote>(userId, 'quotes', CACHE_KEYS.QUOTES, id, queueChange);
+
+// Company Settings
+export const getSettings = async (userId: string | undefined): Promise<any> => {
+  const defaultSettings = {
+    name: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    phone: '',
+    email: '',
+    website: '',
+    license: '',
+    insurance: '',
+    logoDisplayOption: 'both',
+    terms: 'Payment due within 30 days. Thank you for your business!',
+  };
+
+  if (!userId) {
+    return getStorageItem('quote-it-settings', defaultSettings);
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('company_settings')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (data) {
+      const settings = {
+        name: data.name || '',
+        address: data.address || '',
+        city: data.city || '',
+        state: data.state || '',
+        zip: data.zip || '',
+        phone: data.phone || '',
+        email: data.email || '',
+        website: data.website || '',
+        license: data.license || '',
+        insurance: data.insurance || '',
+        logo: data.logo || '',
+        logoDisplayOption: data.logo_display_option || 'both',
+        terms: data.terms || 'Payment due within 30 days. Thank you for your business!',
+      };
+      setStorageItem('quote-it-settings', settings);
+      return settings;
+    }
+
+    return defaultSettings;
+  } catch (error) {
+    console.error('Error fetching settings:', error);
+    return getStorageItem('quote-it-settings', defaultSettings);
+  }
+};
+
+export const saveSettings = async (userId: string | undefined, settings: any, queueChange?: (change: any) => void): Promise<void> => {
+  setStorageItem('quote-it-settings', settings);
+
+  if (!userId) return;
+
+  try {
+    const settingsData = {
+      user_id: userId,
+      name: settings.name,
+      address: settings.address,
+      city: settings.city,
+      state: settings.state,
+      zip: settings.zip,
+      phone: settings.phone,
+      email: settings.email,
+      website: settings.website,
+      license: settings.license,
+      insurance: settings.insurance,
+      logo: settings.logo,
+      logo_display_option: settings.logoDisplayOption,
+      terms: settings.terms,
+    };
+
+    const { error } = await supabase
+      .from('company_settings')
+      .upsert(settingsData, { onConflict: 'user_id' });
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error saving settings:', error);
+    if (queueChange) {
+      queueChange({
+        type: 'upsert',
+        table: 'company_settings',
+        data: settings,
+      });
+    }
+  }
+};

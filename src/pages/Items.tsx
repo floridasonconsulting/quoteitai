@@ -9,11 +9,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { getItems, addItem, updateItem, deleteItem, saveItems } from '@/lib/storage';
+import { getItems, addItem, updateItem, deleteItem } from '@/lib/db-service';
 import { Item } from '@/types';
 import { toast } from 'sonner';
 import { parseCSVLine, formatCSVLine } from '@/lib/csv-utils';
 import { formatCurrency } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSyncManager } from '@/hooks/useSyncManager';
+import { supabase } from '@/integrations/supabase/client';
 
 const CATEGORIES = [
   'General',
@@ -27,7 +30,10 @@ const CATEGORIES = [
 ];
 
 export default function Items() {
+  const { user } = useAuth();
+  const { queueChange } = useSyncManager();
   const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -45,11 +51,14 @@ export default function Items() {
 
   useEffect(() => {
     loadItems();
-  }, []);
+  }, [user]);
 
-  const loadItems = () => {
-    setItems(getItems());
+  const loadItems = async () => {
+    setLoading(true);
+    const data = await getItems(user?.id);
+    setItems(data);
     setSelectedItems([]);
+    setLoading(false);
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -68,38 +77,37 @@ export default function Items() {
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedItems.length === 0) return;
     if (confirm(`Delete ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}?`)) {
-      const remaining = items.filter(i => !selectedItems.includes(i.id));
-      saveItems(remaining);
-      loadItems();
+      for (const itemId of selectedItems) {
+        await deleteItem(user?.id, itemId, queueChange);
+      }
+      await loadItems();
       toast.success(`Deleted ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}`);
     }
   };
 
-  const handleBulkMarkup = (markup: number, markupType: 'percentage' | 'fixed') => {
+  const handleBulkMarkup = async (markup: number, markupType: 'percentage' | 'fixed') => {
     if (selectedItems.length === 0 || !markup) return;
     
-    const updatedItems = items.map(item => {
-      if (selectedItems.includes(item.id)) {
+    for (const itemId of selectedItems) {
+      const item = items.find(i => i.id === itemId);
+      if (item) {
         const basePrice = item.basePrice;
         const finalPrice = markupType === 'percentage' 
           ? basePrice + (basePrice * markup / 100)
           : basePrice + markup;
         
-        return {
-          ...item,
+        await updateItem(user?.id, itemId, {
           markup,
           markupType,
           finalPrice
-        };
+        }, queueChange);
       }
-      return item;
-    });
+    }
     
-    saveItems(updatedItems);
-    loadItems();
+    await loadItems();
     toast.success(`Applied ${markup}${markupType === 'percentage' ? '%' : '$'} markup to ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}`);
     
     // Clear the markup input
@@ -125,7 +133,7 @@ export default function Items() {
     return matchesSearch && matchesCategory;
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.basePrice) {
@@ -137,13 +145,13 @@ export default function Items() {
     const markup = parseFloat(formData.markup) || 0;
 
     if (editingItem) {
-      updateItem(editingItem.id, {
+      await updateItem(user?.id, editingItem.id, {
         ...formData,
         category: formData.category.trim(),
         basePrice,
         markup,
         finalPrice: calculateFinalPrice(),
-      });
+      }, queueChange);
       toast.success('Item updated successfully');
     } else {
       const newItem: Item = {
@@ -155,11 +163,11 @@ export default function Items() {
         finalPrice: calculateFinalPrice(),
         createdAt: new Date().toISOString(),
       };
-      addItem(newItem);
+      await addItem(user?.id, newItem, queueChange);
       toast.success('Item added successfully');
     }
 
-    loadItems();
+    await loadItems();
     handleCloseDialog();
   };
 
@@ -177,10 +185,10 @@ export default function Items() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this item?')) {
-      deleteItem(id);
-      loadItems();
+      await deleteItem(user?.id, id, queueChange);
+      await loadItems();
       toast.success('Item deleted successfully');
     }
   };
@@ -227,7 +235,7 @@ export default function Items() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const text = e.target?.result as string;
       const lines = text.split('\n');
       const importedItems: Item[] = [];
@@ -258,8 +266,10 @@ export default function Items() {
       }
 
       if (importedItems.length > 0) {
-        saveItems([...items, ...importedItems]);
-        loadItems();
+        for (const item of importedItems) {
+          await addItem(user?.id, item, queueChange);
+        }
+        await loadItems();
         toast.success(`Imported ${importedItems.length} items`);
       }
     };

@@ -7,18 +7,23 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { getQuotes, deleteQuote, saveQuotes } from '@/lib/storage';
+import { getQuotes, deleteQuote } from '@/lib/db-service';
 import { getQuoteAge } from '@/lib/quote-utils';
 import { Quote, QuoteAge } from '@/types';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSyncManager } from '@/hooks/useSyncManager';
 
 export default function Quotes() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { dueFollowUpIds } = useNotifications();
+  const { user } = useAuth();
+  const { queueChange } = useSyncManager();
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [ageFilter, setAgeFilter] = useState<string>('all');
@@ -33,11 +38,14 @@ export default function Quotes() {
     
     if (status) setStatusFilter(status);
     if (age) setAgeFilter(age);
-  }, [searchParams]);
+  }, [searchParams, user]);
 
-  const loadQuotes = () => {
-    setQuotes(getQuotes());
+  const loadQuotes = async () => {
+    setLoading(true);
+    const data = await getQuotes(user?.id);
+    setQuotes(data);
     setSelectedQuotes([]);
+    setLoading(false);
   };
 
   const filteredQuotes = quotes.filter(quote => {
@@ -67,13 +75,14 @@ export default function Quotes() {
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedQuotes.length === 0) return;
     
     if (confirm(`Are you sure you want to delete ${selectedQuotes.length} quote${selectedQuotes.length > 1 ? 's' : ''}?`)) {
-      const remainingQuotes = quotes.filter(q => !selectedQuotes.includes(q.id));
-      saveQuotes(remainingQuotes);
-      loadQuotes();
+      for (const quoteId of selectedQuotes) {
+        await deleteQuote(user?.id, quoteId, queueChange);
+      }
+      await loadQuotes();
       toast.success(`Deleted ${selectedQuotes.length} quote${selectedQuotes.length > 1 ? 's' : ''}`);
     }
   };
