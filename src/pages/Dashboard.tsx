@@ -149,14 +149,14 @@ export default function Dashboard() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">Avg Value</span>
               </div>
-              <span className="text-lg font-bold">${stats.avgQuoteValue.toFixed(0)}</span>
+              <span className="text-lg font-bold">{formatCurrency(stats.avgQuoteValue)}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">Pending</span>
               </div>
-              <span className="text-lg font-bold">${stats.pendingValue.toFixed(0)}</span>
+              <span className="text-lg font-bold">{formatCurrency(stats.pendingValue)}</span>
             </div>
           </CardContent>
         </Card>
@@ -172,18 +172,18 @@ export default function Dashboard() {
                 <TrendingUp className="h-4 w-4 text-success" />
                 <span className="text-sm">Total Revenue</span>
               </div>
-              <span className="text-lg font-bold text-success">${stats.totalRevenue.toFixed(0)}</span>
+              <span className="text-lg font-bold text-success">{formatCurrency(stats.totalRevenue)}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <TrendingDown className="h-4 w-4 text-destructive" />
                 <span className="text-sm">Declined</span>
               </div>
-              <span className="text-lg font-bold text-muted-foreground">${stats.declinedValue.toFixed(0)}</span>
+              <span className="text-lg font-bold text-muted-foreground">{formatCurrency(stats.declinedValue)}</span>
             </div>
             <div className="flex items-center justify-between pt-1 border-t">
               <span className="text-sm font-medium">Potential</span>
-              <span className="text-lg font-bold">${(stats.totalRevenue + stats.pendingValue).toFixed(0)}</span>
+              <span className="text-lg font-bold">{formatCurrency(stats.totalRevenue + stats.pendingValue)}</span>
             </div>
           </CardContent>
         </Card>
