@@ -70,7 +70,7 @@ export default function Auth() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img src="/logo.jpg" alt="Quote-it AI" className="h-16 w-16 rounded-lg" />
+            <img src="/logo.png" alt="Quote-it AI" className="h-24 w-auto" />
           </div>
           <CardTitle className="text-2xl">Welcome to Quote-it AI</CardTitle>
           <CardDescription>
