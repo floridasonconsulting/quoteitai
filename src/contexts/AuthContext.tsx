@@ -24,7 +24,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshSubscription: () => Promise<void>;
-  checkUserRole: () => Promise<void>;
+  checkUserRole: (sessionToUse?: Session | null) => Promise<void>;
   updateUserRole: (userId: string, newRole: string) => Promise<void>;
 }
 
@@ -40,17 +40,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAdmin = userRole === 'admin';
 
-  const checkUserRole = async () => {
-    if (!session) {
+  const checkUserRole = async (sessionToUse?: Session | null) => {
+    const activeSession = sessionToUse ?? session;
+    
+    if (!activeSession) {
       console.log('[AuthContext] No session, setting role to null');
       setUserRole(null);
       return;
     }
 
-    console.log('[AuthContext] Checking role for user:', session.user.id);
+    console.log('[AuthContext] Checking role for user:', activeSession.user.id);
     try {
       const { data, error } = await supabase.rpc('get_user_role', {
-        _user_id: session.user.id,
+        _user_id: activeSession.user.id,
       });
 
       if (error) {
@@ -144,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Check role immediately before setting loading to false
         if (currentSession?.user) {
-          await checkUserRole();
+          await checkUserRole(currentSession);
           setLoading(false);
           // Defer subscription check and data migration
           setTimeout(async () => {
@@ -180,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
-          await checkUserRole();
+          await checkUserRole(currentSession);
           setLoading(false);
           // Defer subscription check and data migration
           setTimeout(async () => {
