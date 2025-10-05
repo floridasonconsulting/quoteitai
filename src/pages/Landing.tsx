@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { 
   Sparkles, 
   BarChart3, 
@@ -13,9 +15,15 @@ import {
   TrendingUp,
   Zap,
   Shield,
-  Globe
+  Globe,
+  MousePointerClick,
+  ArrowRight,
+  Star,
+  Play
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import Autoplay from "embla-carousel-autoplay";
+import { useRef } from "react";
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -156,6 +164,65 @@ export default function Landing() {
     }
   ];
 
+  const heroFeatures = [
+    { icon: Sparkles, text: "AI-powered quote generation" },
+    { icon: BarChart3, text: "Real-time analytics dashboard" },
+    { icon: Clock, text: "Smart aging alerts" },
+    { icon: Smartphone, text: "Works on any device" }
+  ];
+
+  const screenshots = [
+    {
+      id: 'dashboard',
+      title: 'Smart Dashboard',
+      description: 'Track all your quotes and metrics in one place',
+      image: '/screenshots/dashboard.png',
+      badge: 'Analytics'
+    },
+    {
+      id: 'quote-detail',
+      title: 'Professional Quotes',
+      description: 'Create detailed quotes with AI assistance',
+      image: '/screenshots/quote-detail.png',
+      badge: 'AI-Powered'
+    },
+    {
+      id: 'customers',
+      title: 'Customer Management',
+      description: 'Organize and manage all your contacts',
+      image: '/screenshots/customers.png',
+      badge: 'CRM'
+    }
+  ];
+
+  const workflows = [
+    {
+      id: 'create-quote',
+      title: 'Create a Quote',
+      icon: FileText,
+      description: 'From customer selection to PDF generation in under 60 seconds',
+      steps: ['Select customer', 'Add items', 'AI generates details', 'Export PDF']
+    },
+    {
+      id: 'track-quotes',
+      title: 'Track Performance',
+      icon: TrendingUp,
+      description: 'Monitor quote status and aging with visual indicators',
+      steps: ['View dashboard', 'Check aging alerts', 'Follow up on time', 'Close deals']
+    },
+    {
+      id: 'manage-customers',
+      title: 'Manage Customers',
+      icon: Users,
+      description: 'Add contacts, import data, and keep everything organized',
+      steps: ['Add customer', 'Import from CSV', 'View history', 'Send quotes']
+    }
+  ];
+
+  const plugin = useRef(
+    Autoplay({ delay: 4000, stopOnInteraction: true })
+  );
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -178,31 +245,85 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="py-20 md:py-32">
+      {/* Hero Banner with Screenshots */}
+      <section className="py-12 md:py-20 bg-gradient-to-br from-primary/5 via-background to-accent/5">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <Badge className="mb-4" variant="secondary">
-              <Sparkles className="h-3 w-3 mr-1" />
-              AI-Powered Quote Management
-            </Badge>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Create Professional Quotes in Seconds
-            </h1>
-            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Smart quote management powered by AI. Track quotes, manage customers, and never miss a follow-up opportunity. Work from anywhere with seamless cloud sync.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" onClick={() => navigate('/auth')}>
-                Start Free Trial
-              </Button>
-              <Button size="lg" variant="outline" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
-                Explore Features
-              </Button>
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Left: Feature highlights */}
+            <div className="space-y-8">
+              <Badge variant="secondary">
+                <Star className="h-3 w-3 mr-1 fill-primary" />
+                See It In Action
+              </Badge>
+              <h1 className="text-4xl md:text-6xl font-bold leading-tight">
+                Create Professional Quotes in{" "}
+                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  Seconds
+                </span>
+              </h1>
+              <p className="text-xl text-muted-foreground">
+                Smart quote management powered by AI. Track quotes, manage customers, and never miss a follow-up opportunity.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                {heroFeatures.map((feature, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <feature.icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="text-sm">{feature.text}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button size="lg" onClick={() => navigate('/auth')}>
+                  Start Free Trial
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button size="lg" variant="outline" onClick={() => document.getElementById('screenshots')?.scrollIntoView({ behavior: 'smooth' })}>
+                  <Play className="mr-2 h-4 w-4" />
+                  View Demo
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                No credit card required • Free forever plan available
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground mt-4">
-              No credit card required • Free forever plan available
-            </p>
+            
+            {/* Right: Screenshot carousel */}
+            <div className="relative">
+              <Carousel 
+                plugins={[plugin.current]}
+                className="w-full"
+                onMouseEnter={plugin.current.stop}
+                onMouseLeave={plugin.current.reset}
+              >
+                <CarouselContent>
+                  {screenshots.map((screenshot) => (
+                    <CarouselItem key={screenshot.id}>
+                      <div className="space-y-4">
+                        <Badge variant="secondary">{screenshot.badge}</Badge>
+                        <div className="browser-mockup bg-card rounded-lg overflow-hidden shadow-2xl border">
+                          <div className="aspect-video bg-muted flex items-center justify-center">
+                            <div className="text-center space-y-2">
+                              <FileText className="h-16 w-16 text-muted-foreground mx-auto" />
+                              <p className="text-sm text-muted-foreground">
+                                Screenshot: {screenshot.title}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-lg mb-1">{screenshot.title}</h3>
+                          <p className="text-sm text-muted-foreground">{screenshot.description}</p>
+                        </div>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className="hidden md:flex" />
+                <CarouselNext className="hidden md:flex" />
+              </Carousel>
+            </div>
           </div>
         </div>
       </section>
@@ -251,6 +372,211 @@ export default function Landing() {
                 )}
                 <p className="text-muted-foreground">{benefit.description}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Interactive Screenshots Section */}
+      <section id="screenshots" className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <Badge variant="secondary" className="mb-4">
+              <MousePointerClick className="h-3 w-3 mr-1" />
+              Interactive Preview
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">See Quote-it AI in Action</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Explore the intuitive interface designed for speed and simplicity
+            </p>
+          </div>
+          
+          <Tabs defaultValue="dashboard" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 mb-8 h-auto">
+              <TabsTrigger value="dashboard" className="text-xs sm:text-sm">Dashboard</TabsTrigger>
+              <TabsTrigger value="quotes" className="text-xs sm:text-sm">Quotes</TabsTrigger>
+              <TabsTrigger value="new-quote" className="text-xs sm:text-sm">Create</TabsTrigger>
+              <TabsTrigger value="customers" className="text-xs sm:text-sm">Customers</TabsTrigger>
+              <TabsTrigger value="items" className="text-xs sm:text-sm">Catalog</TabsTrigger>
+              <TabsTrigger value="mobile" className="text-xs sm:text-sm">Mobile</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="dashboard" className="space-y-4">
+              <div className="relative max-w-6xl mx-auto">
+                <div className="browser-mockup">
+                  <div className="aspect-video bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">
+                    <div className="text-center space-y-4 p-8">
+                      <BarChart3 className="h-24 w-24 text-primary mx-auto" />
+                      <div>
+                        <h3 className="text-xl font-semibold mb-2">Dashboard Overview</h3>
+                        <p className="text-muted-foreground max-w-md mx-auto">
+                          Track revenue, quote status, aging analysis, and performance metrics in real-time
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        <Badge variant="secondary">Revenue Charts</Badge>
+                        <Badge variant="secondary">Quote Aging</Badge>
+                        <Badge variant="secondary">Win Rates</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="quotes" className="space-y-4">
+              <div className="relative max-w-6xl mx-auto">
+                <div className="browser-mockup">
+                  <div className="aspect-video bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">
+                    <div className="text-center space-y-4 p-8">
+                      <FileText className="h-24 w-24 text-primary mx-auto" />
+                      <div>
+                        <h3 className="text-xl font-semibold mb-2">Quote Management</h3>
+                        <p className="text-muted-foreground max-w-md mx-auto">
+                          View all quotes with status badges, filters, and quick actions
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        <Badge>Sent</Badge>
+                        <Badge variant="secondary">Draft</Badge>
+                        <Badge className="bg-success">Accepted</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="new-quote" className="space-y-4">
+              <div className="relative max-w-6xl mx-auto">
+                <div className="browser-mockup">
+                  <div className="aspect-video bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">
+                    <div className="text-center space-y-4 p-8">
+                      <Sparkles className="h-24 w-24 text-primary mx-auto" />
+                      <div>
+                        <h3 className="text-xl font-semibold mb-2">AI-Powered Quote Creation</h3>
+                        <p className="text-muted-foreground max-w-md mx-auto">
+                          Select customer and items, let AI generate descriptions and terms
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        <Badge variant="secondary">Auto-fill</Badge>
+                        <Badge variant="secondary">AI Descriptions</Badge>
+                        <Badge variant="secondary">PDF Export</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="customers" className="space-y-4">
+              <div className="relative max-w-6xl mx-auto">
+                <div className="browser-mockup">
+                  <div className="aspect-video bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">
+                    <div className="text-center space-y-4 p-8">
+                      <Users className="h-24 w-24 text-primary mx-auto" />
+                      <div>
+                        <h3 className="text-xl font-semibold mb-2">Customer Management</h3>
+                        <p className="text-muted-foreground max-w-md mx-auto">
+                          Store contacts, track quote history, import/export customer data
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        <Badge variant="secondary">Contact Info</Badge>
+                        <Badge variant="secondary">CSV Import</Badge>
+                        <Badge variant="secondary">Quote History</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="items" className="space-y-4">
+              <div className="relative max-w-6xl mx-auto">
+                <div className="browser-mockup">
+                  <div className="aspect-video bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">
+                    <div className="text-center space-y-4 p-8">
+                      <Package className="h-24 w-24 text-primary mx-auto" />
+                      <div>
+                        <h3 className="text-xl font-semibold mb-2">Item Catalog</h3>
+                        <p className="text-muted-foreground max-w-md mx-auto">
+                          Pre-configure products and services for rapid quote generation
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        <Badge variant="secondary">Products</Badge>
+                        <Badge variant="secondary">Services</Badge>
+                        <Badge variant="secondary">Pricing</Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="mobile" className="space-y-4">
+              <div className="relative max-w-sm mx-auto">
+                <div className="phone-mockup mx-auto">
+                  <div className="w-full h-full bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-6">
+                    <div className="text-center space-y-4">
+                      <Smartphone className="h-16 w-16 text-primary mx-auto" />
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Mobile Ready</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Full functionality on any device
+                        </p>
+                      </div>
+                      <Badge variant="secondary">iOS & Android</Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </section>
+
+      {/* Workflow Demonstrations */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Common Workflows Made Simple</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              See how Quote-it AI streamlines your daily tasks
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            {workflows.map((workflow) => (
+              <Card key={workflow.id} className="hover-scale">
+                <CardHeader>
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <workflow.icon className="h-6 w-6 text-primary" />
+                  </div>
+                  <CardTitle className="flex items-center gap-2">
+                    {workflow.title}
+                  </CardTitle>
+                  <CardDescription>{workflow.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {workflow.steps.map((step, idx) => (
+                      <div key={idx} className="flex items-center gap-3">
+                        <div className="flex-shrink-0 h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-semibold">
+                          {idx + 1}
+                        </div>
+                        <span className="text-sm">{step}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button variant="ghost" className="w-full mt-4" onClick={() => navigate('/auth')}>
+                    Try It Now
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
