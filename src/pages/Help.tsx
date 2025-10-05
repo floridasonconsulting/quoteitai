@@ -269,6 +269,21 @@ export default function Help() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Smooth scroll to category section
+  const scrollToCategory = (categoryId: string) => {
+    const element = document.getElementById(categoryId);
+    if (element) {
+      const headerOffset = 100;
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   // Filter articles based on search
   const filteredCategories = helpCategories.map(category => ({
     ...category,
@@ -333,7 +348,11 @@ export default function Help() {
                 // Category Grid View
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {helpCategories.map((category) => (
-                    <Card key={category.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                    <Card 
+                      key={category.id} 
+                      className="hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => scrollToCategory(category.id)}
+                    >
                       <CardHeader>
                         <category.icon className="h-10 w-10 text-primary mb-2" />
                         <CardTitle>{category.title}</CardTitle>
@@ -388,7 +407,7 @@ export default function Help() {
                 <div className="mt-12 space-y-8">
                   <h2 className="text-3xl font-bold text-center mb-8">All Articles</h2>
                   {helpCategories.map((category) => (
-                    <div key={category.id}>
+                    <div key={category.id} id={category.id}>
                       <div className="flex items-center gap-2 mb-4">
                         <category.icon className="h-6 w-6 text-primary" />
                         <h3 className="text-2xl font-bold">{category.title}</h3>
