@@ -28,6 +28,7 @@ import { useTheme } from '@/components/ThemeProvider';
 export default function Settings() {
   const { permission, requestPermission, isSupported } = useNotifications();
   const { themeMode, setThemeMode } = useTheme();
+  const [clearCompanyInfo, setClearCompanyInfo] = useState(false);
   const [formData, setFormData] = useState<CompanySettings>({
     name: '',
     address: '',
@@ -67,7 +68,27 @@ export default function Settings() {
 
   const handleClearAllData = () => {
     clearAllData();
-    toast.success('All data cleared from local cache. Cloud data remains synced.');
+    
+    if (clearCompanyInfo) {
+      saveSettings({
+        name: '',
+        address: '',
+        city: '',
+        state: '',
+        zip: '',
+        phone: '',
+        email: '',
+        website: '',
+        license: '',
+        insurance: '',
+        logoDisplayOption: 'both',
+        terms: 'Payment due within 30 days. Thank you for your business!',
+      });
+      toast.success('All data and company information cleared.');
+    } else {
+      toast.success('All data cleared from local cache. Company settings preserved.');
+    }
+    
     window.location.reload();
   };
 
@@ -103,13 +124,23 @@ export default function Settings() {
             <AlertDialogHeader>
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete all customers, items, and quotes from your application. Your company settings will be preserved.
+                This action cannot be undone. This will permanently delete all customers, items, and quotes from your application.
               </AlertDialogDescription>
             </AlertDialogHeader>
+            <div className="flex items-center space-x-2 py-4">
+              <Switch
+                id="clear-company"
+                checked={clearCompanyInfo}
+                onCheckedChange={setClearCompanyInfo}
+              />
+              <Label htmlFor="clear-company" className="cursor-pointer">
+                Also clear company information and settings
+              </Label>
+            </div>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel onClick={() => setClearCompanyInfo(false)}>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleClearAllData} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Yes, clear all data
+                Yes, clear {clearCompanyInfo ? 'all data' : 'data'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
