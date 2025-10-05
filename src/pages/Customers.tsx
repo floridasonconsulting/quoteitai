@@ -6,10 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { getCustomers, addCustomer, updateCustomer, deleteCustomer, saveCustomers } from '@/lib/storage';
+import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from '@/lib/db-service';
 import { Customer } from '@/types';
 import { toast } from 'sonner';
 import { parseCSVLine, formatCSVLine } from '@/lib/csv-utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSyncManager } from '@/hooks/useSyncManager';
 
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -17,6 +19,7 @@ export default function Customers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -26,14 +29,19 @@ export default function Customers() {
     state: '',
     zip: '',
   });
+  const { user } = useAuth();
+  const { queueChange } = useSyncManager();
 
   useEffect(() => {
     loadCustomers();
-  }, []);
+  }, [user]);
 
-  const loadCustomers = () => {
-    setCustomers(getCustomers());
+  const loadCustomers = async () => {
+    setLoading(true);
+    const data = await getCustomers(user?.id);
+    setCustomers(data);
     setSelectedCustomers([]);
+    setLoading(false);
   };
 
   const filteredCustomers = customers.filter(customer =>
@@ -58,18 +66,19 @@ export default function Customers() {
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedCustomers.length === 0) return;
     
     if (confirm(`Are you sure you want to delete ${selectedCustomers.length} customer${selectedCustomers.length > 1 ? 's' : ''}?`)) {
-      const remainingCustomers = customers.filter(c => !selectedCustomers.includes(c.id));
-      saveCustomers(remainingCustomers);
+      for (const id of selectedCustomers) {
+        await deleteCustomer(user?.id, id, queueChange);
+      }
       loadCustomers();
       toast.success(`Deleted ${selectedCustomers.length} customer${selectedCustomers.length > 1 ? 's' : ''}`);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.email) {
@@ -78,7 +87,7 @@ export default function Customers() {
     }
 
     if (editingCustomer) {
-      updateCustomer(editingCustomer.id, formData);
+      await updateCustomer(user?.id, editingCustomer.id, formData, queueChange);
       toast.success('Customer updated successfully');
     } else {
       const newCustomer: Customer = {
@@ -86,7 +95,7 @@ export default function Customers() {
         id: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
       };
-      addCustomer(newCustomer);
+      await addCustomer(user?.id, newCustomer, queueChange);
       toast.success('Customer added successfully');
     }
 
@@ -108,9 +117,9 @@ export default function Customers() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this customer?')) {
-      deleteCustomer(id);
+      await deleteCustomer(user?.id, id, queueChange);
       loadCustomers();
       toast.success('Customer deleted successfully');
     }
@@ -152,12 +161,12 @@ export default function Customers() {
     toast.success('Customers exported successfully');
   };
 
-  const importFromCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const importFromCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const text = e.target?.result as string;
       const lines = text.split('\n');
       const importedCustomers: Customer[] = [];
@@ -184,7 +193,9 @@ export default function Customers() {
       }
 
       if (importedCustomers.length > 0) {
-        saveCustomers([...customers, ...importedCustomers]);
+        for (const customer of importedCustomers) {
+          await addCustomer(user?.id, customer, queueChange);
+        }
         loadCustomers();
         toast.success(`Imported ${importedCustomers.length} customers`);
       }
@@ -370,7 +381,11 @@ export default function Customers() {
           )}
         </CardHeader>
         <CardContent>
-          {filteredCustomers.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <p>Loading customers...</p>
+            </div>
+          ) : filteredCustomers.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               {searchTerm ? (
                 <p>No customers found matching "{searchTerm}"</p>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Building2, Save, Sparkles, Trash2, Bell, Sun, Moon, Sunset } from 'lucide-react';
+import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,6 @@ import {
 import { getSettings, saveSettings, clearAllData } from '@/lib/storage';
 import { CompanySettings } from '@/types';
 import { toast } from 'sonner';
-import { generateSampleData } from '@/lib/sample-data';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/components/ThemeProvider';
 
@@ -66,15 +65,10 @@ export default function Settings() {
     }
   };
 
-  const handleGenerateSampleData = () => {
-    const result = generateSampleData();
-    toast.success(`Generated ${result.customersAdded} customers, ${result.itemsAdded} items, and ${result.quotesAdded} quotes`);
-  };
-
   const handleClearAllData = () => {
     clearAllData();
-    toast.success('All data cleared successfully');
-    window.location.reload(); // Refresh to show empty state
+    toast.success('All data cleared from local cache. Cloud data remains synced.');
+    window.location.reload();
   };
 
   const handleNotificationToggle = async (enabled: boolean) => {
@@ -97,36 +91,29 @@ export default function Settings() {
             Configure your company information and preferences
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={handleGenerateSampleData} size="sm" className="sm:h-10">
-            <Sparkles className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Generate Sample Data</span>
-            <span className="sm:hidden">Sample Data</span>
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm" className="sm:h-10">
-                <Trash2 className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Clear All Data</span>
-                <span className="sm:hidden">Clear Data</span>
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete all customers, items, and quotes from your application. Your company settings will be preserved.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleClearAllData} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Yes, clear all data
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="sm" className="sm:h-10">
+              <Trash2 className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Clear All Data</span>
+              <span className="sm:hidden">Clear Data</span>
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete all customers, items, and quotes from your application. Your company settings will be preserved.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleClearAllData} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Yes, clear all data
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

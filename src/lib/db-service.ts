@@ -15,23 +15,23 @@ async function fetchWithCache<T>(
   cacheKey: string
 ): Promise<T[]> {
   if (!navigator.onLine || !userId) {
-    return getStorageItem(cacheKey, []);
+    return getStorageItem<T[]>(cacheKey, []);
   }
 
   try {
     const { data, error } = await supabase
-      .from(table)
+      .from(table as any)
       .select('*')
       .eq('user_id', userId);
     
     if (error) throw error;
     
     const result = (data as T[]) || [];
-    setStorageItem(cacheKey, result);
+    setStorageItem<T[]>(cacheKey, result);
     return result;
   } catch (error) {
     console.error(`Error fetching ${table}:`, error);
-    return getStorageItem(cacheKey, []);
+    return getStorageItem<T[]>(cacheKey, []);
   }
 }
 
@@ -48,23 +48,23 @@ async function createWithCache<T>(
   if (!navigator.onLine || !userId) {
     // Offline: update cache and queue
     const cached = getStorageItem<T[]>(cacheKey, []);
-    setStorageItem(cacheKey, [...cached, itemWithUser]);
+    setStorageItem<T[]>(cacheKey, [...cached, itemWithUser]);
     queueChange?.({ type: 'create', table, data: itemWithUser });
     return;
   }
 
   try {
-    const { error } = await supabase.from(table).insert(itemWithUser as any);
+    const { error } = await supabase.from(table as any).insert(itemWithUser as any);
     if (error) throw error;
     
     // Update cache
     const cached = getStorageItem<T[]>(cacheKey, []);
-    setStorageItem(cacheKey, [...cached, itemWithUser as T]);
+    setStorageItem<T[]>(cacheKey, [...cached, itemWithUser as T]);
   } catch (error) {
     console.error(`Error creating ${table}:`, error);
     // Fallback to cache
     const cached = getStorageItem<T[]>(cacheKey, []);
-    setStorageItem(cacheKey, [...cached, itemWithUser as T]);
+    setStorageItem<T[]>(cacheKey, [...cached, itemWithUser as T]);
     queueChange?.({ type: 'create', table, data: itemWithUser });
   }
 }
@@ -84,14 +84,14 @@ async function updateWithCache<T extends { id: string }>(
     const updated = cached.map(item => 
       item.id === id ? { ...item, ...updates } : item
     );
-    setStorageItem(cacheKey, updated);
+    setStorageItem<T[]>(cacheKey, updated);
     queueChange?.({ type: 'update', table, data: { id, ...updates } });
     return;
   }
 
   try {
     const { error } = await supabase
-      .from(table)
+      .from(table as any)
       .update(updates as any)
       .eq('id', id)
       .eq('user_id', userId);
@@ -103,7 +103,7 @@ async function updateWithCache<T extends { id: string }>(
     const updated = cached.map(item => 
       item.id === id ? { ...item, ...updates } : item
     );
-    setStorageItem(cacheKey, updated);
+    setStorageItem<T[]>(cacheKey, updated);
   } catch (error) {
     console.error(`Error updating ${table}:`, error);
     // Fallback to cache
@@ -111,7 +111,7 @@ async function updateWithCache<T extends { id: string }>(
     const updated = cached.map(item => 
       item.id === id ? { ...item, ...updates } : item
     );
-    setStorageItem(cacheKey, updated);
+    setStorageItem<T[]>(cacheKey, updated);
     queueChange?.({ type: 'update', table, data: { id, ...updates } });
   }
 }
@@ -127,14 +127,14 @@ async function deleteWithCache<T extends { id: string }>(
   if (!navigator.onLine || !userId) {
     // Offline: update cache and queue
     const cached = getStorageItem<T[]>(cacheKey, []);
-    setStorageItem(cacheKey, cached.filter(item => item.id !== id));
+    setStorageItem<T[]>(cacheKey, cached.filter(item => item.id !== id));
     queueChange?.({ type: 'delete', table, data: { id } });
     return;
   }
 
   try {
     const { error } = await supabase
-      .from(table)
+      .from(table as any)
       .delete()
       .eq('id', id)
       .eq('user_id', userId);
@@ -143,12 +143,12 @@ async function deleteWithCache<T extends { id: string }>(
     
     // Update cache
     const cached = getStorageItem<T[]>(cacheKey, []);
-    setStorageItem(cacheKey, cached.filter(item => item.id !== id));
+    setStorageItem<T[]>(cacheKey, cached.filter(item => item.id !== id));
   } catch (error) {
     console.error(`Error deleting ${table}:`, error);
     // Fallback to cache
     const cached = getStorageItem<T[]>(cacheKey, []);
-    setStorageItem(cacheKey, cached.filter(item => item.id !== id));
+    setStorageItem<T[]>(cacheKey, cached.filter(item => item.id !== id));
     queueChange?.({ type: 'delete', table, data: { id } });
   }
 }

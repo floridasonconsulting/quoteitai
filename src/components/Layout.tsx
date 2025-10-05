@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useTheme } from '@/components/ThemeProvider';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { SyncIndicator } from '@/components/SyncIndicator';
 
 interface LayoutProps {
   children: ReactNode;
@@ -35,6 +36,7 @@ export function Layout({ children }: LayoutProps) {
             <h1 className="text-xl font-bold">Quote-it AI</h1>
           </div>
           <div className="flex items-center gap-2">
+            <SyncIndicator />
             <Button
               variant="ghost"
               size="icon"
