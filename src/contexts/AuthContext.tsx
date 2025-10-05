@@ -11,15 +11,21 @@ interface SubscriptionData {
   subscription_end: string | null;
 }
 
+type UserRole = 'admin' | 'free' | 'pro' | 'max';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   subscription: SubscriptionData | null;
+  userRole: UserRole | null;
+  isAdmin: boolean;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshSubscription: () => Promise<void>;
+  checkUserRole: () => Promise<void>;
+  updateUserRole: (userId: string, newRole: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,8 +34,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  const isAdmin = userRole === 'admin';
+
+  const checkUserRole = async () => {
+    if (!session) return;
+
+    try {
+      const { data, error } = await supabase.rpc('get_user_role', {
+        _user_id: session.user.id,
+      });
+
+      if (error) {
+        console.error('Error fetching user role:', error);
+        return;
+      }
+
+      setUserRole(data as UserRole);
+    } catch (error) {
+      console.error('Error checking user role:', error);
+    }
+  };
+
+  const updateUserRole = async (userId: string, newRole: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-user-role', {
+        body: { userId, newRole },
+      });
+
+      if (error) throw error;
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Refresh the role after update
+      await checkUserRole();
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      throw error;
+    }
+  };
 
   const refreshSubscription = async () => {
     if (!session) return;
@@ -87,14 +135,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(currentSession?.user ?? null);
         setLoading(false); // Critical: Set loading false immediately after setting user
         
-        // Defer subscription check and data migration
+        // Defer subscription check, role check, and data migration
         if (currentSession?.user) {
           setTimeout(async () => {
+            await checkUserRole();
             await refreshSubscription();
             await checkAndMigrateData(currentSession.user.id);
           }, 0);
         } else {
           setSubscription(null);
+          setUserRole(null);
         }
       }
     );
@@ -122,6 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (currentSession?.user) {
           setTimeout(async () => {
+            await checkUserRole();
             await refreshSubscription();
             await checkAndMigrateData(currentSession.user.id);
           }, 0);
@@ -208,11 +259,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         session,
         subscription,
+        userRole,
+        isAdmin,
         loading,
         signUp,
         signIn,
         signOut,
         refreshSubscription,
+        checkUserRole,
+        updateUserRole,
       }}
     >
       {children}

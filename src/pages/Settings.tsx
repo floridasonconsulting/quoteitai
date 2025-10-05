@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset, AlertTriangle, ChevronDown, RefreshCw } from 'lucide-react';
+import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset, AlertTriangle, ChevronDown, RefreshCw, Shield, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -29,17 +29,22 @@ import { useTheme } from '@/components/ThemeProvider';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { checkAndMigrateData } from '@/lib/migration-helper';
+import { generateSampleData } from '@/lib/sample-data';
+import { Separator } from '@/components/ui/separator';
 
 export default function Settings() {
   const { permission, requestPermission, isSupported } = useNotifications();
   const { themeMode, setThemeMode } = useTheme();
-  const { user } = useAuth();
+  const { user, userRole, isAdmin, updateUserRole, checkUserRole } = useAuth();
   const { queueChange } = useSyncManager();
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [clearCompanyInfo, setClearCompanyInfo] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [dangerZoneOpen, setDangerZoneOpen] = useState(false);
+  const [generatingSample, setGeneratingSample] = useState(false);
+  const [includeCompanySettings, setIncludeCompanySettings] = useState(true);
+  const [sampleDataResult, setSampleDataResult] = useState<any>(null);
   const [formData, setFormData] = useState<CompanySettings>({
     name: '',
     address: '',
@@ -135,6 +140,40 @@ export default function Settings() {
       toast.error('Failed to sync data. Please try again.');
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleRoleChange = async (newRole: string) => {
+    if (!user?.id) return;
+    
+    try {
+      await updateUserRole(user.id, newRole);
+      await checkUserRole();
+      toast.success(`Account tier updated to ${newRole}`);
+    } catch (error) {
+      console.error('Role change error:', error);
+      toast.error('Failed to update account tier');
+    }
+  };
+
+  const handleGenerateSampleData = async () => {
+    setGeneratingSample(true);
+    setSampleDataResult(null);
+    
+    try {
+      const result = await generateSampleData(user?.id, includeCompanySettings);
+      
+      if (includeCompanySettings) {
+        await loadSettings();
+      }
+      
+      setSampleDataResult(result);
+      toast.success('Sample data generated successfully!');
+    } catch (error) {
+      console.error('Error generating sample data:', error);
+      toast.error('Failed to generate sample data');
+    } finally {
+      setGeneratingSample(false);
     }
   };
 
@@ -532,6 +571,89 @@ export default function Settings() {
           </CollapsibleContent>
         </Card>
       </Collapsible>
+
+      {/* Admin Controls - Only visible to admin users */}
+      {isAdmin && (
+        <Card className="border-primary/50 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              Admin Controls
+            </CardTitle>
+            <CardDescription>
+              Administrative tools for testing and managing user accounts
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Role Management Section */}
+            <div className="space-y-3">
+              <Label>AI Account Tier</Label>
+              <Select value={userRole || 'free'} onValueChange={handleRoleChange}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">Free Tier</SelectItem>
+                  <SelectItem value="pro">Pro Tier</SelectItem>
+                  <SelectItem value="max">Max Tier</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Change your AI account tier for testing features
+              </p>
+            </div>
+
+            <Separator />
+
+            {/* Sample Data Generation Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Generate Sample Data</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Populate all fields with realistic test data for screenshots and testing
+                  </p>
+                </div>
+                <Button 
+                  onClick={handleGenerateSampleData} 
+                  disabled={generatingSample}
+                  variant="outline"
+                >
+                  <Sparkles className={`mr-2 h-4 w-4 ${generatingSample ? 'animate-pulse' : ''}`} />
+                  {generatingSample ? 'Generating...' : 'Generate Data'}
+                </Button>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="include-company"
+                  checked={includeCompanySettings}
+                  onCheckedChange={setIncludeCompanySettings}
+                />
+                <Label htmlFor="include-company" className="cursor-pointer text-sm">
+                  Include sample company information
+                </Label>
+              </div>
+
+              {sampleDataResult && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <p className="text-sm font-medium text-primary mb-2">
+                    ✓ Sample data generated successfully!
+                  </p>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>• {sampleDataResult.customersAdded} customers added</li>
+                    <li>• {sampleDataResult.itemsAdded} items added</li>
+                    <li>• {sampleDataResult.quotesAdded} quotes added</li>
+                    {sampleDataResult.companySettingsAdded && (
+                      <li>• Company information populated</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

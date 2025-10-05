@@ -83,7 +83,7 @@ export const screenshotPresets: ScreenshotPreset[] = [
  */
 export async function prepareSampleDataForScreenshots() {
   try {
-    const result = await generateSampleData();
+    const result = await generateSampleData(undefined, false);
     console.log('[Screenshot Helper] Sample data generated:', result);
     return result;
   } catch (error) {

@@ -391,11 +391,43 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       reset_monthly_quotas: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -413,6 +445,7 @@ export type Database = {
         | "follow_up_suggestions"
         | "customer_insights"
         | "competitive_analysis"
+      app_role: "admin" | "free" | "pro" | "max"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -552,6 +585,7 @@ export const Constants = {
         "customer_insights",
         "competitive_analysis",
       ],
+      app_role: ["admin", "free", "pro", "max"],
     },
   },
 } as const
