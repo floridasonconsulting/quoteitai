@@ -13,6 +13,7 @@ import { cn, formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { getQuotes } from '@/lib/storage';
 import { toast } from 'sonner';
+import { scheduleFollowUpNotification, requestNotificationPermission } from '@/lib/notifications';
 
 interface FollowUpDialogProps {
   open: boolean;
@@ -34,7 +35,7 @@ export function FollowUpDialog({ open, onOpenChange, quote, customer }: FollowUp
   const [messageTemplate, setMessageTemplate] = useState<string>('checking_in');
   const [customMessage, setCustomMessage] = useState<string>('');
 
-  const handleScheduleFollowUp = () => {
+  const handleScheduleFollowUp = async () => {
     if (!followUpDate) {
       toast.error('Please select a follow-up date');
       return;
@@ -48,7 +49,22 @@ export function FollowUpDialog({ open, onOpenChange, quote, customer }: FollowUp
     );
     localStorage.setItem('quotes', JSON.stringify(updatedQuotes));
     
-    toast.success(`Follow-up scheduled for ${format(followUpDate, 'PPP')}`);
+    // Schedule notification
+    scheduleFollowUpNotification(
+      quote.id,
+      quote.quoteNumber,
+      quote.customerName,
+      followUpDate.toISOString()
+    );
+
+    // Request notification permission if not already granted
+    const permission = await requestNotificationPermission();
+    if (permission === 'granted') {
+      toast.success(`Follow-up scheduled for ${format(followUpDate, 'PPP')} with notification reminder`);
+    } else {
+      toast.success(`Follow-up scheduled for ${format(followUpDate, 'PPP')} (enable notifications in Settings for reminders)`);
+    }
+    
     onOpenChange(false);
   };
 

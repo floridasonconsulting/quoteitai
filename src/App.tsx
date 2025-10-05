@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Layout } from "@/components/Layout";
+import { useNotifications } from "@/hooks/useNotifications";
 import Dashboard from "./pages/Dashboard";
 import Quotes from "./pages/Quotes";
 import QuoteDetail from "./pages/QuoteDetail";
@@ -13,8 +14,37 @@ import Customers from "./pages/Customers";
 import Items from "./pages/Items";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient();
+
+function AppContent() {
+  const notifications = useNotifications();
+  
+  useEffect(() => {
+    // Register service worker for notifications
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js');
+    }
+  }, []);
+  
+  return (
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/quotes" element={<Quotes />} />
+        <Route path="/quotes/new" element={<NewQuote />} />
+        <Route path="/quotes/:id" element={<QuoteDetail />} />
+        <Route path="/quotes/:id/edit" element={<NewQuote />} />
+        <Route path="/customers" element={<Customers />} />
+        <Route path="/items" element={<Items />} />
+        <Route path="/settings" element={<Settings />} />
+        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Layout>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -23,20 +53,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/quotes" element={<Quotes />} />
-              <Route path="/quotes/new" element={<NewQuote />} />
-              <Route path="/quotes/:id" element={<QuoteDetail />} />
-              <Route path="/quotes/:id/edit" element={<NewQuote />} />
-              <Route path="/customers" element={<Customers />} />
-              <Route path="/items" element={<Items />} />
-              <Route path="/settings" element={<Settings />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Layout>
+          <AppContent />
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>

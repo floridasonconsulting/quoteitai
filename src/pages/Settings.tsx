@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Building2, Save, Sparkles, Trash2 } from 'lucide-react';
+import { Building2, Save, Sparkles, Trash2, Bell, Sun, Moon, Sunset } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,8 +23,12 @@ import { getSettings, saveSettings, clearAllData } from '@/lib/storage';
 import { CompanySettings } from '@/types';
 import { toast } from 'sonner';
 import { generateSampleData } from '@/lib/sample-data';
+import { useNotifications } from '@/hooks/useNotifications';
+import { useTheme } from '@/components/ThemeProvider';
 
 export default function Settings() {
+  const { permission, requestPermission, isSupported } = useNotifications();
+  const { themeMode, setThemeMode } = useTheme();
   const [formData, setFormData] = useState<CompanySettings>({
     name: '',
     address: '',
@@ -71,6 +77,17 @@ export default function Settings() {
     window.location.reload(); // Refresh to show empty state
   };
 
+  const handleNotificationToggle = async (enabled: boolean) => {
+    if (enabled) {
+      const result = await requestPermission();
+      if (result !== 'granted') {
+        toast.error('Notification permission denied');
+      } else {
+        toast.success('Notifications enabled');
+      }
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -113,6 +130,84 @@ export default function Settings() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sun className="h-5 w-5" />
+              Appearance
+            </CardTitle>
+            <CardDescription>
+              Customize how the app looks
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <Label>Theme Mode</Label>
+              <Select value={themeMode} onValueChange={setThemeMode}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">
+                    <div className="flex items-center gap-2">
+                      <Sun className="h-4 w-4" />
+                      <span>Light</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="dark">
+                    <div className="flex items-center gap-2">
+                      <Moon className="h-4 w-4" />
+                      <span>Dark</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="auto">
+                    <div className="flex items-center gap-2">
+                      <Sunset className="h-4 w-4" />
+                      <span>Auto (Based on time of day)</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Auto mode switches to dark from 6 PM to 6 AM
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {isSupported && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Notifications
+              </CardTitle>
+              <CardDescription>
+                Get notified when follow-ups are due
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Push Notifications</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Receive notifications for quote follow-ups
+                  </p>
+                </div>
+                <Switch
+                  checked={permission === 'granted'}
+                  onCheckedChange={handleNotificationToggle}
+                />
+              </div>
+              {permission === 'denied' && (
+                <p className="text-xs text-warning">
+                  Notifications are blocked. Please enable them in your browser settings.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

@@ -28,6 +28,7 @@ export default function NewQuote() {
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [itemSearchTerm, setItemSearchTerm] = useState('');
   const [customItem, setCustomItem] = useState({
     name: '',
     description: '',
@@ -56,9 +57,14 @@ export default function NewQuote() {
   }, [id, navigate]);
 
   const categories = ['all', ...new Set(items.map(item => item.category))];
-  const filteredItems = selectedCategory === 'all' 
-    ? items 
-    : items.filter(item => item.category === selectedCategory);
+  const filteredItems = items.filter(item => {
+    const matchesCategory = selectedCategory === 'all' || 
+      item.category.toLowerCase().trim() === selectedCategory.toLowerCase().trim();
+    const matchesSearch = itemSearchTerm === '' ||
+      item.name.toLowerCase().includes(itemSearchTerm.toLowerCase()) ||
+      item.description.toLowerCase().includes(itemSearchTerm.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   const addItemToQuote = (item: Item) => {
     const existingItem = quoteItems.find(qi => qi.itemId === item.id);
@@ -333,22 +339,22 @@ export default function NewQuote() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 max-w-7xl pb-20 md:pb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
             {isEditMode ? 'Edit Quote' : 'Create New Quote'}
           </h2>
-          <p className="text-muted-foreground">Build a professional quote for your customer</p>
+          <p className="text-sm sm:text-base text-muted-foreground">Build a professional quote for your customer</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate('/quotes')}>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => navigate('/quotes')} className="w-full sm:w-auto">
             Cancel
           </Button>
-          <Button variant="secondary" onClick={saveDraft}>
+          <Button variant="secondary" onClick={saveDraft} className="w-full sm:w-auto">
             Save Draft
           </Button>
-          <Button onClick={sendQuote}>
+          <Button onClick={sendQuote} className="w-full sm:w-auto">
             Send Quote
           </Button>
         </div>
@@ -356,7 +362,7 @@ export default function NewQuote() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main Form */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -423,51 +429,68 @@ export default function NewQuote() {
               ) : (
                 <div className="space-y-3">
                   {quoteItems.map(item => (
-                    <div key={item.itemId} className="flex items-center gap-3 p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <p className="font-medium">{item.name}</p>
-                        {item.description && (
-                          <p className="text-sm text-muted-foreground">{item.description}</p>
-                        )}
+                    <div key={item.itemId} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 border rounded-lg">
+                      <div className="flex-1 w-full">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm sm:text-base">{item.name}</p>
+                            {item.description && (
+                              <p className="text-xs sm:text-sm text-muted-foreground">{item.description}</p>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="sm:hidden shrink-0 h-8 w-8"
+                            onClick={() => removeItem(item.itemId)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between w-full sm:w-auto gap-3">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => updateItemQuantity(item.itemId, item.quantity - 1)}
+                          >
+                            -
+                          </Button>
+                          <Input
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            value={item.quantity}
+                            onChange={(e) => updateItemQuantity(item.itemId, parseFloat(e.target.value) || 1)}
+                            className="w-16 sm:w-20 text-center h-8"
+                          />
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => updateItemQuantity(item.itemId, item.quantity + 1)}
+                          >
+                            +
+                          </Button>
+                          {item.units && (
+                            <span className="text-xs sm:text-sm text-muted-foreground">{item.units}</span>
+                          )}
+                        </div>
+                        <div className="text-right min-w-[80px]">
+                          <p className="font-semibold text-sm sm:text-base">{formatCurrency(item.total)}</p>
+                          <p className="text-xs text-muted-foreground">{formatCurrency(item.price)} each</p>
+                        </div>
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="icon"
-                          onClick={() => updateItemQuantity(item.itemId, item.quantity - 1)}
+                          className="hidden sm:flex shrink-0"
+                          onClick={() => removeItem(item.itemId)}
                         >
-                          -
+                          <X className="h-4 w-4" />
                         </Button>
-                        <Input
-                          type="number"
-                          min="0.01"
-                          step="0.01"
-                          value={item.quantity}
-                          onChange={(e) => updateItemQuantity(item.itemId, parseFloat(e.target.value) || 1)}
-                          className="w-20 text-center"
-                        />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => updateItemQuantity(item.itemId, item.quantity + 1)}
-                        >
-                          +
-                        </Button>
-                        {item.units && (
-                          <span className="text-sm text-muted-foreground">{item.units}</span>
-                        )}
                       </div>
-                      <div className="text-right min-w-[80px]">
-                        <p className="font-semibold">{formatCurrency(item.total)}</p>
-                        <p className="text-xs text-muted-foreground">{formatCurrency(item.price)} each</p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeItem(item.itemId)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
                     </div>
                   ))}
                 </div>
@@ -477,10 +500,29 @@ export default function NewQuote() {
         </div>
 
         {/* Sidebar - Item Catalog */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
+        <div className="space-y-6 order-1 lg:order-2">
+          <Card className="sticky top-6">
+            <CardHeader className="space-y-3">
               <CardTitle>Item Catalog</CardTitle>
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder="Search items..."
+                  value={itemSearchTerm}
+                  onChange={(e) => setItemSearchTerm(e.target.value)}
+                  className="pr-8"
+                />
+                {itemSearchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                    onClick={() => setItemSearchTerm('')}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger>
                   <SelectValue />
@@ -497,10 +539,10 @@ export default function NewQuote() {
             <CardContent>
               {filteredItems.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  No items in this category
+                  {itemSearchTerm ? 'No items match your search' : 'No items in this category'}
                 </p>
               ) : (
-                <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                <div className="space-y-2 max-h-[400px] lg:max-h-[600px] overflow-y-auto">
                   {filteredItems.map(item => (
                     <div
                       key={item.id}
@@ -530,20 +572,20 @@ export default function NewQuote() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="lg:sticky lg:top-[calc(100vh-200px)]">
             <CardHeader>
               <CardTitle>Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
-                <span>{formatCurrency(subtotal)}</span>
+                <span className="font-medium">{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Tax:</span>
-                <span>{formatCurrency(tax)}</span>
+                <span className="font-medium">{formatCurrency(tax)}</span>
               </div>
-              <div className="flex justify-between font-bold text-lg pt-2 border-t">
+              <div className="flex justify-between font-bold text-base sm:text-lg pt-2 border-t">
                 <span>Total:</span>
                 <span className="text-primary">{formatCurrency(total)}</span>
               </div>

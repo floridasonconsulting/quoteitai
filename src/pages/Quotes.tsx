@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Search, FileText, Calendar, Trash2 } from 'lucide-react';
+import { Plus, Search, FileText, Calendar, Trash2, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,10 +12,12 @@ import { getQuoteAge } from '@/lib/quote-utils';
 import { Quote, QuoteAge } from '@/types';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export default function Quotes() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { dueFollowUpIds } = useNotifications();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -214,7 +216,7 @@ export default function Quotes() {
                       onClick={() => navigate(`/quotes/${quote.id}`)}
                     >
                       <div className="flex-1 min-w-0 space-y-2">
-                        <div className="flex items-center gap-2 flex-wrap">
+                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold">{quote.title}</p>
                           <Badge variant="outline" className={getStatusColor(quote.status)}>
                             {quote.status}
@@ -222,6 +224,12 @@ export default function Quotes() {
                           {quote.status === 'sent' && (
                             <Badge variant="outline" className={getAgeColor(age)}>
                               {age}
+                            </Badge>
+                          )}
+                          {dueFollowUpIds.includes(quote.id) && (
+                            <Badge variant="default" className="bg-warning text-warning-foreground">
+                              <Bell className="h-3 w-3 mr-1" />
+                              Follow-up Due
                             </Badge>
                           )}
                         </div>

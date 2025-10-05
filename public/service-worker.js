@@ -11,6 +11,7 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(urlsToCache))
   );
+  self.skipWaiting();
 });
 
 // Fetch from cache
@@ -33,5 +34,31 @@ self.addEventListener('activate', (event) => {
         })
       );
     })
+  );
+  return self.clients.claim();
+});
+
+// Handle notification clicks
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  
+  event.waitUntil(
+    clients.openWindow(event.notification.data?.url || '/')
+  );
+});
+
+// Handle push notifications
+self.addEventListener('push', (event) => {
+  const data = event.data?.json() || {};
+  
+  const options = {
+    body: data.body || 'You have a new notification',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    data: data.data || {},
+  };
+  
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Quote It', options)
   );
 });

@@ -120,7 +120,8 @@ export default function Items() {
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
+    const matchesCategory = categoryFilter === 'all' || 
+      item.category.toLowerCase().trim() === categoryFilter.toLowerCase().trim();
     return matchesSearch && matchesCategory;
   });
 
@@ -138,6 +139,7 @@ export default function Items() {
     if (editingItem) {
       updateItem(editingItem.id, {
         ...formData,
+        category: formData.category.trim(),
         basePrice,
         markup,
         finalPrice: calculateFinalPrice(),
@@ -147,6 +149,7 @@ export default function Items() {
       const newItem: Item = {
         id: crypto.randomUUID(),
         ...formData,
+        category: formData.category.trim(),
         basePrice,
         markup,
         finalPrice: calculateFinalPrice(),
@@ -236,11 +239,14 @@ export default function Items() {
         const [name, description, category, basePrice, markupType, markup, finalPrice, units] = parseCSVLine(line);
         
         if (name && category && basePrice) {
+          // Normalize category (trim whitespace)
+          const normalizedCategory = category.trim();
+          
           importedItems.push({
             id: crypto.randomUUID(),
             name: name.trim(),
             description: description?.trim() || '',
-            category: category.trim(),
+            category: normalizedCategory,
             basePrice: parseFloat(basePrice),
             markupType: (markupType?.trim() as 'percentage' | 'fixed') || 'percentage',
             markup: parseFloat(markup) || 0,
