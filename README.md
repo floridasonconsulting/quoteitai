@@ -1,4 +1,4 @@
-# Welcome to your Lovable project
+# Quote-it AI - Smart Quote Management
 
 ## Project info
 

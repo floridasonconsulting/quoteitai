@@ -1,7 +1,7 @@
 {
-  "name": "Quote-it - Professional Quote Generator",
-  "short_name": "Quote-it",
-  "description": "Create, manage, and track professional quotes on the go",
+  "name": "Quote-it AI - Smart Quote Management",
+  "short_name": "Quote-it AI",
+  "description": "Create professional quotes instantly with AI-powered assistance",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

@@ -28,8 +28,8 @@ export function Layout({ children }: LayoutProps) {
       <header className="sticky top-0 z-40 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="container flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <FileText className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold">Quote-it</h1>
+            <img src="/logo.jpg" alt="Quote-it AI" className="h-8 w-8 rounded" />
+            <h1 className="text-xl font-bold">Quote-it AI</h1>
           </div>
           <Button
             variant="ghost"
