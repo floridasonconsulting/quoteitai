@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          feature_type: Database["public"]["Enums"]["ai_feature_type"]
+          id: string
+          success: boolean | null
+          tokens_used: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          feature_type: Database["public"]["Enums"]["ai_feature_type"]
+          id?: string
+          success?: boolean | null
+          tokens_used?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          feature_type?: Database["public"]["Enums"]["ai_feature_type"]
+          id?: string
+          success?: boolean | null
+          tokens_used?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null
@@ -259,27 +289,33 @@ export type Database = {
       }
       usage_tracking: {
         Row: {
+          ai_features_used: Json | null
           ai_requests_this_month: number
           created_at: string
           id: string
+          last_ai_request_at: string | null
           quota_reset_date: string
           quotes_this_month: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          ai_features_used?: Json | null
           ai_requests_this_month?: number
           created_at?: string
           id?: string
+          last_ai_request_at?: string | null
           quota_reset_date?: string
           quotes_this_month?: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          ai_features_used?: Json | null
           ai_requests_this_month?: number
           created_at?: string
           id?: string
+          last_ai_request_at?: string | null
           quota_reset_date?: string
           quotes_this_month?: number
           updated_at?: string
@@ -306,7 +342,17 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      ai_feature_type:
+        | "quote_title"
+        | "notes_generator"
+        | "item_description"
+        | "email_draft"
+        | "full_quote_generation"
+        | "item_recommendations"
+        | "pricing_optimization"
+        | "follow_up_suggestions"
+        | "customer_insights"
+        | "competitive_analysis"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -433,6 +479,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      ai_feature_type: [
+        "quote_title",
+        "notes_generator",
+        "item_description",
+        "email_draft",
+        "full_quote_generation",
+        "item_recommendations",
+        "pricing_optimization",
+        "follow_up_suggestions",
+        "customer_insights",
+        "competitive_analysis",
+      ],
+    },
   },
 } as const

@@ -15,6 +15,8 @@ import { Customer, Item, Quote, QuoteItem } from '@/types';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
 import jsPDF from 'jspdf';
+import { AIButton } from '@/components/AIButton';
+import { useAI } from '@/hooks/useAI';
 
 export default function NewQuote() {
   const navigate = useNavigate();
@@ -34,6 +36,25 @@ export default function NewQuote() {
     description: '',
     quantity: 1,
     price: '',
+  });
+
+  // AI hooks
+  const titleAI = useAI('quote_title', {
+    onSuccess: (content) => {
+      try {
+        const parsed = JSON.parse(content);
+        if (parsed.titles && parsed.titles[0]) {
+          setQuoteTitle(parsed.titles[0]);
+        }
+      } catch {
+        // If not JSON, use first line
+        setQuoteTitle(content.split('\n')[0]);
+      }
+    },
+  });
+
+  const notesAI = useAI('notes_generator', {
+    onSuccess: (content) => setQuoteNotes(content),
   });
 
   useEffect(() => {
@@ -389,16 +410,50 @@ export default function NewQuote() {
 
               <div className="space-y-2">
                 <Label htmlFor="title">Quote Title *</Label>
-                <Input
-                  id="title"
-                  value={quoteTitle}
-                  onChange={(e) => setQuoteTitle(e.target.value)}
-                  placeholder="Website Development Project"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="title"
+                    value={quoteTitle}
+                    onChange={(e) => setQuoteTitle(e.target.value)}
+                    placeholder="Website Development Project"
+                    className="flex-1"
+                  />
+                  <AIButton
+                    onClick={() => {
+                      const customer = customers.find(c => c.id === selectedCustomerId);
+                      const itemsList = quoteItems.map(i => i.name).join(', ');
+                      titleAI.generate(
+                        `Generate 3 professional quote titles based on: Customer: ${customer?.name}, Items: ${itemsList}`,
+                        { customerName: customer?.name, items: itemsList }
+                      );
+                    }}
+                    isLoading={titleAI.isLoading}
+                    disabled={!selectedCustomerId || quoteItems.length === 0}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="notes">Notes</Label>
+                  <AIButton
+                    onClick={() => {
+                      const customer = customers.find(c => c.id === selectedCustomerId);
+                      notesAI.generate(
+                        `Generate professional terms and conditions for this quote`,
+                        { 
+                          customerName: customer?.name, 
+                          total,
+                          items: quoteItems.map(i => i.name)
+                        }
+                      );
+                    }}
+                    isLoading={notesAI.isLoading}
+                    disabled={!selectedCustomerId || quoteItems.length === 0}
+                  >
+                    Generate Terms
+                  </AIButton>
+                </div>
                 <Textarea
                   id="notes"
                   value={quoteNotes}

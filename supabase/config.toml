@@ -1,5 +1,8 @@
 project_id = "onxyqhixydadpnkvdtvm"
 
+[functions.ai-assist]
+verify_jwt = true
+
 [functions.check-subscription]
 verify_jwt = true
 
