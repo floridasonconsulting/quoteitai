@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset, AlertTriangle, ChevronDown, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/components/ThemeProvider';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
+import { checkAndMigrateData } from '@/lib/migration-helper';
 
 export default function Settings() {
   const { permission, requestPermission, isSupported } = useNotifications();
@@ -35,6 +36,7 @@ export default function Settings() {
   const { user } = useAuth();
   const { queueChange } = useSyncManager();
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [clearCompanyInfo, setClearCompanyInfo] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [dangerZoneOpen, setDangerZoneOpen] = useState(false);
@@ -115,6 +117,24 @@ export default function Settings() {
       } else {
         toast.success('Notifications enabled');
       }
+    }
+  };
+
+  const handleManualSync = async () => {
+    if (!user?.id) {
+      toast.error('You must be signed in to sync data');
+      return;
+    }
+
+    setSyncing(true);
+    try {
+      await checkAndMigrateData(user.id);
+      toast.success('Data synced successfully to database');
+    } catch (error) {
+      console.error('Manual sync error:', error);
+      toast.error('Failed to sync data. Please try again.');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -205,6 +225,34 @@ export default function Settings() {
             </CardContent>
           </Card>
         )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              Data Sync
+            </CardTitle>
+            <CardDescription>
+              Manually sync your local data to the database
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Use this to force sync all local data (customers, items, quotes, and settings) to the database. This ensures your data is accessible across all your devices.
+              </p>
+              <Button 
+                onClick={handleManualSync} 
+                disabled={syncing || !user}
+                variant="outline"
+                className="w-full"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Syncing...' : 'Sync Data Now'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
