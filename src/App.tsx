@@ -5,9 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Layout } from "@/components/Layout";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useNotifications } from "@/hooks/useNotifications";
+import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Quotes from "./pages/Quotes";
 import QuoteDetail from "./pages/QuoteDetail";
@@ -16,14 +17,17 @@ import Customers from "./pages/Customers";
 import Items from "./pages/Items";
 import Settings from "./pages/Settings";
 import Subscription from "./pages/Subscription";
+import Help from "./pages/Help";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
+import { Navigate } from "react-router-dom";
 
 const queryClient = new QueryClient();
 
 function AppContent() {
   const notifications = useNotifications();
+  const { user } = useAuth();
   
   useEffect(() => {
     // Register service worker for notifications
@@ -34,8 +38,13 @@ function AppContent() {
   
   return (
     <Routes>
-      <Route path="/auth" element={<Auth />} />
-      <Route path="/" element={
+      {/* Public Routes */}
+      <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Landing />} />
+      <Route path="/help" element={<Help />} />
+      <Route path="/auth" element={user ? <Navigate to="/dashboard" /> : <Auth />} />
+      
+      {/* Protected Routes */}
+      <Route path="/dashboard" element={
         <ProtectedRoute>
           <Layout>
             <Dashboard />
