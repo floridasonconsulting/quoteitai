@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Mail, Trash2, FileText, Calendar, DollarSign, Edit } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Trash2, FileText, Calendar, DollarSign, Edit, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,8 @@ import { Separator } from '@/components/ui/separator';
 import { getQuotes, deleteQuote, getSettings, getCustomers } from '@/lib/storage';
 import { Quote, Customer } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { FollowUpDialog } from '@/components/FollowUpDialog';
+import { formatCurrency } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -18,6 +20,7 @@ export default function QuoteDetail() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
+  const [followUpDialogOpen, setFollowUpDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -225,7 +228,7 @@ export default function QuoteDetail() {
     pdf.setFont(undefined, 'bold');
     pdf.setFontSize(12);
     pdf.text('TOTAL:', 120, yPos);
-    pdf.text(`$${quote.total.toFixed(2)}`, 185, yPos, { align: 'right' });
+    pdf.text(formatCurrency(quote.total), 185, yPos, { align: 'right' });
     
     yPos += 12;
     
@@ -258,10 +261,20 @@ export default function QuoteDetail() {
 
   const handleEmail = () => {
     if (!quote) return;
+    
+    if (!customer?.email) {
+      toast({
+        title: 'Customer email missing',
+        description: 'Please add an email address to this customer first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     const settings = getSettings();
     const subject = encodeURIComponent(`Quote ${quote.quoteNumber}: ${quote.title}`);
-    const body = encodeURIComponent(`Please find attached quote ${quote.quoteNumber} for ${quote.title}.\n\nTotal: $${quote.total.toFixed(2)}`);
-    const to = customer?.email ? encodeURIComponent(customer.email) : '';
+    const body = encodeURIComponent(`Please find attached quote ${quote.quoteNumber} for ${quote.title}.\n\nTotal: ${formatCurrency(quote.total)}`);
+    const to = encodeURIComponent(customer.email);
     const cc = settings.email ? `&cc=${encodeURIComponent(settings.email)}` : '';
     window.open(`mailto:${to}?subject=${subject}&body=${body}${cc}`, '_blank');
   };
@@ -312,11 +325,22 @@ export default function QuoteDetail() {
           <Mail className="mr-2 h-4 w-4" />
           Email
         </Button>
+        <Button variant="outline" onClick={() => setFollowUpDialogOpen(true)}>
+          <Clock className="mr-2 h-4 w-4" />
+          Follow Up
+        </Button>
         <Button variant="destructive" onClick={handleDelete}>
           <Trash2 className="mr-2 h-4 w-4" />
           Delete
         </Button>
       </div>
+
+      <FollowUpDialog
+        open={followUpDialogOpen}
+        onOpenChange={setFollowUpDialogOpen}
+        quote={quote}
+        customer={customer}
+      />
 
       <Card>
         <CardHeader>
@@ -349,9 +373,8 @@ export default function QuoteDetail() {
               )}
               <div>
                 <p className="text-sm text-muted-foreground">Total</p>
-                <p className="font-bold text-xl text-primary flex items-center gap-1">
-                  <DollarSign className="h-5 w-5" />
-                  {quote.total.toFixed(2)}
+                <p className="font-bold text-xl text-primary">
+                  {formatCurrency(quote.total)}
                 </p>
               </div>
             </div>
@@ -386,7 +409,7 @@ export default function QuoteDetail() {
           <Separator className="my-4" />
           <div className="flex justify-between items-center">
             <p className="text-lg font-bold">Total</p>
-            <p className="text-2xl font-bold text-primary">${quote.total.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-primary">{formatCurrency(quote.total)}</p>
           </div>
         </CardContent>
       </Card>

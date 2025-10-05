@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { getItems, addItem, updateItem, deleteItem, saveItems } from '@/lib/storage';
 import { Item } from '@/types';
 import { toast } from 'sonner';
+import { parseCSVLine, formatCSVLine } from '@/lib/csv-utils';
+import { formatCurrency } from '@/lib/utils';
 
 const CATEGORIES = [
   'General',
@@ -207,7 +209,7 @@ export default function Items() {
       item.units
     ]);
     
-    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const csvContent = [headers, ...rows].map(row => formatCSVLine(row)).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -231,7 +233,7 @@ export default function Items() {
         const line = lines[i].trim();
         if (!line) continue;
 
-        const [name, description, category, basePrice, markupType, markup, finalPrice, units] = line.split(',');
+        const [name, description, category, basePrice, markupType, markup, finalPrice, units] = parseCSVLine(line);
         
         if (name && category && basePrice) {
           importedItems.push({
@@ -409,7 +411,7 @@ export default function Items() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Final Price:</span>
                     <span className="text-2xl font-bold text-primary">
-                      ${calculateFinalPrice().toFixed(2)}
+                      {formatCurrency(calculateFinalPrice())}
                     </span>
                   </div>
                 </div>
@@ -556,7 +558,7 @@ export default function Items() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Base Price:</span>
-                        <span>${(item.basePrice || 0).toFixed(2)}</span>
+                        <span>{formatCurrency(item.basePrice || 0)}</span>
                       </div>
                       {(item.markup || 0) > 0 && (
                         <div className="flex justify-between">
@@ -564,13 +566,13 @@ export default function Items() {
                           <span>
                             {item.markupType === 'percentage'
                               ? `${item.markup || 0}%`
-                              : `$${(item.markup || 0).toFixed(2)}`}
+                              : formatCurrency(item.markup || 0)}
                           </span>
                         </div>
                       )}
                       <div className="flex justify-between font-semibold pt-1 border-t">
                         <span>Final Price:</span>
-                        <span className="text-primary">${(item.finalPrice || 0).toFixed(2)}</span>
+                        <span className="text-primary">{formatCurrency(item.finalPrice || 0)}</span>
                       </div>
                     </div>
                     <div className="flex gap-2 pt-2">

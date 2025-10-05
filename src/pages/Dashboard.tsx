@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { getQuotes, getCustomers, getItems } from '@/lib/storage';
 import { getAgingSummary, getQuoteAge } from '@/lib/quote-utils';
 import { Quote } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -323,7 +323,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="text-right ml-4">
-                      <p className="font-semibold">${quote.total.toFixed(2)}</p>
+                      <p className="font-semibold">{formatCurrency(quote.total)}</p>
                       <p className="text-sm text-muted-foreground">
                         {new Date(quote.createdAt).toLocaleDateString()}
                       </p>

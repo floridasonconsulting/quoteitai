@@ -11,6 +11,7 @@ import { getQuotes, deleteQuote, saveQuotes } from '@/lib/storage';
 import { getQuoteAge } from '@/lib/quote-utils';
 import { Quote, QuoteAge } from '@/types';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/utils';
 
 export default function Quotes() {
   const navigate = useNavigate();
@@ -237,7 +238,7 @@ export default function Quotes() {
                         </div>
                       </div>
                       <div className="text-right ml-4">
-                        <p className="text-lg font-bold text-primary">${quote.total.toFixed(2)}</p>
+                        <p className="text-lg font-bold text-primary">{formatCurrency(quote.total)}</p>
                         <p className="text-sm text-muted-foreground">
                           {quote.items.length} item{quote.items.length !== 1 ? 's' : ''}
                         </p>

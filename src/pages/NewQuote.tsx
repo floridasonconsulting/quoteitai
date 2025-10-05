@@ -13,6 +13,7 @@ import { getCustomers, getItems, addQuote, getSettings, getQuotes } from '@/lib/
 import { generateQuoteNumber, calculateItemTotal, calculateQuoteTotal } from '@/lib/quote-utils';
 import { Customer, Item, Quote, QuoteItem } from '@/types';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/utils';
 import jsPDF from 'jspdf';
 
 export default function NewQuote() {
@@ -312,13 +313,13 @@ export default function NewQuote() {
       doc.text(item.name, 20, yPos);
       const qtyText = item.units ? `${item.quantity} ${item.units}` : item.quantity.toString();
       doc.text(qtyText, 100, yPos);
-      doc.text(`$${item.price.toFixed(2)}`, 130, yPos);
-      doc.text(`$${item.total.toFixed(2)}`, 170, yPos);
+      doc.text(formatCurrency(item.price), 130, yPos);
+      doc.text(formatCurrency(item.total), 170, yPos);
       yPos += 5;
     });
 
     yPos += 5;
-    doc.text(`Total: $${quote.total.toFixed(2)}`, 170, yPos);
+    doc.text(`Total: ${formatCurrency(quote.total)}`, 170, yPos);
 
     if (quote.notes) {
       yPos += 15;
@@ -457,8 +458,8 @@ export default function NewQuote() {
                         )}
                       </div>
                       <div className="text-right min-w-[80px]">
-                        <p className="font-semibold">${item.total.toFixed(2)}</p>
-                        <p className="text-xs text-muted-foreground">${item.price.toFixed(2)} each</p>
+                        <p className="font-semibold">{formatCurrency(item.total)}</p>
+                        <p className="text-xs text-muted-foreground">{formatCurrency(item.price)} each</p>
                       </div>
                       <Button
                         variant="ghost"
@@ -519,7 +520,7 @@ export default function NewQuote() {
                           </p>
                         </div>
                         <Badge variant="secondary" className="shrink-0">
-                          ${item.finalPrice.toFixed(2)}
+                          {formatCurrency(item.finalPrice)}
                         </Badge>
                       </div>
                     </div>
@@ -536,15 +537,15 @@ export default function NewQuote() {
             <CardContent className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Tax:</span>
-                <span>${tax.toFixed(2)}</span>
+                <span>{formatCurrency(tax)}</span>
               </div>
               <div className="flex justify-between font-bold text-lg pt-2 border-t">
                 <span>Total:</span>
-                <span className="text-primary">${total.toFixed(2)}</span>
+                <span className="text-primary">{formatCurrency(total)}</span>
               </div>
             </CardContent>
           </Card>

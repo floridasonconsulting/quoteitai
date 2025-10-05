@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { getCustomers, addCustomer, updateCustomer, deleteCustomer, saveCustomers } from '@/lib/storage';
 import { Customer } from '@/types';
 import { toast } from 'sonner';
+import { parseCSVLine, formatCSVLine } from '@/lib/csv-utils';
 
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -141,7 +142,7 @@ export default function Customers() {
       customer.zip || ''
     ]);
     
-    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const csvContent = [headers, ...rows].map(row => formatCSVLine(row)).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -165,7 +166,7 @@ export default function Customers() {
         const line = lines[i].trim();
         if (!line) continue;
 
-        const [name, email, phone, address, city, state, zip] = line.split(',');
+        const [name, email, phone, address, city, state, zip] = parseCSVLine(line);
         
         if (name && email) {
           importedCustomers.push({
