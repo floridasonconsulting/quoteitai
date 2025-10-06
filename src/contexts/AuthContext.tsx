@@ -37,10 +37,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  
+  // Refs to prevent race conditions
+  const isInitializing = useState(false);
+  const roleCheckInProgress = useState(false);
 
   const isAdmin = userRole === 'admin';
 
   const checkUserRole = async (sessionToUse?: Session | null) => {
+    // Prevent duplicate role checks
+    if (roleCheckInProgress[0]) {
+      console.log('[AuthContext] Role check already in progress, skipping');
+      return;
+    }
+    
     const activeSession = sessionToUse ?? session;
     
     if (!activeSession) {
@@ -50,6 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     console.log('[AuthContext] Checking role for user:', activeSession.user.id);
+    roleCheckInProgress[1](true);
+    
     try {
       const { data, error } = await supabase.rpc('get_user_role', {
         _user_id: activeSession.user.id,
@@ -66,6 +78,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('[AuthContext] Error checking user role:', error);
       setUserRole(null);
+    } finally {
+      roleCheckInProgress[1](false);
     }
   };
 
@@ -103,7 +117,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // Prevent duplicate initialization
+    if (isInitializing[0]) {
+      console.log('[AUTH DEBUG] Auth already initializing, skipping');
+      return;
+    }
+    
+    isInitializing[1](true);
     let timeoutId: NodeJS.Timeout;
+    let maxLoadingTimeout: NodeJS.Timeout;
+    
+    // Maximum timeout to prevent infinite loading (5 seconds)
+    maxLoadingTimeout = setTimeout(() => {
+      console.warn('[AUTH DEBUG] Maximum loading timeout reached - forcing loading to false');
+      setLoading(false);
+      isInitializing[1](false);
+    }, 5000);
     
     // Set timeout to prevent infinite loading on slow networks
     timeoutId = setTimeout(() => {
@@ -112,12 +141,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setSession(null);
       setSubscription(null);
+      isInitializing[1](false);
     }, 3000); // 3 second timeout
     
     // Set up auth state listener with error handling
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         clearTimeout(timeoutId);
+        clearTimeout(maxLoadingTimeout);
         console.log('[AUTH DEBUG] Auth state change:', event, 'Session:', !!currentSession);
         
         // Handle token refresh failures
@@ -147,6 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Check role immediately before setting loading to false
         if (currentSession?.user) {
           await checkUserRole(currentSession);
+          console.log('[AUTH DEBUG] Setting loading to false after role check');
           setLoading(false);
           // Defer subscription check and data migration
           setTimeout(async () => {
@@ -156,6 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setSubscription(null);
           setUserRole(null);
+          console.log('[AUTH DEBUG] Setting loading to false - no session');
           setLoading(false);
         }
       }
@@ -165,6 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession()
       .then(async ({ data: { session: currentSession }, error }) => {
         clearTimeout(timeoutId);
+        clearTimeout(maxLoadingTimeout);
         console.log('[AUTH DEBUG] getSession completed. Error:', !!error, 'Session:', !!currentSession);
         
         if (error) {
@@ -183,6 +217,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (currentSession?.user) {
           await checkUserRole(currentSession);
+          console.log('[AUTH DEBUG] Setting loading to false after initial role check');
           setLoading(false);
           // Defer subscription check and data migration
           setTimeout(async () => {
@@ -190,22 +225,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await checkAndMigrateData(currentSession.user.id);
           }, 0);
         } else {
+          console.log('[AUTH DEBUG] Setting loading to false - no initial session');
           setLoading(false);
         }
       })
       .catch(async (err) => {
         clearTimeout(timeoutId);
+        clearTimeout(maxLoadingTimeout);
         console.error('[AUTH DEBUG] Fatal auth error:', err);
         await supabase.auth.signOut();
         setSession(null);
         setUser(null);
         setSubscription(null);
+        console.log('[AUTH DEBUG] Setting loading to false after fatal error');
         setLoading(false);
       });
 
     return () => {
       clearTimeout(timeoutId);
+      clearTimeout(maxLoadingTimeout);
       authSubscription.unsubscribe();
+      isInitializing[1](false);
     };
   }, []);
 

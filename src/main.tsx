@@ -15,10 +15,10 @@ if ('serviceWorker' in navigator) {
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // New service worker available, skip waiting and reload
-                console.log('New service worker available, updating...');
+                // New service worker available, skip waiting but DON'T force reload
+                // This prevents infinite reload loops during development
+                console.log('New service worker available, will be used on next page load');
                 newWorker.postMessage({ type: 'SKIP_WAITING' });
-                window.location.reload();
               }
             });
           }

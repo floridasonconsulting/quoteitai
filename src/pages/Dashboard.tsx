@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -27,8 +27,15 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
+    // Don't load data if auth is still loading
+    if (authLoading) {
+      console.log('[Dashboard] Auth still loading, waiting...');
+      return;
+    }
+    
+    console.log('[Dashboard] Auth loaded, loading data...');
     loadData();
-  }, [user]);
+  }, [user, authLoading]);
 
   const loadData = async () => {
     setLoading(true);
