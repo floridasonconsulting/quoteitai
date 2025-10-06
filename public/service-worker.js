@@ -37,6 +37,25 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Stale-while-revalidate helper for API
+async function staleWhileRevalidate(request, cache) {
+  const cachedResponse = await cache.match(request);
+  
+  // Start network fetch (don't await)
+  const fetchPromise = fetch(request)
+    .then(response => {
+      if (response && response.ok) {
+        const clone = response.clone();
+        cache.put(request, clone);
+      }
+      return response;
+    })
+    .catch(() => null);
+
+  // Return cached immediately if available, otherwise wait for network
+  return cachedResponse || await fetchPromise || new Response(null, { status: 504 });
+}
+
 // Fetch strategy
 self.addEventListener('fetch', (event) => {
   const { request } = event;
@@ -52,35 +71,35 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first strategy for HTML and API calls
-  if (request.headers.get('accept')?.includes('text/html') || 
-      url.pathname.includes('/api/') ||
-      url.pathname.includes('/rest/')) {
+  // Analytics - fire and forget, never block
+  if (url.pathname.includes('analytics') || url.pathname.includes('~api/analytics')) {
     event.respondWith(
       fetch(request)
-        .then((response) => {
-          // Clone and cache the response
-          const responseClone = response.clone();
-          caches.open(DYNAMIC_CACHE).then((cache) => {
-            cache.put(request, responseClone);
-          });
-          return response;
-        })
-        .catch(() => {
-          // Fallback to cache if offline
-          return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            // Return a custom offline page if available
-            return caches.match('/index.html');
-          });
-        })
+        .then(r => r)
+        .catch(() => new Response(null, { status: 204 }))
     );
     return;
   }
 
-  // Cache-first strategy for static assets (images, fonts, JS, CSS)
+  // API calls - stale-while-revalidate strategy
+  if (url.pathname.includes('/api/') || url.pathname.includes('/rest/v1/')) {
+    event.respondWith(
+      caches.open(DYNAMIC_CACHE).then(cache => staleWhileRevalidate(request, cache))
+    );
+    return;
+  }
+
+  // HTML - network first with cache fallback
+  if (request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(request)
+        .catch(() => caches.match(request))
+        .then(response => response || caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Static assets - cache first
   if (request.destination === 'image' || 
       request.destination === 'font' ||
       request.destination === 'script' ||
@@ -88,26 +107,14 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
         if (cachedResponse) {
-          // Check if cache is expired
-          return cachedResponse.headers.get('sw-cache-time')
-            ? checkCacheExpiration(cachedResponse, request)
-            : cachedResponse;
+          return cachedResponse;
         }
         
-        // Fetch from network and cache
         return fetch(request).then((response) => {
           if (response.status === 200) {
             const responseClone = response.clone();
             caches.open(STATIC_CACHE).then((cache) => {
-              // Add timestamp to cached response
-              const headers = new Headers(responseClone.headers);
-              headers.append('sw-cache-time', Date.now().toString());
-              const cachedResponse = new Response(responseClone.body, {
-                status: responseClone.status,
-                statusText: responseClone.statusText,
-                headers: headers
-              });
-              cache.put(request, cachedResponse);
+              cache.put(request, responseClone);
             });
           }
           return response;
@@ -117,7 +124,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first for everything else
+  // Default - network first
   event.respondWith(
     fetch(request)
       .catch(() => caches.match(request))
@@ -183,6 +190,21 @@ self.addEventListener('push', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  }
+  
+  // Clear all caches (coordinated clear)
+  if (event.data && event.data.type === 'CLEAR_ALL_CACHE') {
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        console.log('[SW] Clearing all caches');
+        return Promise.all(
+          cacheNames.map((cacheName) => caches.delete(cacheName))
+        ).then(() => {
+          // Notify caller that clear is complete
+          event.ports[0]?.postMessage({ success: true });
+        });
+      })
+    );
   }
   
   // Clear all caches on auth errors

@@ -36,7 +36,7 @@ export default function Customers() {
     zip: '',
   });
   const { user } = useAuth();
-  const { queueChange } = useSyncManager();
+  const { queueChange, pauseSync, resumeSync } = useSyncManager();
   const { startLoading, stopLoading, isLoading } = useLoadingState();
   const loadingRef = useRef(false);
 
@@ -210,9 +210,19 @@ export default function Customers() {
   };
 
   const handleClearCacheAndRetry = () => {
+    pauseSync();
     localStorage.removeItem('customers-cache');
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      const messageChannel = new MessageChannel();
+      navigator.serviceWorker.controller.postMessage(
+        { type: 'CLEAR_ALL_CACHE' },
+        [messageChannel.port2]
+      );
+    }
     setRetryCount(0);
-    loadCustomers(true);
+    loadCustomers(true).finally(() => {
+      resumeSync();
+    });
     toast.success('Cache cleared');
   };
 

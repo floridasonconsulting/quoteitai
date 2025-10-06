@@ -3,6 +3,7 @@ import { Customer, Item, Quote } from '@/types';
 import { getStorageItem, setStorageItem } from './storage';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 
+const CACHE_VERSION = 'v1';
 const CACHE_KEYS = {
   CUSTOMERS: 'customers-cache',
   ITEMS: 'items-cache',
@@ -11,9 +12,13 @@ const CACHE_KEYS = {
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+// Request deduplication map
+const inFlightRequests = new Map<string, Promise<any>>();
+
 interface CacheEntry<T> {
   data: T[];
   timestamp: number;
+  version: string;
 }
 
 function getCachedData<T>(key: string): T[] | null {
@@ -22,6 +27,14 @@ function getCachedData<T>(key: string): T[] | null {
   
   try {
     const entry: CacheEntry<T> = JSON.parse(cached);
+    
+    // Version check
+    if (entry.version !== CACHE_VERSION) {
+      console.log(`[Cache] ${key} version mismatch, clearing`);
+      localStorage.removeItem(key);
+      return null;
+    }
+    
     const age = Date.now() - entry.timestamp;
     
     if (age > CACHE_DURATION) {
@@ -42,8 +55,39 @@ function setCachedData<T>(key: string, data: T[]): void {
   const entry: CacheEntry<T> = {
     data,
     timestamp: Date.now(),
+    version: CACHE_VERSION,
   };
   localStorage.setItem(key, JSON.stringify(entry));
+}
+
+// Clear all caches (coordinated clear of localStorage + service worker)
+export async function clearAllCaches(): Promise<void> {
+  // Clear localStorage caches
+  Object.values(CACHE_KEYS).forEach(key => {
+    localStorage.removeItem(key);
+  });
+  
+  // Clear service worker caches if available
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    const messageChannel = new MessageChannel();
+    
+    return new Promise((resolve) => {
+      messageChannel.port1.onmessage = () => {
+        console.log('[Cache] All caches cleared (localStorage + Service Worker)');
+        resolve();
+      };
+      
+      navigator.serviceWorker.controller.postMessage(
+        { type: 'CLEAR_ALL_CACHE' },
+        [messageChannel.port2]
+      );
+      
+      // Fallback timeout
+      setTimeout(resolve, 1000);
+    });
+  }
+  
+  console.log('[Cache] localStorage caches cleared');
 }
 
 // Transformation functions to convert between camelCase (frontend) and snake_case (database)
@@ -91,62 +135,77 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   ]);
 }
 
-// Generic fetch with cache
+// Request deduplication wrapper
+async function dedupedRequest<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
+  if (inFlightRequests.has(key)) {
+    console.log(`[Dedup] Reusing in-flight request for ${key}`);
+    return inFlightRequests.get(key)!;
+  }
+
+  const promise = requestFn().finally(() => {
+    inFlightRequests.delete(key);
+  });
+
+  inFlightRequests.set(key, promise);
+  return promise;
+}
+
+// Generic fetch with cache and deduplication
 async function fetchWithCache<T>(
   userId: string | undefined,
   table: string,
   cacheKey: string
 ): Promise<T[]> {
-  // Check cache first
-  const cached = getCachedData<T>(cacheKey);
-  
-  if (!navigator.onLine || !userId) {
-    if (!userId) {
-      console.warn(`⚠️ No user ID - using cache for ${table}. Database operations require authentication.`);
-    }
-    return cached || [];
+  if (!userId) {
+    console.warn(`⚠️ No user ID - using cache for ${table}.`);
+    return getCachedData<T>(cacheKey) || [];
   }
 
-  // Return cache immediately, fetch in background
-  const returnCache = cached !== null;
+  const dedupKey = `fetch-${table}-${userId}`;
 
-  try {
-    // Apply 15-second timeout to prevent hanging
-    const dbQueryPromise = Promise.resolve(
-      supabase
-        .from(table as any)
-        .select('*')
-        .eq('user_id', userId)
-    );
+  return dedupedRequest(dedupKey, async () => {
+    // Check cache first
+    const cached = getCachedData<T>(cacheKey);
     
-    const { data, error } = await withTimeout(dbQueryPromise, 15000);
-    
-    if (error) {
+    if (!navigator.onLine) {
+      return cached || [];
+    }
+
+    try {
+      // Apply 15-second timeout
+      const dbQueryPromise = Promise.resolve(
+        supabase
+          .from(table as any)
+          .select('*')
+          .eq('user_id', userId)
+      );
+      
+      const { data, error } = await withTimeout(dbQueryPromise, 15000);
+      
+      if (error) {
+        console.error(`Error fetching ${table}:`, error);
+        // Return cached data on error
+        if (cached) {
+          console.log(`[Cache] Using cached data for ${table} after error`);
+          return cached;
+        }
+        throw error;
+      }
+      
+      // Transform and cache
+      const result = data ? data.map(item => toCamelCase(item)) as T[] : [];
+      setCachedData<T>(cacheKey, result);
+      
+      return result;
+    } catch (error) {
       console.error(`Error fetching ${table}:`, error);
-      // Clear stale cache on error
-      localStorage.removeItem(cacheKey);
-      throw error;
+      if (cached) {
+        console.log(`[Cache] Returning cached data for ${table} after timeout`);
+        return cached;
+      }
+      return [];
     }
-    
-    // Transform snake_case from DB to camelCase for frontend
-    const result = data ? data.map(item => toCamelCase(item)) as T[] : [];
-    setCachedData<T>(cacheKey, result);
-    
-    // If we returned cache, this is a background refresh
-    if (returnCache) {
-      console.log(`[Cache] Background refresh for ${table}`);
-    }
-    
-    return result;
-  } catch (error) {
-    console.error(`Error fetching ${table}:`, error);
-    // Return cached data on timeout or error
-    if (cached) {
-      console.log(`[Cache] Returning cached data for ${table} after error`);
-      return cached;
-    }
-    return [];
-  }
+  });
 }
 
 // Generic create with cache

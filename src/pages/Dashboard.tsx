@@ -41,7 +41,13 @@ export default function Dashboard() {
     if (!authLoading && user && !hasLoadedData.current) {
       console.log('[Dashboard] Loading data for user:', user.id);
       hasLoadedData.current = true;
-      loadData();
+      
+      // Pause sync during initial load to prevent conflicts
+      pauseSync();
+      loadData().finally(() => {
+        // Resume sync after load completes
+        resumeSync();
+      });
     }
 
     return () => {
@@ -49,8 +55,9 @@ export default function Dashboard() {
         abortControllerRef.current.abort();
         console.log('[Dashboard] Aborted data loading on unmount');
       }
+      resumeSync(); // Ensure sync is resumed on unmount
     };
-  }, [user, authLoading]);
+  }, [user, authLoading, pauseSync, resumeSync]);
 
   const loadData = async () => {
     if (abortControllerRef.current) {
@@ -170,27 +177,43 @@ export default function Dashboard() {
     loadData();
   };
 
-  const handleFullReset = () => {
-    // Pause sync during reset
+  const handleFullReset = async () => {
     pauseSync();
     
-    // Clear all caches and state
-    localStorage.removeItem('customers-cache');
-    localStorage.removeItem('items-cache');
-    localStorage.removeItem('quotes-cache');
-    localStorage.removeItem('sync-queue');
-    localStorage.removeItem('failed-sync-queue');
-    
-    // Reset component state
-    hasLoadedData.current = false;
-    setRetryCount(0);
-    setError(null);
-    
-    // Resume sync and reload
-    setTimeout(() => {
+    try {
+      // Clear all caches
+      localStorage.removeItem('customers-cache');
+      localStorage.removeItem('items-cache');
+      localStorage.removeItem('quotes-cache');
+      localStorage.removeItem('sync-queue');
+      localStorage.removeItem('failed-sync-queue');
+      
+      // Clear service worker caches
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        const messageChannel = new MessageChannel();
+        messageChannel.port1.onmessage = () => {
+          console.log('[Dashboard] Service worker caches cleared');
+        };
+        navigator.serviceWorker.controller.postMessage(
+          { type: 'CLEAR_ALL_CACHE' },
+          [messageChannel.port2]
+        );
+      }
+      
+      // Reset state
+      hasLoadedData.current = false;
+      setRetryCount(0);
+      setError(null);
+      
+      // Reload
+      setTimeout(() => {
+        resumeSync();
+        loadData();
+      }, 500);
+    } catch (error) {
+      console.error('[Dashboard] Error during reset:', error);
       resumeSync();
-      loadData();
-    }, 500);
+    }
   };
 
   const agingSummary = getAgingSummary(quotes.filter(q => q.status === 'sent'));

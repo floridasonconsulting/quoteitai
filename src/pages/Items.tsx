@@ -34,7 +34,7 @@ const CATEGORIES = [
 
 export default function Items() {
   const { user } = useAuth();
-  const { queueChange } = useSyncManager();
+  const { queueChange, pauseSync, resumeSync } = useSyncManager();
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -277,9 +277,19 @@ export default function Items() {
   };
 
   const handleClearCacheAndRetry = () => {
+    pauseSync();
     localStorage.removeItem('items-cache');
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      const messageChannel = new MessageChannel();
+      navigator.serviceWorker.controller.postMessage(
+        { type: 'CLEAR_ALL_CACHE' },
+        [messageChannel.port2]
+      );
+    }
     setRetryCount(0);
-    loadItems(true);
+    loadItems(true).finally(() => {
+      resumeSync();
+    });
     toast.success('Cache cleared');
   };
 
