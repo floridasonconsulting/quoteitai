@@ -1,5 +1,8 @@
 project_id = "onxyqhixydadpnkvdtvm"
 
+[functions.analytics]
+verify_jwt = false
+
 [functions.ai-assist]
 verify_jwt = true
 

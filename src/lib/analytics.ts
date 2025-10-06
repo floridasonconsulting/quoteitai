@@ -1,6 +1,6 @@
 /**
- * Non-blocking analytics helper
- * Uses sendBeacon for fire-and-forget analytics that never blocks the UI
+ * Enhanced non-blocking analytics helper
+ * Features: offline queue, retry logic, idle callback, batching, timeouts
  */
 
 interface AnalyticsEvent {
@@ -9,9 +9,38 @@ interface AnalyticsEvent {
   payload?: Record<string, any>;
 }
 
+interface QueuedEvent {
+  event: AnalyticsEvent;
+  retries: number;
+  nextRetry?: number;
+}
+
+// Configuration
+const MAX_RETRIES = 3;
+const RETRY_DELAY_BASE = 1000; // 1 second base delay
+const REQUEST_TIMEOUT = 3000; // 3 second timeout
+const BATCH_SIZE = 5;
+const BATCH_DELAY = 2000; // 2 seconds
+
+// Queue management
+let eventQueue: QueuedEvent[] = [];
+let batchTimeout: ReturnType<typeof setTimeout> | null = null;
+let isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+
+// Initialize online/offline listeners
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    isOnline = true;
+    processQueue();
+  });
+  window.addEventListener('offline', () => {
+    isOnline = false;
+  });
+}
+
 /**
  * Send analytics event without blocking UI
- * Uses navigator.sendBeacon if available, falls back to fetch with keepalive
+ * Uses requestIdleCallback to defer processing during critical rendering
  */
 export function sendAnalytics(eventName: string, payload?: Record<string, any>): void {
   const event: AnalyticsEvent = {
@@ -20,39 +49,142 @@ export function sendAnalytics(eventName: string, payload?: Record<string, any>):
     payload,
   };
 
-  const data = JSON.stringify(event);
-  const url = '/~api/analytics';
-
-  // Prefer sendBeacon for guaranteed delivery
-  if (navigator.sendBeacon) {
-    const blob = new Blob([data], { type: 'application/json' });
-    const sent = navigator.sendBeacon(url, blob);
-    
-    if (!sent) {
-      console.warn('[Analytics] sendBeacon failed, falling back to fetch');
-      sendWithFetch(url, data);
-    }
+  // Use requestIdleCallback for non-blocking execution
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => queueEvent(event), { timeout: 2000 });
   } else {
-    // Fallback to fetch with keepalive
-    sendWithFetch(url, data);
+    // Fallback for browsers without requestIdleCallback
+    setTimeout(() => queueEvent(event), 0);
   }
 }
 
 /**
- * Fallback method using fetch with keepalive flag
+ * Queue an event for sending
  */
-function sendWithFetch(url: string, data: string): void {
-  fetch(url, {
-    method: 'POST',
-    body: data,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    keepalive: true, // Ensures request continues even if page unloads
-  }).catch((error) => {
-    // Silently ignore analytics errors - they should never impact UX
-    console.debug('[Analytics] Error sending event:', error);
-  });
+function queueEvent(event: AnalyticsEvent): void {
+  eventQueue.push({ event, retries: 0 });
+  
+  // Process immediately if online, otherwise wait for connection
+  if (isOnline) {
+    scheduleBatchSend();
+  }
+}
+
+/**
+ * Schedule batch send with debouncing
+ */
+function scheduleBatchSend(): void {
+  if (batchTimeout) {
+    clearTimeout(batchTimeout);
+  }
+  
+  // Send immediately if queue is full, otherwise debounce
+  if (eventQueue.length >= BATCH_SIZE) {
+    processBatch();
+  } else {
+    batchTimeout = setTimeout(processBatch, BATCH_DELAY);
+  }
+}
+
+/**
+ * Process a batch of events
+ */
+async function processBatch(): Promise<void> {
+  if (eventQueue.length === 0) return;
+  
+  // Take up to BATCH_SIZE events
+  const batch = eventQueue.splice(0, BATCH_SIZE);
+  
+  for (const queuedEvent of batch) {
+    await sendEventWithRetry(queuedEvent);
+  }
+  
+  // Continue processing if more events remain
+  if (eventQueue.length > 0) {
+    scheduleBatchSend();
+  }
+}
+
+/**
+ * Process the entire queue (called when coming back online)
+ */
+function processQueue(): void {
+  if (eventQueue.length > 0 && isOnline) {
+    scheduleBatchSend();
+  }
+}
+
+/**
+ * Send a single event with retry logic
+ */
+async function sendEventWithRetry(queuedEvent: QueuedEvent): Promise<void> {
+  const { event, retries } = queuedEvent;
+  
+  // Check if we should retry (exponential backoff)
+  if (queuedEvent.nextRetry && Date.now() < queuedEvent.nextRetry) {
+    eventQueue.push(queuedEvent); // Re-queue for later
+    return;
+  }
+  
+  try {
+    await sendWithTimeout(event);
+  } catch (error) {
+    console.debug('[Analytics] Send failed:', error);
+    
+    // Retry with exponential backoff
+    if (retries < MAX_RETRIES) {
+      const delay = RETRY_DELAY_BASE * Math.pow(2, retries);
+      queuedEvent.retries++;
+      queuedEvent.nextRetry = Date.now() + delay;
+      eventQueue.push(queuedEvent);
+    } else {
+      console.debug('[Analytics] Max retries exceeded, dropping event:', event.event);
+    }
+  }
+}
+
+/**
+ * Send event with timeout protection
+ */
+async function sendWithTimeout(event: AnalyticsEvent): Promise<void> {
+  const data = JSON.stringify(event);
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analytics`;
+  
+  // Try sendBeacon first (most reliable, no timeout needed)
+  if (navigator.sendBeacon) {
+    const blob = new Blob([data], { type: 'application/json' });
+    const sent = navigator.sendBeacon(url, blob);
+    
+    if (sent) {
+      return; // Success
+    }
+  }
+  
+  // Fallback to fetch with timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      body: data,
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+      keepalive: true,
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok && response.status !== 202) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
 }
 
 /**
