@@ -99,11 +99,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets - cache first
-  if (request.destination === 'image' || 
-      request.destination === 'font' ||
-      request.destination === 'script' ||
-      request.destination === 'style') {
+  // Scripts and styles - network first (prevent React version mismatches)
+  if (request.destination === 'script' || request.destination === 'style') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(STATIC_CACHE).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Images and fonts - cache first
+  if (request.destination === 'image' || request.destination === 'font') {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
         if (cachedResponse) {
