@@ -15,6 +15,7 @@ import { formatCurrency } from '@/lib/utils';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
+import { useDataRefresh } from '@/hooks/useDataRefresh';
 
 export default function Quotes() {
   const navigate = useNavigate();
@@ -58,6 +59,13 @@ export default function Quotes() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user]);
+
+  // Listen for quote data changes
+  useDataRefresh('quotes-changed', () => {
+    if (user) {
+      loadQuotes();
+    }
+  });
 
   const filteredQuotes = quotes.filter(quote => {
     const matchesSearch = 

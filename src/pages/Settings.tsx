@@ -32,6 +32,7 @@ import { useSyncManager } from '@/hooks/useSyncManager';
 import { checkAndMigrateData } from '@/lib/migration-helper';
 import { generateSampleData } from '@/lib/sample-data';
 import { Separator } from '@/components/ui/separator';
+import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 
 export default function Settings() {
   const { permission, requestPermission, isSupported } = useNotifications();
@@ -171,6 +172,10 @@ export default function Settings() {
       }
       
       setSampleDataResult(result);
+      
+      // Notify pages to refresh their data
+      dispatchDataRefresh('customers-changed');
+      dispatchDataRefresh('items-changed');
       
       // Build detailed success message
       const totalCustomers = result.customersAddedToDb + result.customersFailedToDb;

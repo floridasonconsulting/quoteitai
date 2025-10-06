@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { parseCSVLine, formatCSVLine } from '@/lib/csv-utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
+import { useDataRefresh } from '@/hooks/useDataRefresh';
 
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -54,6 +55,13 @@ export default function Customers() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user]);
+
+  // Listen for customer data changes
+  useDataRefresh('customers-changed', () => {
+    if (user) {
+      loadCustomers();
+    }
+  });
 
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

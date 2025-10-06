@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Customer, Item, Quote } from '@/types';
 import { getStorageItem, setStorageItem } from './storage';
+import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 
 const CACHE_KEYS = {
   CUSTOMERS: 'customers-cache',
@@ -108,6 +109,11 @@ async function createWithCache<T>(
     // Update cache with camelCase version
     const cached = getStorageItem<T[]>(cacheKey, []);
     setStorageItem<T[]>(cacheKey, [...cached, itemWithUser as T]);
+    
+    // Dispatch refresh event
+    if (table === 'customers') dispatchDataRefresh('customers-changed');
+    if (table === 'items') dispatchDataRefresh('items-changed');
+    if (table === 'quotes') dispatchDataRefresh('quotes-changed');
   } catch (error) {
     console.error(`⚠️ Error creating ${table}, falling back to localStorage:`, error);
     // Fallback to cache
@@ -155,6 +161,11 @@ async function updateWithCache<T extends { id: string }>(
       item.id === id ? { ...item, ...updates } : item
     );
     setStorageItem<T[]>(cacheKey, updated);
+    
+    // Dispatch refresh event
+    if (table === 'customers') dispatchDataRefresh('customers-changed');
+    if (table === 'items') dispatchDataRefresh('items-changed');
+    if (table === 'quotes') dispatchDataRefresh('quotes-changed');
   } catch (error) {
     console.error(`Error updating ${table}:`, error);
     // Fallback to cache
@@ -195,6 +206,11 @@ async function deleteWithCache<T extends { id: string }>(
     // Update cache
     const cached = getStorageItem<T[]>(cacheKey, []);
     setStorageItem<T[]>(cacheKey, cached.filter(item => item.id !== id));
+    
+    // Dispatch refresh event
+    if (table === 'customers') dispatchDataRefresh('customers-changed');
+    if (table === 'items') dispatchDataRefresh('items-changed');
+    if (table === 'quotes') dispatchDataRefresh('quotes-changed');
   } catch (error) {
     console.error(`Error deleting ${table}:`, error);
     // Fallback to cache

@@ -16,6 +16,7 @@ import { parseCSVLine, formatCSVLine } from '@/lib/csv-utils';
 import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
+import { useDataRefresh } from '@/hooks/useDataRefresh';
 import { supabase } from '@/integrations/supabase/client';
 
 const CATEGORIES = [
@@ -71,6 +72,13 @@ export default function Items() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user]);
+
+  // Listen for item data changes
+  useDataRefresh('items-changed', () => {
+    if (user) {
+      loadItems();
+    }
+  });
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
