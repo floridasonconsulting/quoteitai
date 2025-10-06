@@ -62,13 +62,13 @@ export default function Dashboard() {
     // Set a timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
       setLoading(false);
-      setError('Loading is taking longer than expected. Please refresh the page.');
+      setError('Loading is taking longer than expected. This may be due to sync conflicts.');
       toast({
         title: 'Loading timeout',
-        description: 'Data loading took too long. Please try refreshing the page.',
+        description: 'Data loading took too long. Try clearing cache and retrying.',
         variant: 'destructive',
       });
-    }, 15000); // 15 second timeout
+    }, 10000); // 10 second timeout
 
     try {
       const quotesData = await getQuotes(user?.id);
@@ -163,12 +163,28 @@ export default function Dashboard() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <p className="text-destructive">{error}</p>
-        <Button onClick={() => {
-          hasLoadedData.current = false;
-          loadData();
-        }}>
-          Retry
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => {
+            hasLoadedData.current = false;
+            loadData();
+          }}>
+            Retry
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              // Clear cache and retry
+              localStorage.removeItem('customers-cache');
+              localStorage.removeItem('items-cache');
+              localStorage.removeItem('quotes-cache');
+              localStorage.removeItem('sync-queue');
+              hasLoadedData.current = false;
+              loadData();
+            }}
+          >
+            Clear Cache & Retry
+          </Button>
+        </div>
       </div>
     );
   }

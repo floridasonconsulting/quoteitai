@@ -27,8 +27,10 @@ import { clearAllData } from '@/lib/storage';
 import { 
   importCustomersFromCSV, 
   importItemsFromCSV, 
+  importQuotesFromCSV,
   importCompanySettingsFromCSV, 
   loadSampleDataFile,
+  validateItemsCSV,
   ImportResult 
 } from '@/lib/import-export-utils';
 import { CompanySettings } from '@/types';
@@ -157,41 +159,63 @@ export default function Settings() {
       // Load CSV files
       const customersCSV = await loadSampleDataFile('customers.csv');
       const itemsCSV = await loadSampleDataFile('items.csv');
+      const quotesCSV = await loadSampleDataFile('quotes.csv');
       const settingsCSV = await loadSampleDataFile('company-settings.csv');
+
+      // Validate items CSV first
+      const validation = validateItemsCSV(itemsCSV);
+      if (!validation.valid) {
+        toast.error(`Validation failed: ${validation.errors[0]}`);
+        setImportResult({
+          success: 0,
+          failed: validation.errors.length,
+          skipped: 0,
+          errors: validation.errors
+        });
+        return;
+      }
 
       // Import data
       const customersResult = await importCustomersFromCSV(customersCSV, user.id);
       const itemsResult = await importItemsFromCSV(itemsCSV, user.id);
+      const quotesResult = await importQuotesFromCSV(quotesCSV, user.id);
       await importCompanySettingsFromCSV(settingsCSV, user.id);
 
       // Reload settings
       await loadSettings();
 
+      // Clear localStorage cache after successful import
+      localStorage.removeItem('customers-cache');
+      localStorage.removeItem('items-cache');
+      localStorage.removeItem('quotes-cache');
+
       // Dispatch refresh events
       dispatchDataRefresh('customers-changed');
       dispatchDataRefresh('items-changed');
+      dispatchDataRefresh('quotes-changed');
 
-      const totalSuccess = customersResult.success + itemsResult.success;
-      const totalFailed = customersResult.failed + itemsResult.failed;
-      const totalSkipped = customersResult.skipped + itemsResult.skipped;
+      const totalSuccess = customersResult.success + itemsResult.success + quotesResult.success;
+      const totalFailed = customersResult.failed + itemsResult.failed + quotesResult.failed;
+      const totalSkipped = customersResult.skipped + itemsResult.skipped + quotesResult.skipped;
 
       setImportResult({
         success: totalSuccess,
         failed: totalFailed,
         skipped: totalSkipped,
-        errors: [...customersResult.errors, ...itemsResult.errors]
+        errors: [...customersResult.errors, ...itemsResult.errors, ...quotesResult.errors]
       });
 
       if (totalFailed > 0) {
-        toast.warning(`Import completed with errors. ${totalSuccess} imported, ${totalSkipped} skipped, ${totalFailed} failed.`);
+        toast.warning(`Import completed with errors. ${totalSuccess} imported, ${totalSkipped} skipped, ${totalFailed} failed. Check details below.`);
       } else if (totalSkipped > 0) {
-        toast.success(`Imported ${totalSuccess} records, skipped ${totalSkipped} duplicates.`);
+        toast.success(`Imported ${totalSuccess} records (${customersResult.success} customers, ${itemsResult.success} items, ${quotesResult.success} quotes), skipped ${totalSkipped} duplicates.`);
       } else {
-        toast.success(`Successfully imported ${totalSuccess} records!`);
+        toast.success(`Successfully imported ${totalSuccess} records (${customersResult.success} customers, ${itemsResult.success} items, ${quotesResult.success} quotes)!`);
       }
     } catch (error) {
       console.error('Import error:', error);
-      toast.error('Failed to import sample data. Please try again.');
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to import sample data: ${errorMsg}`);
     } finally {
       setImporting(false);
     }
@@ -215,30 +239,47 @@ export default function Settings() {
       // Import sample data inline to avoid state conflicts
       const customersCSV = await loadSampleDataFile('customers.csv');
       const itemsCSV = await loadSampleDataFile('items.csv');
+      const quotesCSV = await loadSampleDataFile('quotes.csv');
       const settingsCSV = await loadSampleDataFile('company-settings.csv');
+
+      // Validate before importing
+      const validation = validateItemsCSV(itemsCSV);
+      if (!validation.valid) {
+        toast.error(`Validation failed: ${validation.errors[0]}`);
+        return;
+      }
 
       const customersResult = await importCustomersFromCSV(customersCSV, user.id);
       const itemsResult = await importItemsFromCSV(itemsCSV, user.id);
+      const quotesResult = await importQuotesFromCSV(quotesCSV, user.id);
       await importCompanySettingsFromCSV(settingsCSV, user.id);
+
+      // Clear localStorage cache
+      localStorage.removeItem('customers-cache');
+      localStorage.removeItem('items-cache');
+      localStorage.removeItem('quotes-cache');
+      localStorage.removeItem('sync-queue');
 
       // Dispatch refresh events
       dispatchDataRefresh('customers-changed');
       dispatchDataRefresh('items-changed');
+      dispatchDataRefresh('quotes-changed');
 
-      const totalSuccess = customersResult.success + itemsResult.success;
-      const totalFailed = customersResult.failed + itemsResult.failed;
+      const totalSuccess = customersResult.success + itemsResult.success + quotesResult.success;
+      const totalFailed = customersResult.failed + itemsResult.failed + quotesResult.failed;
 
       if (totalFailed > 0) {
         toast.warning(`Import completed with errors. ${totalSuccess} records imported, ${totalFailed} failed.`);
       } else {
-        toast.success(`Successfully imported ${totalSuccess} records!`);
+        toast.success(`Successfully imported ${totalSuccess} records (${customersResult.success} customers, ${itemsResult.success} items, ${quotesResult.success} quotes)!`);
       }
 
       // Reload page to ensure fresh state
       setTimeout(() => window.location.reload(), 500);
     } catch (error) {
       console.error('Clear and import error:', error);
-      toast.error('Failed to clear and import data');
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to clear and import data: ${errorMsg}`);
     } finally {
       setImporting(false);
     }

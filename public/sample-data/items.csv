@@ -18,4 +18,4 @@ name,description,category,basePrice,markup,markupType,finalPrice,units
 "Vinyl Plank Flooring","Install luxury vinyl plank flooring","Home Rehab",4.25,65,percentage,7.01,sq ft
 "Kitchen Faucet - Standard","Mid-range kitchen faucet","Home Rehab",125,45,percentage,181.25,per unit
 "Bathroom Vanity","Basic bathroom vanity cabinet","Home Rehab",275,40,percentage,385.00,per unit
-"Labor - Hourly","General labor and service work","Freelancer",65,0,flat,65.00,per hour
+"Labor - Hourly","General labor and service work","Freelancer",65,0,fixed,65.00,per hour
