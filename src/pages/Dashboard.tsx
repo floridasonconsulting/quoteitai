@@ -4,14 +4,17 @@ import { Plus, Users, Package, FileText, Clock, TrendingUp, Target, DollarSign, 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getQuotes, getCustomers, getItems } from '@/lib/storage';
+import { getQuotes, getCustomers, getItems } from '@/lib/db-service';
 import { getAgingSummary, getQuoteAge } from '@/lib/quote-utils';
 import { Quote } from '@/types';
 import { cn, formatCurrency } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalQuotes: 0,
     totalCustomers: 0,
@@ -24,9 +27,14 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    const quotesData = getQuotes();
-    const customersData = getCustomers();
-    const itemsData = getItems();
+    loadData();
+  }, [user]);
+
+  const loadData = async () => {
+    setLoading(true);
+    const quotesData = await getQuotes(user?.id);
+    const customersData = await getCustomers(user?.id);
+    const itemsData = await getItems(user?.id);
 
     const pendingValue = quotesData
       .filter(q => q.status === 'sent')
@@ -59,7 +67,8 @@ export default function Dashboard() {
       totalRevenue,
       declinedValue,
     });
-  }, []);
+    setLoading(false);
+  };
 
   const agingSummary = getAgingSummary(quotes.filter(q => q.status === 'sent'));
   const recentQuotes = quotes.slice(0, 5);
@@ -83,6 +92,10 @@ export default function Dashboard() {
       default: return 'bg-muted text-muted-foreground';
     }
   };
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[60vh]">Loading dashboard...</div>;
+  }
 
   return (
     <div className="space-y-6 overflow-x-hidden max-w-full">
