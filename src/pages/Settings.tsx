@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset, AlertTriangle, ChevronDown, RefreshCw, Shield, Sparkles } from 'lucide-react';
+import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset, AlertTriangle, ChevronDown, RefreshCw, Shield, Sparkles, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getSettings, saveSettings } from '@/lib/db-service';
 import { clearAllData } from '@/lib/storage';
 import { CompanySettings } from '@/types';
@@ -609,6 +610,16 @@ export default function Settings() {
 
             {/* Sample Data Generation Section */}
             <div className="space-y-3">
+              {!user && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Authentication Required</AlertTitle>
+                  <AlertDescription>
+                    You must be signed in to generate sample data. Please sign in first.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <div className="flex items-center justify-between">
                 <div>
                   <Label>Generate Sample Data</Label>
@@ -618,7 +629,7 @@ export default function Settings() {
                 </div>
                 <Button 
                   onClick={handleGenerateSampleData} 
-                  disabled={generatingSample}
+                  disabled={generatingSample || !user}
                   variant="outline"
                 >
                   <Sparkles className={`mr-2 h-4 w-4 ${generatingSample ? 'animate-pulse' : ''}`} />

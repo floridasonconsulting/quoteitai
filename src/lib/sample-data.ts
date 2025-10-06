@@ -23,8 +23,11 @@ export const generateSampleData = async (
   includeCompanySettings: boolean = false
 ) => {
   if (!userId) {
-    throw new Error('User ID is required to generate sample data');
+    console.error('Sample data generation failed: No user ID provided');
+    throw new Error('You must be logged in to generate sample data. Please sign in first.');
   }
+  
+  console.log('Starting sample data generation for user:', userId);
 
   let customersAdded = 0;
   let itemsAdded = 0;

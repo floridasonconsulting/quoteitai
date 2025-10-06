@@ -50,6 +50,9 @@ async function fetchWithCache<T>(
   cacheKey: string
 ): Promise<T[]> {
   if (!navigator.onLine || !userId) {
+    if (!userId) {
+      console.warn(`⚠️ No user ID - using localStorage for ${table}. Database operations require authentication.`);
+    }
     return getStorageItem<T[]>(cacheKey, []);
   }
 
@@ -83,6 +86,9 @@ async function createWithCache<T>(
 
   if (!navigator.onLine || !userId) {
     // Offline: update cache and queue
+    if (!userId) {
+      console.warn(`⚠️ No user ID - saving ${table} to localStorage only. Sign in to save to database.`);
+    }
     const cached = getStorageItem<T[]>(cacheKey, []);
     setStorageItem<T[]>(cacheKey, [...cached, itemWithUser]);
     queueChange?.({ type: 'create', table, data: toSnakeCase(itemWithUser) });
