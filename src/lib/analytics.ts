@@ -150,10 +150,21 @@ async function sendWithTimeout(event: AnalyticsEvent): Promise<void> {
   const data = JSON.stringify(event);
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analytics`;
   
+  // Debug logging in development
+  if (import.meta.env.DEV) {
+    console.log('[Analytics] Sending event:', event.event, 'to', url);
+    console.time(`analytics-${event.event}`);
+  }
+  
   // Try sendBeacon first (most reliable, no timeout needed)
   if (navigator.sendBeacon) {
     const blob = new Blob([data], { type: 'application/json' });
     const sent = navigator.sendBeacon(url, blob);
+    
+    if (import.meta.env.DEV) {
+      console.timeEnd(`analytics-${event.event}`);
+      console.log('[Analytics] sendBeacon result:', sent);
+    }
     
     if (sent) {
       return; // Success
@@ -178,11 +189,21 @@ async function sendWithTimeout(event: AnalyticsEvent): Promise<void> {
     
     clearTimeout(timeoutId);
     
+    if (import.meta.env.DEV) {
+      console.timeEnd(`analytics-${event.event}`);
+      console.log('[Analytics] Fetch response:', response.status, response.ok);
+    }
+    
     if (!response.ok && response.status !== 202) {
       throw new Error(`HTTP ${response.status}`);
     }
   } catch (error) {
     clearTimeout(timeoutId);
+    
+    if (import.meta.env.DEV) {
+      console.error('[Analytics] Failed to send:', error);
+    }
+    
     throw error;
   }
 }

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'quote-it-v2';  // Increment manually only when needed
+const CACHE_VERSION = 'quote-it-v3';  // Force complete cache bust for analytics fix
 const STATIC_CACHE = CACHE_VERSION + '-static';
 const DYNAMIC_CACHE = CACHE_VERSION + '-dynamic';
 const CACHE_EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 hours
@@ -71,7 +71,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Analytics - fire and forget, never block
+  // Edge functions - never cache, always fetch fresh
+  if (url.pathname.includes('/functions/v1/')) {
+    event.respondWith(
+      fetch(request, { cache: 'no-store' })
+        .then(r => r)
+        .catch(() => new Response(null, { status: 204 }))
+    );
+    return;
+  }
+
+  // Analytics - fire and forget, never block (legacy support)
   if (url.pathname.includes('analytics') || url.pathname.includes('~api/analytics')) {
     event.respondWith(
       fetch(request)
