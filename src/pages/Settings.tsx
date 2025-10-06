@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset, AlertTriangle, ChevronDown, RefreshCw, Shield, Sparkles, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +36,7 @@ import { Separator } from '@/components/ui/separator';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 
 export default function Settings() {
+  const navigate = useNavigate();
   const { permission, requestPermission, isSupported } = useNotifications();
   const { themeMode, setThemeMode } = useTheme();
   const { user, userRole, isAdmin, updateUserRole, checkUserRole } = useAuth();
@@ -93,7 +95,7 @@ export default function Settings() {
   };
 
   const handleClearAllData = async () => {
-    clearAllData();
+    await clearAllData();
     
     if (clearCompanyInfo) {
       await saveSettings(user?.id, {
@@ -115,7 +117,15 @@ export default function Settings() {
       toast.success('All data cleared from local cache. Company settings preserved.');
     }
     
-    window.location.reload();
+    // Dispatch data refresh events
+    dispatchDataRefresh('customers-changed');
+    dispatchDataRefresh('items-changed');
+    dispatchDataRefresh('quotes-changed');
+    
+    // Navigate to dashboard instead of hard reload
+    setTimeout(() => {
+      navigate('/dashboard');
+    }, 100);
   };
 
   const handleNotificationToggle = async (enabled: boolean) => {

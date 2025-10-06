@@ -124,13 +124,19 @@ export const saveTheme = (theme: 'light' | 'dark'): void =>
   setStorageItem(STORAGE_KEYS.THEME, theme);
 
 // Clear All Data
-export const clearAllData = (): void => {
-  try {
-    localStorage.removeItem(STORAGE_KEYS.CUSTOMERS);
-    localStorage.removeItem(STORAGE_KEYS.ITEMS);
-    localStorage.removeItem(STORAGE_KEYS.QUOTES);
-    // Note: We preserve SETTINGS and THEME
-  } catch (error) {
-    console.error('Error clearing data:', error);
-  }
+export const clearAllData = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.CUSTOMERS);
+      localStorage.removeItem(STORAGE_KEYS.ITEMS);
+      localStorage.removeItem(STORAGE_KEYS.QUOTES);
+      // Note: We preserve SETTINGS and THEME
+      
+      // Small delay to ensure localStorage operations are flushed
+      setTimeout(() => resolve(), 50);
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      reject(error);
+    }
+  });
 };

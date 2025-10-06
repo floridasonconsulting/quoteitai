@@ -30,16 +30,14 @@ function AppContent() {
   const notifications = useNotifications();
   const { user, loading } = useAuth();
   
-  useEffect(() => {
-    // Register service worker for notifications
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js');
-    }
-  }, []);
-  
-  // Show Landing page immediately while auth loads to prevent blank screen
+  // Show proper loading spinner during auth initialization
+  // Only show Landing page when we know user is not authenticated
   if (loading) {
-    return <Landing />;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
   
   return (
