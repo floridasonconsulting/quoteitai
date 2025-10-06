@@ -32,10 +32,6 @@ export default function Customers() {
   const { user } = useAuth();
   const { queueChange } = useSyncManager();
 
-  useEffect(() => {
-    loadCustomers();
-  }, [user]);
-
   const loadCustomers = async () => {
     setLoading(true);
     const data = await getCustomers(user?.id);
@@ -43,6 +39,21 @@ export default function Customers() {
     setSelectedCustomers([]);
     setLoading(false);
   };
+
+  useEffect(() => {
+    loadCustomers();
+  }, [user]);
+
+  // Refresh data when navigating back to the page
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user) {
+        loadCustomers();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user]);
 
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

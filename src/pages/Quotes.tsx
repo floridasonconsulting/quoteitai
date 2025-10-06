@@ -29,6 +29,14 @@ export default function Quotes() {
   const [ageFilter, setAgeFilter] = useState<string>('all');
   const [selectedQuotes, setSelectedQuotes] = useState<string[]>([]);
 
+  const loadQuotes = async () => {
+    setLoading(true);
+    const data = await getQuotes(user?.id);
+    setQuotes(data);
+    setSelectedQuotes([]);
+    setLoading(false);
+  };
+
   useEffect(() => {
     loadQuotes();
     
@@ -40,13 +48,16 @@ export default function Quotes() {
     if (age) setAgeFilter(age);
   }, [searchParams, user]);
 
-  const loadQuotes = async () => {
-    setLoading(true);
-    const data = await getQuotes(user?.id);
-    setQuotes(data);
-    setSelectedQuotes([]);
-    setLoading(false);
-  };
+  // Refresh data when navigating back to the page
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user) {
+        loadQuotes();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user]);
 
   const filteredQuotes = quotes.filter(quote => {
     const matchesSearch = 

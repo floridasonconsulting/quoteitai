@@ -49,10 +49,6 @@ export default function Items() {
     units: 'Each',
   });
 
-  useEffect(() => {
-    loadItems();
-  }, [user]);
-
   const loadItems = async () => {
     setLoading(true);
     const data = await getItems(user?.id);
@@ -60,6 +56,21 @@ export default function Items() {
     setSelectedItems([]);
     setLoading(false);
   };
+
+  useEffect(() => {
+    loadItems();
+  }, [user]);
+
+  // Refresh data when navigating back to the page
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user) {
+        loadItems();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
