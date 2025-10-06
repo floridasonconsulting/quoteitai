@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -38,15 +38,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   
-  // Refs to prevent race conditions
-  const isInitializing = useState(false);
-  const roleCheckInProgress = useState(false);
+  // Refs to prevent race conditions (CRITICAL: Must use useRef not useState)
+  const isInitializing = useRef(false);
+  const roleCheckInProgress = useRef(false);
 
   const isAdmin = userRole === 'admin';
 
   const checkUserRole = async (sessionToUse?: Session | null) => {
     // Prevent duplicate role checks
-    if (roleCheckInProgress[0]) {
+    if (roleCheckInProgress.current) {
       console.log('[AuthContext] Role check already in progress, skipping');
       return;
     }
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     console.log('[AuthContext] Checking role for user:', activeSession.user.id);
-    roleCheckInProgress[1](true);
+    roleCheckInProgress.current = true;
     
     try {
       const { data, error } = await supabase.rpc('get_user_role', {
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('[AuthContext] Error checking user role:', error);
       setUserRole(null);
     } finally {
-      roleCheckInProgress[1](false);
+      roleCheckInProgress.current = false;
     }
   };
 
@@ -118,134 +118,133 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Prevent duplicate initialization
-    if (isInitializing[0]) {
+    if (isInitializing.current) {
       console.log('[AUTH DEBUG] Auth already initializing, skipping');
       return;
     }
     
-    isInitializing[1](true);
-    let timeoutId: NodeJS.Timeout;
+    isInitializing.current = true;
     let maxLoadingTimeout: NodeJS.Timeout;
+    
+    // Wrap in try-catch to handle corrupted localStorage
+    try {
+      // Test localStorage access
+      localStorage.getItem('test');
+    } catch (storageError) {
+      console.error('[AUTH DEBUG] localStorage corrupted, clearing:', storageError);
+      try {
+        localStorage.clear();
+      } catch (e) {
+        console.error('[AUTH DEBUG] Cannot clear localStorage:', e);
+      }
+      setLoading(false);
+      isInitializing.current = false;
+      return;
+    }
     
     // Maximum timeout to prevent infinite loading (5 seconds)
     maxLoadingTimeout = setTimeout(() => {
       console.warn('[AUTH DEBUG] Maximum loading timeout reached - forcing loading to false');
       setLoading(false);
-      isInitializing[1](false);
+      isInitializing.current = false;
     }, 5000);
-    
-    // Set timeout to prevent infinite loading on slow networks
-    timeoutId = setTimeout(() => {
-      console.log('[AUTH DEBUG] Auth check timeout - assuming no session');
-      setLoading(false);
-      setUser(null);
-      setSession(null);
-      setSubscription(null);
-      isInitializing[1](false);
-    }, 3000); // 3 second timeout
     
     // Set up auth state listener with error handling
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        clearTimeout(timeoutId);
         clearTimeout(maxLoadingTimeout);
         console.log('[AUTH DEBUG] Auth state change:', event, 'Session:', !!currentSession);
         
+        // Validate session has refresh token
+        if (currentSession?.refresh_token) {
+          try {
+            // Basic validation that refresh token looks valid
+            if (currentSession.refresh_token.length < 10) {
+              console.error('[AUTH DEBUG] Invalid refresh token detected');
+              throw new Error('Invalid refresh token');
+            }
+          } catch (validationError) {
+            console.error('[AUTH DEBUG] Session validation failed:', validationError);
+            localStorage.clear();
+            toast.error('Your session expired. Please sign in again.');
+            setSession(null);
+            setUser(null);
+            setSubscription(null);
+            setUserRole(null);
+            setLoading(false);
+            return;
+          }
+        }
+        
         // Handle token refresh failures
         if (event === 'TOKEN_REFRESHED' && !currentSession) {
-          console.log('[AUTH DEBUG] Token refresh failed - clearing session');
-          await supabase.auth.signOut();
+          console.error('[AUTH DEBUG] Token refresh failed - clearing corrupted data');
+          try {
+            localStorage.clear();
+            // Tell service worker to clear caches
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_AUTH_CACHE' });
+            }
+          } catch (e) {
+            console.error('[AUTH DEBUG] Error clearing storage:', e);
+          }
+          toast.error('Your session expired. Please sign in again.');
           setSession(null);
           setUser(null);
-          setSubscription(null);
-          setLoading(false);
-          return;
-        }
-        
-        // Handle sign out
-        if (event === 'SIGNED_OUT' || !currentSession) {
-          console.log('[AUTH DEBUG] Signed out or no session');
-          setSession(null);
-          setUser(null);
-          setSubscription(null);
-          setLoading(false);
-          return;
-        }
-        
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        
-        // Check role immediately before setting loading to false
-        if (currentSession?.user) {
-          await checkUserRole(currentSession);
-          console.log('[AUTH DEBUG] Setting loading to false after role check');
-          setLoading(false);
-          // Defer subscription check and data migration
-          setTimeout(async () => {
-            await refreshSubscription();
-            await checkAndMigrateData(currentSession.user.id);
-          }, 0);
-        } else {
           setSubscription(null);
           setUserRole(null);
-          console.log('[AUTH DEBUG] Setting loading to false - no session');
           setLoading(false);
+          return;
         }
+        
+        // Handle sign out - distinguish intentional vs automatic
+        if (event === 'SIGNED_OUT') {
+          console.log('[AUTH DEBUG] Signed out event');
+          try {
+            localStorage.clear();
+          } catch (e) {
+            console.error('[AUTH DEBUG] Error clearing storage on signout:', e);
+          }
+          setSession(null);
+          setUser(null);
+          setSubscription(null);
+          setUserRole(null);
+          setLoading(false);
+          return;
+        }
+        
+        // No session case
+        if (!currentSession) {
+          console.log('[AUTH DEBUG] No session');
+          setSession(null);
+          setUser(null);
+          setSubscription(null);
+          setUserRole(null);
+          setLoading(false);
+          return;
+        }
+        
+        // Valid session - update state
+        setSession(currentSession);
+        setUser(currentSession.user);
+        
+        // Check role immediately before setting loading to false
+        await checkUserRole(currentSession);
+        console.log('[AUTH DEBUG] Setting loading to false after role check');
+        setLoading(false);
+        
+        // Defer subscription check and data migration
+        setTimeout(async () => {
+          await refreshSubscription();
+          await checkAndMigrateData(currentSession.user.id);
+        }, 0);
       }
     );
 
-    // Check for existing session with error handling
-    supabase.auth.getSession()
-      .then(async ({ data: { session: currentSession }, error }) => {
-        clearTimeout(timeoutId);
-        clearTimeout(maxLoadingTimeout);
-        console.log('[AUTH DEBUG] getSession completed. Error:', !!error, 'Session:', !!currentSession);
-        
-        if (error) {
-          // Session restoration failed - clear everything
-          console.error('[AUTH DEBUG] Session restoration error:', error);
-          await supabase.auth.signOut();
-          setSession(null);
-          setUser(null);
-          setSubscription(null);
-          setLoading(false);
-          return;
-        }
-        
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        
-        if (currentSession?.user) {
-          await checkUserRole(currentSession);
-          console.log('[AUTH DEBUG] Setting loading to false after initial role check');
-          setLoading(false);
-          // Defer subscription check and data migration
-          setTimeout(async () => {
-            await refreshSubscription();
-            await checkAndMigrateData(currentSession.user.id);
-          }, 0);
-        } else {
-          console.log('[AUTH DEBUG] Setting loading to false - no initial session');
-          setLoading(false);
-        }
-      })
-      .catch(async (err) => {
-        clearTimeout(timeoutId);
-        clearTimeout(maxLoadingTimeout);
-        console.error('[AUTH DEBUG] Fatal auth error:', err);
-        await supabase.auth.signOut();
-        setSession(null);
-        setUser(null);
-        setSubscription(null);
-        console.log('[AUTH DEBUG] Setting loading to false after fatal error');
-        setLoading(false);
-      });
-
     return () => {
-      clearTimeout(timeoutId);
       clearTimeout(maxLoadingTimeout);
       authSubscription.unsubscribe();
-      isInitializing[1](false);
+      isInitializing.current = false;
     };
   }, []);
 

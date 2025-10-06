@@ -184,4 +184,16 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+  
+  // Clear all caches on auth errors
+  if (event.data && event.data.type === 'CLEAR_AUTH_CACHE') {
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        console.log('[SW] Clearing all caches due to auth error');
+        return Promise.all(
+          cacheNames.map((cacheName) => caches.delete(cacheName))
+        );
+      })
+    );
+  }
 });
