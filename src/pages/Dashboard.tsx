@@ -17,15 +17,16 @@ import { useSyncManager } from '@/hooks/useSyncManager';
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { pauseSync, resumeSync } = useSyncManager();
   const { startLoading, stopLoading } = useLoadingState();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingProgress, setLoadingProgress] = useState('');
+  const [loadingProgress, setLoadingProgress] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [showStuckHelper, setShowStuckHelper] = useState(false);
   const hasLoadedData = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const loadStartTime = useRef<number>(0);
   const [stats, setStats] = useState({
     totalQuotes: 0,
     totalCustomers: 0,
@@ -41,13 +42,7 @@ export default function Dashboard() {
     if (!authLoading && user && !hasLoadedData.current) {
       console.log('[Dashboard] Loading data for user:', user.id);
       hasLoadedData.current = true;
-      
-      // Pause sync during initial load to prevent conflicts
-      pauseSync();
-      loadData().finally(() => {
-        // Resume sync after load completes
-        resumeSync();
-      });
+      loadData();
     }
 
     return () => {
@@ -55,62 +50,59 @@ export default function Dashboard() {
         abortControllerRef.current.abort();
         console.log('[Dashboard] Aborted data loading on unmount');
       }
-      resumeSync(); // Ensure sync is resumed on unmount
     };
-  }, [user, authLoading, pauseSync, resumeSync]);
+  }, [user, authLoading]);
+
+  // Show "stuck" helper after 10 seconds
+  useEffect(() => {
+    if (loading) {
+      const timer = setTimeout(() => {
+        setShowStuckHelper(true);
+      }, 10000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowStuckHelper(false);
+    }
+  }, [loading]);
 
   const loadData = async () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
+    loadStartTime.current = Date.now();
     abortControllerRef.current = new AbortController();
     setLoading(true);
     setError(null);
-    setLoadingProgress('Starting...');
+    setLoadingProgress([]);
 
     const operationId = `dashboard-load-${Date.now()}`;
     startLoading(operationId, 'Loading dashboard data');
 
-    // Exponential backoff
-    const backoffDelay = Math.min(5000 * Math.pow(2, retryCount), 20000);
-    const timeoutDuration = 15000 + backoffDelay;
+    const timeoutDuration = 8000; // Reduced from 15s to 8s
 
     const timeoutId = setTimeout(() => {
       setLoading(false);
-      setError('Loading is taking longer than expected. This may be due to sync conflicts.');
-      setLoadingProgress('');
+      setError('Loading timeout - data took too long to fetch.');
+      setLoadingProgress([]);
       stopLoading(operationId);
-      toast({
-        title: 'Loading timeout',
-        description: 'Data loading took too long. Try clearing cache and retrying.',
-        variant: 'destructive',
-      });
+      console.error('[Dashboard] Timeout after', Date.now() - loadStartTime.current, 'ms');
     }, timeoutDuration);
 
     try {
-      setLoadingProgress('Loading customers...');
-      const customersData = await getCustomers(user?.id);
+      console.log('[Dashboard] Starting parallel data load');
+      const startTime = Date.now();
       
-      if (abortControllerRef.current?.signal.aborted) {
-        console.log('[Dashboard] Load aborted');
-        clearTimeout(timeoutId);
-        stopLoading(operationId);
-        return;
-      }
-
-      setLoadingProgress('Loading items...');
-      const itemsData = await getItems(user?.id);
+      // Load all data in parallel for maximum speed
+      setLoadingProgress(['Loading customers', 'Loading items', 'Loading quotes']);
       
-      if (abortControllerRef.current?.signal.aborted) {
-        console.log('[Dashboard] Load aborted');
-        clearTimeout(timeoutId);
-        stopLoading(operationId);
-        return;
-      }
-
-      setLoadingProgress('Loading quotes...');
-      const quotesData = await getQuotes(user?.id);
+      const [customersData, itemsData, quotesData] = await Promise.all([
+        getCustomers(user?.id),
+        getItems(user?.id),
+        getQuotes(user?.id)
+      ]);
+      
+      console.log('[Dashboard] Data loaded in', Date.now() - startTime, 'ms');
 
       if (abortControllerRef.current?.signal.aborted) {
         console.log('[Dashboard] Load aborted');
@@ -152,20 +144,20 @@ export default function Dashboard() {
       });
       
       setLoading(false);
-      setLoadingProgress('');
-      setRetryCount(0); // Reset retry count on success
+      setLoadingProgress([]);
+      setRetryCount(0);
       clearTimeout(timeoutId);
       stopLoading(operationId);
     } catch (error) {
       clearTimeout(timeoutId);
       stopLoading(operationId);
-      console.error('[Dashboard] Error loading data:', error);
+      console.error('[Dashboard] Error:', error, 'Duration:', Date.now() - loadStartTime.current, 'ms');
       setError('Failed to load dashboard data. Please try again.');
       setLoading(false);
-      setLoadingProgress('');
+      setLoadingProgress([]);
       toast({
         title: 'Error loading data',
-        description: 'Could not load dashboard data. Please try refreshing the page.',
+        description: 'Could not load dashboard. Check console for details.',
         variant: 'destructive',
       });
     }
@@ -178,8 +170,6 @@ export default function Dashboard() {
   };
 
   const handleFullReset = async () => {
-    pauseSync();
-    
     try {
       // Clear all caches
       localStorage.removeItem('customers-cache');
@@ -207,12 +197,10 @@ export default function Dashboard() {
       
       // Reload
       setTimeout(() => {
-        resumeSync();
         loadData();
       }, 500);
     } catch (error) {
       console.error('[Dashboard] Error during reset:', error);
-      resumeSync();
     }
   };
 
@@ -244,10 +232,19 @@ export default function Dashboard() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         <p className="text-muted-foreground">Loading dashboard...</p>
-        {loadingProgress && (
-          <p className="text-sm text-muted-foreground">{loadingProgress}</p>
+        {loadingProgress.length > 0 && (
+          <div className="text-sm text-muted-foreground space-y-1">
+            {loadingProgress.map((step, i) => (
+              <p key={i}>• {step}</p>
+            ))}
+          </div>
         )}
         <Progress value={33} className="w-48" />
+        {showStuckHelper && (
+          <Button variant="outline" size="sm" onClick={handleFullReset}>
+            Stuck? Click here to reset
+          </Button>
+        )}
       </div>
     );
   }
