@@ -29,8 +29,10 @@ export const generateSampleData = async (
   
   console.log('Starting sample data generation for user:', userId);
 
-  let customersAdded = 0;
-  let itemsAdded = 0;
+  let customersAddedToDb = 0;
+  let customersFailedToDb = 0;
+  let itemsAddedToDb = 0;
+  let itemsFailedToDb = 0;
   let quotesAdded = 0;
 
   try {
@@ -147,9 +149,14 @@ export const generateSampleData = async (
     ];
 
     // Insert customers into database
-    const customerInserts = sampleCustomers.map(customer => 
-      addCustomer(userId, customer as Customer).then(() => customersAdded++)
-    );
+    const customerInserts = sampleCustomers.map(async (customer) => {
+      try {
+        await addCustomer(userId, customer as Customer);
+        customersAddedToDb++;
+      } catch (error) {
+        customersFailedToDb++;
+      }
+    });
     await Promise.all(customerInserts);
 
     // Generate diverse sample items (15-20)
@@ -337,15 +344,25 @@ export const generateSampleData = async (
     ];
 
     // Insert items into database
-    const itemInserts = sampleItems.map(item => 
-      addItem(userId, item as Item).then(() => itemsAdded++)
-    );
+    const itemInserts = sampleItems.map(async (item) => {
+      try {
+        await addItem(userId, item as Item);
+        itemsAddedToDb++;
+      } catch (error) {
+        itemsFailedToDb++;
+      }
+    });
     await Promise.all(itemInserts);
 
     // Generate diverse sample quotes (20-25)  
     // Note: We need actual customer/item IDs from the database, so we'll create simplified quotes
     // In practice, you'd fetch the created customers/items first to get their IDs
-    console.log('Sample data generated successfully:', { customersAdded, itemsAdded });
+    console.log('Sample data generation results:', { 
+      customersAddedToDb, 
+      customersFailedToDb,
+      itemsAddedToDb, 
+      itemsFailedToDb 
+    });
 
   } catch (error) {
     console.error('Error generating sample data:', error);
@@ -360,8 +377,10 @@ export const generateSampleData = async (
   }
 
   return {
-    customersAdded,
-    itemsAdded,
+    customersAddedToDb,
+    customersFailedToDb,
+    itemsAddedToDb,
+    itemsFailedToDb,
     quotesAdded: 0, // Quotes require customer IDs, skipping for now
     companySettingsAdded,
   };

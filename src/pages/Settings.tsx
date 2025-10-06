@@ -171,10 +171,27 @@ export default function Settings() {
       }
       
       setSampleDataResult(result);
-      toast.success('Sample data generated successfully!');
+      
+      // Build detailed success message
+      const totalCustomers = result.customersAddedToDb + result.customersFailedToDb;
+      const totalItems = result.itemsAddedToDb + result.itemsFailedToDb;
+      
+      if (result.customersFailedToDb > 0 || result.itemsFailedToDb > 0) {
+        toast.warning(
+          `Sample data partially created. ${result.customersAddedToDb}/${totalCustomers} customers and ${result.itemsAddedToDb}/${totalItems} items saved to database. Check console for details.`,
+          { duration: 5000 }
+        );
+      } else {
+        toast.success(
+          `Sample data created! ${result.customersAddedToDb} customers and ${result.itemsAddedToDb} items added to database.`,
+          { duration: 4000 }
+        );
+      }
     } catch (error) {
       console.error('Error generating sample data:', error);
-      toast.error('Failed to generate sample data');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to generate sample data. Check console for details.'
+      );
     } finally {
       setGeneratingSample(false);
     }

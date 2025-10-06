@@ -99,17 +99,22 @@ async function createWithCache<T>(
     // Transform camelCase to snake_case for DB
     const dbItem = toSnakeCase(itemWithUser);
     const { error } = await supabase.from(table as any).insert(dbItem as any);
-    if (error) throw error;
+    if (error) {
+      console.error(`❌ Database insert failed for ${table}:`, error);
+      throw error;
+    }
     
+    console.log(`✅ Successfully inserted ${table} into database`);
     // Update cache with camelCase version
     const cached = getStorageItem<T[]>(cacheKey, []);
     setStorageItem<T[]>(cacheKey, [...cached, itemWithUser as T]);
   } catch (error) {
-    console.error(`Error creating ${table}:`, error);
+    console.error(`⚠️ Error creating ${table}, falling back to localStorage:`, error);
     // Fallback to cache
     const cached = getStorageItem<T[]>(cacheKey, []);
     setStorageItem<T[]>(cacheKey, [...cached, itemWithUser as T]);
     queueChange?.({ type: 'create', table, data: toSnakeCase(itemWithUser) });
+    throw error; // Re-throw so caller knows it failed
   }
 }
 
