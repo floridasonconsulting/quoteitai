@@ -233,10 +233,10 @@ export default function Landing() {
             <span className="text-xl font-bold">Quote-it AI</span>
           </div>
           <nav className="hidden md:flex gap-6">
-            <a href="#features" className="text-sm hover:text-primary transition-colors">Features</a>
-            <a href="#pricing" className="text-sm hover:text-primary transition-colors">Pricing</a>
-            <a href="#testimonials" className="text-sm hover:text-primary transition-colors">Testimonials</a>
-            <a href="/help" className="text-sm hover:text-primary transition-colors">Help</a>
+            <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Features</button>
+            <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Pricing</button>
+            <button onClick={() => document.getElementById('testimonials')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Testimonials</button>
+            <button onClick={() => navigate('/help')} className="text-sm hover:text-primary transition-colors">Help</button>
           </nav>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => navigate('/auth')}>Sign In</Button>

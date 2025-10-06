@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Plus, Users, Package, FileText, Clock, TrendingUp, Target, DollarSign, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,12 +9,16 @@ import { getAgingSummary, getQuoteAge } from '@/lib/quote-utils';
 import { Quote } from '@/types';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const hasLoadedData = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [stats, setStats] = useState({
     totalQuotes: 0,
     totalCustomers: 0,
@@ -27,54 +31,100 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    // Don't load data if auth is still loading
-    if (authLoading) {
-      console.log('[Dashboard] Auth still loading, waiting...');
-      return;
+    // Only load data once when user is available
+    if (!authLoading && user && !hasLoadedData.current) {
+      console.log('[Dashboard] Loading data for user:', user.id);
+      hasLoadedData.current = true;
+      loadData();
     }
-    
-    console.log('[Dashboard] Auth loaded, loading data...');
-    loadData();
+
+    // Cleanup function
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        console.log('[Dashboard] Aborted data loading on unmount');
+      }
+    };
   }, [user, authLoading]);
 
   const loadData = async () => {
+    // Cancel any previous load
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller
+    abortControllerRef.current = new AbortController();
+
     setLoading(true);
-    const quotesData = await getQuotes(user?.id);
-    const customersData = await getCustomers(user?.id);
-    const itemsData = await getItems(user?.id);
+    setError(null);
 
-    const pendingValue = quotesData
-      .filter(q => q.status === 'sent')
-      .reduce((sum, q) => sum + q.total, 0);
+    // Set a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError('Loading is taking longer than expected. Please refresh the page.');
+      toast({
+        title: 'Loading timeout',
+        description: 'Data loading took too long. Please try refreshing the page.',
+        variant: 'destructive',
+      });
+    }, 15000); // 15 second timeout
 
-    const sentQuotes = quotesData.filter(q => q.status === 'sent' || q.status === 'accepted' || q.status === 'declined');
-    const acceptedQuotes = quotesData.filter(q => q.status === 'accepted');
-    const acceptanceRate = sentQuotes.length > 0 
-      ? (acceptedQuotes.length / sentQuotes.length) * 100 
-      : 0;
+    try {
+      const quotesData = await getQuotes(user?.id);
+      const customersData = await getCustomers(user?.id);
+      const itemsData = await getItems(user?.id);
 
-    const avgQuoteValue = quotesData.length > 0
-      ? quotesData.reduce((sum, q) => sum + q.total, 0) / quotesData.length
-      : 0;
+      // Check if aborted
+      if (abortControllerRef.current?.signal.aborted) {
+        console.log('[Dashboard] Load aborted');
+        return;
+      }
 
-    const totalRevenue = acceptedQuotes.reduce((sum, q) => sum + q.total, 0);
-    
-    const declinedValue = quotesData
-      .filter(q => q.status === 'declined')
-      .reduce((sum, q) => sum + q.total, 0);
+      const pendingValue = quotesData
+        .filter(q => q.status === 'sent')
+        .reduce((sum, q) => sum + q.total, 0);
 
-    setQuotes(quotesData);
-    setStats({
-      totalQuotes: quotesData.length,
-      totalCustomers: customersData.length,
-      totalItems: itemsData.length,
-      pendingValue,
-      acceptanceRate,
-      avgQuoteValue,
-      totalRevenue,
-      declinedValue,
-    });
-    setLoading(false);
+      const sentQuotes = quotesData.filter(q => q.status === 'sent' || q.status === 'accepted' || q.status === 'declined');
+      const acceptedQuotes = quotesData.filter(q => q.status === 'accepted');
+      const acceptanceRate = sentQuotes.length > 0 
+        ? (acceptedQuotes.length / sentQuotes.length) * 100 
+        : 0;
+
+      const avgQuoteValue = quotesData.length > 0
+        ? quotesData.reduce((sum, q) => sum + q.total, 0) / quotesData.length
+        : 0;
+
+      const totalRevenue = acceptedQuotes.reduce((sum, q) => sum + q.total, 0);
+      
+      const declinedValue = quotesData
+        .filter(q => q.status === 'declined')
+        .reduce((sum, q) => sum + q.total, 0);
+
+      setQuotes(quotesData);
+      setStats({
+        totalQuotes: quotesData.length,
+        totalCustomers: customersData.length,
+        totalItems: itemsData.length,
+        pendingValue,
+        acceptanceRate,
+        avgQuoteValue,
+        totalRevenue,
+        declinedValue,
+      });
+      setLoading(false);
+      clearTimeout(timeoutId);
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.error('[Dashboard] Error loading data:', error);
+      setError('Failed to load dashboard data. Please try again.');
+      setLoading(false);
+      toast({
+        title: 'Error loading data',
+        description: 'Could not load dashboard data. Please try refreshing the page.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const agingSummary = getAgingSummary(quotes.filter(q => q.status === 'sent'));
@@ -101,7 +151,26 @@ export default function Dashboard() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[60vh]">Loading dashboard...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="text-muted-foreground">Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <p className="text-destructive">{error}</p>
+        <Button onClick={() => {
+          hasLoadedData.current = false;
+          loadData();
+        }}>
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   return (
