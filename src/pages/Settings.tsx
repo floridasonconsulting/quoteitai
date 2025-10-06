@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset, AlertTriangle, ChevronDown, RefreshCw, Shield, Sparkles, AlertCircle } from 'lucide-react';
+import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset, AlertTriangle, ChevronDown, RefreshCw, Shield, Sparkles, AlertCircle, Upload, Download, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,8 +22,15 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { getSettings, saveSettings } from '@/lib/db-service';
+import { getSettings, saveSettings, clearDatabaseData } from '@/lib/db-service';
 import { clearAllData } from '@/lib/storage';
+import { 
+  importCustomersFromCSV, 
+  importItemsFromCSV, 
+  importCompanySettingsFromCSV, 
+  loadSampleDataFile,
+  ImportResult 
+} from '@/lib/import-export-utils';
 import { CompanySettings } from '@/types';
 import { toast } from 'sonner';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -51,6 +58,8 @@ export default function Settings() {
   const [generatingSample, setGeneratingSample] = useState(false);
   const [includeCompanySettings, setIncludeCompanySettings] = useState(true);
   const [sampleDataResult, setSampleDataResult] = useState<any>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [formData, setFormData] = useState<CompanySettings>({
     name: '',
     address: '',
@@ -95,37 +104,120 @@ export default function Settings() {
   };
 
   const handleClearAllData = async () => {
-    await clearAllData();
-    
-    if (clearCompanyInfo) {
-      await saveSettings(user?.id, {
-        name: '',
-        address: '',
-        city: '',
-        state: '',
-        zip: '',
-        phone: '',
-        email: '',
-        website: '',
-        license: '',
-        insurance: '',
-        logoDisplayOption: 'both',
-        terms: 'Payment due within 30 days. Thank you for your business!',
-      }, queueChange);
-      toast.success('All data and company information cleared.');
-    } else {
-      toast.success('All data cleared from local cache. Company settings preserved.');
+    try {
+      // Clear database data
+      await clearDatabaseData(user?.id);
+      
+      // Clear local storage
+      await clearAllData();
+      
+      if (clearCompanyInfo) {
+        await saveSettings(user?.id, {
+          name: '',
+          address: '',
+          city: '',
+          state: '',
+          zip: '',
+          phone: '',
+          email: '',
+          website: '',
+          license: '',
+          insurance: '',
+          logoDisplayOption: 'both',
+          terms: 'Payment due within 30 days. Thank you for your business!',
+        }, queueChange);
+        toast.success('All data and company information cleared from database and local cache.');
+      } else {
+        toast.success('All data cleared from database and local cache. Company settings preserved.');
+      }
+      
+      // Dispatch data refresh events
+      dispatchDataRefresh('customers-changed');
+      dispatchDataRefresh('items-changed');
+      dispatchDataRefresh('quotes-changed');
+      
+      // Reload the page to refresh state
+      window.location.reload();
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      toast.error('Failed to clear data. Please try again.');
     }
-    
-    // Dispatch data refresh events
-    dispatchDataRefresh('customers-changed');
-    dispatchDataRefresh('items-changed');
-    dispatchDataRefresh('quotes-changed');
-    
-    // Navigate to dashboard instead of hard reload
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 100);
+  };
+
+  const handleImportSampleData = async () => {
+    if (!user?.id) {
+      toast.error('You must be signed in to import data');
+      return;
+    }
+
+    setImporting(true);
+    setImportResult(null);
+
+    try {
+      // Load CSV files
+      const customersCSV = await loadSampleDataFile('customers.csv');
+      const itemsCSV = await loadSampleDataFile('items.csv');
+      const settingsCSV = await loadSampleDataFile('company-settings.csv');
+
+      // Import data
+      const customersResult = await importCustomersFromCSV(customersCSV, user.id);
+      const itemsResult = await importItemsFromCSV(itemsCSV, user.id);
+      await importCompanySettingsFromCSV(settingsCSV, user.id);
+
+      // Reload settings
+      await loadSettings();
+
+      // Dispatch refresh events
+      dispatchDataRefresh('customers-changed');
+      dispatchDataRefresh('items-changed');
+
+      const totalSuccess = customersResult.success + itemsResult.success;
+      const totalFailed = customersResult.failed + itemsResult.failed;
+
+      setImportResult({
+        success: totalSuccess,
+        failed: totalFailed,
+        errors: [...customersResult.errors, ...itemsResult.errors]
+      });
+
+      if (totalFailed > 0) {
+        toast.warning(`Import completed with errors. ${totalSuccess} records imported, ${totalFailed} failed.`);
+      } else {
+        toast.success(`Successfully imported ${totalSuccess} records!`);
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error('Failed to import sample data. Please try again.');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleClearAndImport = async () => {
+    if (!user?.id) {
+      toast.error('You must be signed in');
+      return;
+    }
+
+    setImporting(true);
+
+    try {
+      // Clear existing data
+      await clearDatabaseData(user.id);
+      await clearAllData();
+
+      toast.success('Database cleared. Importing sample data...');
+
+      // Import sample data
+      await handleImportSampleData();
+
+      toast.success('Sample data imported successfully!');
+    } catch (error) {
+      console.error('Clear and import error:', error);
+      toast.error('Failed to clear and import data');
+    } finally {
+      setImporting(false);
+    }
   };
 
   const handleNotificationToggle = async (enabled: boolean) => {
@@ -324,6 +416,75 @@ export default function Settings() {
                 <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
                 {syncing ? 'Syncing...' : 'Sync Data Now'}
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileDown className="h-5 w-5" />
+              Sample Data Management
+            </CardTitle>
+            <CardDescription>
+              Import pre-made sample data for testing and screenshots
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Import sample customers, items, and company settings for field service businesses (plumbers, electricians, handymen, home rehab).
+              </p>
+              
+              <div className="grid gap-2">
+                <Button 
+                  onClick={handleImportSampleData} 
+                  disabled={importing || !user}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <Upload className={`mr-2 h-4 w-4 ${importing ? 'animate-pulse' : ''}`} />
+                  {importing ? 'Importing...' : 'Import Sample Data'}
+                </Button>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      disabled={importing || !user}
+                      variant="secondary"
+                      className="w-full"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Clear Database & Import Sample Data
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Clear All Data?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will delete all customers, items, and quotes from the database, then import fresh sample data. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleClearAndImport}>
+                        Clear & Import
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+
+              {importResult && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Import Results</AlertTitle>
+                  <AlertDescription>
+                    Successfully imported {importResult.success} records.
+                    {importResult.failed > 0 && ` ${importResult.failed} records failed.`}
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
           </CardContent>
         </Card>

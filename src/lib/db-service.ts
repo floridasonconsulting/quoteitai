@@ -355,3 +355,31 @@ export const saveSettings = async (userId: string | undefined, settings: any, qu
     }
   }
 };
+
+export async function clearDatabaseData(userId: string | undefined): Promise<void> {
+  if (!userId) return;
+
+  const { error: customersError } = await supabase
+    .from('customers')
+    .delete()
+    .eq('user_id', userId);
+
+  const { error: itemsError } = await supabase
+    .from('items')
+    .delete()
+    .eq('user_id', userId);
+
+  const { error: quotesError } = await supabase
+    .from('quotes')
+    .delete()
+    .eq('user_id', userId);
+
+  if (customersError || itemsError || quotesError) {
+    throw new Error('Failed to clear database data');
+  }
+
+  // Clear caches
+  localStorage.removeItem(`customers_${userId}`);
+  localStorage.removeItem(`items_${userId}`);
+  localStorage.removeItem(`quotes_${userId}`);
+}

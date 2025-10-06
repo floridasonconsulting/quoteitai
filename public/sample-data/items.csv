@@ -1,0 +1,21 @@
+name,description,category,basePrice,markup,markupType,finalPrice,units
+"Drain Cleaning","Clear clogged drains and pipes","Plumbing",85,50,percentage,127.50,per service
+"Toilet Repair","Repair or replace toilet components","Plumbing",95,50,percentage,142.50,per service
+"Faucet Installation","Install kitchen or bathroom faucet","Plumbing",75,60,percentage,120.00,per service
+"Water Heater Service","Inspect and service water heater","Plumbing",125,40,percentage,175.00,per service
+"Pipe Repair","Fix leaking or damaged pipes","Plumbing",110,45,percentage,159.50,per service
+"Outlet Installation","Install new electrical outlet","Electrical",65,55,percentage,100.75,per outlet
+"Light Fixture Install","Install ceiling or wall light fixture","Electrical",80,50,percentage,120.00,per fixture
+"Panel Upgrade","Upgrade electrical service panel","Electrical",450,35,percentage,607.50,per service
+"Circuit Breaker Replace","Replace faulty circuit breaker","Electrical",95,45,percentage,137.75,per service
+"Ceiling Fan Install","Install and wire ceiling fan","Electrical",120,40,percentage,168.00,per service
+"Drywall Repair","Patch and repair drywall damage","Handyman",75,50,percentage,112.50,per repair
+"Door Hardware Install","Install door handles and locks","Handyman",60,55,percentage,93.00,per door
+"Trim & Molding Install","Install baseboards and crown molding","Handyman",85,45,percentage,123.25,linear ft
+"Painting - Interior","Paint interior walls and trim","Handyman",45,60,percentage,72.00,per hour
+"Minor Carpentry","Custom carpentry and repairs","Handyman",70,50,percentage,105.00,per hour
+"Laminate Flooring","Install laminate floor planks","Home Rehab",3.50,70,percentage,5.95,sq ft
+"Vinyl Plank Flooring","Install luxury vinyl plank flooring","Home Rehab",4.25,65,percentage,7.01,sq ft
+"Kitchen Faucet - Standard","Mid-range kitchen faucet","Home Rehab",125,45,percentage,181.25,per unit
+"Bathroom Vanity","Basic bathroom vanity cabinet","Home Rehab",275,40,percentage,385.00,per unit
+"Labor - Hourly","General labor and service work","Freelancer",65,0,flat,65.00,per hour
