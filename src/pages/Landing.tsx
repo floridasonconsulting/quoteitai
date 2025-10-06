@@ -303,14 +303,11 @@ export default function Landing() {
                       <div className="space-y-4">
                         <Badge variant="secondary">{screenshot.badge}</Badge>
                         <div className="browser-mockup bg-card rounded-lg overflow-hidden shadow-2xl border">
-                          <div className="aspect-video bg-muted flex items-center justify-center">
-                            <div className="text-center space-y-2">
-                              <FileText className="h-16 w-16 text-muted-foreground mx-auto" />
-                              <p className="text-sm text-muted-foreground">
-                                Screenshot: {screenshot.title}
-                              </p>
-                            </div>
-                          </div>
+                          <img 
+                            src={screenshot.image} 
+                            alt={screenshot.title}
+                            className="w-full h-auto"
+                          />
                         </div>
                         <div>
                           <h3 className="font-semibold text-lg mb-1">{screenshot.title}</h3>
@@ -404,22 +401,11 @@ export default function Landing() {
             <TabsContent value="dashboard" className="space-y-4">
               <div className="relative max-w-6xl mx-auto">
                 <div className="browser-mockup">
-                  <div className="aspect-video bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">
-                    <div className="text-center space-y-4 p-8">
-                      <BarChart3 className="h-24 w-24 text-primary mx-auto" />
-                      <div>
-                        <h3 className="text-xl font-semibold mb-2">Dashboard Overview</h3>
-                        <p className="text-muted-foreground max-w-md mx-auto">
-                          Track revenue, quote status, aging analysis, and performance metrics in real-time
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        <Badge variant="secondary">Revenue Charts</Badge>
-                        <Badge variant="secondary">Quote Aging</Badge>
-                        <Badge variant="secondary">Win Rates</Badge>
-                      </div>
-                    </div>
-                  </div>
+                  <img 
+                    src="/screenshots/dashboard.png" 
+                    alt="Dashboard Overview"
+                    className="w-full h-auto"
+                  />
                 </div>
               </div>
             </TabsContent>
@@ -427,22 +413,11 @@ export default function Landing() {
             <TabsContent value="quotes" className="space-y-4">
               <div className="relative max-w-6xl mx-auto">
                 <div className="browser-mockup">
-                  <div className="aspect-video bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">
-                    <div className="text-center space-y-4 p-8">
-                      <FileText className="h-24 w-24 text-primary mx-auto" />
-                      <div>
-                        <h3 className="text-xl font-semibold mb-2">Quote Management</h3>
-                        <p className="text-muted-foreground max-w-md mx-auto">
-                          View all quotes with status badges, filters, and quick actions
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        <Badge>Sent</Badge>
-                        <Badge variant="secondary">Draft</Badge>
-                        <Badge className="bg-success">Accepted</Badge>
-                      </div>
-                    </div>
-                  </div>
+                  <img 
+                    src="/screenshots/quotes.png" 
+                    alt="Quote Management"
+                    className="w-full h-auto"
+                  />
                 </div>
               </div>
             </TabsContent>
@@ -450,22 +425,11 @@ export default function Landing() {
             <TabsContent value="new-quote" className="space-y-4">
               <div className="relative max-w-6xl mx-auto">
                 <div className="browser-mockup">
-                  <div className="aspect-video bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">
-                    <div className="text-center space-y-4 p-8">
-                      <Sparkles className="h-24 w-24 text-primary mx-auto" />
-                      <div>
-                        <h3 className="text-xl font-semibold mb-2">AI-Powered Quote Creation</h3>
-                        <p className="text-muted-foreground max-w-md mx-auto">
-                          Select customer and items, let AI generate descriptions and terms
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        <Badge variant="secondary">Auto-fill</Badge>
-                        <Badge variant="secondary">AI Descriptions</Badge>
-                        <Badge variant="secondary">PDF Export</Badge>
-                      </div>
-                    </div>
-                  </div>
+                  <img 
+                    src="/screenshots/new-quote.png" 
+                    alt="AI-Powered Quote Creation"
+                    className="w-full h-auto"
+                  />
                 </div>
               </div>
             </TabsContent>
@@ -473,22 +437,11 @@ export default function Landing() {
             <TabsContent value="customers" className="space-y-4">
               <div className="relative max-w-6xl mx-auto">
                 <div className="browser-mockup">
-                  <div className="aspect-video bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">
-                    <div className="text-center space-y-4 p-8">
-                      <Users className="h-24 w-24 text-primary mx-auto" />
-                      <div>
-                        <h3 className="text-xl font-semibold mb-2">Customer Management</h3>
-                        <p className="text-muted-foreground max-w-md mx-auto">
-                          Store contacts, track quote history, import/export customer data
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        <Badge variant="secondary">Contact Info</Badge>
-                        <Badge variant="secondary">CSV Import</Badge>
-                        <Badge variant="secondary">Quote History</Badge>
-                      </div>
-                    </div>
-                  </div>
+                  <img 
+                    src="/screenshots/customers.png" 
+                    alt="Customer Management"
+                    className="w-full h-auto"
+                  />
                 </div>
               </div>
             </TabsContent>
@@ -496,22 +449,11 @@ export default function Landing() {
             <TabsContent value="items" className="space-y-4">
               <div className="relative max-w-6xl mx-auto">
                 <div className="browser-mockup">
-                  <div className="aspect-video bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center">
-                    <div className="text-center space-y-4 p-8">
-                      <Package className="h-24 w-24 text-primary mx-auto" />
-                      <div>
-                        <h3 className="text-xl font-semibold mb-2">Item Catalog</h3>
-                        <p className="text-muted-foreground max-w-md mx-auto">
-                          Pre-configure products and services for rapid quote generation
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        <Badge variant="secondary">Products</Badge>
-                        <Badge variant="secondary">Services</Badge>
-                        <Badge variant="secondary">Pricing</Badge>
-                      </div>
-                    </div>
-                  </div>
+                  <img 
+                    src="/screenshots/items.png" 
+                    alt="Item Catalog"
+                    className="w-full h-auto"
+                  />
                 </div>
               </div>
             </TabsContent>
@@ -519,18 +461,11 @@ export default function Landing() {
             <TabsContent value="mobile" className="space-y-4">
               <div className="relative max-w-sm mx-auto">
                 <div className="phone-mockup mx-auto">
-                  <div className="w-full h-full bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-6">
-                    <div className="text-center space-y-4">
-                      <Smartphone className="h-16 w-16 text-primary mx-auto" />
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Mobile Ready</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Full functionality on any device
-                        </p>
-                      </div>
-                      <Badge variant="secondary">iOS & Android</Badge>
-                    </div>
-                  </div>
+                  <img 
+                    src="/screenshots/mobile.png" 
+                    alt="Mobile App"
+                    className="w-full h-auto"
+                  />
                 </div>
               </div>
             </TabsContent>
