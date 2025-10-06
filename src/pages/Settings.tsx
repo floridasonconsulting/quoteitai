@@ -173,15 +173,19 @@ export default function Settings() {
 
       const totalSuccess = customersResult.success + itemsResult.success;
       const totalFailed = customersResult.failed + itemsResult.failed;
+      const totalSkipped = customersResult.skipped + itemsResult.skipped;
 
       setImportResult({
         success: totalSuccess,
         failed: totalFailed,
+        skipped: totalSkipped,
         errors: [...customersResult.errors, ...itemsResult.errors]
       });
 
       if (totalFailed > 0) {
-        toast.warning(`Import completed with errors. ${totalSuccess} records imported, ${totalFailed} failed.`);
+        toast.warning(`Import completed with errors. ${totalSuccess} imported, ${totalSkipped} skipped, ${totalFailed} failed.`);
+      } else if (totalSkipped > 0) {
+        toast.success(`Imported ${totalSuccess} records, skipped ${totalSkipped} duplicates.`);
       } else {
         toast.success(`Successfully imported ${totalSuccess} records!`);
       }
@@ -208,10 +212,30 @@ export default function Settings() {
 
       toast.success('Database cleared. Importing sample data...');
 
-      // Import sample data
-      await handleImportSampleData();
+      // Import sample data inline to avoid state conflicts
+      const customersCSV = await loadSampleDataFile('customers.csv');
+      const itemsCSV = await loadSampleDataFile('items.csv');
+      const settingsCSV = await loadSampleDataFile('company-settings.csv');
 
-      toast.success('Sample data imported successfully!');
+      const customersResult = await importCustomersFromCSV(customersCSV, user.id);
+      const itemsResult = await importItemsFromCSV(itemsCSV, user.id);
+      await importCompanySettingsFromCSV(settingsCSV, user.id);
+
+      // Dispatch refresh events
+      dispatchDataRefresh('customers-changed');
+      dispatchDataRefresh('items-changed');
+
+      const totalSuccess = customersResult.success + itemsResult.success;
+      const totalFailed = customersResult.failed + itemsResult.failed;
+
+      if (totalFailed > 0) {
+        toast.warning(`Import completed with errors. ${totalSuccess} records imported, ${totalFailed} failed.`);
+      } else {
+        toast.success(`Successfully imported ${totalSuccess} records!`);
+      }
+
+      // Reload page to ensure fresh state
+      setTimeout(() => window.location.reload(), 500);
     } catch (error) {
       console.error('Clear and import error:', error);
       toast.error('Failed to clear and import data');
@@ -481,6 +505,7 @@ export default function Settings() {
                   <AlertTitle>Import Results</AlertTitle>
                   <AlertDescription>
                     Successfully imported {importResult.success} records.
+                    {importResult.skipped > 0 && ` ${importResult.skipped} duplicates skipped.`}
                     {importResult.failed > 0 && ` ${importResult.failed} records failed.`}
                   </AlertDescription>
                 </Alert>

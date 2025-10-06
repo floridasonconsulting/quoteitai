@@ -4,13 +4,18 @@ import { addCustomer, addItem, saveSettings } from './db-service';
 export interface ImportResult {
   success: number;
   failed: number;
+  skipped: number;
   errors: string[];
 }
 
 export async function importCustomersFromCSV(csvContent: string, userId: string): Promise<ImportResult> {
   const lines = csvContent.trim().split('\n');
   const headers = parseCSVLine(lines[0]);
-  const result: ImportResult = { success: 0, failed: 0, errors: [] };
+  const result: ImportResult = { success: 0, failed: 0, skipped: 0, errors: [] };
+
+  // Import getCustomers to check for duplicates
+  const { getCustomers } = await import('./db-service');
+  const existingCustomers = await getCustomers(userId);
 
   for (let i = 1; i < lines.length; i++) {
     try {
@@ -19,6 +24,16 @@ export async function importCustomersFromCSV(csvContent: string, userId: string)
       headers.forEach((header, index) => {
         customer[header.trim()] = values[index] || '';
       });
+
+      // Check for duplicates by name and email
+      const isDuplicate = existingCustomers.some(
+        existing => existing.name === customer.name && existing.email === customer.email
+      );
+
+      if (isDuplicate) {
+        result.skipped++;
+        continue;
+      }
 
       await addCustomer(userId, customer);
       result.success++;
@@ -34,7 +49,11 @@ export async function importCustomersFromCSV(csvContent: string, userId: string)
 export async function importItemsFromCSV(csvContent: string, userId: string): Promise<ImportResult> {
   const lines = csvContent.trim().split('\n');
   const headers = parseCSVLine(lines[0]);
-  const result: ImportResult = { success: 0, failed: 0, errors: [] };
+  const result: ImportResult = { success: 0, failed: 0, skipped: 0, errors: [] };
+
+  // Import getItems to check for duplicates
+  const { getItems } = await import('./db-service');
+  const existingItems = await getItems(userId);
 
   for (let i = 1; i < lines.length; i++) {
     try {
@@ -50,6 +69,16 @@ export async function importItemsFromCSV(csvContent: string, userId: string): Pr
           item[headerName] = value;
         }
       });
+
+      // Check for duplicates by name and category
+      const isDuplicate = existingItems.some(
+        existing => existing.name === item.name && existing.category === item.category
+      );
+
+      if (isDuplicate) {
+        result.skipped++;
+        continue;
+      }
 
       await addItem(userId, item);
       result.success++;
