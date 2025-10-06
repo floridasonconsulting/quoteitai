@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, Mail, Phone, Download, Upload } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Plus, Search, Edit, Trash2, Mail, Phone, Download, Upload, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from '@/lib/db-service';
 import { Customer } from '@/types';
 import { toast } from 'sonner';
@@ -13,6 +14,7 @@ import { parseCSVLine, formatCSVLine } from '@/lib/csv-utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { useDataRefresh } from '@/hooks/useDataRefresh';
+import { useLoadingState } from '@/hooks/useLoadingState';
 
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -21,6 +23,9 @@ export default function Customers() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [loadStartTime, setLoadStartTime] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -32,13 +37,54 @@ export default function Customers() {
   });
   const { user } = useAuth();
   const { queueChange } = useSyncManager();
+  const { startLoading, stopLoading, isLoading } = useLoadingState();
+  const loadingRef = useRef(false);
 
-  const loadCustomers = async () => {
+  const loadCustomers = async (forceRefresh = false) => {
+    if (loadingRef.current) {
+      console.log('[Customers] Load already in progress, skipping');
+      return;
+    }
+
+    loadingRef.current = true;
     setLoading(true);
-    const data = await getCustomers(user?.id);
-    setCustomers(data);
-    setSelectedCustomers([]);
-    setLoading(false);
+    setError(null);
+    setLoadStartTime(Date.now());
+    startLoading('load-customers', 'Loading customers');
+
+    try {
+      // Add 15-second timeout with exponential backoff for retries
+      const backoffDelay = retryCount > 0 ? Math.pow(2, retryCount - 1) * 5000 : 0;
+      const timeoutMs = 15000 + backoffDelay;
+
+      const timeoutPromise = new Promise<Customer[]>((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
+      );
+
+      const dataPromise = getCustomers(user?.id);
+      const data = await Promise.race([dataPromise, timeoutPromise]);
+
+      setCustomers(data);
+      setSelectedCustomers([]);
+      setError(null);
+      setRetryCount(0);
+      console.log(`[Customers] Loaded ${data.length} customers successfully`);
+    } catch (err: any) {
+      console.error('[Customers] Load failed:', err);
+      const errorMsg = err.message === 'Request timeout' 
+        ? 'Loading is taking longer than expected. Try clearing cache or check your connection.'
+        : 'Failed to load customers. Please try again.';
+      setError(errorMsg);
+      
+      if (retryCount < 3) {
+        toast.error(`${errorMsg} Retry ${retryCount + 1}/3`);
+      }
+    } finally {
+      setLoading(false);
+      loadingRef.current = false;
+      stopLoading('load-customers');
+      setLoadStartTime(null);
+    }
   };
 
   useEffect(() => {
@@ -156,6 +202,18 @@ export default function Customers() {
       state: '',
       zip: '',
     });
+  };
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    loadCustomers(true);
+  };
+
+  const handleClearCacheAndRetry = () => {
+    localStorage.removeItem('customers-cache');
+    setRetryCount(0);
+    loadCustomers(true);
+    toast.success('Cache cleared');
   };
 
   const exportToCSV = () => {
@@ -374,6 +432,33 @@ export default function Customers() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>{error}</span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={handleRetry}>
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Retry {retryCount > 0 && `(${retryCount}/3)`}
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleClearCacheAndRetry}>
+                Clear Cache & Retry
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {loadStartTime && Date.now() - loadStartTime > 10000 && loading && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Loading is taking longer than expected. If this continues, try clearing the cache.
+          </AlertDescription>
+        </Alert>
       )}
 
       <Card>

@@ -81,6 +81,16 @@ export function toCamelCase(obj: any): any {
   return camelCaseObj;
 }
 
+// Timeout utility to prevent hanging promises
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
+    ),
+  ]);
+}
+
 // Generic fetch with cache
 async function fetchWithCache<T>(
   userId: string | undefined,
@@ -101,10 +111,15 @@ async function fetchWithCache<T>(
   const returnCache = cached !== null;
 
   try {
-    const { data, error } = await supabase
-      .from(table as any)
-      .select('*')
-      .eq('user_id', userId);
+    // Apply 15-second timeout to prevent hanging
+    const dbQueryPromise = Promise.resolve(
+      supabase
+        .from(table as any)
+        .select('*')
+        .eq('user_id', userId)
+    );
+    
+    const { data, error } = await withTimeout(dbQueryPromise, 15000);
     
     if (error) {
       console.error(`Error fetching ${table}:`, error);
@@ -125,7 +140,12 @@ async function fetchWithCache<T>(
     return result;
   } catch (error) {
     console.error(`Error fetching ${table}:`, error);
-    return cached || [];
+    // Return cached data on timeout or error
+    if (cached) {
+      console.log(`[Cache] Returning cached data for ${table} after error`);
+      return cached;
+    }
+    return [];
   }
 }
 
