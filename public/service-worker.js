@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'quote-it-v' + Date.now();
+const CACHE_VERSION = 'quote-it-v1';  // Increment manually only when needed
 const STATIC_CACHE = CACHE_VERSION + '-static';
 const DYNAMIC_CACHE = CACHE_VERSION + '-dynamic';
 const CACHE_EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 hours

@@ -2,6 +2,30 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
+// Global error handlers - catch all unhandled errors
+window.onerror = (message, source, lineno, colno, error) => {
+  console.error('[Global Error Handler]', {
+    message,
+    source,
+    lineno,
+    colno,
+    error,
+    timestamp: new Date().toISOString()
+  });
+  // Never reload on error - just log it
+  return true; // Prevents default error handling
+};
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[Unhandled Promise Rejection]', {
+    reason: event.reason,
+    promise: event.promise,
+    timestamp: new Date().toISOString()
+  });
+  // Prevent default (which might reload)
+  event.preventDefault();
+});
+
 // Register service worker with update detection
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
