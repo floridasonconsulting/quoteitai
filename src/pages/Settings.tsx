@@ -31,6 +31,7 @@ import {
   importCompanySettingsFromCSV, 
   loadSampleDataFile,
   validateItemsCSV,
+  validateQuotesCSV,
   ImportResult 
 } from '@/lib/import-export-utils';
 import { CompanySettings } from '@/types';
@@ -155,30 +156,46 @@ export default function Settings() {
     setImporting(true);
     setImportResult(null);
 
+    const timeoutId = setTimeout(() => {
+      toast.error('Import is taking too long. Please refresh the page.');
+      setImporting(false);
+    }, 30000);
+
     try {
       // Load CSV files
+      toast.loading('Loading CSV files...');
       const customersCSV = await loadSampleDataFile('customers.csv');
       const itemsCSV = await loadSampleDataFile('items.csv');
       const quotesCSV = await loadSampleDataFile('quotes.csv');
       const settingsCSV = await loadSampleDataFile('company-settings.csv');
 
-      // Validate items CSV first
-      const validation = validateItemsCSV(itemsCSV);
-      if (!validation.valid) {
-        toast.error(`Validation failed: ${validation.errors[0]}`);
+      // Validate CSVs first
+      const itemsValidation = validateItemsCSV(itemsCSV);
+      const quotesValidation = validateQuotesCSV(quotesCSV);
+      
+      if (!itemsValidation.valid || !quotesValidation.valid) {
+        const allErrors = [...itemsValidation.errors, ...quotesValidation.errors];
+        toast.error(`Validation failed: ${allErrors[0]}`);
         setImportResult({
           success: 0,
-          failed: validation.errors.length,
+          failed: allErrors.length,
           skipped: 0,
-          errors: validation.errors
+          errors: allErrors
         });
         return;
       }
 
-      // Import data
+      // Import data with progress feedback
+      toast.loading('Importing customers...');
       const customersResult = await importCustomersFromCSV(customersCSV, user.id);
+      
+      toast.loading('Importing items...');
       const itemsResult = await importItemsFromCSV(itemsCSV, user.id);
+      
+      toast.loading('Importing quotes...');
       const quotesResult = await importQuotesFromCSV(quotesCSV, user.id);
+      
+      toast.loading('Importing company settings...');
       await importCompanySettingsFromCSV(settingsCSV, user.id);
 
       // Reload settings
@@ -217,6 +234,7 @@ export default function Settings() {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       toast.error(`Failed to import sample data: ${errorMsg}`);
     } finally {
+      clearTimeout(timeoutId);
       setImporting(false);
     }
   };
@@ -229,29 +247,46 @@ export default function Settings() {
 
     setImporting(true);
 
+    const timeoutId = setTimeout(() => {
+      toast.error('Import is taking too long. The page will reload in 3 seconds.');
+      setTimeout(() => window.location.reload(), 3000);
+    }, 30000);
+
     try {
       // Clear existing data
+      toast.loading('Clearing database...');
       await clearDatabaseData(user.id);
       await clearAllData();
 
       toast.success('Database cleared. Importing sample data...');
 
-      // Import sample data inline to avoid state conflicts
+      // Load CSV files
       const customersCSV = await loadSampleDataFile('customers.csv');
       const itemsCSV = await loadSampleDataFile('items.csv');
       const quotesCSV = await loadSampleDataFile('quotes.csv');
       const settingsCSV = await loadSampleDataFile('company-settings.csv');
 
       // Validate before importing
-      const validation = validateItemsCSV(itemsCSV);
-      if (!validation.valid) {
-        toast.error(`Validation failed: ${validation.errors[0]}`);
+      const itemsValidation = validateItemsCSV(itemsCSV);
+      const quotesValidation = validateQuotesCSV(quotesCSV);
+      
+      if (!itemsValidation.valid || !quotesValidation.valid) {
+        const allErrors = [...itemsValidation.errors, ...quotesValidation.errors];
+        toast.error(`Validation failed: ${allErrors[0]}`);
         return;
       }
 
+      // Import with progress feedback
+      toast.loading('Importing customers...');
       const customersResult = await importCustomersFromCSV(customersCSV, user.id);
+      
+      toast.loading('Importing items...');
       const itemsResult = await importItemsFromCSV(itemsCSV, user.id);
+      
+      toast.loading('Importing quotes...');
       const quotesResult = await importQuotesFromCSV(quotesCSV, user.id);
+      
+      toast.loading('Importing company settings...');
       await importCompanySettingsFromCSV(settingsCSV, user.id);
 
       // Clear localStorage cache
@@ -275,12 +310,14 @@ export default function Settings() {
       }
 
       // Reload page to ensure fresh state
+      toast.loading('Reloading page...');
       setTimeout(() => window.location.reload(), 500);
     } catch (error) {
       console.error('Clear and import error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       toast.error(`Failed to clear and import data: ${errorMsg}`);
     } finally {
+      clearTimeout(timeoutId);
       setImporting(false);
     }
   };

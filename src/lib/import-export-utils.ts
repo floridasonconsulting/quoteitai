@@ -121,6 +121,8 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
   const { getQuotes } = await import('./db-service');
   const existingQuotes = await getQuotes(userId);
 
+  const validStatuses = ['draft', 'sent', 'accepted', 'declined'];
+
   for (let i = 1; i < lines.length; i++) {
     try {
       const values = parseCSVLine(lines[i]);
@@ -162,6 +164,13 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
         continue;
       }
 
+      // Validate status
+      if (quote.status && !validStatuses.includes(quote.status)) {
+        result.failed++;
+        result.errors.push(`Line ${i + 1}: Invalid status "${quote.status}". Must be "draft", "sent", "accepted", or "declined"`);
+        continue;
+      }
+
       // Import addQuote dynamically to save the quote
       const { addQuote } = await import('./db-service');
       await addQuote(userId, quote);
@@ -169,7 +178,12 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
     } catch (error) {
       result.failed++;
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      result.errors.push(`Line ${i + 1}: ${errorMsg}`);
+      // Include specific constraint violations in error message
+      if (errorMsg.includes('violates') || errorMsg.includes('constraint')) {
+        result.errors.push(`Line ${i + 1}: Database constraint violation - ${errorMsg}`);
+      } else {
+        result.errors.push(`Line ${i + 1}: ${errorMsg}`);
+      }
     }
   }
 
@@ -220,6 +234,60 @@ export function validateItemsCSV(csvContent: string): { valid: boolean; errors: 
     // Check numeric fields
     if (item.basePrice && isNaN(parseFloat(item.basePrice))) {
       errors.push(`Line ${i + 1}: Invalid basePrice "${item.basePrice}"`);
+    }
+  }
+  
+  return { valid: errors.length === 0, errors };
+}
+
+export function validateQuotesCSV(csvContent: string): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  const lines = csvContent.trim().split('\n');
+  const headers = parseCSVLine(lines[0]);
+  
+  const validStatuses = ['draft', 'sent', 'accepted', 'declined'];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCSVLine(lines[i]);
+    const quote: any = {};
+    headers.forEach((header, index) => {
+      quote[header.trim()] = values[index] || '';
+    });
+    
+    // Check required fields
+    if (!quote.quoteNumber) {
+      errors.push(`Line ${i + 1}: Missing required field "quoteNumber"`);
+    }
+    if (!quote.customerName) {
+      errors.push(`Line ${i + 1}: Missing required field "customerName"`);
+    }
+    if (!quote.title) {
+      errors.push(`Line ${i + 1}: Missing required field "title"`);
+    }
+    
+    // Check status
+    if (quote.status && !validStatuses.includes(quote.status)) {
+      errors.push(`Line ${i + 1}: Invalid status "${quote.status}". Must be "draft", "sent", "accepted", or "declined"`);
+    }
+    
+    // Check items is valid JSON
+    if (quote.items) {
+      try {
+        JSON.parse(quote.items);
+      } catch (e) {
+        errors.push(`Line ${i + 1}: Invalid JSON in items field`);
+      }
+    }
+    
+    // Check numeric fields
+    if (quote.subtotal && isNaN(parseFloat(quote.subtotal))) {
+      errors.push(`Line ${i + 1}: Invalid subtotal "${quote.subtotal}"`);
+    }
+    if (quote.tax && isNaN(parseFloat(quote.tax))) {
+      errors.push(`Line ${i + 1}: Invalid tax "${quote.tax}"`);
+    }
+    if (quote.total && isNaN(parseFloat(quote.total))) {
+      errors.push(`Line ${i + 1}: Invalid total "${quote.total}"`);
     }
   }
   
