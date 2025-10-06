@@ -50,7 +50,7 @@ export default function Settings() {
   const { permission, requestPermission, isSupported } = useNotifications();
   const { themeMode, setThemeMode } = useTheme();
   const { user, userRole, isAdmin, updateUserRole, checkUserRole } = useAuth();
-  const { queueChange } = useSyncManager();
+  const { queueChange, pauseSync, resumeSync } = useSyncManager();
   
   console.log('[Settings] Current userRole:', userRole, 'isAdmin:', isAdmin);
   const [loading, setLoading] = useState(true);
@@ -153,6 +153,7 @@ export default function Settings() {
       return;
     }
 
+    pauseSync(); // Pause sync during import
     setImporting(true);
     setImportResult(null);
 
@@ -236,6 +237,8 @@ export default function Settings() {
     } finally {
       clearTimeout(timeoutId);
       setImporting(false);
+      resumeSync(); // Resume sync after import completes
+      window.location.reload();
     }
   };
 
@@ -245,6 +248,7 @@ export default function Settings() {
       return;
     }
 
+    pauseSync(); // Pause sync during clear and import
     setImporting(true);
 
     const timeoutId = setTimeout(() => {
@@ -319,6 +323,7 @@ export default function Settings() {
     } finally {
       clearTimeout(timeoutId);
       setImporting(false);
+      resumeSync(); // Resume sync after operation completes
     }
   };
 

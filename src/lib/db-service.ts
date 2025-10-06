@@ -9,6 +9,43 @@ const CACHE_KEYS = {
   QUOTES: 'quotes-cache',
 } as const;
 
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+interface CacheEntry<T> {
+  data: T[];
+  timestamp: number;
+}
+
+function getCachedData<T>(key: string): T[] | null {
+  const cached = localStorage.getItem(key);
+  if (!cached) return null;
+  
+  try {
+    const entry: CacheEntry<T> = JSON.parse(cached);
+    const age = Date.now() - entry.timestamp;
+    
+    if (age > CACHE_DURATION) {
+      console.log(`[Cache] ${key} expired (${(age / 1000).toFixed(0)}s old)`);
+      localStorage.removeItem(key);
+      return null;
+    }
+    
+    console.log(`[Cache] ${key} hit (${(age / 1000).toFixed(0)}s old)`);
+    return entry.data;
+  } catch {
+    localStorage.removeItem(key);
+    return null;
+  }
+}
+
+function setCachedData<T>(key: string, data: T[]): void {
+  const entry: CacheEntry<T> = {
+    data,
+    timestamp: Date.now(),
+  };
+  localStorage.setItem(key, JSON.stringify(entry));
+}
+
 // Transformation functions to convert between camelCase (frontend) and snake_case (database)
 export function toSnakeCase(obj: any): any {
   if (!obj || typeof obj !== 'object') return obj;
@@ -50,12 +87,18 @@ async function fetchWithCache<T>(
   table: string,
   cacheKey: string
 ): Promise<T[]> {
+  // Check cache first
+  const cached = getCachedData<T>(cacheKey);
+  
   if (!navigator.onLine || !userId) {
     if (!userId) {
-      console.warn(`⚠️ No user ID - using localStorage for ${table}. Database operations require authentication.`);
+      console.warn(`⚠️ No user ID - using cache for ${table}. Database operations require authentication.`);
     }
-    return getStorageItem<T[]>(cacheKey, []);
+    return cached || [];
   }
+
+  // Return cache immediately, fetch in background
+  const returnCache = cached !== null;
 
   try {
     const { data, error } = await supabase
@@ -63,15 +106,26 @@ async function fetchWithCache<T>(
       .select('*')
       .eq('user_id', userId);
     
-    if (error) throw error;
+    if (error) {
+      console.error(`Error fetching ${table}:`, error);
+      // Clear stale cache on error
+      localStorage.removeItem(cacheKey);
+      throw error;
+    }
     
     // Transform snake_case from DB to camelCase for frontend
     const result = data ? data.map(item => toCamelCase(item)) as T[] : [];
-    setStorageItem<T[]>(cacheKey, result);
+    setCachedData<T>(cacheKey, result);
+    
+    // If we returned cache, this is a background refresh
+    if (returnCache) {
+      console.log(`[Cache] Background refresh for ${table}`);
+    }
+    
     return result;
   } catch (error) {
     console.error(`Error fetching ${table}:`, error);
-    return getStorageItem<T[]>(cacheKey, []);
+    return cached || [];
   }
 }
 
@@ -106,9 +160,9 @@ async function createWithCache<T>(
     }
     
     console.log(`✅ Successfully inserted ${table} into database`);
-    // Update cache with camelCase version
-    const cached = getStorageItem<T[]>(cacheKey, []);
-    setStorageItem<T[]>(cacheKey, [...cached, itemWithUser as T]);
+    // Update cache with camelCase version and fresh timestamp
+    const cached = getCachedData<T>(cacheKey) || [];
+    setCachedData<T>(cacheKey, [...cached, itemWithUser as T]);
     
     // Dispatch refresh event
     if (table === 'customers') dispatchDataRefresh('customers-changed');
@@ -117,8 +171,8 @@ async function createWithCache<T>(
   } catch (error) {
     console.error(`⚠️ Error creating ${table}, falling back to localStorage:`, error);
     // Fallback to cache
-    const cached = getStorageItem<T[]>(cacheKey, []);
-    setStorageItem<T[]>(cacheKey, [...cached, itemWithUser as T]);
+    const cached = getCachedData<T>(cacheKey) || [];
+    setCachedData<T>(cacheKey, [...cached, itemWithUser as T]);
     queueChange?.({ type: 'create', table, data: toSnakeCase(itemWithUser) });
     throw error; // Re-throw so caller knows it failed
   }
@@ -135,11 +189,11 @@ async function updateWithCache<T extends { id: string }>(
 ): Promise<void> {
   if (!navigator.onLine || !userId) {
     // Offline: update cache and queue
-    const cached = getStorageItem<T[]>(cacheKey, []);
+    const cached = getCachedData<T>(cacheKey) || [];
     const updated = cached.map(item => 
       item.id === id ? { ...item, ...updates } : item
     );
-    setStorageItem<T[]>(cacheKey, updated);
+    setCachedData<T>(cacheKey, updated);
     queueChange?.({ type: 'update', table, data: toSnakeCase({ id, ...updates }) });
     return;
   }
@@ -156,11 +210,11 @@ async function updateWithCache<T extends { id: string }>(
     if (error) throw error;
     
     // Update cache with camelCase version
-    const cached = getStorageItem<T[]>(cacheKey, []);
+    const cached = getCachedData<T>(cacheKey) || [];
     const updated = cached.map(item => 
       item.id === id ? { ...item, ...updates } : item
     );
-    setStorageItem<T[]>(cacheKey, updated);
+    setCachedData<T>(cacheKey, updated);
     
     // Dispatch refresh event
     if (table === 'customers') dispatchDataRefresh('customers-changed');
@@ -169,11 +223,11 @@ async function updateWithCache<T extends { id: string }>(
   } catch (error) {
     console.error(`Error updating ${table}:`, error);
     // Fallback to cache
-    const cached = getStorageItem<T[]>(cacheKey, []);
+    const cached = getCachedData<T>(cacheKey) || [];
     const updated = cached.map(item => 
       item.id === id ? { ...item, ...updates } : item
     );
-    setStorageItem<T[]>(cacheKey, updated);
+    setCachedData<T>(cacheKey, updated);
     queueChange?.({ type: 'update', table, data: toSnakeCase({ id, ...updates }) });
   }
 }
@@ -188,8 +242,8 @@ async function deleteWithCache<T extends { id: string }>(
 ): Promise<void> {
   if (!navigator.onLine || !userId) {
     // Offline: update cache and queue
-    const cached = getStorageItem<T[]>(cacheKey, []);
-    setStorageItem<T[]>(cacheKey, cached.filter(item => item.id !== id));
+    const cached = getCachedData<T>(cacheKey) || [];
+    setCachedData<T>(cacheKey, cached.filter(item => item.id !== id));
     queueChange?.({ type: 'delete', table, data: { id } });
     return;
   }
@@ -204,8 +258,8 @@ async function deleteWithCache<T extends { id: string }>(
     if (error) throw error;
     
     // Update cache
-    const cached = getStorageItem<T[]>(cacheKey, []);
-    setStorageItem<T[]>(cacheKey, cached.filter(item => item.id !== id));
+    const cached = getCachedData<T>(cacheKey) || [];
+    setCachedData<T>(cacheKey, cached.filter(item => item.id !== id));
     
     // Dispatch refresh event
     if (table === 'customers') dispatchDataRefresh('customers-changed');
@@ -214,8 +268,8 @@ async function deleteWithCache<T extends { id: string }>(
   } catch (error) {
     console.error(`Error deleting ${table}:`, error);
     // Fallback to cache
-    const cached = getStorageItem<T[]>(cacheKey, []);
-    setStorageItem<T[]>(cacheKey, cached.filter(item => item.id !== id));
+    const cached = getCachedData<T>(cacheKey) || [];
+    setCachedData<T>(cacheKey, cached.filter(item => item.id !== id));
     queueChange?.({ type: 'delete', table, data: { id } });
   }
 }

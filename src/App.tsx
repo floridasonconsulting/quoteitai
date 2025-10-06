@@ -8,8 +8,10 @@ import { Layout } from "@/components/Layout";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useNotifications } from "@/hooks/useNotifications";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
+import Diagnostics from "./pages/Diagnostics";
 import Quotes from "./pages/Quotes";
 import QuoteDetail from "./pages/QuoteDetail";
 import NewQuote from "./pages/NewQuote";
@@ -51,7 +53,16 @@ function AppContent() {
       <Route path="/dashboard" element={
         <ProtectedRoute>
           <Layout>
-            <Dashboard />
+            <ErrorBoundary>
+              <Dashboard />
+            </ErrorBoundary>
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/diagnostics" element={
+        <ProtectedRoute>
+          <Layout>
+            <Diagnostics />
           </Layout>
         </ProtectedRoute>
       } />

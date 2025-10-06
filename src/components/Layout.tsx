@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, Package, FileText, Settings, Moon, Sun, CreditCard, LogOut, HelpCircle } from 'lucide-react';
+import { Home, Users, Package, FileText, Settings, Moon, Sun, CreditCard, LogOut, HelpCircle, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/components/ThemeProvider';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +18,7 @@ const navigation = [
   { name: 'Items', path: '/items', icon: Package },
   { name: 'Subscription', path: '/subscription', icon: CreditCard },
   { name: 'Settings', path: '/settings', icon: Settings },
+  { name: 'Diagnostics', path: '/diagnostics', icon: Activity },
 ];
 
 export function Layout({ children }: LayoutProps) {

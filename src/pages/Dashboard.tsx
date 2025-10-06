@@ -1,22 +1,29 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
-import { Plus, Users, Package, FileText, Clock, TrendingUp, Target, DollarSign, TrendingDown } from 'lucide-react';
+import { Plus, Users, Package, FileText, Clock, TrendingUp, Target, DollarSign, TrendingDown, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { getQuotes, getCustomers, getItems } from '@/lib/db-service';
 import { getAgingSummary, getQuoteAge } from '@/lib/quote-utils';
 import { Quote } from '@/types';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { useLoadingState } from '@/hooks/useLoadingState';
+import { useSyncManager } from '@/hooks/useSyncManager';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { pauseSync, resumeSync } = useSyncManager();
+  const { startLoading, stopLoading } = useLoadingState();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const hasLoadedData = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const [stats, setStats] = useState({
@@ -31,14 +38,12 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    // Only load data once when user is available
     if (!authLoading && user && !hasLoadedData.current) {
       console.log('[Dashboard] Loading data for user:', user.id);
       hasLoadedData.current = true;
       loadData();
     }
 
-    // Cleanup function
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -48,36 +53,62 @@ export default function Dashboard() {
   }, [user, authLoading]);
 
   const loadData = async () => {
-    // Cancel any previous load
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
-    // Create new abort controller
     abortControllerRef.current = new AbortController();
-
     setLoading(true);
     setError(null);
+    setLoadingProgress('Starting...');
 
-    // Set a timeout to prevent infinite loading
+    const operationId = `dashboard-load-${Date.now()}`;
+    startLoading(operationId, 'Loading dashboard data');
+
+    // Exponential backoff
+    const backoffDelay = Math.min(5000 * Math.pow(2, retryCount), 20000);
+    const timeoutDuration = 15000 + backoffDelay;
+
     const timeoutId = setTimeout(() => {
       setLoading(false);
       setError('Loading is taking longer than expected. This may be due to sync conflicts.');
+      setLoadingProgress('');
+      stopLoading(operationId);
       toast({
         title: 'Loading timeout',
         description: 'Data loading took too long. Try clearing cache and retrying.',
         variant: 'destructive',
       });
-    }, 10000); // 10 second timeout
+    }, timeoutDuration);
 
     try {
-      const quotesData = await getQuotes(user?.id);
+      setLoadingProgress('Loading customers...');
       const customersData = await getCustomers(user?.id);
-      const itemsData = await getItems(user?.id);
-
-      // Check if aborted
+      
       if (abortControllerRef.current?.signal.aborted) {
         console.log('[Dashboard] Load aborted');
+        clearTimeout(timeoutId);
+        stopLoading(operationId);
+        return;
+      }
+
+      setLoadingProgress('Loading items...');
+      const itemsData = await getItems(user?.id);
+      
+      if (abortControllerRef.current?.signal.aborted) {
+        console.log('[Dashboard] Load aborted');
+        clearTimeout(timeoutId);
+        stopLoading(operationId);
+        return;
+      }
+
+      setLoadingProgress('Loading quotes...');
+      const quotesData = await getQuotes(user?.id);
+
+      if (abortControllerRef.current?.signal.aborted) {
+        console.log('[Dashboard] Load aborted');
+        clearTimeout(timeoutId);
+        stopLoading(operationId);
         return;
       }
 
@@ -112,19 +143,54 @@ export default function Dashboard() {
         totalRevenue,
         declinedValue,
       });
+      
       setLoading(false);
+      setLoadingProgress('');
+      setRetryCount(0); // Reset retry count on success
       clearTimeout(timeoutId);
+      stopLoading(operationId);
     } catch (error) {
       clearTimeout(timeoutId);
+      stopLoading(operationId);
       console.error('[Dashboard] Error loading data:', error);
       setError('Failed to load dashboard data. Please try again.');
       setLoading(false);
+      setLoadingProgress('');
       toast({
         title: 'Error loading data',
         description: 'Could not load dashboard data. Please try refreshing the page.',
         variant: 'destructive',
       });
     }
+  };
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    hasLoadedData.current = false;
+    loadData();
+  };
+
+  const handleFullReset = () => {
+    // Pause sync during reset
+    pauseSync();
+    
+    // Clear all caches and state
+    localStorage.removeItem('customers-cache');
+    localStorage.removeItem('items-cache');
+    localStorage.removeItem('quotes-cache');
+    localStorage.removeItem('sync-queue');
+    localStorage.removeItem('failed-sync-queue');
+    
+    // Reset component state
+    hasLoadedData.current = false;
+    setRetryCount(0);
+    setError(null);
+    
+    // Resume sync and reload
+    setTimeout(() => {
+      resumeSync();
+      loadData();
+    }, 500);
   };
 
   const agingSummary = getAgingSummary(quotes.filter(q => q.status === 'sent'));
@@ -155,6 +221,10 @@ export default function Dashboard() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         <p className="text-muted-foreground">Loading dashboard...</p>
+        {loadingProgress && (
+          <p className="text-sm text-muted-foreground">{loadingProgress}</p>
+        )}
+        <Progress value={33} className="w-48" />
       </div>
     );
   }
@@ -162,27 +232,25 @@ export default function Dashboard() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <p className="text-destructive">{error}</p>
+        <p className="text-destructive font-medium">{error}</p>
+        {retryCount > 0 && (
+          <p className="text-sm text-muted-foreground">
+            Retry attempt {retryCount} of 3
+          </p>
+        )}
         <div className="flex gap-2">
-          <Button onClick={() => {
-            hasLoadedData.current = false;
-            loadData();
-          }}>
+          <Button onClick={handleRetry} disabled={retryCount >= 3}>
+            <RefreshCw className="mr-2 h-4 w-4" />
             Retry
+          </Button>
+          <Button variant="outline" onClick={handleFullReset}>
+            Clear Cache & Reset
           </Button>
           <Button 
             variant="outline" 
-            onClick={() => {
-              // Clear cache and retry
-              localStorage.removeItem('customers-cache');
-              localStorage.removeItem('items-cache');
-              localStorage.removeItem('quotes-cache');
-              localStorage.removeItem('sync-queue');
-              hasLoadedData.current = false;
-              loadData();
-            }}
+            onClick={() => window.location.reload()}
           >
-            Clear Cache & Retry
+            Force Reload Page
           </Button>
         </div>
       </div>
@@ -428,10 +496,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="text-right ml-4">
-                      <p className="font-semibold">{formatCurrency(quote.total)}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(quote.createdAt).toLocaleDateString()}
-                      </p>
+                      <p className="font-bold">{formatCurrency(quote.total)}</p>
                     </div>
                   </div>
                 );
