@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { getQuotes, getCustomers, getItems } from '@/lib/db-service';
+import { getQuotes, getCustomers, getItems, clearInFlightRequests } from '@/lib/db-service';
 import { getAgingSummary, getQuoteAge } from '@/lib/quote-utils';
 import { Quote } from '@/types';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -69,6 +69,10 @@ export default function Dashboard() {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
+
+    // Clear any stale in-flight requests before starting
+    console.log('[Dashboard] Clearing in-flight requests before load');
+    clearInFlightRequests();
 
     loadStartTime.current = Date.now();
     abortControllerRef.current = new AbortController();

@@ -12,8 +12,40 @@ const CACHE_KEYS = {
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-// Request deduplication map
-const inFlightRequests = new Map<string, Promise<any>>();
+// Request deduplication map with timestamp tracking
+interface InFlightRequest {
+  promise: Promise<any>;
+  startTime: number;
+}
+
+const inFlightRequests = new Map<string, InFlightRequest>();
+const MAX_REQUEST_AGE = 20000; // 20 seconds max age for in-flight requests
+
+// Clear all in-flight requests (emergency cleanup)
+export function clearInFlightRequests(): void {
+  const count = inFlightRequests.size;
+  if (count > 0) {
+    console.log(`[Dedup] Clearing ${count} in-flight requests`);
+    inFlightRequests.clear();
+  }
+}
+
+// Clear stale requests that have been in-flight too long
+function clearStaleRequests(): void {
+  const now = Date.now();
+  const staleKeys: string[] = [];
+  
+  inFlightRequests.forEach((request, key) => {
+    if (now - request.startTime > MAX_REQUEST_AGE) {
+      staleKeys.push(key);
+    }
+  });
+  
+  if (staleKeys.length > 0) {
+    console.log(`[Dedup] Clearing ${staleKeys.length} stale requests:`, staleKeys);
+    staleKeys.forEach(key => inFlightRequests.delete(key));
+  }
+}
 
 interface CacheEntry<T> {
   data: T[];
@@ -62,6 +94,9 @@ function setCachedData<T>(key: string, data: T[]): void {
 
 // Clear all caches (coordinated clear of localStorage + service worker)
 export async function clearAllCaches(): Promise<void> {
+  // Clear in-flight requests first
+  clearInFlightRequests();
+  
   // Clear localStorage caches
   Object.values(CACHE_KEYS).forEach(key => {
     localStorage.removeItem(key);
@@ -137,16 +172,38 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 
 // Request deduplication wrapper
 async function dedupedRequest<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
-  if (inFlightRequests.has(key)) {
-    console.log(`[Dedup] Reusing in-flight request for ${key}`);
-    return inFlightRequests.get(key)!;
+  // Clear stale requests before checking
+  clearStaleRequests();
+  
+  const existing = inFlightRequests.get(key);
+  if (existing) {
+    const age = Date.now() - existing.startTime;
+    console.log(`[Dedup] Reusing in-flight request for ${key} (age: ${age}ms)`);
+    return existing.promise;
   }
 
-  const promise = requestFn().finally(() => {
-    inFlightRequests.delete(key);
-  });
+  console.log(`[Dedup] Starting new request for ${key}`);
+  
+  // Create promise with guaranteed cleanup
+  const promise = (async () => {
+    try {
+      const result = await requestFn();
+      return result;
+    } catch (error) {
+      console.error(`[Dedup] Request failed for ${key}:`, error);
+      throw error;
+    } finally {
+      // Always cleanup, even on error or timeout
+      const deleted = inFlightRequests.delete(key);
+      console.log(`[Dedup] Cleanup for ${key}: ${deleted ? 'success' : 'already removed'}`);
+    }
+  })();
 
-  inFlightRequests.set(key, promise);
+  inFlightRequests.set(key, {
+    promise,
+    startTime: Date.now()
+  });
+  
   return promise;
 }
 

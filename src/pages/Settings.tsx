@@ -23,7 +23,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { getSettings, saveSettings, clearDatabaseData } from '@/lib/db-service';
+import { getSettings, saveSettings, clearDatabaseData, clearInFlightRequests, clearAllCaches } from '@/lib/db-service';
 import { clearAllData } from '@/lib/storage';
 import { 
   importCustomersFromCSV, 
@@ -134,6 +134,12 @@ export default function Settings() {
     try {
       await saveSettings(user.id, formData, queueChange);
       console.log('[Settings] Save completed successfully');
+      
+      // Clear in-flight requests and caches to force fresh data load
+      console.log('[Settings] Clearing in-flight requests after save');
+      clearInFlightRequests();
+      await clearAllCaches();
+      
       toast.success('Company settings saved successfully');
     } catch (error) {
       console.error('[Settings] Save failed:', error);
