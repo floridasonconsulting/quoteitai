@@ -40,6 +40,11 @@ interface InFlightRequest {
 const inFlightRequests = new Map<string, InFlightRequest>();
 const MAX_REQUEST_AGE = 20000; // 20 seconds max age for in-flight requests
 
+// Expose for debugging in Diagnostics page
+if (typeof window !== 'undefined') {
+  (window as any).__inFlightRequests = inFlightRequests;
+}
+
 // Clear all in-flight requests (emergency cleanup)
 export function clearInFlightRequests(): void {
   const count = inFlightRequests.size;

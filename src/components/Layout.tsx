@@ -19,6 +19,10 @@ const navigation = [
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
 
+const devNavigation = [
+  { name: 'Diagnostics', path: '/diagnostics', icon: Activity },
+];
+
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -163,6 +167,25 @@ export function Layout({ children }: LayoutProps) {
               </Button>
             );
           })}
+          {/* Developer Tools Section */}
+          <div className="mt-auto pt-4 border-t">
+            <div className="text-xs font-semibold text-muted-foreground mb-2 px-3">Developer Tools</div>
+            {devNavigation.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Button
+                  key={item.path}
+                  variant={isActive ? 'secondary' : 'ghost'}
+                  onClick={() => navigate(item.path)}
+                  className="justify-start"
+                >
+                  <Icon className="mr-2 h-5 w-5" />
+                  {item.name}
+                </Button>
+              );
+            })}
+          </div>
         </div>
       </nav>
 

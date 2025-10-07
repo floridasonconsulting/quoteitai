@@ -507,15 +507,35 @@ export default function Settings() {
       if (!user?.id) return;
       
       try {
-        // Save to DB in background (non-blocking)
-        await saveSettings(user.id, { ...formData, proposalTemplate: newTemplate }, queueChange);
-        console.log('[Settings] Template preference saved to DB');
+        console.log('[Settings] Saving template preference to DB:', newTemplate);
+        
+        // Direct DB update - ONLY save template, not entire formData
+        // This prevents cache invalidation cascade and dependency array issues
+        const { error } = await supabase
+          .from('company_settings')
+          .update({ proposal_template: newTemplate })
+          .eq('user_id', user.id);
+        
+        if (error) throw error;
+        
+        console.log('[Settings] Template preference saved successfully');
+        
+        toast.success("Template updated", {
+          description: "Your quote template preference has been saved",
+        });
       } catch (error) {
         console.error('[Settings] Failed to save template preference:', error);
-        // No toast error - this is background sync
+        toast.error("Error saving template", {
+          description: "Failed to save template preference",
+        });
+        
+        // Revert optimistic update on failure
+        const previousTemplate = formData.proposalTemplate || 'classic';
+        setTemplatePreference(previousTemplate);
+        saveTemplatePreference(previousTemplate);
       }
     }, 500);
-  }, [user?.id, formData, queueChange]);
+  }, [user?.id, formData.proposalTemplate, toast]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
