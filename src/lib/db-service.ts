@@ -12,10 +12,29 @@ const CACHE_KEYS = {
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-// Request deduplication map with timestamp tracking
+// Request pooling to limit concurrent Supabase requests
+const MAX_CONCURRENT_REQUESTS = 2;
+const requestQueue: Array<() => Promise<any>> = [];
+let activeRequests = 0;
+
+async function executeWithPool<T>(requestFn: () => Promise<T>): Promise<T> {
+  while (activeRequests >= MAX_CONCURRENT_REQUESTS) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  
+  activeRequests++;
+  try {
+    return await requestFn();
+  } finally {
+    activeRequests--;
+  }
+}
+
+// Request deduplication map with timestamp tracking and abort controllers
 interface InFlightRequest {
   promise: Promise<any>;
   startTime: number;
+  abortController: AbortController;
 }
 
 const inFlightRequests = new Map<string, InFlightRequest>();
@@ -26,6 +45,10 @@ export function clearInFlightRequests(): void {
   const count = inFlightRequests.size;
   if (count > 0) {
     console.log(`[Dedup] Clearing ${count} in-flight requests`);
+    // Abort all controllers
+    inFlightRequests.forEach((request) => {
+      request.abortController.abort();
+    });
     inFlightRequests.clear();
   }
 }
@@ -38,6 +61,8 @@ function clearStaleRequests(): void {
   inFlightRequests.forEach((request, key) => {
     if (now - request.startTime > MAX_REQUEST_AGE) {
       staleKeys.push(key);
+      // Abort stale request
+      request.abortController.abort();
     }
   });
   
@@ -170,7 +195,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   ]);
 }
 
-// Request deduplication wrapper
+// Request deduplication wrapper with abort support
 async function dedupedRequest<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
   // Clear stale requests before checking
   clearStaleRequests();
@@ -184,13 +209,19 @@ async function dedupedRequest<T>(key: string, requestFn: () => Promise<T>): Prom
 
   console.log(`[Dedup] Starting new request for ${key}`);
   
+  // Create abort controller for this request
+  const abortController = new AbortController();
+  
   // Create promise with guaranteed cleanup
   const promise = (async () => {
     try {
-      const result = await requestFn();
+      const result = await executeWithPool(requestFn);
       return result;
     } catch (error) {
-      console.error(`[Dedup] Request failed for ${key}:`, error);
+      // Don't log abort errors
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error(`[Dedup] Request failed for ${key}:`, error);
+      }
       throw error;
     } finally {
       // Always cleanup, even on error or timeout
@@ -201,7 +232,8 @@ async function dedupedRequest<T>(key: string, requestFn: () => Promise<T>): Prom
 
   inFlightRequests.set(key, {
     promise,
-    startTime: Date.now()
+    startTime: Date.now(),
+    abortController
   });
   
   return promise;

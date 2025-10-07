@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
   QUOTES: 'quote-it-quotes',
   SETTINGS: 'quote-it-settings',
   THEME: 'quote-it-theme',
+  TEMPLATE_PREFERENCE: 'quote-it-template-preference',
 } as const;
 
 // Generic storage helpers
@@ -123,6 +124,13 @@ export const getTheme = (): 'light' | 'dark' =>
 
 export const saveTheme = (theme: 'light' | 'dark'): void => 
   setStorageItem(STORAGE_KEYS.THEME, theme);
+
+// Template Preference (isolated from settings)
+export const getTemplatePreference = (): string =>
+  getStorageItem(STORAGE_KEYS.TEMPLATE_PREFERENCE, 'classic');
+
+export const saveTemplatePreference = (template: string): void =>
+  setStorageItem(STORAGE_KEYS.TEMPLATE_PREFERENCE, template);
 
 // Clear All Data
 export const clearAllData = (): Promise<void> => {

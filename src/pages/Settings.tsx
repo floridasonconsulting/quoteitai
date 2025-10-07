@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { getSettings, saveSettings, clearDatabaseData, clearInFlightRequests, clearAllCaches } from '@/lib/db-service';
-import { clearAllData } from '@/lib/storage';
+import { clearAllData, getTemplatePreference, saveTemplatePreference } from '@/lib/storage';
 import { 
   importCustomersFromCSV, 
   importItemsFromCSV, 
@@ -71,6 +71,8 @@ export default function Settings() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState<string | null>(null);
   const [subscriptionOpen, setSubscriptionOpen] = useState(false);
+  const [templatePreference, setTemplatePreference] = useState(getTemplatePreference());
+  const templateDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const [cacheInfo, setCacheInfo] = useState({
     customers: localStorage.getItem('customers-cache')?.length || 0,
     items: localStorage.getItem('items-cache')?.length || 0,
@@ -135,11 +137,7 @@ export default function Settings() {
       await saveSettings(user.id, formData, queueChange);
       console.log('[Settings] Save completed successfully');
       
-      // Clear in-flight requests and caches to force fresh data load
-      console.log('[Settings] Clearing in-flight requests after save');
-      clearInFlightRequests();
-      await clearAllCaches();
-      
+      // Don't clear caches for settings save - only template changes used to do this
       toast.success('Company settings saved successfully');
     } catch (error) {
       console.error('[Settings] Save failed:', error);
@@ -492,6 +490,42 @@ export default function Settings() {
     toast.success('Sync queues cleared successfully');
   };
 
+  // Handle template preference change with debounce
+  const handleTemplateChange = useCallback(async (newTemplate: string) => {
+    console.log('[Settings] Template changing to:', newTemplate);
+    
+    // Optimistic UI update
+    setTemplatePreference(newTemplate);
+    saveTemplatePreference(newTemplate);
+    
+    // Debounce DB save
+    if (templateDebounceRef.current) {
+      clearTimeout(templateDebounceRef.current);
+    }
+    
+    templateDebounceRef.current = setTimeout(async () => {
+      if (!user?.id) return;
+      
+      try {
+        // Save to DB in background (non-blocking)
+        await saveSettings(user.id, { ...formData, proposalTemplate: newTemplate }, queueChange);
+        console.log('[Settings] Template preference saved to DB');
+      } catch (error) {
+        console.error('[Settings] Failed to save template preference:', error);
+        // No toast error - this is background sync
+      }
+    }, 500);
+  }, [user?.id, formData, queueChange]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (templateDebounceRef.current) {
+        clearTimeout(templateDebounceRef.current);
+      }
+    };
+  }, []);
+
   const activeOps = getActiveOperations();
   const lastSync = localStorage.getItem('last-sync-time');
 
@@ -621,10 +655,8 @@ export default function Settings() {
             <div className="space-y-2">
               <Label>Proposal Template</Label>
               <RadioGroup 
-                value={formData.proposalTemplate || 'classic'}
-                onValueChange={(value: 'classic' | 'modern' | 'detailed') => 
-                  setFormData({ ...formData, proposalTemplate: value })
-                }
+                value={templatePreference}
+                onValueChange={handleTemplateChange}
               >
                 <div className="flex items-start space-x-3 p-3 border rounded hover:bg-accent cursor-pointer">
                   <RadioGroupItem value="classic" id="classic" />

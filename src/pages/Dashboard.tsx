@@ -83,7 +83,7 @@ export default function Dashboard() {
     const operationId = `dashboard-load-${Date.now()}`;
     startLoading(operationId, 'Loading dashboard data');
 
-    const timeoutDuration = 8000; // Reduced from 15s to 8s
+    const timeoutDuration = 15000; // 15 seconds total
 
     const timeoutId = setTimeout(() => {
       setLoading(false);
@@ -94,19 +94,39 @@ export default function Dashboard() {
     }, timeoutDuration);
 
     try {
-      console.log('[Dashboard] Starting parallel data load');
+      console.log('[Dashboard] Starting progressive data load');
       const startTime = Date.now();
       
-      // Load all data in parallel for maximum speed
-      setLoadingProgress(['Loading customers', 'Loading items', 'Loading quotes']);
+      // Phase 1: Load quotes first (highest priority)
+      setLoadingProgress(['Loading quotes...']);
+      const quotesData = await getQuotes(user?.id);
+      console.log('[Dashboard] Quotes loaded:', quotesData.length);
       
-      const [customersData, itemsData, quotesData] = await Promise.all([
-        getCustomers(user?.id),
-        getItems(user?.id),
-        getQuotes(user?.id)
-      ]);
+      if (abortControllerRef.current?.signal.aborted) {
+        console.log('[Dashboard] Load aborted after quotes');
+        clearTimeout(timeoutId);
+        stopLoading(operationId);
+        return;
+      }
       
-      console.log('[Dashboard] Data loaded in', Date.now() - startTime, 'ms');
+      // Phase 2: Load customers (needed for stats)
+      setLoadingProgress(['Quotes loaded', 'Loading customers...']);
+      const customersData = await getCustomers(user?.id);
+      console.log('[Dashboard] Customers loaded:', customersData.length);
+      
+      if (abortControllerRef.current?.signal.aborted) {
+        console.log('[Dashboard] Load aborted after customers');
+        clearTimeout(timeoutId);
+        stopLoading(operationId);
+        return;
+      }
+      
+      // Phase 3: Load items (lowest priority)
+      setLoadingProgress(['Quotes loaded', 'Customers loaded', 'Loading items...']);
+      const itemsData = await getItems(user?.id);
+      console.log('[Dashboard] Items loaded:', itemsData.length);
+      
+      console.log('[Dashboard] All data loaded in', Date.now() - startTime, 'ms');
 
       if (abortControllerRef.current?.signal.aborted) {
         console.log('[Dashboard] Load aborted');
