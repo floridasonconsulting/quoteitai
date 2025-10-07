@@ -307,7 +307,8 @@ export default function Landing() {
                             src={screenshot.image} 
                             alt={screenshot.title}
                             className="w-full h-auto"
-                            loading="lazy"
+                            loading={screenshot.id === 'dashboard' ? 'eager' : 'lazy'}
+                            fetchPriority={screenshot.id === 'dashboard' ? 'high' : 'auto'}
                           />
                         </div>
                         <div>
