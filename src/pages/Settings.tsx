@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset, AlertTriangle, ChevronDown, RefreshCw, Shield, Sparkles, AlertCircle, Upload, Download, FileDown, Check, Loader2, Zap, Database, CheckCircle, XCircle, Clock, CreditCard, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -58,7 +58,9 @@ export default function Settings() {
   
   console.log('[Settings] Current userRole:', userRole, 'isAdmin:', isAdmin);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const saveInProgress = useRef(false);
   const [clearCompanyInfo, setClearCompanyInfo] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [dangerZoneOpen, setDangerZoneOpen] = useState(false);
@@ -91,21 +93,56 @@ export default function Settings() {
     terms: '',
   });
 
+  const loadSettings = useCallback(async () => {
+    if (!user?.id) return;
+    console.log('[Settings] Loading settings for user:', user.id);
+    setLoading(true);
+    try {
+      const settings = await getSettings(user.id);
+      console.log('[Settings] Settings loaded successfully');
+      setFormData(settings);
+    } catch (error) {
+      console.error('[Settings] Failed to load settings:', error);
+      toast.error('Failed to load settings');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     loadSettings();
-  }, [user]);
-
-  const loadSettings = async () => {
-    setLoading(true);
-    const settings = await getSettings(user?.id);
-    setFormData(settings);
-    setLoading(false);
-  };
+  }, [loadSettings]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await saveSettings(user?.id, formData, queueChange);
-    toast.success('Company settings saved successfully');
+    
+    if (saveInProgress.current) {
+      console.log('[Settings] Save already in progress, ignoring');
+      toast.warning('Please wait, saving in progress...');
+      return;
+    }
+    
+    if (!user?.id) {
+      toast.error('You must be signed in to save settings');
+      return;
+    }
+    
+    console.log('[Settings] Starting save operation');
+    saveInProgress.current = true;
+    setSaving(true);
+    
+    try {
+      await saveSettings(user.id, formData, queueChange);
+      console.log('[Settings] Save completed successfully');
+      toast.success('Company settings saved successfully');
+    } catch (error) {
+      console.error('[Settings] Save failed:', error);
+      toast.error('Failed to save settings. Please try again.');
+    } finally {
+      setSaving(false);
+      saveInProgress.current = false;
+      console.log('[Settings] Save operation finished');
+    }
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1123,9 +1160,18 @@ export default function Settings() {
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" size="lg">
-            <Save className="mr-2 h-5 w-5" />
-            Save Settings
+          <Button type="submit" size="lg" disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-5 w-5" />
+                Save Settings
+              </>
+            )}
           </Button>
         </div>
       </form>
