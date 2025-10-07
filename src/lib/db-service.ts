@@ -437,6 +437,7 @@ export const getSettings = async (userId: string | undefined): Promise<any> => {
         logo: data.logo || '',
         logoDisplayOption: data.logo_display_option || 'both',
         terms: data.terms || 'Payment due within 30 days. Thank you for your business!',
+        proposalTemplate: data.proposal_template || 'classic',
       };
       setStorageItem('quote-it-settings', settings);
       return settings;
@@ -470,6 +471,7 @@ export const saveSettings = async (userId: string | undefined, settings: any, qu
       logo: settings.logo,
       logo_display_option: settings.logoDisplayOption,
       terms: settings.terms,
+      proposal_template: settings.proposalTemplate || 'classic',
     };
 
     const { error } = await supabase

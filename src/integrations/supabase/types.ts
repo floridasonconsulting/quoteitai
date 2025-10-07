@@ -57,6 +57,7 @@ export type Database = {
           logo_display_option: string | null
           name: string | null
           phone: string | null
+          proposal_template: string | null
           state: string | null
           terms: string | null
           updated_at: string
@@ -76,6 +77,7 @@ export type Database = {
           logo_display_option?: string | null
           name?: string | null
           phone?: string | null
+          proposal_template?: string | null
           state?: string | null
           terms?: string | null
           updated_at?: string
@@ -95,6 +97,7 @@ export type Database = {
           logo_display_option?: string | null
           name?: string | null
           phone?: string | null
+          proposal_template?: string | null
           state?: string | null
           terms?: string | null
           updated_at?: string

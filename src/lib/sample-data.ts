@@ -16,6 +16,7 @@ const sampleCompanySettings: CompanySettings = {
   insurance: 'GL-123456 / WC-789012',
   logoDisplayOption: 'both',
   terms: 'Payment due upon completion. We accept cash, check, credit cards, and mobile payments. All work guaranteed for 90 days. Thank you for choosing us!',
+  proposalTemplate: 'classic',
 };
 
 export const generateSampleData = async (

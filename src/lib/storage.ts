@@ -111,6 +111,7 @@ export const getSettings = (): CompanySettings =>
     insurance: '',
     logoDisplayOption: 'both',
     terms: 'Payment due within 30 days. Thank you for your business!',
+    proposalTemplate: 'classic',
   });
 
 export const saveSettings = (settings: CompanySettings): void => 

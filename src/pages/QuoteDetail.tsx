@@ -10,10 +10,9 @@ import { Quote, Customer } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { FollowUpDialog } from '@/components/FollowUpDialog';
 import { formatCurrency } from '@/lib/utils';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
+import { generateClassicPDF, generateModernPDF, generateDetailedPDF } from '@/lib/proposal-templates';
 
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -67,204 +66,34 @@ export default function QuoteDetail() {
     if (!quote) return;
 
     const settings = await getSettings(user?.id);
-    const pdf = new jsPDF();
-    const displayOption = settings.logoDisplayOption || 'both';
+    const template = settings.proposalTemplate || 'classic';
     
-    const MARGIN = 20;
-    const LINE_HEIGHT = 5;
-    const SECTION_GAP = 8;
-    let yPos = MARGIN;
-    
-    // Header Section - Logo and/or Company Name
-    const showLogo = (displayOption === 'logo' || displayOption === 'both') && settings.logo;
-    const showName = displayOption === 'name' || displayOption === 'both';
-    
-    if (showLogo) {
-      try {
-        pdf.addImage(settings.logo, 'PNG', MARGIN, yPos, 40, 20);
-        if (showName) {
-          // Logo with name - put name next to logo
-          pdf.setFontSize(20);
-          pdf.setFont(undefined, 'bold');
-          pdf.text(settings.name || 'Your Company', 65, yPos + 10);
-          yPos += 25;
-        } else {
-          // Logo only
-          yPos += 25;
-        }
-      } catch (e) {
-        console.error('Error adding logo:', e);
-        // Fallback to name if logo fails and name should be shown
-        if (showName) {
-          pdf.setFontSize(20);
-          pdf.setFont(undefined, 'bold');
-          pdf.text(settings.name || 'Your Company', MARGIN, yPos);
-          yPos += SECTION_GAP;
-        }
-      }
-    } else if (showName) {
-      // Name only (no logo or logo not available)
-      pdf.setFontSize(20);
-      pdf.setFont(undefined, 'bold');
-      pdf.text(settings.name || 'Your Company', MARGIN, yPos);
-      yPos += SECTION_GAP;
-    }
-    
-    // Company Contact Info
-    pdf.setFontSize(9);
-    pdf.setFont(undefined, 'normal');
-    if (settings.address) {
-      pdf.text(settings.address, MARGIN, yPos);
-      yPos += LINE_HEIGHT;
-    }
-    if (settings.city || settings.state || settings.zip) {
-      const cityStateZip = `${settings.city || ''}${settings.city && settings.state ? ', ' : ''}${settings.state || ''} ${settings.zip || ''}`.trim();
-      if (cityStateZip) {
-        pdf.text(cityStateZip, MARGIN, yPos);
-        yPos += LINE_HEIGHT;
-      }
-    }
-    if (settings.phone || settings.email) {
-      const contact = [settings.phone, settings.email].filter(Boolean).join(' | ');
-      pdf.text(contact, MARGIN, yPos);
-      yPos += LINE_HEIGHT;
-    }
-    if (settings.license) {
-      pdf.text(`License: ${settings.license}`, MARGIN, yPos);
-      yPos += LINE_HEIGHT;
-    }
-    if (settings.insurance) {
-      pdf.text(`Insurance: ${settings.insurance}`, MARGIN, yPos);
-      yPos += LINE_HEIGHT;
-    }
-    
-    // Quote Info (top right) - Reset yPos for right side
-    let rightYPos = MARGIN;
-    pdf.setFontSize(18);
-    pdf.setFont(undefined, 'bold');
-    pdf.text('PROPOSAL', 150, rightYPos);
-    rightYPos += 8;
-    
-    pdf.setFontSize(10);
-    pdf.setFont(undefined, 'normal');
-    pdf.text(`Quote #: ${quote.quoteNumber}`, 150, rightYPos);
-    rightYPos += LINE_HEIGHT + 1;
-    pdf.text(`Date: ${new Date(quote.createdAt).toLocaleDateString()}`, 150, rightYPos);
-    
-    // Move yPos to after header section
-    yPos = Math.max(yPos, rightYPos) + SECTION_GAP;
-    
-    // Separator line
-    pdf.line(MARGIN, yPos, 190, yPos);
-    yPos += SECTION_GAP + 2;
-    
-    // Customer Info Section
-    pdf.setFontSize(12);
-    pdf.setFont(undefined, 'bold');
-    pdf.text('Prepared For:', MARGIN, yPos);
-    yPos += 7;
-    
-    pdf.setFontSize(10);
-    pdf.setFont(undefined, 'normal');
-    pdf.text(quote.customerName, MARGIN, yPos);
-    yPos += LINE_HEIGHT;
-    
-    if (customer?.address) {
-      pdf.text(customer.address, MARGIN, yPos);
-      yPos += LINE_HEIGHT;
-    }
-    if (customer?.city || customer?.state || customer?.zip) {
-      const custCityStateZip = `${customer.city || ''}${customer.city && customer.state ? ', ' : ''}${customer.state || ''} ${customer.zip || ''}`.trim();
-      if (custCityStateZip) {
-        pdf.text(custCityStateZip, MARGIN, yPos);
-        yPos += LINE_HEIGHT;
-      }
-    }
-    if (customer?.phone) {
-      pdf.text(customer.phone, MARGIN, yPos);
-      yPos += LINE_HEIGHT;
-    }
-    
-    yPos += SECTION_GAP;
-    
-    // Quote Title
-    pdf.setFontSize(14);
-    pdf.setFont(undefined, 'bold');
-    const titleLines = pdf.splitTextToSize(quote.title, 170);
-    pdf.text(titleLines, MARGIN, yPos);
-    yPos += titleLines.length * 6 + SECTION_GAP;
-    
-    // Items Header
-    pdf.setFontSize(10);
-    pdf.setFont(undefined, 'bold');
-    pdf.setFillColor(240, 240, 240);
-    pdf.rect(MARGIN, yPos - 2, 170, 8, 'F');
-    pdf.text('Description', MARGIN + 2, yPos + 3);
-    yPos += 10;
-    
-    // Items List
-    pdf.setFont(undefined, 'normal');
-    pdf.setFontSize(9);
-    
-    quote.items.forEach((item, index) => {
-      // Check if we need a new page (leave room for total and terms)
-      if (yPos > 240) {
-        pdf.addPage();
-        yPos = MARGIN;
+    try {
+      switch (template) {
+        case 'modern':
+          await generateModernPDF(quote, customer, settings);
+          break;
+        case 'detailed':
+          await generateDetailedPDF(quote, customer, settings);
+          break;
+        case 'classic':
+        default:
+          await generateClassicPDF(quote, customer, settings);
+          break;
       }
       
-      const itemDescription = item.name + (item.description ? ` - ${item.description}` : '');
-      const itemLines = pdf.splitTextToSize(itemDescription, 165);
-      
-      pdf.text(itemLines, MARGIN + 2, yPos);
-      const itemHeight = itemLines.length * LINE_HEIGHT;
-      yPos += itemHeight + 4;
-    });
-    
-    // Ensure space for total section
-    if (yPos > 250) {
-      pdf.addPage();
-      yPos = MARGIN;
+      toast({
+        title: 'PDF generated',
+        description: 'Quote PDF has been downloaded.',
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate PDF. Please try again.',
+        variant: 'destructive',
+      });
     }
-    
-    yPos += 5;
-    
-    // Total Section
-    pdf.line(MARGIN, yPos, 190, yPos);
-    yPos += 8;
-    
-    pdf.setFont(undefined, 'bold');
-    pdf.setFontSize(12);
-    pdf.text('TOTAL:', 120, yPos);
-    pdf.text(formatCurrency(quote.total), 185, yPos, { align: 'right' });
-    
-    yPos += 12;
-    
-    // Terms & Conditions
-    if (settings.terms) {
-      // Check if we need a new page for terms
-      if (yPos > 240) {
-        pdf.addPage();
-        yPos = MARGIN;
-      }
-      
-      pdf.setFont(undefined, 'bold');
-      pdf.setFontSize(9);
-      pdf.text('Terms & Conditions:', MARGIN, yPos);
-      yPos += 6;
-      
-      pdf.setFont(undefined, 'normal');
-      pdf.setFontSize(8);
-      const termsLines = pdf.splitTextToSize(settings.terms, 170);
-      pdf.text(termsLines, MARGIN, yPos);
-    }
-    
-    pdf.save(`quote-${quote.quoteNumber}.pdf`);
-    
-    toast({
-      title: 'PDF generated',
-      description: 'Quote PDF has been downloaded.',
-    });
   };
 
   const handleEmail = async () => {

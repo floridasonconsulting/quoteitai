@@ -68,6 +68,7 @@ export default function Settings() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState<string | null>(null);
+  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
   const [cacheInfo, setCacheInfo] = useState({
     customers: localStorage.getItem('customers-cache')?.length || 0,
     items: localStorage.getItem('items-cache')?.length || 0,
@@ -575,6 +576,40 @@ export default function Settings() {
             </div>
 
             <div className="space-y-2">
+              <Label>Proposal Template</Label>
+              <RadioGroup 
+                value={formData.proposalTemplate || 'classic'}
+                onValueChange={(value: 'classic' | 'modern' | 'detailed') => 
+                  setFormData({ ...formData, proposalTemplate: value })
+                }
+              >
+                <div className="flex items-start space-x-3 p-3 border rounded hover:bg-accent cursor-pointer">
+                  <RadioGroupItem value="classic" id="classic" />
+                  <div className="flex-1">
+                    <Label htmlFor="classic" className="font-semibold cursor-pointer">Classic</Label>
+                    <p className="text-xs text-muted-foreground mt-1">Simple, professional layout. Best for straightforward quotes.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3 p-3 border rounded hover:bg-accent cursor-pointer">
+                  <RadioGroupItem value="modern" id="modern" />
+                  <div className="flex-1">
+                    <Label htmlFor="modern" className="font-semibold cursor-pointer">Modern</Label>
+                    <p className="text-xs text-muted-foreground mt-1">Clean, minimal design with pricing details. Great for transparency.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3 p-3 border rounded hover:bg-accent cursor-pointer">
+                  <RadioGroupItem value="detailed" id="detailed" />
+                  <div className="flex-1">
+                    <Label htmlFor="detailed" className="font-semibold cursor-pointer">Detailed</Label>
+                    <p className="text-xs text-muted-foreground mt-1">Comprehensive layout with itemized pricing and categories. Best for complex projects.</p>
+                  </div>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="name">Company Name</Label>
               <Input
                 id="name"
@@ -825,57 +860,68 @@ export default function Settings() {
               </div>
             )}
 
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-              {Object.entries(SUBSCRIPTION_TIERS).map(([key, tier]) => {
-                const isActive = isCurrentPlan(tier.productId);
-                const isLoading = subscriptionLoading === tier.priceId;
+            <Collapsible open={subscriptionOpen} onOpenChange={setSubscriptionOpen}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  <span>View Subscription Tiers</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${subscriptionOpen ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent className="mt-4">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                  {Object.entries(SUBSCRIPTION_TIERS).map(([key, tier]) => {
+                    const isActive = isCurrentPlan(tier.productId);
+                    const isLoading = subscriptionLoading === tier.priceId;
 
-                return (
-                  <div key={key} className={`rounded-lg border-2 p-4 space-y-3 ${isActive ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {key.includes('max') ? (
-                          <Sparkles className="h-4 w-4 text-primary" />
-                        ) : (
-                          <Zap className="h-4 w-4 text-primary" />
-                        )}
-                        <h4 className="font-semibold text-sm">{tier.name}</h4>
+                    return (
+                      <div key={key} className={`rounded-lg border-2 p-4 space-y-3 ${isActive ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {key.includes('max') ? (
+                              <Sparkles className="h-4 w-4 text-primary" />
+                            ) : (
+                              <Zap className="h-4 w-4 text-primary" />
+                            )}
+                            <h4 className="font-semibold text-sm">{tier.name}</h4>
+                          </div>
+                          {isActive && (
+                            <Badge variant="default" className="text-xs">Your Plan</Badge>
+                          )}
+                        </div>
+                        <p className="text-lg font-bold">{tier.price}</p>
+                        <ul className="space-y-1.5">
+                          {tier.features.map((feature, index) => (
+                            <li key={index} className="flex items-start gap-2 text-xs">
+                              <Check className="h-3 w-3 text-success mt-0.5 flex-shrink-0" />
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <Button
+                          size="sm"
+                          className="w-full"
+                          onClick={() => handleSubscribe(tier.priceId)}
+                          disabled={isActive || isLoading}
+                          variant={isActive ? 'secondary' : 'default'}
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                              Loading...
+                            </>
+                          ) : isActive ? (
+                            'Current Plan'
+                          ) : (
+                            'Subscribe'
+                          )}
+                        </Button>
                       </div>
-                      {isActive && (
-                        <Badge variant="default" className="text-xs">Your Plan</Badge>
-                      )}
-                    </div>
-                    <p className="text-lg font-bold">{tier.price}</p>
-                    <ul className="space-y-1.5">
-                      {tier.features.map((feature, index) => (
-                        <li key={index} className="flex items-start gap-2 text-xs">
-                          <Check className="h-3 w-3 text-success mt-0.5 flex-shrink-0" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <Button
-                      size="sm"
-                      className="w-full"
-                      onClick={() => handleSubscribe(tier.priceId)}
-                      disabled={isActive || isLoading}
-                      variant={isActive ? 'secondary' : 'default'}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                          Loading...
-                        </>
-                      ) : isActive ? (
-                        'Current Plan'
-                      ) : (
-                        'Subscribe'
-                      )}
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             <Button variant="outline" onClick={refreshSubscription} size="sm">
               <RefreshCw className="mr-2 h-4 w-4" />

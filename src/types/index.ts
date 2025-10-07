@@ -74,4 +74,5 @@ export interface CompanySettings {
   license?: string;
   insurance?: string;
   terms: string;
+  proposalTemplate?: 'classic' | 'modern' | 'detailed';
 }
