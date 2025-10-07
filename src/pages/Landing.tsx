@@ -307,6 +307,7 @@ export default function Landing() {
                             src={screenshot.image} 
                             alt={screenshot.title}
                             className="w-full h-auto"
+                            loading="lazy"
                           />
                         </div>
                         <div>
