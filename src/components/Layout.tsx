@@ -16,9 +16,7 @@ const navigation = [
   { name: 'Quotes', path: '/quotes', icon: FileText },
   { name: 'Customers', path: '/customers', icon: Users },
   { name: 'Items', path: '/items', icon: Package },
-  { name: 'Subscription', path: '/subscription', icon: CreditCard },
   { name: 'Settings', path: '/settings', icon: Settings },
-  { name: 'Diagnostics', path: '/diagnostics', icon: Activity },
 ];
 
 export function Layout({ children }: LayoutProps) {

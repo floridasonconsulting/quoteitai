@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset, AlertTriangle, ChevronDown, RefreshCw, Shield, Sparkles, AlertCircle, Upload, Download, FileDown } from 'lucide-react';
+import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset, AlertTriangle, ChevronDown, RefreshCw, Shield, Sparkles, AlertCircle, Upload, Download, FileDown, Check, Loader2, Zap, Database, CheckCircle, XCircle, Clock, CreditCard, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -40,6 +41,8 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/components/ThemeProvider';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
+import { useLoadingState } from '@/hooks/useLoadingState';
+import { supabase } from '@/integrations/supabase/client';
 import { checkAndMigrateData } from '@/lib/migration-helper';
 import { generateSampleData } from '@/lib/sample-data';
 import { Separator } from '@/components/ui/separator';
@@ -49,8 +52,9 @@ export default function Settings() {
   const navigate = useNavigate();
   const { permission, requestPermission, isSupported } = useNotifications();
   const { themeMode, setThemeMode } = useTheme();
-  const { user, userRole, isAdmin, updateUserRole, checkUserRole } = useAuth();
-  const { queueChange, pauseSync, resumeSync } = useSyncManager();
+  const { user, userRole, isAdmin, updateUserRole, checkUserRole, subscription, refreshSubscription } = useAuth();
+  const { queueChange, pauseSync, resumeSync, isOnline, isSyncing, pendingCount, failedCount } = useSyncManager();
+  const { getActiveOperations } = useLoadingState();
   
   console.log('[Settings] Current userRole:', userRole, 'isAdmin:', isAdmin);
   const [loading, setLoading] = useState(true);
@@ -63,6 +67,14 @@ export default function Settings() {
   const [sampleDataResult, setSampleDataResult] = useState<any>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState<string | null>(null);
+  const [cacheInfo, setCacheInfo] = useState({
+    customers: localStorage.getItem('customers-cache')?.length || 0,
+    items: localStorage.getItem('items-cache')?.length || 0,
+    quotes: localStorage.getItem('quotes-cache')?.length || 0,
+    syncQueue: localStorage.getItem('sync-queue')?.length || 0,
+    failedQueue: localStorage.getItem('failed-sync-queue')?.length || 0,
+  });
   const [formData, setFormData] = useState<CompanySettings>({
     name: '',
     address: '',
@@ -369,46 +381,133 @@ export default function Settings() {
     }
   };
 
-  const handleGenerateSampleData = async () => {
-    setGeneratingSample(true);
-    setSampleDataResult(null);
-    
+  const handleSubscribe = async (priceId: string) => {
+    setSubscriptionLoading(priceId);
     try {
-      const result = await generateSampleData(user?.id, includeCompanySettings);
-      
-      if (includeCompanySettings) {
-        await loadSettings();
-      }
-      
-      setSampleDataResult(result);
-      
-      // Notify pages to refresh their data
-      dispatchDataRefresh('customers-changed');
-      dispatchDataRefresh('items-changed');
-      
-      // Build detailed success message
-      const totalCustomers = result.customersAddedToDb + result.customersFailedToDb;
-      const totalItems = result.itemsAddedToDb + result.itemsFailedToDb;
-      
-      if (result.customersFailedToDb > 0 || result.itemsFailedToDb > 0) {
-        toast.warning(
-          `Sample data partially created. ${result.customersAddedToDb}/${totalCustomers} customers and ${result.itemsAddedToDb}/${totalItems} items saved to database. Check console for details.`,
-          { duration: 5000 }
-        );
-      } else {
-        toast.success(
-          `Sample data created! ${result.customersAddedToDb} customers and ${result.itemsAddedToDb} items added to database.`,
-          { duration: 4000 }
-        );
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { priceId },
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.open(data.url, '_blank');
+        setTimeout(() => {
+          refreshSubscription();
+        }, 5000);
       }
     } catch (error) {
-      console.error('Error generating sample data:', error);
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to generate sample data. Check console for details.'
-      );
+      toast.error('Failed to create checkout session');
+      console.error(error);
     } finally {
-      setGeneratingSample(false);
+      setSubscriptionLoading(null);
     }
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('customer-portal');
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (error) {
+      toast.error('Failed to open customer portal');
+      console.error(error);
+    }
+  };
+
+  const isCurrentPlan = (productId: string) => {
+    return subscription?.product_id === productId;
+  };
+
+  const handleClearCache = () => {
+    localStorage.removeItem('customers-cache');
+    localStorage.removeItem('items-cache');
+    localStorage.removeItem('quotes-cache');
+    setCacheInfo({
+      customers: 0,
+      items: 0,
+      quotes: 0,
+      syncQueue: cacheInfo.syncQueue,
+      failedQueue: cacheInfo.failedQueue,
+    });
+    toast.success('Data cache cleared successfully');
+  };
+
+  const handleClearSyncQueues = () => {
+    localStorage.removeItem('sync-queue');
+    localStorage.removeItem('failed-sync-queue');
+    setCacheInfo({
+      ...cacheInfo,
+      syncQueue: 0,
+      failedQueue: 0,
+    });
+    toast.success('Sync queues cleared successfully');
+  };
+
+  const activeOps = getActiveOperations();
+  const lastSync = localStorage.getItem('last-sync-time');
+
+  const SUBSCRIPTION_TIERS = {
+    pro_monthly: {
+      name: 'Pro Monthly',
+      price: '$9.99/month',
+      priceId: 'price_pro_monthly_placeholder',
+      productId: 'prod_pro_monthly_placeholder',
+      features: [
+        '50 quotes per month',
+        'Unlimited customers',
+        'Unlimited items',
+        'Basic AI features',
+        'Email support',
+      ],
+    },
+    pro_annual: {
+      name: 'Pro Annual',
+      price: '$99/year',
+      priceId: 'price_pro_annual_placeholder',
+      productId: 'prod_pro_annual_placeholder',
+      features: [
+        '600 quotes per year',
+        'Unlimited customers',
+        'Unlimited items',
+        'Basic AI features',
+        'Priority email support',
+        'Save $20 vs monthly',
+      ],
+    },
+    max_monthly: {
+      name: 'Max AI Monthly',
+      price: '$19.99/month',
+      priceId: 'price_max_monthly_placeholder',
+      productId: 'prod_max_monthly_placeholder',
+      features: [
+        'Unlimited quotes',
+        'Unlimited customers',
+        'Unlimited items',
+        'Advanced AI features',
+        'AI-powered quote generation',
+        'Priority support',
+      ],
+    },
+    max_annual: {
+      name: 'Max AI Annual',
+      price: '$199/year',
+      priceId: 'price_max_annual_placeholder',
+      productId: 'prod_max_annual_placeholder',
+      features: [
+        'Unlimited quotes',
+        'Unlimited customers',
+        'Unlimited items',
+        'Advanced AI features',
+        'AI-powered quote generation',
+        '24/7 priority support',
+        'Save $40 vs monthly',
+      ],
+    },
   };
 
   return (
@@ -421,182 +520,7 @@ export default function Settings() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sun className="h-5 w-5" />
-              Appearance
-            </CardTitle>
-            <CardDescription>
-              Customize how the app looks
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <Label>Theme Mode</Label>
-              <Select value={themeMode} onValueChange={setThemeMode}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="light">
-                    <div className="flex items-center gap-2">
-                      <Sun className="h-4 w-4" />
-                      <span>Light</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="dark">
-                    <div className="flex items-center gap-2">
-                      <Moon className="h-4 w-4" />
-                      <span>Dark</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="auto">
-                    <div className="flex items-center gap-2">
-                      <Sunset className="h-4 w-4" />
-                      <span>Auto (Based on time of day)</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Auto mode switches to dark from 6 PM to 6 AM
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {isSupported && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                Notifications
-              </CardTitle>
-              <CardDescription>
-                Get notified when follow-ups are due
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Push Notifications</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Receive notifications for quote follow-ups
-                  </p>
-                </div>
-                <Switch
-                  checked={permission === 'granted'}
-                  onCheckedChange={handleNotificationToggle}
-                />
-              </div>
-              {permission === 'denied' && (
-                <p className="text-xs text-warning">
-                  Notifications are blocked. Please enable them in your browser settings.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <RefreshCw className="h-5 w-5" />
-              Data Sync
-            </CardTitle>
-            <CardDescription>
-              Manually sync your local data to the database
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Use this to force sync all local data (customers, items, quotes, and settings) to the database. This ensures your data is accessible across all your devices.
-              </p>
-              <Button 
-                onClick={handleManualSync} 
-                disabled={syncing || !user}
-                variant="outline"
-                className="w-full"
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-                {syncing ? 'Syncing...' : 'Sync Data Now'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileDown className="h-5 w-5" />
-              Sample Data Management
-            </CardTitle>
-            <CardDescription>
-              Import pre-made sample data for testing and screenshots
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Import sample customers, items, and company settings for field service businesses (plumbers, electricians, handymen, home rehab).
-              </p>
-              
-              <div className="grid gap-2">
-                <Button 
-                  onClick={handleImportSampleData} 
-                  disabled={importing || !user}
-                  variant="outline"
-                  className="w-full"
-                >
-                  <Upload className={`mr-2 h-4 w-4 ${importing ? 'animate-pulse' : ''}`} />
-                  {importing ? 'Importing...' : 'Import Sample Data'}
-                </Button>
-
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      disabled={importing || !user}
-                      variant="secondary"
-                      className="w-full"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Clear Database & Import Sample Data
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Clear All Data?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will delete all customers, items, and quotes from the database, then import fresh sample data. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleClearAndImport}>
-                        Clear & Import
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-
-              {importResult && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Import Results</AlertTitle>
-                  <AlertDescription>
-                    Successfully imported {importResult.success} records.
-                    {importResult.skipped > 0 && ` ${importResult.skipped} duplicates skipped.`}
-                    {importResult.failed > 0 && ` ${importResult.failed} records failed.`}
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
+        {/* Company Information - Moved to Top */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -768,6 +692,390 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sun className="h-5 w-5" />
+              Appearance
+            </CardTitle>
+            <CardDescription>
+              Customize how the app looks
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <Label>Theme Mode</Label>
+              <Select value={themeMode} onValueChange={setThemeMode}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">
+                    <div className="flex items-center gap-2">
+                      <Sun className="h-4 w-4" />
+                      <span>Light</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="dark">
+                    <div className="flex items-center gap-2">
+                      <Moon className="h-4 w-4" />
+                      <span>Dark</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="auto">
+                    <div className="flex items-center gap-2">
+                      <Sunset className="h-4 w-4" />
+                      <span>Auto (Based on time of day)</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Auto mode switches to dark from 6 PM to 6 AM
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {isSupported && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Notifications
+              </CardTitle>
+              <CardDescription>
+                Get notified when follow-ups are due
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Push Notifications</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Receive notifications for quote follow-ups
+                  </p>
+                </div>
+                <Switch
+                  checked={permission === 'granted'}
+                  onCheckedChange={handleNotificationToggle}
+                />
+              </div>
+              {permission === 'denied' && (
+                <p className="text-xs text-warning">
+                  Notifications are blocked. Please enable them in your browser settings.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              Data Sync
+            </CardTitle>
+            <CardDescription>
+              Manually sync your local data to the database
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Use this to force sync all local data (customers, items, quotes, and settings) to the database. This ensures your data is accessible across all your devices.
+              </p>
+              <Button 
+                onClick={handleManualSync} 
+                disabled={syncing || !user}
+                variant="outline"
+                className="w-full"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Syncing...' : 'Sync Data Now'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Subscription Management */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Subscription Management
+            </CardTitle>
+            <CardDescription>
+              Manage your subscription and billing
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {subscription?.subscribed && (
+              <div className="rounded-lg border-2 border-primary p-4 space-y-3">
+                <h4 className="font-semibold text-sm">Current Subscription</h4>
+                <p className="text-sm text-muted-foreground">
+                  Your subscription is active
+                  {subscription.subscription_end && 
+                    ` until ${new Date(subscription.subscription_end).toLocaleDateString()}`
+                  }
+                </p>
+                <Button onClick={handleManageSubscription} variant="outline" size="sm">
+                  Manage Subscription
+                </Button>
+              </div>
+            )}
+
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+              {Object.entries(SUBSCRIPTION_TIERS).map(([key, tier]) => {
+                const isActive = isCurrentPlan(tier.productId);
+                const isLoading = subscriptionLoading === tier.priceId;
+
+                return (
+                  <div key={key} className={`rounded-lg border-2 p-4 space-y-3 ${isActive ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {key.includes('max') ? (
+                          <Sparkles className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Zap className="h-4 w-4 text-primary" />
+                        )}
+                        <h4 className="font-semibold text-sm">{tier.name}</h4>
+                      </div>
+                      {isActive && (
+                        <Badge variant="default" className="text-xs">Your Plan</Badge>
+                      )}
+                    </div>
+                    <p className="text-lg font-bold">{tier.price}</p>
+                    <ul className="space-y-1.5">
+                      {tier.features.map((feature, index) => (
+                        <li key={index} className="flex items-start gap-2 text-xs">
+                          <Check className="h-3 w-3 text-success mt-0.5 flex-shrink-0" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleSubscribe(tier.priceId)}
+                      disabled={isActive || isLoading}
+                      variant={isActive ? 'secondary' : 'default'}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                          Loading...
+                        </>
+                      ) : isActive ? (
+                        'Current Plan'
+                      ) : (
+                        'Subscribe'
+                      )}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <Button variant="outline" onClick={refreshSubscription} size="sm">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh Subscription Status
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* System Diagnostics */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              System Diagnostics
+            </CardTitle>
+            <CardDescription>
+              Monitor system health and performance
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Status Overview */}
+            <div className="grid gap-3 grid-cols-3">
+              <div className="rounded-lg border p-3 space-y-1">
+                <p className="text-xs text-muted-foreground">Connection</p>
+                <div className="flex items-center gap-2">
+                  {isOnline ? (
+                    <>
+                      <CheckCircle className="h-4 w-4 text-success" />
+                      <span className="text-sm font-bold">Online</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-4 w-4 text-destructive" />
+                      <span className="text-sm font-bold">Offline</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-lg border p-3 space-y-1">
+                <p className="text-xs text-muted-foreground">Sync</p>
+                <div className="flex items-center gap-2">
+                  {isSyncing ? (
+                    <>
+                      <Clock className="h-4 w-4 animate-spin text-primary" />
+                      <span className="text-sm font-bold">Syncing</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 text-success" />
+                      <span className="text-sm font-bold">Idle</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-lg border p-3 space-y-1">
+                <p className="text-xs text-muted-foreground">Auth</p>
+                <div className="flex items-center gap-2">
+                  {user ? (
+                    <>
+                      <CheckCircle className="h-4 w-4 text-success" />
+                      <span className="text-sm font-bold">Active</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-4 w-4 text-warning" />
+                      <span className="text-sm font-bold">Guest</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Sync Queue */}
+            <Collapsible>
+              <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border p-3 hover:bg-accent">
+                <span className="text-sm font-medium">Sync Queue Details</span>
+                <ChevronDown className="h-4 w-4" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-3">
+                <div className="rounded-lg border p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Pending Changes</span>
+                    <Badge variant={pendingCount > 0 ? 'default' : 'secondary'}>{pendingCount}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Failed Changes</span>
+                    <Badge variant={failedCount > 0 ? 'destructive' : 'secondary'}>{failedCount}</Badge>
+                  </div>
+                  {lastSync && (
+                    <p className="text-xs text-muted-foreground pt-2 border-t">
+                      Last sync: {new Date(lastSync).toLocaleString()}
+                    </p>
+                  )}
+                  {(pendingCount > 0 || failedCount > 0) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={handleClearSyncQueues}
+                    >
+                      <Trash2 className="mr-2 h-3 w-3" />
+                      Clear Sync Queues
+                    </Button>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Cache Status */}
+            <Collapsible>
+              <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border p-3 hover:bg-accent">
+                <span className="text-sm font-medium">Cache Status</span>
+                <ChevronDown className="h-4 w-4" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-3">
+                <div className="rounded-lg border p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs">Customers Cache</span>
+                    <Badge variant="outline" className="text-xs">{(cacheInfo.customers / 1024).toFixed(2)} KB</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs">Items Cache</span>
+                    <Badge variant="outline" className="text-xs">{(cacheInfo.items / 1024).toFixed(2)} KB</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs">Quotes Cache</span>
+                    <Badge variant="outline" className="text-xs">{(cacheInfo.quotes / 1024).toFixed(2)} KB</Badge>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="w-full mt-2"
+                    onClick={handleClearCache}
+                  >
+                    <Database className="mr-2 h-3 w-3" />
+                    Clear Data Cache
+                  </Button>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Active Operations */}
+            {activeOps.length > 0 && (
+              <div className="rounded-lg border p-3 space-y-2">
+                <p className="text-sm font-medium">Active Operations</p>
+                {activeOps.map((op) => (
+                  <div key={op.id} className="flex items-center justify-between text-xs p-2 bg-accent rounded">
+                    <span>{op.description}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {(op.elapsed / 1000).toFixed(1)}s
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Sample Data Management - Public Users */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileDown className="h-5 w-5" />
+              Sample Data Management
+            </CardTitle>
+            <CardDescription>
+              Import pre-made sample data for testing
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Import sample customers, items, and company settings for field service businesses (plumbers, electricians, handymen, home rehab).
+            </p>
+            
+            <Button 
+              onClick={handleImportSampleData} 
+              disabled={importing || !user}
+              variant="outline"
+              className="w-full"
+            >
+              <Upload className={`mr-2 h-4 w-4 ${importing ? 'animate-pulse' : ''}`} />
+              {importing ? 'Importing...' : 'Import Sample Data'}
+            </Button>
+
+            {importResult && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Import Results</AlertTitle>
+                <AlertDescription>
+                  Successfully imported {importResult.success} records.
+                  {importResult.skipped > 0 && ` ${importResult.skipped} duplicates skipped.`}
+                  {importResult.failed > 0 && ` ${importResult.failed} records failed.`}
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+
         <div className="flex justify-end">
           <Button type="submit" size="lg">
             <Save className="mr-2 h-5 w-5" />
@@ -776,6 +1084,80 @@ export default function Settings() {
         </div>
       </form>
 
+      {/* Admin Controls - Only visible to admin users */}
+      {isAdmin && (
+        <Card className="border-primary/50 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              Admin Controls
+            </CardTitle>
+            <CardDescription>
+              Administrative tools for testing and managing accounts
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Role Management Section */}
+            <div className="space-y-3">
+              <Label>AI Account Tier</Label>
+              <Select value={userRole || 'free'} onValueChange={handleRoleChange}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">Free Tier</SelectItem>
+                  <SelectItem value="pro">Pro Tier</SelectItem>
+                  <SelectItem value="max">Max Tier</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Change your AI account tier for testing features
+              </p>
+            </div>
+
+            <Separator />
+
+            {/* Clear & Import Sample Data - Admin Only */}
+            <div className="space-y-3">
+              <div>
+                <Label>Clear Database & Import Sample Data</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Delete all data and import fresh sample data (Admin only)
+                </p>
+              </div>
+              
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    disabled={importing || !user}
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear Database & Import Sample Data
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Clear All Data?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will delete all customers, items, and quotes from the database, then import fresh sample data. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleClearAndImport}>
+                      Clear & Import
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Danger Zone - Moved to Bottom */}
       <Collapsible open={dangerZoneOpen} onOpenChange={setDangerZoneOpen}>
         <Card className="border-destructive/50 bg-destructive/5">
           <CardHeader>
@@ -876,98 +1258,6 @@ export default function Settings() {
         </Card>
       </Collapsible>
 
-      {/* Admin Controls - Only visible to admin users */}
-      {isAdmin && (
-        <Card className="border-primary/50 bg-primary/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              Admin Controls
-            </CardTitle>
-            <CardDescription>
-              Administrative tools for testing and managing user accounts
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Role Management Section */}
-            <div className="space-y-3">
-              <Label>AI Account Tier</Label>
-              <Select value={userRole || 'free'} onValueChange={handleRoleChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="free">Free Tier</SelectItem>
-                  <SelectItem value="pro">Pro Tier</SelectItem>
-                  <SelectItem value="max">Max Tier</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Change your AI account tier for testing features
-              </p>
-            </div>
-
-            <Separator />
-
-            {/* Sample Data Generation Section */}
-            <div className="space-y-3">
-              {!user && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Authentication Required</AlertTitle>
-                  <AlertDescription>
-                    You must be signed in to generate sample data. Please sign in first.
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Generate Sample Data</Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Populate all fields with realistic test data for screenshots and testing
-                  </p>
-                </div>
-                <Button 
-                  onClick={handleGenerateSampleData} 
-                  disabled={generatingSample || !user}
-                  variant="outline"
-                >
-                  <Sparkles className={`mr-2 h-4 w-4 ${generatingSample ? 'animate-pulse' : ''}`} />
-                  {generatingSample ? 'Generating...' : 'Generate Data'}
-                </Button>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="include-company"
-                  checked={includeCompanySettings}
-                  onCheckedChange={setIncludeCompanySettings}
-                />
-                <Label htmlFor="include-company" className="cursor-pointer text-sm">
-                  Include sample company information
-                </Label>
-              </div>
-
-              {sampleDataResult && (
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                  <p className="text-sm font-medium text-primary mb-2">
-                    ✓ Sample data generated successfully!
-                  </p>
-                  <ul className="text-xs text-muted-foreground space-y-1">
-                    <li>• {sampleDataResult.customersAdded} customers added</li>
-                    <li>• {sampleDataResult.itemsAdded} items added</li>
-                    <li>• {sampleDataResult.quotesAdded} quotes added</li>
-                    {sampleDataResult.companySettingsAdded && (
-                      <li>• Company information populated</li>
-                    )}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
