@@ -59,18 +59,33 @@ serve(async (req) => {
     const featureConfig = FEATURE_CONFIG[featureType as keyof typeof FEATURE_CONFIG];
     if (!featureConfig) throw new Error("Invalid feature type");
 
-    // Check subscription tier
-    const { data: subscription } = await supabaseClient
-      .from("subscriptions")
-      .select("stripe_product_id, status")
+    // Check user role first (priority), then subscription
+    const { data: userRole } = await supabaseClient
+      .from("user_roles")
+      .select("role")
       .eq("user_id", user.id)
       .single();
 
-    const userTier = subscription?.status === "active" 
-      ? (subscription.stripe_product_id?.includes("max") ? "max" : "pro")
-      : "free";
+    let userTier: "free" | "pro" | "max" = "free";
+    
+    if (userRole?.role) {
+      // User has an assigned role - use it directly
+      userTier = userRole.role as "free" | "pro" | "max";
+      logStep("User tier from role", { userTier, requiredTier: featureConfig.tier });
+    } else {
+      // Fall back to subscription check
+      const { data: subscription } = await supabaseClient
+        .from("subscriptions")
+        .select("stripe_product_id, status")
+        .eq("user_id", user.id)
+        .single();
 
-    logStep("User tier checked", { userTier, requiredTier: featureConfig.tier });
+      userTier = subscription?.status === "active" 
+        ? (subscription.stripe_product_id?.includes("max") ? "max" : "pro")
+        : "free";
+      
+      logStep("User tier from subscription", { userTier, requiredTier: featureConfig.tier });
+    }
 
     // Check tier access
     if (featureConfig.tier === "pro" && userTier === "free") {
