@@ -63,13 +63,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     roleCheckInProgress.current = true;
     
     try {
-      const { data, error } = await supabase.rpc('get_user_role', {
+      // Add 3-second timeout to prevent hanging
+      const rolePromise = supabase.rpc('get_user_role', {
         _user_id: activeSession.user.id,
       });
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Role check timeout')), 3000)
+      );
+      
+      const { data, error } = await Promise.race([rolePromise, timeoutPromise]) as any;
 
       if (error) {
         console.error('[AuthContext] Error fetching user role:', error);
-        setUserRole(null);
+        setUserRole('free'); // Default to free on error
         return;
       }
 
@@ -77,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUserRole(data as UserRole);
     } catch (error) {
       console.error('[AuthContext] Error checking user role:', error);
-      setUserRole(null);
+      setUserRole('free'); // Default to free on timeout/error
     } finally {
       roleCheckInProgress.current = false;
     }
@@ -228,10 +235,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(currentSession);
         setUser(currentSession.user);
         
-        // Check role immediately before setting loading to false
-        await checkUserRole(currentSession);
-        console.log('[AUTH DEBUG] Setting loading to false after role check');
+        // Set loading to false immediately, check role in background
+        console.log('[AUTH DEBUG] Setting loading to false');
         setLoading(false);
+        
+        // Check role in background (non-blocking)
+        checkUserRole(currentSession).catch(error => {
+          console.error('[AUTH DEBUG] Background role check failed:', error);
+        });
         
         // Defer subscription check and data migration
         setTimeout(async () => {
