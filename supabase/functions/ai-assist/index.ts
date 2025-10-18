@@ -69,9 +69,17 @@ serve(async (req) => {
     let userTier: "free" | "pro" | "max" = "free";
     
     if (userRole?.role) {
-      // User has an assigned role - use it directly
-      userTier = userRole.role as "free" | "pro" | "max";
-      logStep("User tier from role", { userTier, requiredTier: featureConfig.tier });
+      // Map database roles to tier system
+      // admin = full access (max tier)
+      const roleMap: Record<string, "free" | "pro" | "max"> = {
+        "admin": "max",
+        "max": "max",
+        "pro": "pro",
+        "free": "free"
+      };
+      
+      userTier = roleMap[userRole.role] || "free";
+      logStep("User tier from role", { dbRole: userRole.role, mappedTier: userTier, requiredTier: featureConfig.tier });
     } else {
       // Fall back to subscription check
       const { data: subscription } = await supabaseClient
