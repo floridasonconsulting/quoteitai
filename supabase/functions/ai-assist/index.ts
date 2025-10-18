@@ -60,11 +60,18 @@ serve(async (req) => {
     if (!featureConfig) throw new Error("Invalid feature type");
 
     // Check user role first (priority), then subscription
-    const { data: userRole } = await supabaseClient
+    const { data: userRole, error: roleError } = await supabaseClient
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle(); // Use maybeSingle() instead of single() to avoid error on no rows
+
+    logStep("Role query result", { 
+      hasData: !!userRole, 
+      role: userRole?.role, 
+      hasError: !!roleError, 
+      errorMsg: roleError?.message 
+    });
 
     let userTier: "free" | "pro" | "max" = "free";
     
@@ -86,7 +93,7 @@ serve(async (req) => {
         .from("subscriptions")
         .select("stripe_product_id, status")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       userTier = subscription?.status === "active" 
         ? (subscription.stripe_product_id?.includes("max") ? "max" : "pro")
