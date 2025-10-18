@@ -60,33 +60,46 @@ serve(async (req) => {
     if (!featureConfig) throw new Error("Invalid feature type");
 
     // Check user role first (priority), then subscription
-    const { data: userRole, error: roleError } = await supabaseClient
+    // User may have multiple roles, so get all and pick highest priority
+    const { data: userRoles, error: roleError } = await supabaseClient
       .from("user_roles")
       .select("role")
-      .eq("user_id", user.id)
-      .maybeSingle(); // Use maybeSingle() instead of single() to avoid error on no rows
+      .eq("user_id", user.id);
 
     logStep("Role query result", { 
-      hasData: !!userRole, 
-      role: userRole?.role, 
+      hasData: !!userRoles && userRoles.length > 0, 
+      roles: userRoles?.map(r => r.role), 
       hasError: !!roleError, 
       errorMsg: roleError?.message 
     });
 
     let userTier: "free" | "pro" | "max" = "free";
     
-    if (userRole?.role) {
-      // Map database roles to tier system
-      // admin = full access (max tier)
+    if (userRoles && userRoles.length > 0) {
+      // Map database roles to tier system with priority
+      const rolePriority: Record<string, number> = {
+        "admin": 4,
+        "max": 3,
+        "pro": 2,
+        "free": 1
+      };
+      
       const roleMap: Record<string, "free" | "pro" | "max"> = {
-        "admin": "max",
+        "admin": "max", // admin gets full access
         "max": "max",
         "pro": "pro",
         "free": "free"
       };
       
-      userTier = roleMap[userRole.role] || "free";
-      logStep("User tier from role", { dbRole: userRole.role, mappedTier: userTier, requiredTier: featureConfig.tier });
+      // Get the highest priority role
+      const highestRole = userRoles.reduce((highest, current) => {
+        const currentPriority = rolePriority[current.role] || 0;
+        const highestPriority = rolePriority[highest.role] || 0;
+        return currentPriority > highestPriority ? current : highest;
+      });
+      
+      userTier = roleMap[highestRole.role] || "free";
+      logStep("User tier from role", { dbRole: highestRole.role, mappedTier: userTier, requiredTier: featureConfig.tier });
     } else {
       // Fall back to subscription check
       const { data: subscription } = await supabaseClient
