@@ -12,7 +12,7 @@ interface LayoutProps {
 }
 
 const navigation = [
-  { name: 'Dashboard', path: '/', icon: Home },
+  { name: 'Dashboard', path: '/dashboard', icon: Home },
   { name: 'Quotes', path: '/quotes', icon: FileText },
   { name: 'Customers', path: '/customers', icon: Users },
   { name: 'Items', path: '/items', icon: Package },

@@ -65,8 +65,12 @@ export default function QuoteDetail() {
   const generatePDF = async () => {
     if (!quote) return;
 
+    // Force fresh settings fetch from database, bypassing cache
+    localStorage.removeItem('quote-it-settings');
     const settings = await getSettings(user?.id);
     const template = settings.proposalTemplate || 'classic';
+    
+    console.log('[QuoteDetail] Using template for PDF:', template);
     
     try {
       switch (template) {

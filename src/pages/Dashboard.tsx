@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { getQuotes, getCustomers, getItems, clearInFlightRequests } from '@/lib/db-service';
 import { getAgingSummary, getQuoteAge } from '@/lib/quote-utils';
 import { Quote } from '@/types';
@@ -251,24 +252,34 @@ export default function Dashboard() {
     }
   };
 
+  // Show skeleton UI immediately instead of full-screen spinner
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <p className="text-muted-foreground">Loading dashboard...</p>
-        {loadingProgress.length > 0 && (
-          <div className="text-sm text-muted-foreground space-y-1">
-            {loadingProgress.map((step, i) => (
-              <p key={i}>• {step}</p>
-            ))}
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex sm:items-center sm:justify-between">
+          <div>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-96" />
           </div>
-        )}
-        <Progress value={33} className="w-48" />
-        {showStuckHelper && (
-          <Button variant="outline" size="sm" onClick={handleFullReset}>
-            Stuck? Click here to reset
-          </Button>
-        )}
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {[1, 2, 3].map(j => (
+                  <div key={j} className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-6 w-16" />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }

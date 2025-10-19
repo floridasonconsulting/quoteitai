@@ -110,16 +110,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const refreshSubscription = async () => {
-    if (!session) return;
-    
+  const loadSubscription = async (userId: string) => {
     try {
       const { data, error } = await supabase.functions.invoke('check-subscription');
-      
       if (error) throw error;
       setSubscription(data);
     } catch (error) {
-      console.error('Error checking subscription:', error);
+      console.error('[AuthContext] Subscription check error:', error);
+      setSubscription(null);
     }
   };
 
@@ -149,12 +147,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     
-    // Maximum timeout to prevent infinite loading (5 seconds)
+    // Reduced maximum timeout to 2 seconds for faster initial load
     maxLoadingTimeout = setTimeout(() => {
       console.warn('[AUTH DEBUG] Maximum loading timeout reached - forcing loading to false');
       setLoading(false);
       isInitializing.current = false;
-    }, 5000);
+    }, 2000);
     
     // Set up auth state listener with error handling
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
@@ -235,20 +233,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(currentSession);
         setUser(currentSession.user);
         
-        // Set loading to false immediately, check role in background
+        // Set loading to false immediately for fast UI
         console.log('[AUTH DEBUG] Setting loading to false');
         setLoading(false);
         
-        // Check role in background (non-blocking)
+        // Check role in background (non-blocking) - no await
         checkUserRole(currentSession).catch(error => {
           console.error('[AUTH DEBUG] Background role check failed:', error);
         });
         
-        // Defer subscription check and data migration
-        setTimeout(async () => {
-          await refreshSubscription();
-          await checkAndMigrateData(currentSession.user.id);
-        }, 0);
+        // Defer subscription check and data migration even further
+        setTimeout(() => {
+          loadSubscription(currentSession.user.id).catch(console.error);
+          checkAndMigrateData(currentSession.user.id).catch(console.error);
+        }, 100);
       }
     );
 
@@ -259,16 +257,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Auto-refresh subscription every minute
-  useEffect(() => {
+  const refreshSubscription = async () => {
     if (!session) return;
-    
-    const interval = setInterval(() => {
-      refreshSubscription();
-    }, 60000);
-    
-    return () => clearInterval(interval);
-  }, [session]);
+    await loadSubscription(session.user.id);
+  };
 
   const signUp = async (email: string, password: string) => {
     const redirectUrl = `${window.location.origin}/`;

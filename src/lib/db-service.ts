@@ -501,6 +501,7 @@ export const getSettings = async (userId: string | undefined): Promise<any> => {
     insurance: '',
     logoDisplayOption: 'both',
     terms: 'Payment due within 30 days. Thank you for your business!',
+    proposalTemplate: 'classic', // Add default here too
   };
 
   if (!userId) {
@@ -517,6 +518,11 @@ export const getSettings = async (userId: string | undefined): Promise<any> => {
     if (error) throw error;
 
     if (data) {
+      // Handle proposal_template explicitly - only use default if undefined or null
+      const proposalTemplate = data.proposal_template !== undefined && data.proposal_template !== null 
+        ? data.proposal_template 
+        : 'classic';
+      
       const settings = {
         name: data.name || '',
         address: data.address || '',
@@ -531,8 +537,11 @@ export const getSettings = async (userId: string | undefined): Promise<any> => {
         logo: data.logo || '',
         logoDisplayOption: data.logo_display_option || 'both',
         terms: data.terms || 'Payment due within 30 days. Thank you for your business!',
-        proposalTemplate: data.proposal_template || 'classic',
+        proposalTemplate,
       };
+      
+      console.log('[DB Service] Retrieved settings from DB:', { proposalTemplate, rawValue: data.proposal_template });
+      
       setStorageItem('quote-it-settings', settings);
       return settings;
     }

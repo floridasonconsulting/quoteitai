@@ -37,13 +37,16 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
       if (data.error) {
         if (data.requiresUpgrade) {
           toast.error(data.error, {
+            description: `Your current tier doesn't include this feature. Upgrade to unlock AI capabilities.`,
             action: {
-              label: 'Upgrade',
+              label: 'View Plans',
               onClick: () => window.location.href = '/subscription',
             },
           });
         } else {
-          toast.error(data.error);
+          toast.error('AI Generation Failed', {
+            description: data.error,
+          });
         }
         options?.onError?.(data.error);
         return null;

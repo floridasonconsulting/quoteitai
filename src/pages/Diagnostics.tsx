@@ -5,11 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle, XCircle, Clock, Database, Network, RefreshCw, Download } from 'lucide-react';
+import { AlertCircle, CheckCircle, XCircle, Clock, Database, Network, RefreshCw, Download, Shield, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { useLoadingState } from '@/hooks/useLoadingState';
 import { getTemplatePreference } from '@/lib/storage';
+import { getSettings } from '@/lib/db-service';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface DiagnosticEvent {
   id: string;
@@ -21,12 +24,15 @@ interface DiagnosticEvent {
 }
 
 export default function Diagnostics() {
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const { isOnline, isSyncing, pendingCount, failedCount } = useSyncManager();
   const { getActiveOperations } = useLoadingState();
   const [events, setEvents] = useState<DiagnosticEvent[]>([]);
   const [inFlightRequests, setInFlightRequests] = useState<Record<string, any>>({});
   const [refreshKey, setRefreshKey] = useState(0);
+  const [aiTestResult, setAiTestResult] = useState<any>(null);
+  const [aiTesting, setAiTesting] = useState(false);
+  const [dbTemplate, setDbTemplate] = useState<string | null>(null);
   
   const lastSyncTime = localStorage.getItem('last-sync-time');
 
@@ -102,10 +108,71 @@ export default function Diagnostics() {
     linkElement.click();
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshKey(prev => prev + 1);
     addEvent('info', 'db', 'Diagnostic refresh triggered', null);
+    
+    // Fetch current template from DB
+    if (user?.id) {
+      const settings = await getSettings(user.id);
+      setDbTemplate(settings.proposalTemplate);
+    }
   };
+
+  const handleTestAIAccess = async () => {
+    setAiTesting(true);
+    setAiTestResult(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-assist', {
+        body: {
+          featureType: 'quote_title',
+          prompt: 'Test access',
+          context: {}
+        }
+      });
+
+      if (error) {
+        setAiTestResult({
+          success: false,
+          error: error.message,
+          data
+        });
+        toast.error('AI access test failed: ' + error.message);
+      } else if (data?.error) {
+        setAiTestResult({
+          success: false,
+          error: data.error,
+          requiresUpgrade: data.requiresUpgrade
+        });
+        toast.error('AI access denied: ' + data.error);
+      } else {
+        setAiTestResult({
+          success: true,
+          message: 'AI access granted',
+          content: data?.content
+        });
+        toast.success('AI access test successful');
+      }
+    } catch (error) {
+      setAiTestResult({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      toast.error('AI test failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setAiTesting(false);
+    }
+  };
+
+  // Load template from DB on mount
+  useEffect(() => {
+    if (user?.id) {
+      getSettings(user.id).then(settings => {
+        setDbTemplate(settings.proposalTemplate);
+      });
+    }
+  }, [user?.id]);
 
   const getEventIcon = (type: DiagnosticEvent['type']) => {
     switch (type) {
@@ -147,12 +214,35 @@ export default function Diagnostics() {
       </div>
 
       {/* System Status Overview */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              User Access
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Role</span>
+                <Badge variant="default">
+                  {userRole || 'Loading...'}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">User ID</span>
+                <code className="text-xs">{user?.id?.slice(0, 8)}...</code>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Network className="h-4 w-4" />
-              Connection Status
+              Connection
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -264,22 +354,77 @@ export default function Diagnostics() {
         </CardContent>
       </Card>
 
+      {/* AI Access Testing */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5" />
+            AI Feature Access
+          </CardTitle>
+          <CardDescription>Test AI feature access and permissions</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Current Role: <Badge>{userRole || 'Unknown'}</Badge></p>
+              <p className="text-xs text-muted-foreground mt-1">
+                AI features require Pro or Max tier access
+              </p>
+            </div>
+            <Button onClick={handleTestAIAccess} disabled={aiTesting} size="sm">
+              {aiTesting ? 'Testing...' : 'Test AI Access'}
+            </Button>
+          </div>
+          
+          {aiTestResult && (
+            <Alert variant={aiTestResult.success ? "default" : "destructive"}>
+              <AlertDescription>
+                <div className="space-y-2">
+                  <div className="font-semibold">
+                    {aiTestResult.success ? '✓ AI Access Granted' : '✗ AI Access Denied'}
+                  </div>
+                  {aiTestResult.error && (
+                    <div className="text-sm">Error: {aiTestResult.error}</div>
+                  )}
+                  {aiTestResult.requiresUpgrade && (
+                    <div className="text-sm">Upgrade to Pro or Max tier required</div>
+                  )}
+                  {aiTestResult.success && (
+                    <div className="text-xs text-muted-foreground mt-2">
+                      Content length: {aiTestResult.content?.length || 0} chars
+                    </div>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Storage State */}
       <Card>
         <CardHeader>
-          <CardTitle>LocalStorage State</CardTitle>
+          <CardTitle>LocalStorage & Settings State</CardTitle>
           <CardDescription>Current state of cached data and preferences</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <div className="text-sm font-medium mb-1">Template Preference</div>
+                <div className="text-sm font-medium mb-1">Template (localStorage)</div>
                 <Badge>{getTemplatePreference()}</Badge>
               </div>
               <div>
-                <div className="text-sm font-medium mb-1">User ID</div>
-                <code className="text-xs bg-muted px-2 py-1 rounded">{user?.id || 'Not authenticated'}</code>
+                <div className="text-sm font-medium mb-1">Template (Database)</div>
+                <Badge variant={dbTemplate ? "default" : "outline"}>
+                  {dbTemplate || 'Not loaded'}
+                </Badge>
+              </div>
+              <div>
+                <div className="text-sm font-medium mb-1">Match Status</div>
+                <Badge variant={dbTemplate === getTemplatePreference() ? "default" : "destructive"}>
+                  {dbTemplate === getTemplatePreference() ? 'Synced' : 'Mismatch'}
+                </Badge>
               </div>
             </div>
             <Separator />

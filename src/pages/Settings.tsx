@@ -490,27 +490,37 @@ export default function Settings() {
     toast.success('Sync queues cleared successfully');
   };
 
-  // Handle template preference change with debounce
-  const handleTemplateChange = useCallback(async (newTemplate: string) => {
+  // Handle template preference change with debounce and cache invalidation
+  const handleTemplateChange = useCallback(async (newTemplate: 'classic' | 'modern' | 'detailed') => {
     console.log('[Settings] Template changing to:', newTemplate);
     
     // Optimistic UI update
     setTemplatePreference(newTemplate);
     saveTemplatePreference(newTemplate);
     
+    // Immediately invalidate settings cache
+    localStorage.removeItem('quote-it-settings');
+    
+    // Update formData optimistically with correct type
+    setFormData(prev => ({ ...prev, proposalTemplate: newTemplate }));
+    
     // Debounce DB save
     if (templateDebounceRef.current) {
       clearTimeout(templateDebounceRef.current);
     }
     
+    setSaving(true);
+    
     templateDebounceRef.current = setTimeout(async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setSaving(false);
+        return;
+      }
       
       try {
         console.log('[Settings] Saving template preference to DB:', newTemplate);
         
         // Direct DB update - ONLY save template, not entire formData
-        // This prevents cache invalidation cascade and dependency array issues
         const { error } = await supabase
           .from('company_settings')
           .update({ proposal_template: newTemplate })
@@ -519,6 +529,9 @@ export default function Settings() {
         if (error) throw error;
         
         console.log('[Settings] Template preference saved successfully');
+        
+        // Clear cache again after successful save
+        localStorage.removeItem('quote-it-settings');
         
         toast.success("Template updated", {
           description: "Your quote template preference has been saved",
@@ -533,6 +546,9 @@ export default function Settings() {
         const previousTemplate = formData.proposalTemplate || 'classic';
         setTemplatePreference(previousTemplate);
         saveTemplatePreference(previousTemplate);
+        setFormData(prev => ({ ...prev, proposalTemplate: previousTemplate }));
+      } finally {
+        setSaving(false);
       }
     }, 500);
   }, [user?.id, formData.proposalTemplate, toast]);
