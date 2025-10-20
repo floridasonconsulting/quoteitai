@@ -139,7 +139,19 @@ serve(async (req) => {
         systemPrompt = "You are a professional business assistant. Generate 3 concise, professional quote titles based on the customer and items. Keep each title under 60 characters. Return as JSON array with key 'titles'.";
         break;
       case "notes_generator":
-        systemPrompt = "You are a professional business assistant. Generate professional terms, conditions, and notes for a quote. Be concise but thorough. Include payment terms, delivery expectations, and any relevant disclaimers.";
+        systemPrompt = `You are a professional business writing assistant. Generate professional terms and conditions for quotes.
+        
+IMPORTANT: Use the provided context (company info, customer details, items, totals) to create SPECIFIC, RELEVANT terms.
+DO NOT use placeholder values like "Your Company", "John Doe", or generic amounts.
+
+Include:
+1. Payment terms (specify exact amount from context)
+2. Warranty information (reference actual items)
+3. Liability limitations
+4. Quote validity period (30 days standard)
+5. Relevant legal disclaimers
+
+Format as clear, professional terms. Reference actual company name, customer name, and quote total from the context provided.`;
         break;
       case "item_description":
         systemPrompt = "You are a professional copywriter. Enhance the item description to be more professional, sales-oriented, and compelling while maintaining accuracy. Keep it concise.";

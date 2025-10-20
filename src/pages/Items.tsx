@@ -205,34 +205,43 @@ export default function Items() {
       return;
     }
 
-    const basePrice = parseFloat(formData.basePrice);
-    const markup = parseFloat(formData.markup) || 0;
+    try {
+      const basePrice = parseFloat(formData.basePrice);
+      const markup = parseFloat(formData.markup) || 0;
 
-    if (editingItem) {
-      await updateItem(user?.id, editingItem.id, {
-        ...formData,
-        category: formData.category.trim(),
-        basePrice,
-        markup,
-        finalPrice: calculateFinalPrice(),
-      }, queueChange);
-      toast.success('Item updated successfully');
-    } else {
-      const newItem: Item = {
-        id: crypto.randomUUID(),
-        ...formData,
-        category: formData.category.trim(),
-        basePrice,
-        markup,
-        finalPrice: calculateFinalPrice(),
-        createdAt: new Date().toISOString(),
-      };
-      await addItem(user?.id, newItem, queueChange);
-      toast.success('Item added successfully');
+      if (editingItem) {
+        const updated = await updateItem(user?.id, editingItem.id, {
+          ...formData,
+          category: formData.category.trim(),
+          basePrice,
+          markup,
+          finalPrice: calculateFinalPrice(),
+        }, queueChange);
+        // Optimistic update
+        setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
+        toast.success('Item updated successfully');
+      } else {
+        const newItem: Item = {
+          id: crypto.randomUUID(),
+          ...formData,
+          category: formData.category.trim(),
+          basePrice,
+          markup,
+          finalPrice: calculateFinalPrice(),
+          createdAt: new Date().toISOString(),
+        };
+        const added = await addItem(user?.id, newItem, queueChange);
+        // Optimistic update
+        setItems(prev => [...prev, added]);
+        toast.success('Item added successfully');
+      }
+
+      handleCloseDialog();
+      // No need to reload
+    } catch (error) {
+      console.error('Error saving item:', error);
+      toast.error('Failed to save item. Please try again.');
     }
-
-    await loadItems();
-    handleCloseDialog();
   };
 
   const handleEdit = (item: Item) => {
@@ -250,10 +259,18 @@ export default function Items() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this item?')) {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+    
+    try {
       await deleteItem(user?.id, id, queueChange);
-      await loadItems();
+      // Optimistic update
+      setItems(prev => prev.filter(i => i.id !== id));
       toast.success('Item deleted successfully');
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      toast.error('Failed to delete item. Please try again.');
+      // Reload on error
+      await loadItems();
     }
   };
 

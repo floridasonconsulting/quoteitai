@@ -43,23 +43,32 @@ export default function NewQuote() {
     price: '',
   });
 
+  // Helper to strip markdown code blocks from AI responses
+  const stripMarkdownCodeBlocks = (text: string): string => {
+    return text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  };
+
   // AI hooks
   const titleAI = useAI('quote_title', {
     onSuccess: (content) => {
       try {
-        const parsed = JSON.parse(content);
+        const cleaned = stripMarkdownCodeBlocks(content);
+        const parsed = JSON.parse(cleaned);
         if (parsed.titles && parsed.titles[0]) {
           setQuoteTitle(parsed.titles[0]);
         }
-      } catch {
-        // If not JSON, use first line
-        setQuoteTitle(content.split('\n')[0]);
+      } catch (error) {
+        console.error('Failed to parse AI response:', error);
+        toast.error('AI response format error. Please try again.');
       }
     },
   });
 
   const notesAI = useAI('notes_generator', {
-    onSuccess: (content) => setQuoteNotes(content),
+    onSuccess: (content) => {
+      const cleaned = stripMarkdownCodeBlocks(content);
+      setQuoteNotes(cleaned);
+    },
   });
 
   useEffect(() => {
@@ -374,7 +383,7 @@ export default function NewQuote() {
   };
 
   return (
-    <div className="space-y-6 max-w-full mx-auto pb-20 md:pb-6 overflow-x-hidden">
+    <div className="max-w-[1800px] mx-auto space-y-4 pb-20 md:pb-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
@@ -395,7 +404,7 @@ export default function NewQuote() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 lg:gap-6 lg:grid-cols-[1fr_380px]">
         {/* Main Form */}
         <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
           <Card>
@@ -451,16 +460,42 @@ export default function NewQuote() {
                 <div className="flex items-center justify-between">
                   <Label htmlFor="notes">Notes</Label>
                   <AIButton
-                    onClick={() => {
+                    onClick={async () => {
+                      if (!selectedCustomerId) {
+                        toast.error('Please select a customer first');
+                        return;
+                      }
+                      
                       const customer = customers.find(c => c.id === selectedCustomerId);
-                      notesAI.generate(
-                        `Generate professional terms and conditions for this quote`,
-                        { 
-                          customerName: customer?.name, 
-                          total,
-                          items: quoteItems.map(i => i.name)
-                        }
-                      );
+                      const settings = await getSettings(user?.id);
+                      
+                      const contextPrompt = `Generate professional terms and conditions for the following quote:
+
+Company: ${settings.name || 'Your Company'}
+Customer: ${customer?.name}
+Email: ${customer?.email}
+Phone: ${customer?.phone || 'N/A'}
+
+Quote Details:
+- Subtotal: $${subtotal.toFixed(2)}
+- Tax: $${(total - subtotal).toFixed(2)}
+- Total: $${total.toFixed(2)}
+
+Items:
+${quoteItems.map((item, idx) => 
+  `${idx + 1}. ${item.name} - Qty: ${item.quantity} @ $${item.price.toFixed(2)} each = $${(item.quantity * item.price).toFixed(2)}`
+).join('\n')}
+
+Please include:
+1. Payment terms (30 days net)
+2. Warranty information
+3. Liability limitations
+4. Quote validity period
+5. Any relevant legal disclaimers
+
+Format as clear, professional terms and conditions.`;
+                      
+                      await notesAI.generate(contextPrompt);
                     }}
                     isLoading={notesAI.isLoading}
                     disabled={!selectedCustomerId || quoteItems.length === 0}

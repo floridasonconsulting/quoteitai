@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Customer, Item, Quote } from '@/types';
+import { Customer, Item, Quote, CompanySettings } from '@/types';
 import { getStorageItem, setStorageItem } from './storage';
+import * as LocalDB from './local-db';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 
 const CACHE_VERSION = 'v1';

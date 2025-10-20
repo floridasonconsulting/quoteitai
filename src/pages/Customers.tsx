@@ -151,21 +151,30 @@ export default function Customers() {
       return;
     }
 
-    if (editingCustomer) {
-      await updateCustomer(user?.id, editingCustomer.id, formData, queueChange);
-      toast.success('Customer updated successfully');
-    } else {
-      const newCustomer: Customer = {
-        ...formData,
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-      };
-      await addCustomer(user?.id, newCustomer, queueChange);
-      toast.success('Customer added successfully');
-    }
+    try {
+      if (editingCustomer) {
+        const updated = await updateCustomer(user?.id, editingCustomer.id, formData, queueChange);
+        // Optimistic update - immediately update local state
+        setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c));
+        toast.success('Customer updated successfully');
+      } else {
+        const newCustomer: Customer = {
+          ...formData,
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+        };
+        const added = await addCustomer(user?.id, newCustomer, queueChange);
+        // Optimistic update - immediately add to local state
+        setCustomers(prev => [...prev, added]);
+        toast.success('Customer added successfully');
+      }
 
-    loadCustomers();
-    handleCloseDialog();
+      handleCloseDialog();
+      // No need to reload - data is already updated locally
+    } catch (error) {
+      console.error('Error saving customer:', error);
+      toast.error('Failed to save customer. Please try again.');
+    }
   };
 
   const handleEdit = (customer: Customer) => {
@@ -183,10 +192,18 @@ export default function Customers() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this customer?')) {
+    if (!confirm('Are you sure you want to delete this customer?')) return;
+    
+    try {
       await deleteCustomer(user?.id, id, queueChange);
-      loadCustomers();
+      // Optimistic update - immediately remove from local state
+      setCustomers(prev => prev.filter(c => c.id !== id));
       toast.success('Customer deleted successfully');
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      toast.error('Failed to delete customer. Please try again.');
+      // Reload on error to restore correct state
+      await loadCustomers();
     }
   };
 
