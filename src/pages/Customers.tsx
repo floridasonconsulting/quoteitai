@@ -13,7 +13,6 @@ import { toast } from 'sonner';
 import { parseCSVLine, formatCSVLine } from '@/lib/csv-utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
-import { useDataRefresh } from '@/hooks/useDataRefresh';
 import { useLoadingState } from '@/hooks/useLoadingState';
 
 export default function Customers() {
@@ -91,23 +90,23 @@ export default function Customers() {
     loadCustomers();
   }, [user]);
 
-  // Refresh data when navigating back to the page
+  // Refresh data when navigating back to the page (with delay to prevent excessive reloads)
   useEffect(() => {
+    let lastFocusTime = Date.now();
+    
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && user) {
-        loadCustomers();
+        const timeSinceFocus = Date.now() - lastFocusTime;
+        if (timeSinceFocus > 5000) {
+          loadCustomers();
+        }
+        lastFocusTime = Date.now();
       }
     };
+    
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user]);
-
-  // Listen for customer data changes
-  useDataRefresh('customers-changed', () => {
-    if (user) {
-      loadCustomers();
-    }
-  });
 
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -135,11 +134,23 @@ export default function Customers() {
     if (selectedCustomers.length === 0) return;
     
     if (confirm(`Are you sure you want to delete ${selectedCustomers.length} customer${selectedCustomers.length > 1 ? 's' : ''}?`)) {
-      for (const id of selectedCustomers) {
-        await deleteCustomer(user?.id, id, queueChange);
+      try {
+        // Optimistic update
+        const deletedIds = [...selectedCustomers];
+        setCustomers(prev => prev.filter(c => !deletedIds.includes(c.id)));
+        setSelectedCustomers([]);
+        
+        for (const id of deletedIds) {
+          await deleteCustomer(user?.id, id, queueChange);
+        }
+        
+        toast.success(`Deleted ${deletedIds.length} customer${deletedIds.length > 1 ? 's' : ''}`);
+      } catch (error) {
+        console.error('Error deleting customers:', error);
+        toast.error('Failed to delete customers. Please try again.');
+        // Reload on error to ensure consistency
+        await loadCustomers();
       }
-      loadCustomers();
-      toast.success(`Deleted ${selectedCustomers.length} customer${selectedCustomers.length > 1 ? 's' : ''}`);
     }
   };
 
@@ -170,10 +181,11 @@ export default function Customers() {
       }
 
       handleCloseDialog();
-      // No need to reload - data is already updated locally
     } catch (error) {
       console.error('Error saving customer:', error);
       toast.error('Failed to save customer. Please try again.');
+      // Reload on error to ensure consistency
+      await loadCustomers();
     }
   };
 

@@ -15,7 +15,6 @@ import { formatCurrency } from '@/lib/utils';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
-import { useDataRefresh } from '@/hooks/useDataRefresh';
 
 export default function Quotes() {
   const navigate = useNavigate();
@@ -49,23 +48,23 @@ export default function Quotes() {
     if (age) setAgeFilter(age);
   }, [searchParams, user]);
 
-  // Refresh data when navigating back to the page
+  // Refresh data when navigating back to the page (with delay to prevent excessive reloads)
   useEffect(() => {
+    let lastFocusTime = Date.now();
+    
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && user) {
-        loadQuotes();
+        const timeSinceFocus = Date.now() - lastFocusTime;
+        if (timeSinceFocus > 5000) {
+          loadQuotes();
+        }
+        lastFocusTime = Date.now();
       }
     };
+    
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user]);
-
-  // Listen for quote data changes
-  useDataRefresh('quotes-changed', () => {
-    if (user) {
-      loadQuotes();
-    }
-  });
 
   const filteredQuotes = quotes.filter(quote => {
     const matchesSearch = 
@@ -98,11 +97,23 @@ export default function Quotes() {
     if (selectedQuotes.length === 0) return;
     
     if (confirm(`Are you sure you want to delete ${selectedQuotes.length} quote${selectedQuotes.length > 1 ? 's' : ''}?`)) {
-      for (const quoteId of selectedQuotes) {
-        await deleteQuote(user?.id, quoteId, queueChange);
+      try {
+        // Optimistic update
+        const deletedIds = [...selectedQuotes];
+        setQuotes(prev => prev.filter(q => !deletedIds.includes(q.id)));
+        setSelectedQuotes([]);
+        
+        for (const quoteId of deletedIds) {
+          await deleteQuote(user?.id, quoteId, queueChange);
+        }
+        
+        toast.success(`Deleted ${deletedIds.length} quote${deletedIds.length > 1 ? 's' : ''}`);
+      } catch (error) {
+        console.error('Error deleting quotes:', error);
+        toast.error('Failed to delete quotes. Please try again.');
+        // Reload on error to ensure consistency
+        await loadQuotes();
       }
-      await loadQuotes();
-      toast.success(`Deleted ${selectedQuotes.length} quote${selectedQuotes.length > 1 ? 's' : ''}`);
     }
   };
 

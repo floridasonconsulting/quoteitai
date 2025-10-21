@@ -17,7 +17,6 @@ import { parseCSVLine, formatCSVLine } from '@/lib/csv-utils';
 import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
-import { useDataRefresh } from '@/hooks/useDataRefresh';
 import { useLoadingState } from '@/hooks/useLoadingState';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -107,23 +106,23 @@ export default function Items() {
     loadItems();
   }, [user]);
 
-  // Refresh data when navigating back to the page
+  // Refresh data when navigating back to the page (with delay to prevent excessive reloads)
   useEffect(() => {
+    let lastFocusTime = Date.now();
+    
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && user) {
-        loadItems();
+        const timeSinceFocus = Date.now() - lastFocusTime;
+        if (timeSinceFocus > 5000) {
+          loadItems();
+        }
+        lastFocusTime = Date.now();
       }
     };
+    
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user]);
-
-  // Listen for item data changes
-  useDataRefresh('items-changed', () => {
-    if (user) {
-      loadItems();
-    }
-  });
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -144,39 +143,70 @@ export default function Items() {
   const handleBulkDelete = async () => {
     if (selectedItems.length === 0) return;
     if (confirm(`Delete ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}?`)) {
-      for (const itemId of selectedItems) {
-        await deleteItem(user?.id, itemId, queueChange);
+      try {
+        // Optimistic update
+        const deletedIds = [...selectedItems];
+        setItems(prev => prev.filter(i => !deletedIds.includes(i.id)));
+        setSelectedItems([]);
+        
+        for (const itemId of deletedIds) {
+          await deleteItem(user?.id, itemId, queueChange);
+        }
+        
+        toast.success(`Deleted ${deletedIds.length} item${deletedIds.length > 1 ? 's' : ''}`);
+      } catch (error) {
+        console.error('Error deleting items:', error);
+        toast.error('Failed to delete items. Please try again.');
+        // Reload on error to ensure consistency
+        await loadItems();
       }
-      await loadItems();
-      toast.success(`Deleted ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}`);
     }
   };
 
   const handleBulkMarkup = async (markup: number, markupType: 'percentage' | 'fixed') => {
     if (selectedItems.length === 0 || !markup) return;
     
-    for (const itemId of selectedItems) {
-      const item = items.find(i => i.id === itemId);
-      if (item) {
+    try {
+      // Optimistic update
+      const updatedItems = items.map(item => {
+        if (!selectedItems.includes(item.id)) return item;
+        
         const basePrice = item.basePrice;
         const finalPrice = markupType === 'percentage' 
           ? basePrice + (basePrice * markup / 100)
           : basePrice + markup;
         
-        await updateItem(user?.id, itemId, {
-          markup,
-          markupType,
-          finalPrice
-        }, queueChange);
+        return { ...item, markup, markupType, finalPrice };
+      });
+      setItems(updatedItems);
+      
+      for (const itemId of selectedItems) {
+        const item = items.find(i => i.id === itemId);
+        if (item) {
+          const basePrice = item.basePrice;
+          const finalPrice = markupType === 'percentage' 
+            ? basePrice + (basePrice * markup / 100)
+            : basePrice + markup;
+          
+          await updateItem(user?.id, itemId, {
+            markup,
+            markupType,
+            finalPrice
+          }, queueChange);
+        }
       }
+      
+      toast.success(`Applied ${markup}${markupType === 'percentage' ? '%' : '$'} markup to ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}`);
+      
+      // Clear the markup input
+      const input = document.getElementById('bulk-markup') as HTMLInputElement;
+      if (input) input.value = '';
+    } catch (error) {
+      console.error('Error applying bulk markup:', error);
+      toast.error('Failed to apply markup. Please try again.');
+      // Reload on error to ensure consistency
+      await loadItems();
     }
-    
-    await loadItems();
-    toast.success(`Applied ${markup}${markupType === 'percentage' ? '%' : '$'} markup to ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}`);
-    
-    // Clear the markup input
-    const input = document.getElementById('bulk-markup') as HTMLInputElement;
-    if (input) input.value = '';
   };
 
   const calculateFinalPrice = () => {
@@ -237,10 +267,11 @@ export default function Items() {
       }
 
       handleCloseDialog();
-      // No need to reload
     } catch (error) {
       console.error('Error saving item:', error);
       toast.error('Failed to save item. Please try again.');
+      // Reload on error to ensure consistency
+      await loadItems();
     }
   };
 
