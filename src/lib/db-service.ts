@@ -310,8 +310,8 @@ async function createWithCache<T>(
   cacheKey: string,
   item: T,
   queueChange?: (change: any) => void
-): Promise<void> {
-  const itemWithUser = { ...item, user_id: userId };
+): Promise<T> {
+  const itemWithUser = { ...item, user_id: userId } as T;
 
   if (!navigator.onLine || !userId) {
     // Offline: update cache and queue
@@ -321,7 +321,7 @@ async function createWithCache<T>(
     const cached = getStorageItem<T[]>(cacheKey, []);
     setStorageItem<T[]>(cacheKey, [...cached, itemWithUser]);
     queueChange?.({ type: 'create', table, data: toSnakeCase(itemWithUser) });
-    return;
+    return itemWithUser;
   }
 
   try {
@@ -342,6 +342,8 @@ async function createWithCache<T>(
     if (table === 'customers') dispatchDataRefresh('customers-changed');
     if (table === 'items') dispatchDataRefresh('items-changed');
     if (table === 'quotes') dispatchDataRefresh('quotes-changed');
+    
+    return itemWithUser;
   } catch (error) {
     console.error(`⚠️ Error creating ${table}, falling back to localStorage:`, error);
     // Fallback to cache
@@ -360,16 +362,18 @@ async function updateWithCache<T extends { id: string }>(
   id: string,
   updates: Partial<T>,
   queueChange?: (change: any) => void
-): Promise<void> {
+): Promise<T> {
+  const updatedItem = { ...updates, id } as T;
+  
   if (!navigator.onLine || !userId) {
     // Offline: update cache and queue
     const cached = getCachedData<T>(cacheKey) || [];
     const updated = cached.map(item => 
-      item.id === id ? { ...item, ...updates } : item
+      item.id === id ? { ...item, ...updates } as T : item
     );
     setCachedData<T>(cacheKey, updated);
     queueChange?.({ type: 'update', table, data: toSnakeCase({ id, ...updates }) });
-    return;
+    return updated.find(item => item.id === id)!;
   }
 
   try {
@@ -386,7 +390,7 @@ async function updateWithCache<T extends { id: string }>(
     // Update cache with camelCase version
     const cached = getCachedData<T>(cacheKey) || [];
     const updated = cached.map(item => 
-      item.id === id ? { ...item, ...updates } : item
+      item.id === id ? { ...item, ...updates } as T : item
     );
     setCachedData<T>(cacheKey, updated);
     
@@ -394,15 +398,18 @@ async function updateWithCache<T extends { id: string }>(
     if (table === 'customers') dispatchDataRefresh('customers-changed');
     if (table === 'items') dispatchDataRefresh('items-changed');
     if (table === 'quotes') dispatchDataRefresh('quotes-changed');
+    
+    return updated.find(item => item.id === id)!;
   } catch (error) {
     console.error(`Error updating ${table}:`, error);
     // Fallback to cache
     const cached = getCachedData<T>(cacheKey) || [];
     const updated = cached.map(item => 
-      item.id === id ? { ...item, ...updates } : item
+      item.id === id ? { ...item, ...updates } as T : item
     );
     setCachedData<T>(cacheKey, updated);
     queueChange?.({ type: 'update', table, data: toSnakeCase({ id, ...updates }) });
+    return updated.find(item => item.id === id)!;
   }
 }
 
@@ -452,10 +459,10 @@ async function deleteWithCache<T extends { id: string }>(
 export const getCustomers = (userId: string | undefined) => 
   fetchWithCache<Customer>(userId, 'customers', CACHE_KEYS.CUSTOMERS);
 
-export const addCustomer = (userId: string | undefined, customer: Customer, queueChange?: (change: any) => void) =>
+export const addCustomer = (userId: string | undefined, customer: Customer, queueChange?: (change: any) => void): Promise<Customer> =>
   createWithCache(userId, 'customers', CACHE_KEYS.CUSTOMERS, customer, queueChange);
 
-export const updateCustomer = (userId: string | undefined, id: string, updates: Partial<Customer>, queueChange?: (change: any) => void) =>
+export const updateCustomer = (userId: string | undefined, id: string, updates: Partial<Customer>, queueChange?: (change: any) => void): Promise<Customer> =>
   updateWithCache(userId, 'customers', CACHE_KEYS.CUSTOMERS, id, updates, queueChange);
 
 export const deleteCustomer = (userId: string | undefined, id: string, queueChange?: (change: any) => void) =>
@@ -465,10 +472,10 @@ export const deleteCustomer = (userId: string | undefined, id: string, queueChan
 export const getItems = (userId: string | undefined) =>
   fetchWithCache<Item>(userId, 'items', CACHE_KEYS.ITEMS);
 
-export const addItem = (userId: string | undefined, item: Item, queueChange?: (change: any) => void) =>
+export const addItem = (userId: string | undefined, item: Item, queueChange?: (change: any) => void): Promise<Item> =>
   createWithCache(userId, 'items', CACHE_KEYS.ITEMS, item, queueChange);
 
-export const updateItem = (userId: string | undefined, id: string, updates: Partial<Item>, queueChange?: (change: any) => void) =>
+export const updateItem = (userId: string | undefined, id: string, updates: Partial<Item>, queueChange?: (change: any) => void): Promise<Item> =>
   updateWithCache(userId, 'items', CACHE_KEYS.ITEMS, id, updates, queueChange);
 
 export const deleteItem = (userId: string | undefined, id: string, queueChange?: (change: any) => void) =>
