@@ -91,8 +91,15 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error('Role update error:', error);
+      
+      // Return sanitized error to client
+      const isDevelopment = Deno.env.get('ENVIRONMENT') === 'development';
+      const clientError = isDevelopment 
+        ? error.message 
+        : 'Failed to update role. Please try again.';
+      
       return new Response(
-        JSON.stringify({ error: 'Failed to update role', details: error.message }),
+        JSON.stringify({ error: clientError }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -105,9 +112,16 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error('Unexpected error:', error);
+    
+    // Return sanitized error to client
+    const isDevelopment = Deno.env.get('ENVIRONMENT') === 'development';
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const clientError = isDevelopment 
+      ? errorMessage 
+      : 'An error occurred. Please try again.';
+    
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: errorMessage }),
+      JSON.stringify({ error: clientError }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -19,6 +19,7 @@ import { AIButton } from '@/components/AIButton';
 import { useAI } from '@/hooks/useAI';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
+import { sanitizeForAI, sanitizeNumber } from '@/lib/input-sanitization';
 
 export default function NewQuote() {
   const navigate = useNavigate();
@@ -444,10 +445,12 @@ export default function NewQuote() {
                   <AIButton
                     onClick={() => {
                       const customer = customers.find(c => c.id === selectedCustomerId);
-                      const itemsList = quoteItems.map(i => i.name).join(', ');
+                      const sanitizedCustomerName = sanitizeForAI(customer?.name, 100);
+                      const sanitizedItems = quoteItems.map(item => sanitizeForAI(item.name, 100));
+                      const itemsList = sanitizedItems.join(', ');
                       titleAI.generate(
-                        `Generate 3 professional quote titles based on: Customer: ${customer?.name}, Items: ${itemsList}`,
-                        { customerName: customer?.name, items: itemsList }
+                        `Generate 3 professional quote titles based on: Customer: ${sanitizedCustomerName}, Items: ${itemsList}`,
+                        { customerName: sanitizedCustomerName, items: itemsList }
                       );
                     }}
                     isLoading={titleAI.isLoading}
@@ -469,22 +472,29 @@ export default function NewQuote() {
                       const customer = customers.find(c => c.id === selectedCustomerId);
                       const settings = await getSettings(user?.id);
                       
+                      // Sanitize all user inputs before passing to AI
+                      const sanitizedCompanyName = sanitizeForAI(settings.name, 100) || 'Your Company';
+                      const sanitizedCustomerName = sanitizeForAI(customer?.name, 100);
+                      const sanitizedEmail = sanitizeForAI(customer?.email, 100);
+                      const sanitizedPhone = sanitizeForAI(customer?.phone, 50) || 'N/A';
+                      
                       const contextPrompt = `Generate professional terms and conditions for the following quote:
 
-Company: ${settings.name || 'Your Company'}
-Customer: ${customer?.name}
-Email: ${customer?.email}
-Phone: ${customer?.phone || 'N/A'}
+Company: ${sanitizedCompanyName}
+Customer: ${sanitizedCustomerName}
+Email: ${sanitizedEmail}
+Phone: ${sanitizedPhone}
 
 Quote Details:
-- Subtotal: $${subtotal.toFixed(2)}
-- Tax: $${(total - subtotal).toFixed(2)}
-- Total: $${total.toFixed(2)}
+- Subtotal: $${sanitizeNumber(subtotal)}
+- Tax: $${sanitizeNumber(total - subtotal)}
+- Total: $${sanitizeNumber(total)}
 
 Items:
-${quoteItems.map((item, idx) => 
-  `${idx + 1}. ${item.name} - Qty: ${item.quantity} @ $${item.price.toFixed(2)} each = $${(item.quantity * item.price).toFixed(2)}`
-).join('\n')}
+${quoteItems.map((item, idx) => {
+  const sanitizedItemName = sanitizeForAI(item.name, 100);
+  return `${idx + 1}. ${sanitizedItemName} - Qty: ${item.quantity} @ $${sanitizeNumber(item.price)} each = $${sanitizeNumber(item.quantity * item.price)}`;
+}).join('\n')}
 
 Please include:
 1. Payment terms (30 days net)

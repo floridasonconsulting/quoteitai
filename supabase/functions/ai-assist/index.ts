@@ -255,7 +255,7 @@ Format as clear, professional terms. Reference actual company name, customer nam
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: errorMessage });
     
-    // Log failed attempt
+    // Log failed attempt with full error details server-side only
     try {
       const authHeader = req.headers.get("Authorization");
       if (authHeader) {
@@ -272,8 +272,14 @@ Format as clear, professional terms. Reference actual company name, customer nam
       }
     } catch {}
 
+    // Return sanitized error to client
+    const isDevelopment = Deno.env.get('ENVIRONMENT') === 'development';
+    const clientError = isDevelopment 
+      ? errorMessage 
+      : 'An error occurred while processing your request. Please try again.';
+
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: clientError }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }

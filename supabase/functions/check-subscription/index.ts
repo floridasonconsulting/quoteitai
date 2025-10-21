@@ -87,7 +87,14 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR in check-subscription", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    
+    // Return sanitized error to client
+    const isDevelopment = Deno.env.get('ENVIRONMENT') === 'development';
+    const clientError = isDevelopment 
+      ? errorMessage 
+      : 'Unable to check subscription status. Please try again.';
+    
+    return new Response(JSON.stringify({ error: clientError }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
