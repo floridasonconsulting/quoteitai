@@ -544,12 +544,12 @@ Format as clear, professional terms and conditions.`;
                 <div className="space-y-3">
                   {quoteItems.map(item => (
                     <div key={item.itemId} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 border rounded-lg">
-                      <div className="flex-1 w-full">
+                      <div className="flex-1 w-full min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm sm:text-base">{item.name}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm sm:text-base truncate">{item.name}</p>
                             {item.description && (
-                              <p className="text-xs sm:text-sm text-muted-foreground">{item.description}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{item.description}</p>
                             )}
                           </div>
                           <Button

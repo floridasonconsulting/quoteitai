@@ -169,22 +169,44 @@ export async function generateClassicPDF(quote: Quote, customer: Customer | null
   
   yPos += 12;
   
-  // Terms
-  if (settings.terms) {
+  // Terms & Conditions Section
+  if (settings.terms || quote.notes) {
     if (yPos > 240) {
       pdf.addPage();
       yPos = MARGIN;
     }
     
-    pdf.setFont(undefined, 'bold');
-    pdf.setFontSize(9);
-    pdf.text('Terms & Conditions:', MARGIN, yPos);
-    yPos += 6;
+    // Company Terms
+    if (settings.terms) {
+      pdf.setFont(undefined, 'bold');
+      pdf.setFontSize(9);
+      pdf.text('Terms & Conditions:', MARGIN, yPos);
+      yPos += 6;
+      
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(8);
+      const termsLines = pdf.splitTextToSize(settings.terms, 170);
+      pdf.text(termsLines, MARGIN, yPos);
+      yPos += termsLines.length * 4 + 8;
+    }
     
-    pdf.setFont(undefined, 'normal');
-    pdf.setFontSize(8);
-    const termsLines = pdf.splitTextToSize(settings.terms, 170);
-    pdf.text(termsLines, MARGIN, yPos);
+    // Quote-Specific Notes/Terms
+    if (quote.notes) {
+      if (yPos > 240) {
+        pdf.addPage();
+        yPos = MARGIN;
+      }
+      
+      pdf.setFont(undefined, 'bold');
+      pdf.setFontSize(9);
+      pdf.text('Additional Terms & Notes:', MARGIN, yPos);
+      yPos += 6;
+      
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(8);
+      const notesLines = pdf.splitTextToSize(quote.notes, 170);
+      pdf.text(notesLines, MARGIN, yPos);
+    }
   }
   
   pdf.save(`quote-${quote.quoteNumber}.pdf`);
@@ -218,9 +240,11 @@ export async function generateModernPDF(quote: Quote, customer: Customer | null,
   
   yPos += 5;
   
-  // Accent bar
-  pdf.setFillColor(100, 100, 255);
+  // Modern accent bar with gradient effect (using overlapping bars)
+  pdf.setFillColor(59, 130, 246); // Blue-500
   pdf.rect(0, yPos, 210, 3, 'F');
+  pdf.setFillColor(37, 99, 235); // Blue-600
+  pdf.rect(0, yPos + 1, 210, 2, 'F');
   yPos += 10;
   
   // Quote number centered
@@ -328,17 +352,48 @@ export async function generateModernPDF(quote: Quote, customer: Customer | null,
   
   yPos += 15;
   
-  // Terms footer
-  if (settings.terms) {
+  // Terms & Conditions Section (Modern)
+  if (settings.terms || quote.notes) {
     if (yPos > 240) {
       pdf.addPage();
       yPos = MARGIN;
     }
     
-    pdf.setFont(undefined, 'normal');
-    pdf.setFontSize(8);
-    const termsLines = pdf.splitTextToSize(settings.terms, 170);
-    pdf.text(termsLines, MARGIN, yPos);
+    // Company Terms
+    if (settings.terms) {
+      pdf.setFillColor(249, 250, 251); // Light gray background
+      pdf.rect(MARGIN, yPos - 3, 170, 6, 'F');
+      pdf.setFont(undefined, 'bold');
+      pdf.setFontSize(9);
+      pdf.text('Terms & Conditions', MARGIN + 2, yPos);
+      yPos += 8;
+      
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(8);
+      const termsLines = pdf.splitTextToSize(settings.terms, 170);
+      pdf.text(termsLines, MARGIN, yPos);
+      yPos += termsLines.length * 4 + 8;
+    }
+    
+    // Quote-Specific Notes/Terms
+    if (quote.notes) {
+      if (yPos > 240) {
+        pdf.addPage();
+        yPos = MARGIN;
+      }
+      
+      pdf.setFillColor(249, 250, 251);
+      pdf.rect(MARGIN, yPos - 3, 170, 6, 'F');
+      pdf.setFont(undefined, 'bold');
+      pdf.setFontSize(9);
+      pdf.text('Additional Terms & Notes', MARGIN + 2, yPos);
+      yPos += 8;
+      
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(8);
+      const notesLines = pdf.splitTextToSize(quote.notes, 170);
+      pdf.text(notesLines, MARGIN, yPos);
+    }
   }
   
   pdf.save(`quote-${quote.quoteNumber}.pdf`);
@@ -486,23 +541,55 @@ export async function generateDetailedPDF(quote: Quote, customer: Customer | nul
   
   yPos += 15;
   
-  // Terms section
-  if (settings.terms) {
+  // Terms & Conditions Section (Detailed with borders)
+  if (settings.terms || quote.notes) {
     if (yPos > 230) {
       pdf.addPage();
       yPos = MARGIN;
     }
     
-    pdf.setFont(undefined, 'bold');
-    pdf.setFontSize(10);
-    pdf.text('Terms & Conditions:', MARGIN, yPos);
-    yPos += 6;
+    // Company Terms in bordered box
+    if (settings.terms) {
+      pdf.setDrawColor(200, 200, 200);
+      pdf.setFillColor(250, 250, 250);
+      const termsBoxHeight = 40;
+      pdf.rect(MARGIN, yPos, 170, termsBoxHeight, 'FD');
+      
+      pdf.setFont(undefined, 'bold');
+      pdf.setFontSize(10);
+      pdf.text('Terms & Conditions:', MARGIN + 3, yPos + 5);
+      yPos += 10;
+      
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(8);
+      const termsLines = pdf.splitTextToSize(settings.terms, 164);
+      pdf.text(termsLines, MARGIN + 3, yPos);
+      yPos += termsBoxHeight + 5;
+    }
     
-    pdf.setFont(undefined, 'normal');
-    pdf.setFontSize(8);
-    const termsLines = pdf.splitTextToSize(settings.terms, 170);
-    pdf.text(termsLines, MARGIN, yPos);
-    yPos += termsLines.length * 4 + 10;
+    // Quote-Specific Notes/Terms in separate bordered box
+    if (quote.notes) {
+      if (yPos > 230) {
+        pdf.addPage();
+        yPos = MARGIN;
+      }
+      
+      pdf.setDrawColor(200, 200, 200);
+      pdf.setFillColor(250, 250, 250);
+      const notesBoxHeight = 30;
+      pdf.rect(MARGIN, yPos, 170, notesBoxHeight, 'FD');
+      
+      pdf.setFont(undefined, 'bold');
+      pdf.setFontSize(10);
+      pdf.text('Additional Terms & Notes:', MARGIN + 3, yPos + 5);
+      yPos += 10;
+      
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(8);
+      const notesLines = pdf.splitTextToSize(quote.notes, 164);
+      pdf.text(notesLines, MARGIN + 3, yPos);
+      yPos += notesBoxHeight + 10;
+    }
   }
   
   // Signature blocks
