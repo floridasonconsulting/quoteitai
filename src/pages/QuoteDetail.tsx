@@ -171,12 +171,17 @@ export default function QuoteDetail() {
       return;
     }
     
-    const settings = await getSettings(user?.id);
-    const subject = encodeURIComponent(`Quote ${quote.quoteNumber}: ${quote.title}`);
-    const body = encodeURIComponent(`Please find attached quote ${quote.quoteNumber} for ${quote.title}.\n\nTotal: ${formatCurrency(quote.total)}`);
-    const to = encodeURIComponent(customer.email);
-    const cc = settings.email ? `&cc=${encodeURIComponent(settings.email)}` : '';
-    window.open(`mailto:${to}?subject=${subject}&body=${body}${cc}`, '_blank');
+    const subject = encodeURIComponent(`Quote #${quote.quoteNumber}: ${quote.title}`);
+    const body = encodeURIComponent(
+      `Hello ${customer.name},\n\n` +
+      `Please find your quote #${quote.quoteNumber} for ${quote.title}.\n\n` +
+      (shareLink ? `View online: ${shareLink}\n\n` : '') +
+      `Total: $${quote.total.toFixed(2)}\n\n` +
+      `Please review and let me know if you have any questions.\n\n` +
+      `Best regards`
+    );
+    
+    window.location.href = `mailto:${customer.email}?subject=${subject}&body=${body}`;
   };
 
   if (loading) {
@@ -221,6 +226,21 @@ export default function QuoteDetail() {
           <Download className="mr-2 h-4 w-4" />
           Download PDF
         </Button>
+        {!shareLink ? (
+          <Button variant="outline" onClick={handleGenerateShareLink}>
+            <Link2 className="mr-2 h-4 w-4" />
+            Generate Share Link
+          </Button>
+        ) : (
+          <Button variant="outline" onClick={handleCopyShareLink}>
+            {copied ? (
+              <Check className="mr-2 h-4 w-4" />
+            ) : (
+              <Copy className="mr-2 h-4 w-4" />
+            )}
+            {copied ? 'Copied!' : 'Copy Link'}
+          </Button>
+        )}
         <Button variant="outline" onClick={handleEmail}>
           <Mail className="mr-2 h-4 w-4" />
           Email

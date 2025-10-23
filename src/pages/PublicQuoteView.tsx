@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Quote, Customer, CompanySettings } from '@/types';
+import { Quote, Customer, CompanySettings, QuoteItem } from '@/types';
 import { generateClassicPDF, generateModernPDF, generateDetailedPDF } from '@/lib/proposal-templates';
 
 export default function PublicQuoteView() {
@@ -48,7 +48,7 @@ export default function PublicQuoteView() {
         customerId: quoteData.customer_id,
         customerName: quoteData.customer_name,
         title: quoteData.title,
-        items: (quoteData.items as QuoteItem[]) || [],
+        items: (quoteData.items as unknown as QuoteItem[]) || [],
         subtotal: Number(quoteData.subtotal),
         tax: Number(quoteData.tax),
         total: Number(quoteData.total),
