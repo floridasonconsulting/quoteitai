@@ -14,6 +14,7 @@ import Dashboard from "./pages/Dashboard";
 import Diagnostics from "./pages/Diagnostics";
 import Quotes from "./pages/Quotes";
 import QuoteDetail from "./pages/QuoteDetail";
+import PublicQuoteView from "./pages/PublicQuoteView";
 import NewQuote from "./pages/NewQuote";
 import Customers from "./pages/Customers";
 import Items from "./pages/Items";
@@ -48,6 +49,7 @@ function AppContent() {
       <Route path="/" element={user !== null ? <Navigate to="/dashboard" /> : <Landing />} />
       <Route path="/help" element={<Help />} />
       <Route path="/auth" element={user ? <Navigate to="/dashboard" /> : <Auth />} />
+      <Route path="/quote/view/:shareToken" element={<PublicQuoteView />} />
       
       {/* Protected Routes */}
       <Route path="/dashboard" element={

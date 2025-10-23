@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Mail, Trash2, FileText, Calendar, DollarSign, Edit, Clock } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Trash2, FileText, Calendar, DollarSign, Edit, Clock, Link2, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { generateClassicPDF, generateModernPDF, generateDetailedPDF } from '@/lib/proposal-templates';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +25,8 @@ export default function QuoteDetail() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
   const [followUpDialogOpen, setFollowUpDialogOpen] = useState(false);
+  const [shareLink, setShareLink] = useState<string>('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -48,6 +51,13 @@ export default function QuoteDetail() {
 
     setQuote(foundQuote);
     setCustomer(foundCustomer || null);
+    
+    // Generate share link if token exists
+    if (foundQuote.shareToken) {
+      const url = `${window.location.origin}/quote/view/${foundQuote.shareToken}`;
+      setShareLink(url);
+    }
+    
     setLoading(false);
   };
 
@@ -97,6 +107,55 @@ export default function QuoteDetail() {
         description: 'Failed to generate PDF. Please try again.',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleGenerateShareLink = async () => {
+    if (!quote || !user?.id) return;
+
+    try {
+      // If no share token exists, generate one
+      if (!quote.shareToken) {
+        const { data, error } = await supabase
+          .from('quotes')
+          .update({ 
+            shared_at: new Date().toISOString(),
+          })
+          .eq('id', quote.id)
+          .select('share_token')
+          .single();
+
+        if (error) throw error;
+
+        const token = data.share_token;
+        const url = `${window.location.origin}/quote/view/${token}`;
+        setShareLink(url);
+        setQuote({ ...quote, shareToken: token, sharedAt: new Date().toISOString() });
+      }
+
+      toast({
+        title: 'Share link generated!',
+        description: 'Copy the link to share with your customer.',
+      });
+    } catch (error) {
+      console.error('Failed to generate share link:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate share link',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCopyShareLink = () => {
+    if (shareLink) {
+      navigator.clipboard.writeText(shareLink);
+      setCopied(true);
+      toast({
+        title: 'Link copied!',
+        description: 'Share link copied to clipboard.',
+      });
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 

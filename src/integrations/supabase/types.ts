@@ -242,6 +242,8 @@ export type Database = {
           notes: string | null
           quote_number: string
           sent_date: string | null
+          share_token: string | null
+          shared_at: string | null
           status: string
           subtotal: number
           tax: number
@@ -249,6 +251,7 @@ export type Database = {
           total: number
           updated_at: string
           user_id: string
+          viewed_at: string | null
         }
         Insert: {
           created_at?: string
@@ -260,6 +263,8 @@ export type Database = {
           notes?: string | null
           quote_number: string
           sent_date?: string | null
+          share_token?: string | null
+          shared_at?: string | null
           status?: string
           subtotal: number
           tax?: number
@@ -267,6 +272,7 @@ export type Database = {
           total: number
           updated_at?: string
           user_id: string
+          viewed_at?: string | null
         }
         Update: {
           created_at?: string
@@ -278,6 +284,8 @@ export type Database = {
           notes?: string | null
           quote_number?: string
           sent_date?: string | null
+          share_token?: string | null
+          shared_at?: string | null
           status?: string
           subtotal?: number
           tax?: number
@@ -285,6 +293,7 @@ export type Database = {
           total?: number
           updated_at?: string
           user_id?: string
+          viewed_at?: string | null
         }
         Relationships: [
           {
@@ -435,10 +444,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      reset_monthly_quotas: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      reset_monthly_quotas: { Args: never; Returns: undefined }
     }
     Enums: {
       ai_feature_type:

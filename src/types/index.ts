@@ -49,6 +49,9 @@ export interface Quote {
   followUpDate?: string;
   createdAt: string;
   updatedAt: string;
+  shareToken?: string;
+  sharedAt?: string;
+  viewedAt?: string;
 }
 
 export type QuoteAge = 'fresh' | 'warm' | 'aging' | 'stale';

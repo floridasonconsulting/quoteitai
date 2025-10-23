@@ -190,9 +190,9 @@ export async function generateClassicPDF(quote: Quote, customer: Customer | null
       yPos += termsLines.length * 4 + 8;
     }
     
-    // Quote-Specific Notes/Terms
+    // Quote-Specific Notes/Terms with page break handling
     if (quote.notes) {
-      if (yPos > 240) {
+      if (yPos > 260) {
         pdf.addPage();
         yPos = MARGIN;
       }
@@ -205,7 +205,16 @@ export async function generateClassicPDF(quote: Quote, customer: Customer | null
       pdf.setFont(undefined, 'normal');
       pdf.setFontSize(8);
       const notesLines = pdf.splitTextToSize(quote.notes, 170);
-      pdf.text(notesLines, MARGIN, yPos);
+      
+      // Render line by line with page break handling
+      notesLines.forEach((line: string) => {
+        if (yPos > 270) {
+          pdf.addPage();
+          yPos = MARGIN;
+        }
+        pdf.text(line, MARGIN, yPos);
+        yPos += 4;
+      });
     }
   }
   
@@ -347,7 +356,7 @@ export async function generateModernPDF(quote: Quote, customer: Customer | null,
   
   pdf.setFont(undefined, 'bold');
   pdf.setFontSize(12);
-  pdf.text('Grand Total:', 150, yPos);
+  pdf.text('Grand Total:', 130, yPos);
   pdf.text(formatCurrency(quote.total), 185, yPos, { align: 'right' });
   
   yPos += 15;
@@ -375,9 +384,9 @@ export async function generateModernPDF(quote: Quote, customer: Customer | null,
       yPos += termsLines.length * 4 + 8;
     }
     
-    // Quote-Specific Notes/Terms
+    // Quote-Specific Notes/Terms with page break handling
     if (quote.notes) {
-      if (yPos > 240) {
+      if (yPos > 260) {
         pdf.addPage();
         yPos = MARGIN;
       }
@@ -392,7 +401,16 @@ export async function generateModernPDF(quote: Quote, customer: Customer | null,
       pdf.setFont(undefined, 'normal');
       pdf.setFontSize(8);
       const notesLines = pdf.splitTextToSize(quote.notes, 170);
-      pdf.text(notesLines, MARGIN, yPos);
+      
+      // Render line by line with page break handling
+      notesLines.forEach((line: string) => {
+        if (yPos > 270) {
+          pdf.addPage();
+          yPos = MARGIN;
+        }
+        pdf.text(line, MARGIN, yPos);
+        yPos += 4;
+      });
     }
   }
   
@@ -567,28 +585,51 @@ export async function generateDetailedPDF(quote: Quote, customer: Customer | nul
       yPos += termsBoxHeight + 5;
     }
     
-    // Quote-Specific Notes/Terms in separate bordered box
+    // Quote-Specific Notes/Terms in bordered boxes with page break handling
     if (quote.notes) {
-      if (yPos > 230) {
+      if (yPos > 250) {
         pdf.addPage();
         yPos = MARGIN;
       }
       
-      pdf.setDrawColor(200, 200, 200);
-      pdf.setFillColor(250, 250, 250);
-      const notesBoxHeight = 30;
-      pdf.rect(MARGIN, yPos, 170, notesBoxHeight, 'FD');
-      
       pdf.setFont(undefined, 'bold');
       pdf.setFontSize(10);
-      pdf.text('Additional Terms & Notes:', MARGIN + 3, yPos + 5);
-      yPos += 10;
+      pdf.text('Additional Terms & Notes:', MARGIN, yPos);
+      yPos += 8;
       
       pdf.setFont(undefined, 'normal');
       pdf.setFontSize(8);
       const notesLines = pdf.splitTextToSize(quote.notes, 164);
-      pdf.text(notesLines, MARGIN + 3, yPos);
-      yPos += notesBoxHeight + 10;
+      
+      // Calculate if we need multiple bordered sections across pages
+      const maxLinesPerPage = Math.floor((280 - yPos) / 4);
+      let currentLine = 0;
+      
+      while (currentLine < notesLines.length) {
+        const linesThisPage = Math.min(maxLinesPerPage, notesLines.length - currentLine);
+        const boxHeight = linesThisPage * 4 + 8;
+        
+        // Draw box for this page's content
+        pdf.setDrawColor(200, 200, 200);
+        pdf.setFillColor(250, 250, 250);
+        pdf.rect(MARGIN, yPos - 5, 170, boxHeight, 'FD');
+        
+        // Render lines for this page
+        for (let i = 0; i < linesThisPage; i++) {
+          pdf.text(notesLines[currentLine + i], MARGIN + 3, yPos);
+          yPos += 4;
+        }
+        
+        currentLine += linesThisPage;
+        
+        // Add new page if more content remains
+        if (currentLine < notesLines.length) {
+          pdf.addPage();
+          yPos = MARGIN;
+        } else {
+          yPos += 10;
+        }
+      }
     }
   }
   
