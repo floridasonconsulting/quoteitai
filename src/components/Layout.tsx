@@ -1,11 +1,13 @@
 import { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, Package, FileText, Settings, Moon, Sun, CreditCard, LogOut, HelpCircle, Activity } from 'lucide-react';
+import { Home, Users, Package, FileText, Settings, Moon, Sun, CreditCard, LogOut, HelpCircle, Activity, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useTheme } from '@/components/ThemeProvider';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { SyncIndicator } from '@/components/SyncIndicator';
+import { useNotificationsSystem } from '@/hooks/useNotificationsSystem';
 
 interface LayoutProps {
   children: ReactNode;
@@ -28,6 +30,7 @@ export function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const { signOut } = useAuth();
+  const { unreadCount } = useNotificationsSystem();
 
   return (
     <div className="min-h-screen flex flex-col bg-background pb-16 md:pb-0">
@@ -49,6 +52,20 @@ export function Layout({ children }: LayoutProps) {
                 title="Help & Support"
               >
                 <HelpCircle className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/quotes')}
+                className="rounded-full relative"
+                title="Notifications"
+              >
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                    {unreadCount}
+                  </Badge>
+                )}
               </Button>
               <SyncIndicator />
               <Button
@@ -81,6 +98,20 @@ export function Layout({ children }: LayoutProps) {
                 <h1 className="text-lg font-bold">Quote-it AI</h1>
               </div>
               <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate('/quotes')}
+                  className="rounded-full h-9 w-9 relative"
+                  title="Notifications"
+                >
+                  <Bell className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-[10px]">
+                      {unreadCount}
+                    </Badge>
+                  )}
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"

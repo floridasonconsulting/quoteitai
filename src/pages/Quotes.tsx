@@ -15,6 +15,7 @@ import { formatCurrency } from '@/lib/utils';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Quotes() {
   const navigate = useNavigate();
@@ -47,6 +48,32 @@ export default function Quotes() {
     if (status) setStatusFilter(status);
     if (age) setAgeFilter(age);
   }, [searchParams, user]);
+
+  // Real-time updates for quote status changes
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('quotes-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'quotes',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('Quote updated:', payload);
+          loadQuotes();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   // Refresh data when navigating back to the page (with delay to prevent excessive reloads)
   useEffect(() => {

@@ -133,20 +133,17 @@ export default function PublicQuoteView() {
 
     setUpdating(true);
     try {
-      const { error } = await supabase
-        .from('quotes')
-        .update({ 
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('share_token', shareToken);
+      // Call edge function instead of direct update
+      const { data, error } = await supabase.functions.invoke('update-quote-status', {
+        body: { shareToken, status: newStatus }
+      });
 
       if (error) throw error;
 
       setQuote({ ...quote, status: newStatus });
       toast.success(`Quote ${newStatus === 'accepted' ? 'accepted' : 'declined'} successfully!`);
     } catch (error) {
-      console.error('Failed to update status:', error);
+      console.error('Error updating quote status:', error);
       toast.error('Failed to update quote status');
     } finally {
       setUpdating(false);

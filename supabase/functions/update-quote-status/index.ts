@@ -69,6 +69,32 @@ serve(async (req) => {
 
     console.log(`Quote status updated: ${shareToken} -> ${status}`);
 
+    // Fetch quote details to get owner info
+    const { data: quoteDetails, error: detailsError } = await supabase
+      .from('quotes')
+      .select('id, user_id, quote_number, customer_name, title')
+      .eq('share_token', shareToken)
+      .single();
+
+    if (!detailsError && quoteDetails) {
+      // Create notification for quote owner
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: quoteDetails.user_id,
+          quote_id: quoteDetails.id,
+          type: status === 'accepted' ? 'quote_accepted' : 'quote_declined',
+          message: `Quote #${quoteDetails.quote_number} for ${quoteDetails.customer_name} has been ${status}`,
+          read: false
+        });
+
+      if (notifError) {
+        console.error('Failed to create notification:', notifError);
+      } else {
+        console.log(`Notification created for user ${quoteDetails.user_id}`);
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
