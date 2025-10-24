@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { Plus, Users, Package, FileText, Clock, TrendingUp, Target, DollarSign, TrendingDown, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,9 +48,11 @@ export default function Dashboard() {
     }
 
     return () => {
-      if (abortControllerRef.current) {
+      // Only abort if we're unmounting during active load
+      // Don't abort if data already loaded successfully
+      if (abortControllerRef.current && loading) {
+        console.log('[Dashboard] Aborting incomplete data load on unmount');
         abortControllerRef.current.abort();
-        console.log('[Dashboard] Aborted data loading on unmount');
       }
     };
   }, [user, authLoading]);
@@ -65,6 +68,16 @@ export default function Dashboard() {
       setShowStuckHelper(false);
     }
   }, [loading]);
+
+  // Secondary effect to catch missed loads
+  useEffect(() => {
+    // If auth is done, user exists, but we have no data and aren't loading, force a load
+    if (!authLoading && user && quotes.length === 0 && !loading && !hasLoadedData.current) {
+      console.log('[Dashboard] Secondary check: No data loaded, forcing load');
+      hasLoadedData.current = true;
+      loadData();
+    }
+  }, [authLoading, user, quotes.length, loading]);
 
   const loadData = async () => {
     if (abortControllerRef.current) {
@@ -156,21 +169,32 @@ export default function Dashboard() {
         .filter(q => q.status === 'declined')
         .reduce((sum, q) => sum + q.total, 0);
 
-      setQuotes(quotesData);
-      setStats({
-        totalQuotes: quotesData.length,
-        totalCustomers: customersData.length,
-        totalItems: itemsData.length,
-        pendingValue,
-        acceptanceRate,
-        avgQuoteValue,
-        totalRevenue,
-        declinedValue,
+      console.log('[Dashboard] State update starting:', {
+        quotesCount: quotesData.length,
+        customersCount: customersData.length,
+        itemsCount: itemsData.length,
+        loadTime: Date.now() - startTime
+      });
+
+      // Use flushSync to ensure state updates trigger re-renders immediately
+      flushSync(() => {
+        setQuotes(quotesData);
+        setStats({
+          totalQuotes: quotesData.length,
+          totalCustomers: customersData.length,
+          totalItems: itemsData.length,
+          pendingValue,
+          acceptanceRate,
+          avgQuoteValue,
+          totalRevenue,
+          declinedValue,
+        });
+        setLoading(false);
+        setLoadingProgress([]);
+        setRetryCount(0);
       });
       
-      setLoading(false);
-      setLoadingProgress([]);
-      setRetryCount(0);
+      console.log('[Dashboard] Re-render triggered, data should be visible');
       clearTimeout(timeoutId);
       stopLoading(operationId);
     } catch (error) {
@@ -261,7 +285,22 @@ export default function Dashboard() {
             <Skeleton className="h-8 w-64 mb-2" />
             <Skeleton className="h-4 w-96" />
           </div>
-          <Skeleton className="h-10 w-32" />
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" />
+            {showStuckHelper && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  hasLoadedData.current = false;
+                  loadData();
+                }}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+            )}
+          </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map(i => (
