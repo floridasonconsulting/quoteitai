@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { getQuotes, deleteQuote, getSettings, getCustomers } from '@/lib/db-service';
+import { getQuotes, deleteQuote, getSettings, getCustomers, updateQuote } from '@/lib/db-service';
 import { Quote, Customer } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { FollowUpDialog } from '@/components/FollowUpDialog';
@@ -171,17 +171,47 @@ export default function QuoteDetail() {
       return;
     }
     
-    const subject = encodeURIComponent(`Quote #${quote.quoteNumber}: ${quote.title}`);
-    const body = encodeURIComponent(
-      `Hello ${customer.name},\n\n` +
-      `Please find your quote #${quote.quoteNumber} for ${quote.title}.\n\n` +
-      (shareLink ? `View online: ${shareLink}\n\n` : '') +
-      `Total: $${quote.total.toFixed(2)}\n\n` +
-      `Please review and let me know if you have any questions.\n\n` +
-      `Best regards`
-    );
-    
-    window.location.href = `mailto:${customer.email}?subject=${subject}&body=${body}`;
+    try {
+      // Generate share link if it doesn't exist
+      if (!shareLink) {
+        await handleGenerateShareLink();
+      }
+
+      // Update quote status to 'sent' and set sentDate
+      const updatedQuote = await updateQuote(user?.id, quote.id, {
+        status: 'sent',
+        sentDate: new Date().toISOString(),
+      }, queueChange);
+      
+      // Update local state
+      setQuote(updatedQuote);
+      
+      toast({
+        title: 'Quote marked as sent',
+        description: 'The quote status has been updated to sent.',
+      });
+      
+      // Generate email content
+      const subject = encodeURIComponent(`Quote #${quote.quoteNumber}: ${quote.title}`);
+      const body = encodeURIComponent(
+        `Hello ${customer.name},\n\n` +
+        `Please find your quote #${quote.quoteNumber} for ${quote.title}.\n\n` +
+        (shareLink ? `View online: ${shareLink}\n\n` : '') +
+        `Total: $${quote.total.toFixed(2)}\n\n` +
+        `Please review and let me know if you have any questions.\n\n` +
+        `Best regards`
+      );
+      
+      // Open email client
+      window.location.href = `mailto:${customer.email}?subject=${subject}&body=${body}`;
+    } catch (error) {
+      console.error('Failed to update quote status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update quote status',
+        variant: 'destructive',
+      });
+    }
   };
 
   if (loading) {
