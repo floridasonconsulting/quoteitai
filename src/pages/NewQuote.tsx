@@ -578,6 +578,8 @@ Format as clear, professional terms and conditions.`;
                             step="0.01"
                             value={item.quantity}
                             onChange={(e) => updateItemQuantity(item.itemId, parseFloat(e.target.value) || 1)}
+                            onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.currentTarget.select()}
                             className="w-16 sm:w-20 text-center h-8"
                           />
                           <Button
@@ -747,6 +749,8 @@ Format as clear, professional terms and conditions.`;
                   step="0.01"
                   value={customItem.quantity}
                   onChange={(e) => setCustomItem({ ...customItem, quantity: parseFloat(e.target.value) || 1 })}
+                  onFocus={(e) => e.target.select()}
+                  onClick={(e) => e.currentTarget.select()}
                 />
               </div>
               <div className="space-y-2">
