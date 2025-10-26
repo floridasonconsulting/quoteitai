@@ -56,6 +56,8 @@ export type Database = {
           logo: string | null
           logo_display_option: string | null
           name: string | null
+          notify_email_accepted: boolean | null
+          notify_email_declined: boolean | null
           phone: string | null
           proposal_template: string | null
           state: string | null
@@ -76,6 +78,8 @@ export type Database = {
           logo?: string | null
           logo_display_option?: string | null
           name?: string | null
+          notify_email_accepted?: boolean | null
+          notify_email_declined?: boolean | null
           phone?: string | null
           proposal_template?: string | null
           state?: string | null
@@ -96,6 +100,8 @@ export type Database = {
           logo?: string | null
           logo_display_option?: string | null
           name?: string | null
+          notify_email_accepted?: boolean | null
+          notify_email_declined?: boolean | null
           phone?: string | null
           proposal_template?: string | null
           state?: string | null
@@ -207,6 +213,8 @@ export type Database = {
       notifications: {
         Row: {
           created_at: string | null
+          email_sent: boolean | null
+          email_sent_at: string | null
           id: string
           message: string
           quote_id: string | null
@@ -216,6 +224,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          email_sent?: boolean | null
+          email_sent_at?: string | null
           id?: string
           message: string
           quote_id?: string | null
@@ -225,6 +235,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          email_sent?: boolean | null
+          email_sent_at?: string | null
           id?: string
           message?: string
           quote_id?: string | null

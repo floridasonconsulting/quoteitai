@@ -78,4 +78,6 @@ export interface CompanySettings {
   insurance?: string;
   terms: string;
   proposalTemplate?: 'classic' | 'modern' | 'detailed';
+  notifyEmailAccepted?: boolean;
+  notifyEmailDeclined?: boolean;
 }

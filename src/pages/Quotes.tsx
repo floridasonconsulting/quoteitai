@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Search, FileText, Calendar, Trash2, Bell } from 'lucide-react';
+import { Plus, Search, FileText, Calendar, Trash2, Bell, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,7 @@ export default function Quotes() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [ageFilter, setAgeFilter] = useState<string>('all');
   const [selectedQuotes, setSelectedQuotes] = useState<string[]>([]);
+  const [notificationFilter, setNotificationFilter] = useState<string[]>([]);
 
   const loadQuotes = async () => {
     setLoading(true);
@@ -44,10 +45,37 @@ export default function Quotes() {
     // Read URL parameters
     const status = searchParams.get('status');
     const age = searchParams.get('age');
+    const filter = searchParams.get('filter');
     
     if (status) setStatusFilter(status);
     if (age) setAgeFilter(age);
+    
+    // Load notification filter
+    if (filter === 'notifications' && user) {
+      loadNotificationFilter();
+    }
   }, [searchParams, user]);
+
+  const loadNotificationFilter = async () => {
+    if (!user) return;
+    
+    try {
+      // Fetch recent notifications (last 24 hours or unread)
+      const { data: notifications } = await supabase
+        .from('notifications')
+        .select('quote_id')
+        .eq('user_id', user.id)
+        .or('read.eq.false,created_at.gte.' + new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+        .not('quote_id', 'is', null);
+      
+      if (notifications) {
+        const quoteIds = notifications.map(n => n.quote_id).filter(Boolean) as string[];
+        setNotificationFilter(quoteIds);
+      }
+    } catch (error) {
+      console.error('Error loading notification filter:', error);
+    }
+  };
 
   // Real-time updates for quote status changes
   useEffect(() => {
@@ -101,8 +129,16 @@ export default function Quotes() {
     const matchesStatus = statusFilter === 'all' || quote.status === statusFilter;
     const age = getQuoteAge(quote);
     const matchesAge = ageFilter === 'all' || age === ageFilter;
-    return matchesSearch && matchesStatus && matchesAge;
+    const matchesNotification = notificationFilter.length === 0 || notificationFilter.includes(quote.id);
+    return matchesSearch && matchesStatus && matchesAge && matchesNotification;
   });
+
+  const clearNotificationFilter = () => {
+    setNotificationFilter([]);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('filter');
+    setSearchParams(newParams);
+  };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -178,6 +214,29 @@ export default function Quotes() {
           Create Quote
         </Button>
       </div>
+
+      {notificationFilter.length > 0 && (
+        <Card className="border-primary/50 bg-primary/5">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bell className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">
+                  Showing {filteredQuotes.length} quote{filteredQuotes.length !== 1 ? 's' : ''} with notifications
+                </span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={clearNotificationFilter}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Clear Filter
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {selectedQuotes.length > 0 && (
         <Card className="border-primary/50 bg-primary/5">

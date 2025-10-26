@@ -93,6 +93,8 @@ export default function Settings() {
     insurance: '',
     logoDisplayOption: 'both',
     terms: '',
+    notifyEmailAccepted: true,
+    notifyEmailDeclined: true,
   });
 
   const loadSettings = useCallback(async () => {
@@ -891,27 +893,77 @@ export default function Settings() {
                 Notifications
               </CardTitle>
               <CardDescription>
-                Get notified when follow-ups are due
+                Configure how you want to be notified about quote activities
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Push Notifications</Label>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Push Notifications</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Receive browser notifications for quote follow-ups
+                    </p>
+                  </div>
+                  <Switch
+                    checked={permission === 'granted'}
+                    onCheckedChange={handleNotificationToggle}
+                  />
+                </div>
+                {permission === 'denied' && (
+                  <p className="text-xs text-warning">
+                    Notifications are blocked. Please enable them in your browser settings.
+                  </p>
+                )}
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-1">Email Notifications</h4>
                   <p className="text-xs text-muted-foreground">
-                    Receive notifications for quote follow-ups
+                    Receive email alerts when customers respond to quotes
                   </p>
                 </div>
-                <Switch
-                  checked={permission === 'granted'}
-                  onCheckedChange={handleNotificationToggle}
-                />
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Quote Accepted</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Get notified when a customer accepts your quote
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.notifyEmailAccepted ?? true}
+                    onCheckedChange={(checked) => 
+                      setFormData({ ...formData, notifyEmailAccepted: checked })
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Quote Declined</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Get notified when a customer declines your quote
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.notifyEmailDeclined ?? true}
+                    onCheckedChange={(checked) => 
+                      setFormData({ ...formData, notifyEmailDeclined: checked })
+                    }
+                  />
+                </div>
+
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Email notifications will be sent to the email address in your company settings: <strong>{formData.email || 'Not set'}</strong>
+                  </AlertDescription>
+                </Alert>
               </div>
-              {permission === 'denied' && (
-                <p className="text-xs text-warning">
-                  Notifications are blocked. Please enable them in your browser settings.
-                </p>
-              )}
             </CardContent>
           </Card>
         )}

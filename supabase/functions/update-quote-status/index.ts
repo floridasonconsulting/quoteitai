@@ -93,6 +93,56 @@ serve(async (req) => {
       } else {
         console.log(`Notification created for user ${quoteDetails.user_id}`);
       }
+
+      // Check if email notifications are enabled
+      const { data: settings } = await supabase
+        .from('company_settings')
+        .select('notify_email_accepted, notify_email_declined, name')
+        .eq('user_id', quoteDetails.user_id)
+        .single();
+
+      const shouldSendEmail = status === 'accepted' 
+        ? settings?.notify_email_accepted !== false
+        : settings?.notify_email_declined !== false;
+
+      if (shouldSendEmail) {
+        // Fetch user email
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('user_id', quoteDetails.user_id)
+          .single();
+
+        if (profile?.email) {
+          try {
+            // Get the app URL from environment or construct it
+            const appUrl = Deno.env.get('VITE_APP_URL') || `${supabaseUrl.replace('supabase.co', 'lovable.app')}`;
+            const quoteLink = `${appUrl}/quotes/${quoteDetails.id}`;
+
+            // Send email notification
+            const emailResponse = await supabase.functions.invoke('send-quote-notification', {
+              body: {
+                email: profile.email,
+                quoteId: quoteDetails.id,
+                quoteNumber: quoteDetails.quote_number,
+                customerName: quoteDetails.customer_name,
+                status: status,
+                quoteLink: quoteLink,
+                companyName: settings?.name || undefined
+              }
+            });
+
+            if (emailResponse.error) {
+              console.error('Failed to send email notification:', emailResponse.error);
+            } else {
+              console.log(`Email notification sent to ${profile.email}`);
+            }
+          } catch (emailError) {
+            console.error('Error sending email notification:', emailError);
+            // Don't fail the whole request if email fails
+          }
+        }
+      }
     }
 
     return new Response(

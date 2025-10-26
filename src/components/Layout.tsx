@@ -30,7 +30,7 @@ export function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const { signOut } = useAuth();
-  const { unreadCount } = useNotificationsSystem();
+  const { unreadCount, markAllAsRead } = useNotificationsSystem();
 
   return (
     <div className="min-h-screen flex flex-col bg-background pb-16 md:pb-0">
@@ -56,7 +56,10 @@ export function Layout({ children }: LayoutProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate('/quotes')}
+                onClick={async () => {
+                  await markAllAsRead();
+                  navigate('/quotes?filter=notifications');
+                }}
                 className="rounded-full relative"
                 title="Notifications"
               >
@@ -101,7 +104,10 @@ export function Layout({ children }: LayoutProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => navigate('/quotes')}
+                  onClick={async () => {
+                    await markAllAsRead();
+                    navigate('/quotes?filter=notifications');
+                  }}
                   className="rounded-full h-9 w-9 relative"
                   title="Notifications"
                 >
