@@ -151,11 +151,17 @@ export default function PublicQuoteView() {
   };
 
   const handleDownloadPDF = () => {
-    if (!quote || !settings) return;
+    if (!quote || !settings) {
+      toast.error('Unable to generate PDF. Missing quote or company data.');
+      console.error('PDF generation failed: Missing data', { quote: !!quote, settings: !!settings });
+      return;
+    }
 
     const template = settings.proposalTemplate || 'classic';
     
     try {
+      console.log('Generating PDF with template:', template);
+      
       if (template === 'modern') {
         generateModernPDF(quote, customer, settings);
       } else if (template === 'detailed') {
@@ -163,10 +169,12 @@ export default function PublicQuoteView() {
       } else {
         generateClassicPDF(quote, customer, settings);
       }
+      
       toast.success('PDF downloaded successfully');
     } catch (error) {
       console.error('Failed to generate PDF:', error);
-      toast.error('Failed to generate PDF');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to generate PDF: ${errorMessage}`);
     }
   };
 
@@ -217,7 +225,7 @@ export default function PublicQuoteView() {
                 {settings?.logo && (
                   <img src={settings.logo} alt="Company Logo" className="h-16 mb-4" />
                 )}
-                <CardTitle className="text-2xl">{settings?.name || 'Quote Proposal'}</CardTitle>
+                <CardTitle className="text-2xl">Proposal from {settings?.name || 'Quote-it AI'}</CardTitle>
                 {settings && (
                   <CardDescription className="mt-2">
                     {settings.address && <div>{settings.address}</div>}
@@ -229,9 +237,11 @@ export default function PublicQuoteView() {
                   </CardDescription>
                 )}
               </div>
-              <Badge className={getStatusColor(quote.status)}>
-                {quote.status.toUpperCase()}
-              </Badge>
+              {(quote.status === 'accepted' || quote.status === 'declined') && (
+                <Badge className={getStatusColor(quote.status)}>
+                  {quote.status.toUpperCase()}
+                </Badge>
+              )}
             </div>
           </CardHeader>
         </Card>

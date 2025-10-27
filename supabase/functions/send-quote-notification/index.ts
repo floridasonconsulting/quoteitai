@@ -135,6 +135,9 @@ serve(async (req) => {
       </html>
     `;
 
+    // Get from email address (use environment variable or default)
+    const fromEmail = Deno.env.get('FROM_EMAIL_ADDRESS') || 'Quote-it AI <notifications@resend.dev>';
+    
     // Send email via Resend
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -143,7 +146,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Quote-it AI <notifications@resend.dev>',
+        from: fromEmail,
         to: [email],
         subject: subject,
         html: htmlContent,
@@ -153,6 +156,13 @@ serve(async (req) => {
     if (!response.ok) {
       const errorData = await response.text();
       console.error('Resend API error:', errorData);
+      
+      // Check if it's a domain verification error
+      if (errorData.includes('validation_error') || errorData.includes('verify a domain')) {
+        console.warn('⚠️ Domain not verified with Resend. To send emails to all recipients, verify your domain at https://resend.com/domains');
+        throw new Error('Email domain not verified. Emails can only be sent to verified addresses. Please verify your domain at resend.com/domains');
+      }
+      
       throw new Error(`Failed to send email: ${response.status} ${errorData}`);
     }
 

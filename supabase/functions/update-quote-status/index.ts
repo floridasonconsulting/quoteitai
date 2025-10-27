@@ -134,12 +134,13 @@ serve(async (req) => {
 
             if (emailResponse.error) {
               console.error('Failed to send email notification:', emailResponse.error);
+              // Email failed but quote status was updated successfully - this is OK
             } else {
-              console.log(`Email notification sent to ${profile.email}`);
+              console.log(`✅ Email notification sent to ${profile.email}`);
             }
           } catch (emailError) {
-            console.error('Error sending email notification:', emailError);
-            // Don't fail the whole request if email fails
+            console.error('⚠️ Email notification failed (quote status updated successfully):', emailError);
+            // Don't fail the whole request if email fails - in-app notification still works
           }
         }
       }
