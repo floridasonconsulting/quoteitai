@@ -514,8 +514,8 @@ export async function generateDetailedPDF(quote: Quote, customer: Customer | nul
   pdf.rect(MARGIN, yPos - 2, 170, 8, 'F');
   pdf.text('Qty', MARGIN + 2, yPos + 3);
   pdf.text('Description', MARGIN + 15, yPos + 3);
-  pdf.text('Unit', 100, yPos + 3);
-  pdf.text('Unit Price', 125, yPos + 3);
+  pdf.text('Unit', 110, yPos + 3);
+  pdf.text('Unit Price', 135, yPos + 3);
   pdf.text('Total', 185, yPos + 3, { align: 'right' });
   yPos += 10;
   
@@ -528,10 +528,10 @@ export async function generateDetailedPDF(quote: Quote, customer: Customer | nul
     }
     
     pdf.text(item.quantity.toString(), MARGIN + 2, yPos);
-    const descLines = pdf.splitTextToSize(item.name + (item.description ? ` - ${item.description}` : ''), 80);
+    const descLines = pdf.splitTextToSize(item.name + (item.description ? ` - ${item.description}` : ''), 85);
     pdf.text(descLines, MARGIN + 15, yPos);
-    pdf.text(item.units || 'ea', 100, yPos);
-    pdf.text(formatCurrency(item.price), 125, yPos);
+    pdf.text(item.units || 'ea', 110, yPos);
+    pdf.text(formatCurrency(item.price), 135, yPos);
     pdf.text(formatCurrency(item.total), 185, yPos, { align: 'right' });
     
     yPos += Math.max(descLines.length * 4, 6) + 2;

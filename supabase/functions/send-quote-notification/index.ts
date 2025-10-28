@@ -33,10 +33,41 @@ serve(async (req) => {
       throw new Error('RESEND_API_KEY not configured');
     }
 
+    // Check if we're in Resend testing mode
+    // In testing mode, Resend only allows sending to the account owner's email
+    const resendAccountEmail = Deno.env.get('RESEND_ACCOUNT_EMAIL') || 'ahill005@gmail.com';
+    const actualRecipient = email;
+    const isTestMode = email !== resendAccountEmail;
+    
+    // If email is not the Resend account owner, log warning and use account owner email
+    if (isTestMode) {
+      console.warn(`⚠️ Resend testing mode: Redirecting email from ${email} to ${resendAccountEmail}`);
+      console.warn(`💡 To send to all recipients, verify your domain at https://resend.com/domains`);
+    }
+
     // Prepare email content
-    const subject = `Quote #${quoteNumber} has been ${status}`;
+    const subject = isTestMode 
+      ? `[Test Mode] Quote #${quoteNumber} has been ${status}`
+      : `Quote #${quoteNumber} has been ${status}`;
     const actionColor = status === 'accepted' ? '#10b981' : '#ef4444';
     const actionText = status === 'accepted' ? 'Accepted' : 'Declined';
+    
+    const testModeNotice = isTestMode ? `
+      <tr>
+        <td style="padding: 20px 40px;">
+          <div style="background: #fff3cd; border: 2px solid #ffc107; padding: 16px; border-radius: 6px;">
+            <p style="margin: 0 0 8px; font-size: 14px; font-weight: bold; color: #856404;">
+              ⚠️ Testing Mode Notice
+            </p>
+            <p style="margin: 0; font-size: 13px; color: #856404; line-height: 1.5;">
+              This email would have been sent to: <strong>${actualRecipient}</strong><br>
+              To send emails to all recipients, verify your domain at 
+              <a href="https://resend.com/domains" style="color: #0066cc;">resend.com/domains</a>
+            </p>
+          </div>
+        </td>
+      </tr>
+    ` : '';
     
     const htmlContent = `
       <!DOCTYPE html>
@@ -51,6 +82,8 @@ serve(async (req) => {
             <tr>
               <td align="center">
                 <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  ${testModeNotice}
+                  
                   <!-- Header -->
                   <tr>
                     <td style="padding: 40px 40px 20px; text-align: center; border-bottom: 1px solid #e5e5e5;">
@@ -138,7 +171,9 @@ serve(async (req) => {
     // Get from email address (use environment variable or default)
     const fromEmail = Deno.env.get('FROM_EMAIL_ADDRESS') || 'Quote-it AI <notifications@resend.dev>';
     
-    // Send email via Resend
+    // Send email via Resend (use account owner email in test mode)
+    const recipientEmail = isTestMode ? resendAccountEmail : email;
+    
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -147,7 +182,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: fromEmail,
-        to: [email],
+        to: [recipientEmail],
         subject: subject,
         html: htmlContent,
       }),

@@ -93,6 +93,7 @@ export default function Settings() {
     insurance: '',
     logoDisplayOption: 'both',
     terms: '',
+    proposalTemplate: 'classic',
     notifyEmailAccepted: true,
     notifyEmailDeclined: true,
   });
