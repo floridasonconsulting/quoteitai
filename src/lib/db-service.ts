@@ -509,7 +509,9 @@ export const getSettings = async (userId: string | undefined): Promise<any> => {
     insurance: '',
     logoDisplayOption: 'both',
     terms: 'Payment due within 30 days. Thank you for your business!',
-    proposalTemplate: 'classic', // Add default here too
+    proposalTemplate: 'classic',
+    notifyEmailAccepted: true,
+    notifyEmailDeclined: true,
   };
 
   if (!userId) {
@@ -517,6 +519,7 @@ export const getSettings = async (userId: string | undefined): Promise<any> => {
   }
 
   try {
+    // Don't use cache - always fetch fresh from database
     const { data, error } = await supabase
       .from('company_settings')
       .select('*')
@@ -526,11 +529,6 @@ export const getSettings = async (userId: string | undefined): Promise<any> => {
     if (error) throw error;
 
     if (data) {
-      // Handle proposal_template explicitly - only use default if undefined or null
-      const proposalTemplate = data.proposal_template !== undefined && data.proposal_template !== null 
-        ? data.proposal_template 
-        : 'classic';
-      
       const settings = {
         name: data.name || '',
         address: data.address || '',
@@ -545,11 +543,19 @@ export const getSettings = async (userId: string | undefined): Promise<any> => {
         logo: data.logo || '',
         logoDisplayOption: data.logo_display_option || 'both',
         terms: data.terms || 'Payment due within 30 days. Thank you for your business!',
-        proposalTemplate,
+        proposalTemplate: data.proposal_template || 'classic',
+        notifyEmailAccepted: data.notify_email_accepted !== false, // default true
+        notifyEmailDeclined: data.notify_email_declined !== false, // default true
       };
       
-      console.log('[DB Service] Retrieved settings from DB:', { proposalTemplate, rawValue: data.proposal_template });
+      console.log('[DB Service] Retrieved settings from DB:', { 
+        proposalTemplate: settings.proposalTemplate, 
+        logoDisplayOption: settings.logoDisplayOption,
+        notifyEmailAccepted: settings.notifyEmailAccepted,
+        notifyEmailDeclined: settings.notifyEmailDeclined
+      });
       
+      // Cache the fresh settings
       setStorageItem('quote-it-settings', settings);
       return settings;
     }
@@ -562,34 +568,45 @@ export const getSettings = async (userId: string | undefined): Promise<any> => {
 };
 
 export const saveSettings = async (userId: string | undefined, settings: any, queueChange?: (change: any) => void): Promise<void> => {
-  setStorageItem('quote-it-settings', settings);
-
   if (!userId) return;
 
   try {
     const settingsData = {
       user_id: userId,
-      name: settings.name,
-      address: settings.address,
-      city: settings.city,
-      state: settings.state,
-      zip: settings.zip,
-      phone: settings.phone,
-      email: settings.email,
-      website: settings.website,
-      license: settings.license,
-      insurance: settings.insurance,
-      logo: settings.logo,
-      logo_display_option: settings.logoDisplayOption,
-      terms: settings.terms,
+      name: settings.name || '',
+      address: settings.address || '',
+      city: settings.city || '',
+      state: settings.state || '',
+      zip: settings.zip || '',
+      phone: settings.phone || '',
+      email: settings.email || '',
+      website: settings.website || '',
+      license: settings.license || '',
+      insurance: settings.insurance || '',
+      logo: settings.logo || '',
+      logo_display_option: settings.logoDisplayOption || 'both',
+      terms: settings.terms || '',
       proposal_template: settings.proposalTemplate || 'classic',
+      notify_email_accepted: settings.notifyEmailAccepted !== false,
+      notify_email_declined: settings.notifyEmailDeclined !== false,
     };
+
+    console.log('[DB Service] Saving settings to DB:', {
+      proposalTemplate: settingsData.proposal_template,
+      logoDisplayOption: settingsData.logo_display_option,
+      notifyEmailAccepted: settingsData.notify_email_accepted,
+      notifyEmailDeclined: settingsData.notify_email_declined
+    });
 
     const { error } = await supabase
       .from('company_settings')
       .upsert(settingsData, { onConflict: 'user_id' });
 
     if (error) throw error;
+    
+    // Clear the cache after successful save to force fresh fetch next time
+    localStorage.removeItem('quote-it-settings');
+    console.log('[DB Service] Settings saved successfully to database');
   } catch (error) {
     console.error('Error saving settings:', error);
     if (queueChange) {
@@ -599,6 +616,7 @@ export const saveSettings = async (userId: string | undefined, settings: any, qu
         data: settings,
       });
     }
+    throw error;
   }
 };
 

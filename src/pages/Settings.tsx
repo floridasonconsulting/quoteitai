@@ -132,7 +132,12 @@ export default function Settings() {
       return;
     }
     
-    console.log('[Settings] Starting save operation');
+    console.log('[Settings] Starting save operation with data:', {
+      proposalTemplate: formData.proposalTemplate,
+      logoDisplayOption: formData.logoDisplayOption,
+      notifyEmailAccepted: formData.notifyEmailAccepted,
+      notifyEmailDeclined: formData.notifyEmailDeclined
+    });
     saveInProgress.current = true;
     setSaving(true);
     
@@ -140,7 +145,9 @@ export default function Settings() {
       await saveSettings(user.id, formData, queueChange);
       console.log('[Settings] Save completed successfully');
       
-      // Don't clear caches for settings save - only template changes used to do this
+      // Reload settings to verify they were saved correctly
+      await loadSettings();
+      
       toast.success('Company settings saved successfully');
     } catch (error) {
       console.error('[Settings] Save failed:', error);
