@@ -256,7 +256,7 @@ export default function PublicQuoteView() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   onClick={() => handleStatusUpdate('accepted')}
                   disabled={updating}
