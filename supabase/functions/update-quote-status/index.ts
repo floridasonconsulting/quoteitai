@@ -72,7 +72,7 @@ serve(async (req) => {
     // Fetch quote details to get owner info
     const { data: quoteDetails, error: detailsError } = await supabase
       .from('quotes')
-      .select('id, user_id, quote_number, customer_name, title')
+      .select('id, user_id, quote_number, customer_name, title, share_token')
       .eq('share_token', shareToken)
       .single();
 
@@ -117,7 +117,7 @@ serve(async (req) => {
           try {
             // Get the app URL from environment or construct it
             const appUrl = Deno.env.get('VITE_APP_URL') || `${supabaseUrl.replace('supabase.co', 'lovable.app')}`;
-            const quoteLink = `${appUrl}/quotes/${quoteDetails.id}`;
+            const quoteLink = `${appUrl}/quote/view/${quoteDetails.share_token}`;
 
             // Send email notification
             const emailResponse = await supabase.functions.invoke('send-quote-notification', {
