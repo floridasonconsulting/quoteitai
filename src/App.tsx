@@ -11,6 +11,8 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 import Diagnostics from "./pages/Diagnostics";
 import Quotes from "./pages/Quotes";
 import QuoteDetail from "./pages/QuoteDetail";
@@ -48,6 +50,8 @@ function AppContent() {
       {/* Public Routes */}
       <Route path="/" element={user !== null ? <Navigate to="/dashboard" /> : <Landing />} />
       <Route path="/help" element={<Help />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<TermsOfService />} />
       <Route path="/auth" element={user ? <Navigate to="/dashboard" /> : <Auth />} />
       <Route path="/quote/view/:shareToken" element={<PublicQuoteView />} />
       
