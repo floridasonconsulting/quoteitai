@@ -7,13 +7,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useState } from 'react';
 
-// Placeholder product IDs - replace with actual Stripe product IDs
+// Real Stripe product and price IDs
 const SUBSCRIPTION_TIERS = {
   pro_monthly: {
     name: 'Pro Monthly',
     price: '$9.99/month',
-    priceId: 'price_pro_monthly_placeholder',
-    productId: 'prod_pro_monthly_placeholder',
+    priceId: 'price_1SEuOKFe05N9s8oj50fHpdt2',
+    productId: 'prod_TBGwDXWSBdGOEM',
     features: [
       '50 quotes per month',
       'Unlimited customers',
@@ -25,8 +25,8 @@ const SUBSCRIPTION_TIERS = {
   pro_annual: {
     name: 'Pro Annual',
     price: '$99/year',
-    priceId: 'price_pro_annual_placeholder',
-    productId: 'prod_pro_annual_placeholder',
+    priceId: 'price_1SEuP5Fe05N9s8ojbUqindin',
+    productId: 'prod_TBGwuEojGwEuM5',
     features: [
       '600 quotes per year',
       'Unlimited customers',
@@ -39,8 +39,8 @@ const SUBSCRIPTION_TIERS = {
   max_monthly: {
     name: 'Max AI Monthly',
     price: '$19.99/month',
-    priceId: 'price_max_monthly_placeholder',
-    productId: 'prod_max_monthly_placeholder',
+    priceId: 'price_1SEuQ3Fe05N9s8ojkiETaKB4',
+    productId: 'prod_TBGxhMwPGvWBdO',
     features: [
       'Unlimited quotes',
       'Unlimited customers',
@@ -53,8 +53,8 @@ const SUBSCRIPTION_TIERS = {
   max_annual: {
     name: 'Max AI Annual',
     price: '$199/year',
-    priceId: 'price_max_annual_placeholder',
-    productId: 'prod_max_annual_placeholder',
+    priceId: 'price_1SEuQoFe05N9s8ojTbzv8sGt',
+    productId: 'prod_TBGyVDEvJOqCz3',
     features: [
       'Unlimited quotes',
       'Unlimited customers',
