@@ -265,7 +265,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -273,8 +273,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
     
-    if (!error) {
+    if (!error && data.user) {
       toast.success('Account created! You can now sign in.');
+      
+      // Auto-generate sample data for new users (fire and forget - don't block signup)
+      setTimeout(async () => {
+        try {
+          const { generateSampleData } = await import('@/lib/sample-data');
+          await generateSampleData(data.user!.id, true);
+          console.log('[AuthContext] Sample data generated for new user');
+          toast.success('Sample data has been added to help you get started!');
+        } catch (sampleError) {
+          console.error('[AuthContext] Failed to generate sample data:', sampleError);
+        }
+      }, 2000);
     }
     
     return { error };

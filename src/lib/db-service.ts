@@ -647,3 +647,37 @@ export async function clearDatabaseData(userId: string | undefined): Promise<voi
   localStorage.removeItem(`items_${userId}`);
   localStorage.removeItem(`quotes_${userId}`);
 }
+
+// Clear only sample data (customers, items, quotes) but keep company settings
+export async function clearSampleData(userId: string | undefined): Promise<void> {
+  if (!userId) return;
+
+  const { error: customersError } = await supabase
+    .from('customers')
+    .delete()
+    .eq('user_id', userId);
+
+  const { error: itemsError } = await supabase
+    .from('items')
+    .delete()
+    .eq('user_id', userId);
+
+  const { error: quotesError } = await supabase
+    .from('quotes')
+    .delete()
+    .eq('user_id', userId);
+
+  if (customersError || itemsError || quotesError) {
+    throw new Error('Failed to clear sample data');
+  }
+
+  // Clear caches
+  localStorage.removeItem(CACHE_KEYS.CUSTOMERS);
+  localStorage.removeItem(CACHE_KEYS.ITEMS);
+  localStorage.removeItem(CACHE_KEYS.QUOTES);
+  
+  // Dispatch refresh events for all data types
+  dispatchDataRefresh('customers-changed');
+  dispatchDataRefresh('items-changed');
+  dispatchDataRefresh('quotes-changed');
+}

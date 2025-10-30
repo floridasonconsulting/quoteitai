@@ -23,7 +23,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { getSettings, saveSettings, clearDatabaseData, clearInFlightRequests, clearAllCaches } from '@/lib/db-service';
+import { getSettings, saveSettings, clearDatabaseData, clearSampleData, clearInFlightRequests, clearAllCaches } from '@/lib/db-service';
 import { clearAllData, getTemplatePreference, saveTemplatePreference } from '@/lib/storage';
 import { 
   importCustomersFromCSV, 
@@ -67,6 +67,7 @@ export default function Settings() {
   const [generatingSample, setGeneratingSample] = useState(false);
   const [includeCompanySettings, setIncludeCompanySettings] = useState(true);
   const [sampleDataResult, setSampleDataResult] = useState<any>(null);
+  const [clearingSampleData, setClearingSampleData] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState<string | null>(null);
@@ -303,6 +304,27 @@ export default function Settings() {
       setImporting(false);
       resumeSync(); // Resume sync after import completes
       window.location.reload();
+    }
+  };
+
+  const handleClearSampleData = async () => {
+    if (!user) return;
+    
+    setClearingSampleData(true);
+    
+    try {
+      await clearSampleData(user.id);
+      toast.success('Sample data cleared successfully! Your company settings remain intact.');
+      
+      // Dispatch data refresh to update UI
+      dispatchDataRefresh('customers-changed');
+      dispatchDataRefresh('items-changed');
+      dispatchDataRefresh('quotes-changed');
+    } catch (error) {
+      console.error('Error clearing sample data:', error);
+      toast.error('Failed to clear sample data');
+    } finally {
+      setClearingSampleData(false);
     }
   };
 
@@ -1339,6 +1361,54 @@ export default function Settings() {
               <p className="text-xs text-muted-foreground">
                 Change your AI account tier for testing features
               </p>
+            </div>
+
+            <Separator />
+
+            {/* Clear Sample Data */}
+            <div className="space-y-3">
+              <div>
+                <Label>Clear Sample Data</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Remove all customers, items, and quotes. Your company settings will remain intact.
+                </p>
+              </div>
+              
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    disabled={clearingSampleData || !user}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {clearingSampleData ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Clearing...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Clear Sample Data
+                      </>
+                    )}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Clear Sample Data?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will delete all customers, items, and quotes, but keep your company settings. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleClearSampleData}>
+                      Clear Sample Data
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
 
             <Separator />
