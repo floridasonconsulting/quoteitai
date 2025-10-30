@@ -36,6 +36,13 @@ export default function Diagnostics() {
   
   const lastSyncTime = localStorage.getItem('last-sync-time');
 
+  // Redirect non-admin users
+  useEffect(() => {
+    if (userRole && userRole !== 'admin') {
+      window.location.href = '/dashboard';
+    }
+  }, [userRole]);
+
   // Monitor localStorage changes
   useEffect(() => {
     const checkStorage = () => {
