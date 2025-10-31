@@ -24,6 +24,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import Autoplay from "embla-carousel-autoplay";
 import { useRef } from "react";
+import { heroScreenshots, interactiveScreenshots } from "@/config/landing-media";
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -171,29 +172,6 @@ export default function Landing() {
     { icon: Smartphone, text: "Works on any device" }
   ];
 
-  const screenshots = [
-    {
-      id: 'dashboard',
-      title: 'Smart Dashboard',
-      description: 'Track all your quotes and metrics in one place',
-      image: '/screenshots/dashboard.png',
-      badge: 'Analytics'
-    },
-    {
-      id: 'quote-detail',
-      title: 'Professional Quotes',
-      description: 'Create detailed quotes with AI assistance',
-      image: '/screenshots/quote-detail.png',
-      badge: 'AI-Powered'
-    },
-    {
-      id: 'customers',
-      title: 'Customer Management',
-      description: 'Organize and manage all your contacts',
-      image: '/screenshots/customers.png',
-      badge: 'CRM'
-    }
-  ];
 
   const workflows = [
     {
@@ -229,7 +207,7 @@ export default function Landing() {
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary" />
+            <img src="/logo.png" alt="Quote-it AI" className="h-8 w-8" />
             <span className="text-xl font-bold">Quote-it AI</span>
           </div>
           <nav className="hidden md:flex gap-6">
@@ -298,11 +276,11 @@ export default function Landing() {
                 onMouseLeave={plugin.current.reset}
               >
                 <CarouselContent>
-                  {screenshots.map((screenshot) => (
+                  {heroScreenshots.map((screenshot) => (
                     <CarouselItem key={screenshot.id}>
                       <div className="space-y-4">
                         <Badge variant="secondary">{screenshot.badge}</Badge>
-                        <div className="browser-mockup bg-card rounded-lg overflow-hidden shadow-2xl border">
+                        <div className="browser-mockup bg-card rounded-lg overflow-hidden shadow-2xl border relative">
                           <img 
                             src={screenshot.image} 
                             alt={screenshot.title}
@@ -310,6 +288,11 @@ export default function Landing() {
                             loading={screenshot.id === 'dashboard' ? 'eager' : 'lazy'}
                             fetchPriority={screenshot.id === 'dashboard' ? 'high' : 'auto'}
                           />
+                          {screenshot.isGif && (
+                            <div className="absolute top-2 right-2 bg-black/60 rounded-full p-2">
+                              <Play className="h-4 w-4 text-white" />
+                            </div>
+                          )}
                         </div>
                         <div>
                           <h3 className="font-semibold text-lg mb-1">{screenshot.title}</h3>
@@ -400,77 +383,31 @@ export default function Landing() {
               <TabsTrigger value="mobile" className="text-xs sm:text-sm">Mobile</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="dashboard" className="space-y-4">
-              <div className="relative max-w-6xl mx-auto">
-                <div className="browser-mockup">
-                  <img 
-                    src="/screenshots/dashboard.png" 
-                    alt="Dashboard Overview"
-                    className="w-full h-auto"
-                  />
+{interactiveScreenshots.map((screenshot) => (
+              <TabsContent key={screenshot.id} value={screenshot.id} className="space-y-4">
+                <div className={`relative ${screenshot.id === 'mobile' ? 'max-w-sm' : 'max-w-6xl'} mx-auto`}>
+                  <div className={screenshot.id === 'mobile' ? 'phone-mockup' : 'browser-mockup'}>
+                    <div className="relative">
+                      <img 
+                        src={screenshot.image} 
+                        alt={screenshot.description}
+                        className="w-full h-auto"
+                      />
+                      {screenshot.isGif && (
+                        <div className="absolute top-2 right-2 bg-black/60 rounded-full p-2">
+                          <Play className="h-4 w-4 text-white" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {screenshot.badge && (
+                    <div className="mt-4 text-center">
+                      <Badge variant="secondary">{screenshot.badge}</Badge>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="quotes" className="space-y-4">
-              <div className="relative max-w-6xl mx-auto">
-                <div className="browser-mockup">
-                  <img 
-                    src="/screenshots/quotes.png" 
-                    alt="Quote Management"
-                    className="w-full h-auto"
-                  />
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="new-quote" className="space-y-4">
-              <div className="relative max-w-6xl mx-auto">
-                <div className="browser-mockup">
-                  <img 
-                    src="/screenshots/new-quote.png" 
-                    alt="AI-Powered Quote Creation"
-                    className="w-full h-auto"
-                  />
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="customers" className="space-y-4">
-              <div className="relative max-w-6xl mx-auto">
-                <div className="browser-mockup">
-                  <img 
-                    src="/screenshots/customers.png" 
-                    alt="Customer Management"
-                    className="w-full h-auto"
-                  />
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="items" className="space-y-4">
-              <div className="relative max-w-6xl mx-auto">
-                <div className="browser-mockup">
-                  <img 
-                    src="/screenshots/items.png" 
-                    alt="Item Catalog"
-                    className="w-full h-auto"
-                  />
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="mobile" className="space-y-4">
-              <div className="relative max-w-sm mx-auto">
-                <div className="phone-mockup mx-auto">
-                  <img 
-                    src="/screenshots/mobile.png" 
-                    alt="Mobile App"
-                    className="w-full h-auto"
-                  />
-                </div>
-              </div>
-            </TabsContent>
+              </TabsContent>
+            ))}
           </Tabs>
         </div>
       </section>
