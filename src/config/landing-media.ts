@@ -21,7 +21,7 @@ export const heroScreenshots: MediaAsset[] = [
     id: 'quote-detail',
     title: 'Professional Quotes',
     description: 'Create detailed quotes with AI assistance',
-    image: '/screenshots/quote-detail.png',
+    image: '/screenshots/quotes.png',
     badge: 'AI-Powered',
     category: 'ai-features'
   },
