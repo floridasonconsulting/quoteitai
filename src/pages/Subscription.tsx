@@ -12,8 +12,8 @@ const SUBSCRIPTION_TIERS = {
   pro_monthly: {
     name: 'Pro Monthly',
     price: '$9.99/month',
-    priceId: 'price_1SEuOKFe05N9s8oj50fHpdt2',
-    productId: 'prod_TBGwDXWSBdGOEM',
+    priceId: 'price_1SPTGFFe05N9s8ojqPOfbsBO',
+    productId: 'prod_TMBdXO8oZcVkfV',
     features: [
       '50 quotes per month',
       'Unlimited customers & items',
@@ -28,8 +28,8 @@ const SUBSCRIPTION_TIERS = {
   pro_annual: {
     name: 'Pro Annual',
     price: '$99/year',
-    priceId: 'price_1SEuP5Fe05N9s8ojbUqindin',
-    productId: 'prod_TBGwuEojGwEuM5',
+    priceId: 'price_1SPTGPFe05N9s8ojPuL611il',
+    productId: 'prod_TMBdpTblCywgQf',
     features: [
       '600 quotes per year',
       'Unlimited customers & items',
@@ -45,8 +45,8 @@ const SUBSCRIPTION_TIERS = {
   max_monthly: {
     name: 'Max AI Monthly',
     price: '$19.99/month',
-    priceId: 'price_1SEuQ3Fe05N9s8ojkiETaKB4',
-    productId: 'prod_TBGxhMwPGvWBdO',
+    priceId: 'price_1SPTGQFe05N9s8ojREGE4yhs',
+    productId: 'prod_TMBdc6WfCWbNVm',
     features: [
       'Everything in Pro, plus:',
       'Unlimited quotes & AI requests',
@@ -62,8 +62,8 @@ const SUBSCRIPTION_TIERS = {
   max_annual: {
     name: 'Max AI Annual',
     price: '$199/year',
-    priceId: 'price_1SEuQoFe05N9s8ojTbzv8sGt',
-    productId: 'prod_TBGyVDEvJOqCz3',
+    priceId: 'price_1SPTGQFe05N9s8ojtcXQuj1p',
+    productId: 'prod_TMBd1KM25jZncG',
     features: [
       'Everything in Pro, plus:',
       'Unlimited quotes & AI requests',
