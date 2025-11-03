@@ -6,6 +6,9 @@ export type AIFeatureType =
   | 'quote_title'
   | 'notes_generator'
   | 'item_description'
+  | 'quote_summary'
+  | 'followup_message'
+  | 'discount_justification'
   | 'email_draft'
   | 'full_quote_generation'
   | 'item_recommendations'
@@ -32,33 +35,61 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
         body: { featureType, prompt, context },
       });
 
-      if (error) throw error;
+      // Handle network/invoke errors
+      if (error) {
+        console.error('AI invoke error:', error);
+        toast.error('Connection Error', {
+          description: 'Failed to connect to AI service. Please try again.',
+        });
+        options?.onError?.(error.message);
+        return null;
+      }
 
-      if (data.error) {
+      // Handle edge function response errors
+      if (data?.error) {
+        // Check if this is a tier restriction
         if (data.requiresUpgrade) {
-          toast.error(data.error, {
-            description: `Your current tier doesn't include this feature. Upgrade to unlock AI capabilities.`,
+          // Determine which tier is needed based on the error message
+          const needsMax = data.error.toLowerCase().includes('max');
+          const tierName = needsMax ? 'Max AI' : 'Pro';
+          
+          toast.error(`${tierName} Feature Required`, {
+            description: data.error,
+            duration: 6000,
             action: {
-              label: 'View Plans',
-              onClick: () => window.location.href = '/subscription',
+              label: 'Upgrade Now',
+              onClick: () => {
+                window.location.href = '/subscription';
+              },
             },
           });
         } else {
-          toast.error('AI Generation Failed', {
+          // Other errors (rate limits, etc.)
+          toast.error('AI Request Failed', {
             description: data.error,
+            duration: 5000,
           });
         }
         options?.onError?.(data.error);
         return null;
       }
 
-      setResult(data.content);
-      options?.onSuccess?.(data.content);
-      toast.success('AI generated successfully!');
-      return data.content;
+      // Success case
+      if (data?.content) {
+        setResult(data.content);
+        options?.onSuccess?.(data.content);
+        toast.success('AI generated successfully!');
+        return data.content;
+      }
+
+      // Unexpected response format
+      throw new Error('Invalid response from AI service');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'AI generation failed';
-      toast.error(message);
+      console.error('AI generation error:', error);
+      toast.error('AI Generation Error', {
+        description: message,
+      });
       options?.onError?.(message);
       return null;
     } finally {

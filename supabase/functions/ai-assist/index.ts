@@ -13,10 +13,16 @@ const logStep = (step: string, details?: any) => {
 
 // Feature configuration with tier restrictions and limits
 const FEATURE_CONFIG = {
+  // Pro Tier Features
   quote_title: { tier: "pro", monthlyLimit: 50 },
   notes_generator: { tier: "pro", monthlyLimit: 50 },
   item_description: { tier: "pro", monthlyLimit: 50 },
+  quote_summary: { tier: "pro", monthlyLimit: 50 },
+  followup_message: { tier: "pro", monthlyLimit: 30 },
+  discount_justification: { tier: "pro", monthlyLimit: 50 },
   email_draft: { tier: "pro", monthlyLimit: null }, // unlimited
+  
+  // Max Tier Features
   full_quote_generation: { tier: "max", monthlyLimit: null },
   item_recommendations: { tier: "max", monthlyLimit: null },
   pricing_optimization: { tier: "max", monthlyLimit: null },
@@ -155,6 +161,52 @@ Format as clear, professional terms. Reference actual company name, customer nam
         break;
       case "item_description":
         systemPrompt = "You are a professional copywriter. Enhance the item description to be more professional, sales-oriented, and compelling while maintaining accuracy. Keep it concise.";
+        break;
+      case "quote_summary":
+        systemPrompt = `You are a professional business writer. Generate a compelling 2-3 sentence executive summary for this quote.
+
+The summary should:
+- Highlight the key value proposition
+- Mention the total investment amount
+- Create urgency and excitement
+- Be customer-focused (what's in it for them)
+
+Keep it concise, professional, and persuasive. This will be the first thing customers see.`;
+        break;
+      case "followup_message":
+        systemPrompt = `You are a sales expert specializing in follow-up communications. Generate a personalized follow-up message for this quote.
+
+Consider:
+- Quote age (days since sent)
+- Current status (draft, sent, accepted, rejected)
+- Customer relationship history
+- Quote value and complexity
+
+Create a warm, professional message that:
+- References specific details from the quote
+- Adds value (insights, options, answers)
+- Has a clear call-to-action
+- Maintains appropriate urgency based on timing
+
+Keep the tone conversational but professional. Personalize using context provided.`;
+        break;
+      case "discount_justification":
+        systemPrompt = `You are a professional sales consultant. Generate a clear, professional justification for applying a discount to this quote.
+
+The justification should:
+- Explain the business rationale for the discount
+- Maintain the company's value proposition
+- Reference specific context (volume, relationship, timing, etc.)
+- Be concise (2-3 sentences)
+- Sound professional, not apologetic
+
+Examples of good justifications:
+- "Volume discount for purchasing multiple units"
+- "Loyalty discount for valued long-term customer"
+- "Early commitment discount for project timeline flexibility"
+- "Bundle discount for comprehensive service package"
+
+Generate a justification based on the discount percentage and context provided.`;
         break;
       case "email_draft":
         systemPrompt = "You are a professional email writer. Create a professional email template to send with this quote. Include a warm greeting, quote summary, next steps, and professional closing.";
