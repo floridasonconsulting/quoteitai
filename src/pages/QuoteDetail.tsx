@@ -14,6 +14,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { generateClassicPDF, generateModernPDF, generateDetailedPDF } from '@/lib/proposal-templates';
 import { supabase } from '@/integrations/supabase/client';
+import { QuoteSummaryAI } from '@/components/QuoteSummaryAI';
+import { FollowUpMessageAI } from '@/components/FollowUpMessageAI';
 
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -283,6 +285,7 @@ export default function QuoteDetail() {
           <Clock className="mr-2 h-4 w-4" />
           Follow Up
         </Button>
+        <FollowUpMessageAI quote={quote} customer={customer} />
         <Button variant="destructive" onClick={handleDelete}>
           <Trash2 className="mr-2 h-4 w-4" />
           Delete
@@ -344,6 +347,8 @@ export default function QuoteDetail() {
           )}
         </CardContent>
       </Card>
+
+      <QuoteSummaryAI quote={quote} customer={customer} />
 
       <Card>
         <CardHeader>
