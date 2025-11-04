@@ -69,9 +69,16 @@ export function FollowUpDialog({ open, onOpenChange, quote, customer }: FollowUp
   };
 
   const getTemplateMessage = () => {
+    // Determine the best greeting name
+    const greetingName = customer?.contactFirstName 
+      ? customer.contactFirstName
+      : customer?.contactLastName
+      ? `Mr./Ms. ${customer.contactLastName}`
+      : customer?.name || quote.customerName;
+    
     const template = MESSAGE_TEMPLATES[messageTemplate as keyof typeof MESSAGE_TEMPLATES] || '';
     return template
-      .replace('{customerName}', customer?.name || quote.customerName)
+      .replace('{customerName}', greetingName)
       .replace('{quoteNumber}', quote.quoteNumber)
       .replace('{quoteTitle}', quote.title)
       .replace('{quoteTotal}', formatCurrency(quote.total));

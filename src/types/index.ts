@@ -7,6 +7,8 @@ export interface Customer {
   city: string;
   state: string;
   zip: string;
+  contactFirstName?: string;
+  contactLastName?: string;
   createdAt: string;
 }
 

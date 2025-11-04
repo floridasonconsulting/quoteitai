@@ -30,16 +30,28 @@ export function FollowUpMessageAI({ quote, customer }: FollowUpMessageAIProps) {
       return;
     }
 
+    // Determine the best name to use for personalization
+    const contactFirstName = customer.contactFirstName;
+    const contactLastName = customer.contactLastName;
+    const businessName = customer.name;
+    
+    // Use first name if available, otherwise last name with title, otherwise business name
+    const personalizedGreeting = contactFirstName 
+      ? contactFirstName
+      : contactLastName 
+      ? `Mr./Ms. ${contactLastName}`
+      : businessName;
+
     const daysSinceSent = quote.sentDate 
       ? Math.floor((Date.now() - new Date(quote.sentDate).getTime()) / (1000 * 60 * 60 * 24))
       : 0;
 
-    const sanitizedCustomerName = sanitizeForAI(customer.name, 100);
+    const sanitizedGreeting = sanitizeForAI(personalizedGreeting, 100);
     const sanitizedTitle = sanitizeForAI(quote.title, 200);
     const total = sanitizeNumber(quote.total);
 
     const context = {
-      customerName: sanitizedCustomerName,
+      customerName: sanitizedGreeting,
       quoteNumber: quote.quoteNumber,
       quoteTitle: sanitizedTitle,
       status: quote.status,
@@ -50,14 +62,14 @@ export function FollowUpMessageAI({ quote, customer }: FollowUpMessageAIProps) {
 
     const prompt = `Generate a personalized follow-up message for this quote:
 
-Customer: ${sanitizedCustomerName}
+Customer Contact: ${sanitizedGreeting}
 Quote: #${quote.quoteNumber} - ${sanitizedTitle}
 Status: ${quote.status}
 Days Since Sent: ${daysSinceSent}
 Total: $${total}
 Items: ${quote.items.length}
 
-Create a warm, professional follow-up that references the quote and encourages action.`;
+Create a warm, professional follow-up that references the quote and encourages action. Address the customer by name in the greeting.`;
 
     messageAI.generate(prompt, context);
   };

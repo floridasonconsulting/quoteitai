@@ -33,6 +33,8 @@ export default function Customers() {
     city: '',
     state: '',
     zip: '',
+    contactFirstName: '',
+    contactLastName: '',
   });
   const { user } = useAuth();
   const { queueChange, pauseSync, resumeSync } = useSyncManager();
@@ -170,8 +172,16 @@ export default function Customers() {
         toast.success('Customer updated successfully');
       } else {
         const newCustomer: Customer = {
-          ...formData,
           id: crypto.randomUUID(),
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+          contactFirstName: formData.contactFirstName,
+          contactLastName: formData.contactLastName,
           createdAt: new Date().toISOString(),
         };
         const added = await addCustomer(user?.id, newCustomer, queueChange);
@@ -199,6 +209,8 @@ export default function Customers() {
       city: customer.city,
       state: customer.state,
       zip: customer.zip,
+      contactFirstName: customer.contactFirstName || '',
+      contactLastName: customer.contactLastName || '',
     });
     setIsDialogOpen(true);
   };
@@ -230,6 +242,8 @@ export default function Customers() {
       city: '',
       state: '',
       zip: '',
+      contactFirstName: '',
+      contactLastName: '',
     });
   };
 
@@ -256,7 +270,7 @@ export default function Customers() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Name', 'Email', 'Phone', 'Address', 'City', 'State', 'ZIP'];
+    const headers = ['Name', 'Email', 'Phone', 'Address', 'City', 'State', 'ZIP', 'Contact First Name', 'Contact Last Name'];
     const rows = customers.map(customer => [
       customer.name,
       customer.email,
@@ -264,7 +278,9 @@ export default function Customers() {
       customer.address || '',
       customer.city || '',
       customer.state || '',
-      customer.zip || ''
+      customer.zip || '',
+      customer.contactFirstName || '',
+      customer.contactLastName || ''
     ]);
     
     const csvContent = [headers, ...rows].map(row => formatCSVLine(row)).join('\n');
@@ -291,7 +307,7 @@ export default function Customers() {
         const line = lines[i].trim();
         if (!line) continue;
 
-        const [name, email, phone, address, city, state, zip] = parseCSVLine(line);
+        const [name, email, phone, address, city, state, zip, contactFirstName, contactLastName] = parseCSVLine(line);
         
         if (name && email) {
           importedCustomers.push({
@@ -303,6 +319,8 @@ export default function Customers() {
             city: city?.trim() || '',
             state: state?.trim() || '',
             zip: zip?.trim() || '',
+            contactFirstName: contactFirstName?.trim() || '',
+            contactLastName: contactLastName?.trim() || '',
             createdAt: new Date().toISOString(),
           });
         }
@@ -364,28 +382,48 @@ export default function Customers() {
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Business/Company Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Acme Corporation"
+                    required
+                  />
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Name *</Label>
+                    <Label htmlFor="contactFirstName">Contact First Name</Label>
                     <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="John Doe"
-                      required
+                      id="contactFirstName"
+                      value={formData.contactFirstName}
+                      onChange={(e) => setFormData({ ...formData, contactFirstName: e.target.value })}
+                      placeholder="John"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
+                    <Label htmlFor="contactLastName">Contact Last Name</Label>
                     <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="john@example.com"
-                      required
+                      id="contactLastName"
+                      value={formData.contactLastName}
+                      onChange={(e) => setFormData({ ...formData, contactLastName: e.target.value })}
+                      placeholder="Doe"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="john@example.com"
+                    required
+                  />
                 </div>
                 
                 <div className="space-y-2">

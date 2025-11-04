@@ -197,10 +197,16 @@ export default function QuoteDetail() {
         description: 'The quote status has been updated to sent.',
       });
       
-      // Generate email content
+      // Generate email content with personalized greeting
+      const greeting = customer.contactFirstName 
+        ? `Hello ${customer.contactFirstName},`
+        : customer.contactLastName
+        ? `Hello Mr./Ms. ${customer.contactLastName},`
+        : `Hello,`;
+      
       const subject = encodeURIComponent(`Quote #${quote.quoteNumber}: ${quote.title}`);
       const body = encodeURIComponent(
-        `Hello ${customer.name},\n\n` +
+        `${greeting}\n\n` +
         `Please find your quote #${quote.quoteNumber} for ${quote.title}.\n\n` +
         (shareLink ? `View online: ${shareLink}\n\n` : '') +
         `Total: $${quote.total.toFixed(2)}\n\n` +
