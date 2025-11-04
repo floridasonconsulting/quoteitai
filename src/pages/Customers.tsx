@@ -595,6 +595,11 @@ export default function Customers() {
                     </div>
                     <CardHeader className="pb-3 pl-10">
                       <CardTitle className="text-lg break-words">{customer.name}</CardTitle>
+                      {(customer.contactFirstName || customer.contactLastName) && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Contact: {customer.contactFirstName} {customer.contactLastName}
+                        </p>
+                      )}
                       <CardDescription className="space-y-1">
                         <div className="flex items-center gap-2 min-w-0">
                           <Mail className="h-3 w-3 flex-shrink-0" />

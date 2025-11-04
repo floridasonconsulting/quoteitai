@@ -425,7 +425,15 @@ export default function NewQuote() {
                   <SelectContent>
                     {customers.map(customer => (
                       <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name} - {customer.email}
+                        <div>
+                          <div>{customer.name}</div>
+                          {(customer.contactFirstName || customer.contactLastName) && (
+                            <div className="text-xs text-muted-foreground">
+                              Contact: {customer.contactFirstName} {customer.contactLastName}
+                            </div>
+                          )}
+                          <div className="text-xs text-muted-foreground">{customer.email}</div>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>

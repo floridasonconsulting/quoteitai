@@ -314,6 +314,11 @@ export default function QuoteDetail() {
             <div>
               <p className="text-sm text-muted-foreground">Customer</p>
               <p className="font-medium">{quote.customerName}</p>
+              {customer && (customer.contactFirstName || customer.contactLastName) && (
+                <p className="text-sm text-muted-foreground">
+                  Contact: {customer.contactFirstName} {customer.contactLastName}
+                </p>
+              )}
               {customer?.address && <p className="text-sm">{customer.address}</p>}
               {(customer?.city || customer?.state || customer?.zip) && (
                 <p className="text-sm">{`${customer.city || ''}, ${customer.state || ''} ${customer.zip || ''}`.trim()}</p>

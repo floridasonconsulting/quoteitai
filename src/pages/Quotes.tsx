@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { getQuotes, deleteQuote } from '@/lib/db-service';
+import { getQuotes, deleteQuote, getCustomers } from '@/lib/db-service';
 import { getQuoteAge } from '@/lib/quote-utils';
-import { Quote, QuoteAge } from '@/types';
+import { Quote, QuoteAge, Customer } from '@/types';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -24,6 +24,7 @@ export default function Quotes() {
   const { user } = useAuth();
   const { queueChange } = useSyncManager();
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -33,8 +34,12 @@ export default function Quotes() {
 
   const loadQuotes = async () => {
     setLoading(true);
-    const data = await getQuotes(user?.id);
-    setQuotes(data);
+    const [quotesData, customersData] = await Promise.all([
+      getQuotes(user?.id),
+      getCustomers(user?.id)
+    ]);
+    setQuotes(quotesData);
+    setCustomers(customersData);
     setSelectedQuotes([]);
     setLoading(false);
   };
@@ -326,6 +331,7 @@ export default function Quotes() {
               {filteredQuotes.map((quote) => {
                 const age = getQuoteAge(quote);
                 const isSelected = selectedQuotes.includes(quote.id);
+                const customer = customers.find(c => c.id === quote.customerId);
                 return (
                   <div
                     key={quote.id}
@@ -373,7 +379,14 @@ export default function Quotes() {
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                         {/* Metadata */}
                         <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground">
-                          <span className="font-medium">{quote.customerName}</span>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{quote.customerName}</span>
+                            {customer && (customer.contactFirstName || customer.contactLastName) && (
+                              <span className="text-xs">
+                                {customer.contactFirstName} {customer.contactLastName}
+                              </span>
+                            )}
+                          </div>
                           <span className="flex items-center gap-1">
                             <FileText className="h-3 w-3" />
                             {quote.quoteNumber}
