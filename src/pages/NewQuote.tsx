@@ -20,6 +20,8 @@ import { useAI } from '@/hooks/useAI';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { sanitizeForAI, sanitizeNumber } from '@/lib/input-sanitization';
+import { QuoteSummaryAI } from '@/components/QuoteSummaryAI';
+import { SendQuoteDialog } from '@/components/SendQuoteDialog';
 
 export default function NewQuote() {
   const navigate = useNavigate();
@@ -33,7 +35,9 @@ export default function NewQuote() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [quoteTitle, setQuoteTitle] = useState('');
   const [quoteNotes, setQuoteNotes] = useState('');
+  const [executiveSummary, setExecutiveSummary] = useState('');
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [itemSearchTerm, setItemSearchTerm] = useState('');
@@ -96,6 +100,7 @@ export default function NewQuote() {
         setQuoteTitle(quoteToEdit.title);
         setQuoteItems(quoteToEdit.items);
         setQuoteNotes(quoteToEdit.notes || '');
+        setExecutiveSummary(quoteToEdit.executiveSummary || '');
       } else {
         navigate('/quotes');
       }
@@ -207,6 +212,7 @@ export default function NewQuote() {
         total,
         status: 'draft',
         notes: quoteNotes,
+        executiveSummary,
         createdAt: existingQuote?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -226,6 +232,7 @@ export default function NewQuote() {
         total,
         status: 'draft',
         notes: quoteNotes,
+        executiveSummary,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -250,6 +257,13 @@ export default function NewQuote() {
       return;
     }
 
+    // Open send dialog for confirmation
+    setSendDialogOpen(true);
+  };
+
+  const handleConfirmSend = async (includeSummary: boolean, customSummary?: string) => {
+    const finalSummary = includeSummary ? customSummary : undefined;
+
     if (isEditMode && id) {
       const quotes = await getQuotes(user?.id);
       const existingQuote = quotes.find(q => q.id === id);
@@ -265,6 +279,7 @@ export default function NewQuote() {
         total,
         status: 'sent',
         notes: quoteNotes,
+        executiveSummary: finalSummary,
         sentDate: new Date().toISOString(),
         createdAt: existingQuote?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -286,6 +301,7 @@ export default function NewQuote() {
         total,
         status: 'sent',
         notes: quoteNotes,
+        executiveSummary: finalSummary,
         sentDate: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -531,6 +547,30 @@ Format as clear, professional terms and conditions.`;
               </div>
             </CardContent>
           </Card>
+
+          {/* Executive Summary Section */}
+          {quoteItems.length > 0 && selectedCustomerId && (
+            <QuoteSummaryAI 
+              quote={{
+                id: id || '',
+                quoteNumber: generateQuoteNumber(),
+                customerId: selectedCustomerId,
+                customerName: selectedCustomer?.name || '',
+                title: quoteTitle,
+                items: quoteItems,
+                subtotal,
+                tax,
+                total,
+                status: 'draft',
+                notes: quoteNotes,
+                executiveSummary,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              }}
+              customer={selectedCustomer}
+              onSummaryGenerated={(summary) => setExecutiveSummary(summary)}
+            />
+          )}
 
           {/* Quote Items */}
           <Card>
@@ -785,6 +825,30 @@ Format as clear, professional terms and conditions.`;
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Send Quote Dialog */}
+      <SendQuoteDialog
+        open={sendDialogOpen}
+        onOpenChange={setSendDialogOpen}
+        quote={{
+          id: id || crypto.randomUUID(),
+          quoteNumber: generateQuoteNumber(),
+          customerId: selectedCustomerId,
+          customerName: selectedCustomer?.name || '',
+          title: quoteTitle,
+          items: quoteItems,
+          subtotal,
+          tax,
+          total,
+          status: 'draft',
+          notes: quoteNotes,
+          executiveSummary,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }}
+        customer={selectedCustomer}
+        onConfirm={handleConfirmSend}
+      />
     </div>
   );
 }

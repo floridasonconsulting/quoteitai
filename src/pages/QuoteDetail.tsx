@@ -16,6 +16,7 @@ import { generateClassicPDF, generateModernPDF, generateDetailedPDF } from '@/li
 import { supabase } from '@/integrations/supabase/client';
 import { QuoteSummaryAI } from '@/components/QuoteSummaryAI';
 import { FollowUpMessageAI } from '@/components/FollowUpMessageAI';
+import { SendQuoteDialog } from '@/components/SendQuoteDialog';
 
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +30,7 @@ export default function QuoteDetail() {
   const [followUpDialogOpen, setFollowUpDialogOpen] = useState(false);
   const [shareLink, setShareLink] = useState<string>('');
   const [copied, setCopied] = useState(false);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -177,16 +179,24 @@ export default function QuoteDetail() {
       return;
     }
     
+    // Open send dialog
+    setSendDialogOpen(true);
+  };
+
+  const handleConfirmSend = async (includeSummary: boolean, customSummary?: string) => {
+    if (!quote || !customer) return;
+
     try {
       // Generate share link if it doesn't exist
       if (!shareLink) {
         await handleGenerateShareLink();
       }
 
-      // Update quote status to 'sent' and set sentDate
+      // Update quote status and executive summary
       const updatedQuote = await updateQuote(user?.id, quote.id, {
         status: 'sent',
         sentDate: new Date().toISOString(),
+        executiveSummary: includeSummary ? customSummary : quote.executiveSummary,
       }, queueChange);
       
       // Update local state
@@ -197,19 +207,25 @@ export default function QuoteDetail() {
         description: 'The quote status has been updated to sent.',
       });
       
-      // Generate email content with personalized greeting
+      // Generate email content
       const greeting = customer.contactFirstName 
         ? `Hello ${customer.contactFirstName},`
         : customer.contactLastName
         ? `Hello Mr./Ms. ${customer.contactLastName},`
         : `Hello,`;
       
-      const subject = encodeURIComponent(`Quote #${quote.quoteNumber}: ${quote.title}`);
+      const summarySection = includeSummary && customSummary 
+        ? `\n\nExecutive Summary:\n${customSummary}\n`
+        : '';
+      
+      const subject = encodeURIComponent(`Quote #${updatedQuote.quoteNumber}: ${updatedQuote.title}`);
       const body = encodeURIComponent(
         `${greeting}\n\n` +
-        `Please find your quote #${quote.quoteNumber} for ${quote.title}.\n\n` +
+        `Please find your quote #${updatedQuote.quoteNumber} for ${updatedQuote.title}.` +
+        summarySection +
+        `\n\n` +
         (shareLink ? `View online: ${shareLink}\n\n` : '') +
-        `Total: $${quote.total.toFixed(2)}\n\n` +
+        `Total: $${updatedQuote.total.toFixed(2)}\n\n` +
         `Please review and let me know if you have any questions.\n\n` +
         `Best regards`
       );
@@ -383,6 +399,14 @@ export default function QuoteDetail() {
           </div>
         </CardContent>
       </Card>
+
+      <SendQuoteDialog
+        open={sendDialogOpen}
+        onOpenChange={setSendDialogOpen}
+        quote={quote}
+        customer={customer}
+        onConfirm={handleConfirmSend}
+      />
     </div>
   );
 }

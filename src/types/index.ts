@@ -47,6 +47,7 @@ export interface Quote {
   total: number;
   status: 'draft' | 'sent' | 'accepted' | 'declined';
   notes?: string;
+  executiveSummary?: string;
   sentDate?: string;
   followUpDate?: string;
   createdAt: string;

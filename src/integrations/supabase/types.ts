@@ -292,6 +292,7 @@ export type Database = {
           created_at: string
           customer_id: string | null
           customer_name: string
+          executive_summary: string | null
           follow_up_date: string | null
           id: string
           items: Json
@@ -313,6 +314,7 @@ export type Database = {
           created_at?: string
           customer_id?: string | null
           customer_name: string
+          executive_summary?: string | null
           follow_up_date?: string | null
           id?: string
           items?: Json
@@ -334,6 +336,7 @@ export type Database = {
           created_at?: string
           customer_id?: string | null
           customer_name?: string
+          executive_summary?: string | null
           follow_up_date?: string | null
           id?: string
           items?: Json

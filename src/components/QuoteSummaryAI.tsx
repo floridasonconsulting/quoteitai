@@ -15,7 +15,7 @@ interface QuoteSummaryAIProps {
 }
 
 export function QuoteSummaryAI({ quote, customer, onSummaryGenerated }: QuoteSummaryAIProps) {
-  const [summary, setSummary] = useState('');
+  const [summary, setSummary] = useState(quote.executiveSummary || '');
 
   const summaryAI = useAI('quote_summary', {
     onSuccess: (content) => {
@@ -23,6 +23,11 @@ export function QuoteSummaryAI({ quote, customer, onSummaryGenerated }: QuoteSum
       onSummaryGenerated?.(content);
     },
   });
+
+  const handleSummaryChange = (value: string) => {
+    setSummary(value);
+    onSummaryGenerated?.(value);
+  };
 
   const generateSummary = () => {
     const sanitizedCustomerName = sanitizeForAI(customer?.name, 100) || 'Customer';
@@ -90,7 +95,7 @@ Key Items: ${quote.items.slice(0, 3).map(i => sanitizeForAI(i.name, 50)).join(',
       <CardContent className="space-y-3">
         <Textarea
           value={summary}
-          onChange={(e) => setSummary(e.target.value)}
+          onChange={(e) => handleSummaryChange(e.target.value)}
           rows={4}
           className="resize-none"
           placeholder="AI-generated summary will appear here..."
