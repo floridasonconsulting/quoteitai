@@ -20,13 +20,20 @@ export type AIFeatureType =
 interface UseAIOptions {
   onSuccess?: (content: string) => void;
   onError?: (error: string) => void;
+  onUpgradeRequired?: (requiredTier: 'pro' | 'max') => void;
+}
+
+export interface AIUpgradeInfo {
+  needsUpgrade: true;
+  requiredTier: 'pro' | 'max';
+  featureName: AIFeatureType;
 }
 
 export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
-  const generate = async (prompt: string, context?: any) => {
+  const generate = async (prompt: string, context?: any): Promise<string | AIUpgradeInfo | null> => {
     setIsLoading(true);
     setResult(null);
 
@@ -51,18 +58,17 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
         if (data.requiresUpgrade) {
           // Determine which tier is needed based on the error message
           const needsMax = data.error.toLowerCase().includes('max');
-          const tierName = needsMax ? 'Max AI' : 'Pro';
+          const requiredTier = needsMax ? 'max' : 'pro';
           
-          toast.error(`${tierName} Feature Required`, {
-            description: data.error,
-            duration: 6000,
-            action: {
-              label: 'Upgrade Now',
-              onClick: () => {
-                window.location.href = '/subscription';
-              },
-            },
-          });
+          // Call the upgrade callback if provided
+          options?.onUpgradeRequired?.(requiredTier);
+          
+          // Return upgrade info instead of showing error toast
+          return {
+            needsUpgrade: true,
+            requiredTier,
+            featureName: featureType
+          };
         } else {
           // Other errors (rate limits, etc.)
           toast.error('AI Request Failed', {

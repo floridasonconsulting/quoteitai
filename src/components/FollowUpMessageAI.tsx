@@ -4,6 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AIButton } from '@/components/AIButton';
 import { useAI } from '@/hooks/useAI';
+import { AIUpgradeDialog } from '@/components/AIUpgradeDialog';
 import { Quote, Customer } from '@/types';
 import { MessageSquare, Copy, Mail } from 'lucide-react';
 import { sanitizeForAI, sanitizeNumber } from '@/lib/input-sanitization';
@@ -17,14 +18,20 @@ interface FollowUpMessageAIProps {
 export function FollowUpMessageAI({ quote, customer }: FollowUpMessageAIProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [requiredTier, setRequiredTier] = useState<'pro' | 'max'>('pro');
 
   const messageAI = useAI('followup_message', {
     onSuccess: (content) => {
       setMessage(content);
     },
+    onUpgradeRequired: (tier) => {
+      setRequiredTier(tier);
+      setShowUpgradeDialog(true);
+    },
   });
 
-  const generateFollowUp = () => {
+  const generateFollowUp = async () => {
     if (!customer) {
       toast.error('Customer information required');
       return;
@@ -71,7 +78,13 @@ Items: ${quote.items.length}
 
 Create a warm, professional follow-up that references the quote and encourages action. Address the customer by name in the greeting.`;
 
-    messageAI.generate(prompt, context);
+    const result = await messageAI.generate(prompt, context);
+    
+    // Check if upgrade is required
+    if (result && typeof result === 'object' && 'needsUpgrade' in result) {
+      setRequiredTier(result.requiredTier);
+      setShowUpgradeDialog(true);
+    }
   };
 
   const handleCopy = () => {
@@ -91,62 +104,71 @@ Create a warm, professional follow-up that references the quote and encourages a
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <MessageSquare className="h-4 w-4 mr-2" />
-          AI Follow-up Message
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Generate Follow-up Message</DialogTitle>
-          <DialogDescription>
-            Create a personalized follow-up message based on quote status and timing
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          {!message ? (
-            <div className="text-center py-8">
-              <AIButton
-                onClick={generateFollowUp}
-                isLoading={messageAI.isLoading}
-                size="lg"
-                className="w-full max-w-md"
-              >
-                Generate Follow-up Message
-              </AIButton>
-            </div>
-          ) : (
-            <>
-              <Textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={10}
-                className="resize-none"
-              />
-              <div className="flex gap-2 justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
+    <>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <MessageSquare className="h-4 w-4 mr-2" />
+            AI Follow-up Message
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Generate Follow-up Message</DialogTitle>
+            <DialogDescription>
+              Create a personalized follow-up message based on quote status and timing
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {!message ? (
+              <div className="text-center py-8">
+                <AIButton
                   onClick={generateFollowUp}
-                  disabled={messageAI.isLoading}
+                  isLoading={messageAI.isLoading}
+                  size="lg"
+                  className="w-full max-w-md"
                 >
-                  Regenerate
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleCopy}>
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copy
-                </Button>
-                <Button size="sm" onClick={handleEmail}>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Email
-                </Button>
+                  Generate Follow-up Message
+                </AIButton>
               </div>
-            </>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+            ) : (
+              <>
+                <Textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={10}
+                  className="resize-none"
+                />
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={generateFollowUp}
+                    disabled={messageAI.isLoading}
+                  >
+                    Regenerate
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleCopy}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy
+                  </Button>
+                  <Button size="sm" onClick={handleEmail}>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Send Email
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AIUpgradeDialog
+        isOpen={showUpgradeDialog}
+        onClose={() => setShowUpgradeDialog(false)}
+        featureName="followup_message"
+        requiredTier={requiredTier}
+      />
+    </>
   );
 }

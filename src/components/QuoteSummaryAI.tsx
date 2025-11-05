@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { AIButton } from '@/components/AIButton';
 import { useAI } from '@/hooks/useAI';
+import { AIUpgradeDialog } from '@/components/AIUpgradeDialog';
 import { Quote, Customer } from '@/types';
 import { Sparkles } from 'lucide-react';
 import { sanitizeForAI, sanitizeNumber } from '@/lib/input-sanitization';
@@ -16,11 +17,17 @@ interface QuoteSummaryAIProps {
 
 export function QuoteSummaryAI({ quote, customer, onSummaryGenerated }: QuoteSummaryAIProps) {
   const [summary, setSummary] = useState(quote.executiveSummary || '');
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [requiredTier, setRequiredTier] = useState<'pro' | 'max'>('pro');
 
   const summaryAI = useAI('quote_summary', {
     onSuccess: (content) => {
       setSummary(content);
       onSummaryGenerated?.(content);
+    },
+    onUpgradeRequired: (tier) => {
+      setRequiredTier(tier);
+      setShowUpgradeDialog(true);
     },
   });
 
@@ -29,7 +36,7 @@ export function QuoteSummaryAI({ quote, customer, onSummaryGenerated }: QuoteSum
     onSummaryGenerated?.(value);
   };
 
-  const generateSummary = () => {
+  const generateSummary = async () => {
     const sanitizedCustomerName = sanitizeForAI(customer?.name, 100) || 'Customer';
     const sanitizedTitle = sanitizeForAI(quote.title, 200);
     const itemCount = quote.items.length;
@@ -55,7 +62,13 @@ Total Investment: $${total}
 
 Key Items: ${quote.items.slice(0, 3).map(i => sanitizeForAI(i.name, 50)).join(', ')}`;
 
-    summaryAI.generate(prompt, context);
+    const result = await summaryAI.generate(prompt, context);
+    
+    // Check if upgrade is required
+    if (result && typeof result === 'object' && 'needsUpgrade' in result) {
+      setRequiredTier(result.requiredTier);
+      setShowUpgradeDialog(true);
+    }
   };
 
   if (!summary && !summaryAI.isLoading) {
@@ -85,41 +98,50 @@ Key Items: ${quote.items.slice(0, 3).map(i => sanitizeForAI(i.name, 50)).join(',
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Sparkles className="h-5 w-5 text-primary" />
-          Executive Summary
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <Textarea
-          value={summary}
-          onChange={(e) => handleSummaryChange(e.target.value)}
-          rows={4}
-          className="resize-none"
-          placeholder="AI-generated summary will appear here..."
-        />
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={generateSummary}
-            disabled={summaryAI.isLoading}
-          >
-            Regenerate
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              navigator.clipboard.writeText(summary);
-            }}
-          >
-            Copy
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Executive Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Textarea
+            value={summary}
+            onChange={(e) => handleSummaryChange(e.target.value)}
+            rows={4}
+            className="resize-none"
+            placeholder="AI-generated summary will appear here..."
+          />
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generateSummary}
+              disabled={summaryAI.isLoading}
+            >
+              Regenerate
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(summary);
+              }}
+            >
+              Copy
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <AIUpgradeDialog
+        isOpen={showUpgradeDialog}
+        onClose={() => setShowUpgradeDialog(false)}
+        featureName="quote_summary"
+        requiredTier={requiredTier}
+      />
+    </>
   );
 }
