@@ -22,6 +22,19 @@ export default function PublicQuoteView() {
     loadQuote();
   }, [shareToken]);
 
+  // Update browser title with company name
+  useEffect(() => {
+    const originalTitle = document.title;
+    
+    if (settings?.name) {
+      document.title = `${settings.name} - Proposal`;
+    }
+
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [settings]);
+
   const loadQuote = async () => {
     if (!shareToken) return;
     
