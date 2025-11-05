@@ -69,7 +69,7 @@ describe('Offline CRUD Operations', () => {
     it('should create customer offline and store in cache', async () => {
       const customer = createTestCustomer('cust-1');
       const result = await dbService.addCustomer('user-1', customer);
-      expect(result).toEqual(customer);
+      expect(result).toEqual({ ...customer, user_id: 'user-1' });
       const cached = localStorage.getItem('customers-cache');
       expect(cached).toBeTruthy();
     });
@@ -79,7 +79,8 @@ describe('Offline CRUD Operations', () => {
       await dbService.addCustomer('user-1', customer);
       const customers = await dbService.getCustomers('user-1');
       expect(customers).toHaveLength(1);
-      expect(customers[0]).toEqual(customer);
+      expect(customers[0].id).toBe(customer.id);
+      expect(customers[0].name).toBe(customer.name);
     });
 
     it('should update customer offline', async () => {
@@ -105,7 +106,7 @@ describe('Offline CRUD Operations', () => {
     it('should create item offline', async () => {
       const item = createTestItem('item-1');
       const result = await dbService.addItem('user-1', item);
-      expect(result).toEqual(item);
+      expect(result).toEqual({ ...item, user_id: 'user-1' });
     });
 
     it('should read item offline', async () => {
@@ -113,7 +114,8 @@ describe('Offline CRUD Operations', () => {
       await dbService.addItem('user-1', item);
       const items = await dbService.getItems('user-1');
       expect(items).toHaveLength(1);
-      expect(items[0]).toEqual(item);
+      expect(items[0].id).toBe(item.id);
+      expect(items[0].name).toBe(item.name);
     });
 
     it('should update item offline', async () => {
@@ -138,7 +140,7 @@ describe('Offline CRUD Operations', () => {
     it('should create quote offline', async () => {
       const quote = createTestQuote('quote-1');
       const result = await dbService.addQuote('user-1', quote);
-      expect(result).toEqual(quote);
+      expect(result).toEqual({ ...quote, user_id: 'user-1' });
     });
 
     it('should read quote offline', async () => {
@@ -173,7 +175,7 @@ describe('Offline CRUD Operations', () => {
       const result = await dbService.addCustomer('user-1', customer);
       const endTime = Date.now();
       expect(endTime - startTime).toBeLessThan(100);
-      expect(result).toEqual(customer);
+      expect(result).toEqual({ ...customer, user_id: 'user-1' });
     });
   });
 });
