@@ -9,33 +9,77 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
     ...actual,
-    useParams: () => ({ id: 'quote-123' }),
+    useParams: () => ({ shareToken: 'test-share-token' }),
   };
 });
 
 // Mock Supabase with quote data
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn(() => Promise.resolve({ 
-            data: {
-              id: 'quote-123',
-              quote_number: 'Q-001',
-              title: 'Test Quote',
-              customer_name: 'Test Customer',
-              items: [],
-              subtotal: 100,
-              tax: 10,
-              total: 110,
-              status: 'sent',
-            }, 
-            error: null 
+    from: vi.fn((table: string) => {
+      if (table === 'quotes') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              single: vi.fn(() =>
+                Promise.resolve({
+                  data: {
+                    id: 'quote-123',
+                    share_token: 'test-share-token',
+                    quote_number: 'Q-001',
+                    title: 'Test Quote',
+                    customer_name: 'Test Customer',
+                    customer_id: 'customer-1',
+                    user_id: 'user-123',
+                    items: [],
+                    subtotal: 100,
+                    tax: 10,
+                    total: 110,
+                    status: 'sent',
+                  },
+                  error: null,
+                })
+              ),
+            })),
+          })),
+        };
+      }
+      if (table === 'user_roles') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              single: vi.fn(() =>
+                Promise.resolve({
+                  data: { role: 'free' },
+                  error: null,
+                })
+              ),
+            })),
+          })),
+        };
+      }
+      if (table === 'company_settings') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              single: vi.fn(() =>
+                Promise.resolve({
+                  data: { logo: null },
+                  error: null,
+                })
+              ),
+            })),
+          })),
+        };
+      }
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn(() => Promise.resolve({ data: null, error: null })),
           })),
         })),
-      })),
-    })),
+      };
+    }),
   },
 }));
 
