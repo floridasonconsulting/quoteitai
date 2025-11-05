@@ -45,6 +45,9 @@ vi.mock('@/integrations/supabase/client', () => ({
             single: vi.fn().mockResolvedValue({ data: null, error: null }),
           })),
         })),
+        select: vi.fn(() => ({
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        })),
       })),
       delete: vi.fn(() => ({
         eq: vi.fn().mockResolvedValue({ data: null, error: null }),

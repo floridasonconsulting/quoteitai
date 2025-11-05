@@ -47,6 +47,8 @@
 - ✅ Fixed all Supabase mock chains to return proper Promise resolutions
 - ✅ Enhanced mock data for user_roles, company_settings, and quotes tables
 - ✅ Fixed PublicQuoteView useParams mock to use shareToken instead of id
+- ✅ Added missing `.update()` method to Supabase mock chain
+- ✅ Fixed offline-crud tests to expect `user_id` field in results (matches db-service behavior)
 
 ## ✅ White-Label Branding Tests (COMPLETED & FIXED)
 
