@@ -247,6 +247,17 @@ export async function generateModernPDF(quote: Quote, customer: Customer | null,
     yPos += 8;
   }
   
+  // Company credentials (license/insurance) centered below name
+  pdf.setFontSize(8);
+  pdf.setFont(undefined, 'normal');
+  const credentials = [];
+  if (settings.license) credentials.push(`License: ${settings.license}`);
+  if (settings.insurance) credentials.push(`Insurance: ${settings.insurance}`);
+  if (credentials.length > 0) {
+    pdf.text(credentials.join(' | '), 105, yPos, { align: 'center' });
+    yPos += 5;
+  }
+  
   yPos += 5;
   
   // Modern accent bar with gradient effect (using overlapping bars)
