@@ -86,7 +86,7 @@ export default function PrivacyPolicy() {
               <li>Object to data processing</li>
             </ul>
             <p className="mt-2">
-              To exercise these rights, contact us at support@quoteit-ai.com
+              To exercise these rights, contact us at quoteitai@gmail.com
             </p>
           </section>
 
@@ -121,7 +121,7 @@ export default function PrivacyPolicy() {
               If you have questions about this Privacy Policy or our data practices, contact us at:
             </p>
             <p className="mt-2">
-              <strong>Email:</strong> support@quoteit-ai.com<br />
+              <strong>Email:</strong> quoteitai@gmail.com<br />
               <strong>Address:</strong> [Your Company Address]
             </p>
           </section>

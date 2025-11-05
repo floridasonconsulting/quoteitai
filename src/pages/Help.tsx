@@ -468,7 +468,7 @@ export default function Help() {
               <p className="text-muted-foreground mb-6">
                 Can't find what you're looking for? Contact our support team and we'll get back to you within 24 hours.
               </p>
-              <Button size="lg" onClick={() => window.location.href = 'mailto:support@quote-it.app'}>
+              <Button size="lg" onClick={() => window.location.href = 'mailto:quoteitai@gmail.com'}>
                 Contact Support
               </Button>
             </CardContent>

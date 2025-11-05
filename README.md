@@ -386,7 +386,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **API Docs**: [Lovable Documentation](https://docs.lovable.dev)
 
 ### Get Help
-- **Email**: support@quote-it.app
+- **Email**: quoteitai@gmail.com
 - **Discord**: [Lovable Community](https://discord.gg/lovable)
 - **GitHub Issues**: Report bugs or request features
 

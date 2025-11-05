@@ -215,7 +215,7 @@ export default function TermsOfService() {
               For questions about these Terms, contact us at:
             </p>
             <p className="mt-2">
-              <strong>Email:</strong> support@quoteit-ai.com<br />
+              <strong>Email:</strong> quoteitai@gmail.com<br />
               <strong>Address:</strong> [Your Company Address]
             </p>
           </section>
