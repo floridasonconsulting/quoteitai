@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Quote, Customer } from '@/types';
 import { Loader2, Sparkles } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,12 +11,22 @@ import { useAI } from '@/hooks/useAI';
 import { AIUpgradeDialog } from '@/components/AIUpgradeDialog';
 import { sanitizeForAI, sanitizeNumber } from '@/lib/input-sanitization';
 
+export interface EmailContent {
+  subject: string;
+  greeting: string;
+  bodyText: string;
+  closingText: string;
+  includeSummary: boolean;
+  customSummary?: string;
+  includeShareLink: boolean;
+}
+
 interface SendQuoteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quote: Quote;
   customer: Customer | null;
-  onConfirm: (includeSummary: boolean, customSummary?: string) => void;
+  onConfirm: (emailContent: EmailContent) => void;
 }
 
 export function SendQuoteDialog({ 
@@ -25,8 +36,19 @@ export function SendQuoteDialog({
   customer,
   onConfirm 
 }: SendQuoteDialogProps) {
+  const greeting = customer?.contactFirstName 
+    ? `Hello ${customer.contactFirstName},`
+    : customer?.contactLastName
+    ? `Hello Mr./Ms. ${customer.contactLastName},`
+    : `Hello,`;
+
+  const [subject, setSubject] = useState(`Quote #${quote.quoteNumber}: ${quote.title}`);
+  const [greetingText, setGreetingText] = useState(greeting);
+  const [bodyText, setBodyText] = useState(`Please find your quote #${quote.quoteNumber} for ${quote.title}.\n\nTotal: $${quote.total.toFixed(2)}\n\nPlease review and let me know if you have any questions.`);
+  const [closingText, setClosingText] = useState('Best regards');
   const [includeSummary, setIncludeSummary] = useState(!!quote.executiveSummary);
   const [summary, setSummary] = useState(quote.executiveSummary || '');
+  const [includeShareLink, setIncludeShareLink] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [requiredTier, setRequiredTier] = useState<'pro' | 'max'>('pro');
@@ -73,15 +95,17 @@ export function SendQuoteDialog({
   };
 
   const handleConfirm = () => {
-    onConfirm(includeSummary, includeSummary ? summary : undefined);
+    onConfirm({
+      subject,
+      greeting: greetingText,
+      bodyText,
+      closingText,
+      includeSummary,
+      customSummary: includeSummary ? summary : undefined,
+      includeShareLink,
+    });
     onOpenChange(false);
   };
-
-  const greeting = customer?.contactFirstName 
-    ? `Hello ${customer.contactFirstName},`
-    : customer?.contactLastName
-    ? `Hello Mr./Ms. ${customer.contactLastName},`
-    : `Hello,`;
 
   return (
     <>
@@ -95,20 +119,53 @@ export function SendQuoteDialog({
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Email Preview */}
-            <div className="border rounded-lg p-4 bg-muted/30">
-              <div className="space-y-2 text-sm">
-                <p><strong>To:</strong> {customer?.email}</p>
-                <p><strong>Subject:</strong> Quote #{quote.quoteNumber}: {quote.title}</p>
-                <div className="border-t pt-3 mt-3">
-                  <div className="whitespace-pre-wrap">
-                    {greeting}
-                    {'\n\n'}
-                    Please find your quote #{quote.quoteNumber} for {quote.title}.
-                    {'\n\n'}
-                    Total: ${quote.total.toFixed(2)}
-                  </div>
-                </div>
+            {/* Editable Email Fields */}
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="email-to">To</Label>
+                <Input id="email-to" value={customer?.email || ''} disabled className="bg-muted" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email-subject">Subject</Label>
+                <Input 
+                  id="email-subject" 
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="Email subject"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email-greeting">Greeting</Label>
+                <Input 
+                  id="email-greeting" 
+                  value={greetingText}
+                  onChange={(e) => setGreetingText(e.target.value)}
+                  placeholder="Hello,"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email-body">Email Body</Label>
+                <Textarea 
+                  id="email-body" 
+                  value={bodyText}
+                  onChange={(e) => setBodyText(e.target.value)}
+                  rows={5}
+                  placeholder="Email message..."
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="include-link"
+                  checked={includeShareLink}
+                  onCheckedChange={(checked) => setIncludeShareLink(checked as boolean)}
+                />
+                <Label htmlFor="include-link" className="text-sm font-medium cursor-pointer">
+                  Include "View & Download Quote" button in email
+                </Label>
               </div>
             </div>
 
@@ -164,6 +221,16 @@ export function SendQuoteDialog({
                   </p>
                 </div>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email-closing">Closing</Label>
+              <Input 
+                id="email-closing" 
+                value={closingText}
+                onChange={(e) => setClosingText(e.target.value)}
+                placeholder="Best regards"
+              />
             </div>
           </div>
 

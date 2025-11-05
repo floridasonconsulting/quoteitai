@@ -16,7 +16,7 @@ import { generateClassicPDF, generateModernPDF, generateDetailedPDF } from '@/li
 import { supabase } from '@/integrations/supabase/client';
 import { QuoteSummaryAI } from '@/components/QuoteSummaryAI';
 import { FollowUpMessageAI } from '@/components/FollowUpMessageAI';
-import { SendQuoteDialog } from '@/components/SendQuoteDialog';
+import { SendQuoteDialog, EmailContent } from '@/components/SendQuoteDialog';
 
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -227,60 +227,106 @@ export default function QuoteDetail() {
     setSendDialogOpen(true);
   };
 
-  const handleConfirmSend = async (includeSummary: boolean, customSummary?: string) => {
+  const handleConfirmSend = async (emailContent: EmailContent) => {
     if (!quote || !customer) return;
 
     try {
-      // Generate share link if it doesn't exist
-      if (!shareLink) {
+      // Generate share link if it doesn't exist and user wants to include it
+      let currentShareLink = shareLink;
+      if (!currentShareLink && emailContent.includeShareLink) {
         await handleGenerateShareLink();
+        // Wait a moment for state to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+        currentShareLink = shareLink;
       }
 
       // Update quote status and executive summary
       const updatedQuote = await updateQuote(user?.id, quote.id, {
         status: 'sent',
         sentDate: new Date().toISOString(),
-        executiveSummary: includeSummary ? customSummary : quote.executiveSummary,
+        executiveSummary: emailContent.includeSummary ? emailContent.customSummary : quote.executiveSummary,
       }, queueChange);
       
       // Update local state
       setQuote(updatedQuote);
-      
-      toast({
-        title: 'Quote marked as sent',
-        description: 'The quote status has been updated to sent.',
-      });
-      
-      // Generate email content
-      const greeting = customer.contactFirstName 
-        ? `Hello ${customer.contactFirstName},`
-        : customer.contactLastName
-        ? `Hello Mr./Ms. ${customer.contactLastName},`
-        : `Hello,`;
-      
-      const summarySection = includeSummary && customSummary 
-        ? `\n\nExecutive Summary:\n${customSummary}\n`
-        : '';
-      
-      const subject = encodeURIComponent(`Quote #${updatedQuote.quoteNumber}: ${updatedQuote.title}`);
-      const body = encodeURIComponent(
-        `${greeting}\n\n` +
-        `Please find your quote #${updatedQuote.quoteNumber} for ${updatedQuote.title}.` +
-        summarySection +
-        `\n\n` +
-        (shareLink ? `View online: ${shareLink}\n\n` : '') +
-        `Total: $${updatedQuote.total.toFixed(2)}\n\n` +
-        `Please review and let me know if you have any questions.\n\n` +
-        `Best regards`
-      );
-      
-      // Open email client
-      window.location.href = `mailto:${customer.email}?subject=${subject}&body=${body}`;
+
+      // Fetch company settings for email
+      const { data: settingsData } = await supabase
+        .from('company_settings')
+        .select('*')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      const companyName = settingsData?.name || undefined;
+      const companyLogo = settingsData?.logo || undefined;
+
+      // Try to send via edge function
+      try {
+        const { data, error } = await supabase.functions.invoke('send-quote-email', {
+          body: {
+            customerEmail: customer.email,
+            customerName: customer.name,
+            subject: emailContent.subject,
+            greeting: emailContent.greeting,
+            bodyText: emailContent.bodyText,
+            closingText: emailContent.closingText,
+            includeSummary: emailContent.includeSummary,
+            executiveSummary: emailContent.customSummary,
+            includeShareLink: emailContent.includeShareLink,
+            shareLink: currentShareLink,
+            quoteNumber: updatedQuote.quoteNumber,
+            quoteTitle: updatedQuote.title,
+            quoteTotal: updatedQuote.total,
+            companyName,
+            companyLogo,
+          },
+        });
+
+        if (error) throw error;
+
+        if (data?.testMode) {
+          toast({
+            title: 'Email sent (Test Mode)',
+            description: `Email redirected to ${data.actualRecipient} because domain is not verified. Verify at resend.com/domains`,
+            duration: 8000,
+          });
+        } else {
+          toast({
+            title: 'Email sent successfully',
+            description: `Quote sent to ${customer.email}`,
+          });
+        }
+      } catch (emailError) {
+        console.error('Failed to send email via edge function:', emailError);
+        
+        // Fallback to mailto
+        const summarySection = emailContent.includeSummary && emailContent.customSummary 
+          ? `\n\nExecutive Summary:\n${emailContent.customSummary}\n`
+          : '';
+        
+        const subject = encodeURIComponent(emailContent.subject);
+        const body = encodeURIComponent(
+          `${emailContent.greeting}\n\n` +
+          emailContent.bodyText +
+          summarySection +
+          `\n\n` +
+          (emailContent.includeShareLink && currentShareLink ? `View online: ${currentShareLink}\n\n` : '') +
+          emailContent.closingText
+        );
+        
+        window.location.href = `mailto:${customer.email}?subject=${subject}&body=${body}`;
+        
+        toast({
+          title: 'Opening email client',
+          description: 'Email service unavailable. Opening your default email client instead.',
+          variant: 'default',
+        });
+      }
     } catch (error) {
-      console.error('Failed to update quote status:', error);
+      console.error('Failed to process email:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update quote status',
+        description: 'Failed to send email. Please try again.',
         variant: 'destructive',
       });
     }

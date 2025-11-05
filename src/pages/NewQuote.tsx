@@ -21,7 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { sanitizeForAI, sanitizeNumber } from '@/lib/input-sanitization';
 import { QuoteSummaryAI } from '@/components/QuoteSummaryAI';
-import { SendQuoteDialog } from '@/components/SendQuoteDialog';
+import { SendQuoteDialog, EmailContent } from '@/components/SendQuoteDialog';
 
 export default function NewQuote() {
   const navigate = useNavigate();
@@ -261,8 +261,8 @@ export default function NewQuote() {
     setSendDialogOpen(true);
   };
 
-  const handleConfirmSend = async (includeSummary: boolean, customSummary?: string) => {
-    const finalSummary = includeSummary ? customSummary : undefined;
+  const handleConfirmSend = async (emailContent: EmailContent) => {
+    const finalSummary = emailContent.includeSummary ? emailContent.customSummary : undefined;
 
     if (isEditMode && id) {
       const quotes = await getQuotes(user?.id);
