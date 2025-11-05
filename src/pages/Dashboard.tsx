@@ -26,6 +26,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [showStuckHelper, setShowStuckHelper] = useState(false);
+  const [autoRefreshAttempted, setAutoRefreshAttempted] = useState(false);
   const hasLoadedData = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const loadStartTime = useRef<number>(0);
@@ -57,7 +58,21 @@ export default function Dashboard() {
     };
   }, [user, authLoading]);
 
-  // Show "stuck" helper after 10 seconds
+  // Auto-refresh after 5 seconds if still loading
+  useEffect(() => {
+    if (loading && hasLoadedData.current && !autoRefreshAttempted) {
+      const autoRefreshTimer = setTimeout(() => {
+        console.log('[Dashboard] Auto-refresh triggered after 5s hang');
+        setAutoRefreshAttempted(true);
+        clearInFlightRequests();
+        hasLoadedData.current = false;
+        loadData();
+      }, 5000);
+      return () => clearTimeout(autoRefreshTimer);
+    }
+  }, [loading, autoRefreshAttempted]);
+
+  // Show "stuck" helper after 10 seconds (backup manual refresh)
   useEffect(() => {
     if (loading) {
       const timer = setTimeout(() => {
@@ -192,6 +207,7 @@ export default function Dashboard() {
         setLoading(false);
         setLoadingProgress([]);
         setRetryCount(0);
+        setAutoRefreshAttempted(false); // Reset for next load cycle
       });
       
       console.log('[Dashboard] Re-render triggered, data should be visible');
@@ -214,6 +230,7 @@ export default function Dashboard() {
 
   const handleRetry = () => {
     setRetryCount(prev => prev + 1);
+    setAutoRefreshAttempted(false);
     hasLoadedData.current = false;
     loadData();
   };
@@ -243,6 +260,7 @@ export default function Dashboard() {
       hasLoadedData.current = false;
       setRetryCount(0);
       setError(null);
+      setAutoRefreshAttempted(false);
       
       // Reload
       setTimeout(() => {
@@ -292,6 +310,8 @@ export default function Dashboard() {
                 variant="outline" 
                 size="sm" 
                 onClick={() => {
+                  setAutoRefreshAttempted(false);
+                  clearInFlightRequests();
                   hasLoadedData.current = false;
                   loadData();
                 }}
