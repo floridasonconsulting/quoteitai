@@ -29,6 +29,7 @@ Quote-it AI is a modern, AI-powered quote management system designed for busines
 - **Multi-Status Tracking**: Track quotes through Draft, Sent, Accepted, and Declined stages
 - **Quote Aging Analysis**: Visual indicators (Fresh/Warm/Aging/Stale) show quote freshness
 - **Professional PDF Export**: Generate branded, polished quote documents with company information
+- **Email Integration**: Send professional HTML emails with editable templates, download buttons, and automated follow-ups
 
 ### 📊 Business Intelligence
 - **Dashboard Analytics**: Track revenue, win rates, pending value, and active quotes
@@ -404,13 +405,14 @@ Built with:
 
 ## 📊 Roadmap
 
+- [x] ✅ Email integration for quote delivery - **COMPLETED**
 - [ ] Advanced analytics and reporting
-- [ ] Email integration for quote delivery
 - [ ] Multi-currency support
 - [ ] Quote templates
 - [ ] Team collaboration features
 - [ ] Webhook integrations
 - [ ] API for third-party integrations
+- [ ] Email open tracking and analytics
 
 ---
 
