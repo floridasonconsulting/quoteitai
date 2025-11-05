@@ -79,12 +79,56 @@ export default function QuoteDetail() {
   const generatePDF = async () => {
     if (!quote) return;
 
-    // Force fresh settings fetch from database, clear cache first
+    // Force fresh settings fetch - bypass all caches
     localStorage.removeItem('quote-it-settings');
-    const settings = await getSettings(user?.id);
+    
+    // Fetch directly from Supabase to bypass service worker cache
+    const { data } = await supabase
+      .from('company_settings')
+      .select('*')
+      .eq('user_id', user?.id)
+      .maybeSingle();
+    
+    // Map snake_case to camelCase
+    const settings = data ? {
+      name: data.name || '',
+      address: data.address || '',
+      city: data.city || '',
+      state: data.state || '',
+      zip: data.zip || '',
+      phone: data.phone || '',
+      email: data.email || '',
+      website: data.website || '',
+      license: data.license || '',
+      insurance: data.insurance || '',
+      logoDisplayOption: (data.logo_display_option || 'both') as 'both' | 'logo' | 'name',
+      logo: data.logo,
+      terms: data.terms || 'Payment due within 30 days. Thank you for your business!',
+      proposalTemplate: (data.proposal_template || 'classic') as 'classic' | 'modern' | 'detailed',
+      notifyEmailAccepted: data.notify_email_accepted ?? true,
+      notifyEmailDeclined: data.notify_email_declined ?? true,
+    } : {
+      name: '',
+      address: '',
+      city: '',
+      state: '',
+      zip: '',
+      phone: '',
+      email: '',
+      website: '',
+      license: '',
+      insurance: '',
+      logoDisplayOption: 'both' as const,
+      logo: null,
+      terms: 'Payment due within 30 days. Thank you for your business!',
+      proposalTemplate: 'classic' as const,
+      notifyEmailAccepted: true,
+      notifyEmailDeclined: true,
+    };
+    
     const template = settings.proposalTemplate || 'classic';
     
-    console.log('[QuoteDetail] Generating PDF with settings:', {
+    console.log('[QuoteDetail] Generating PDF with fresh settings:', {
       template,
       logoDisplayOption: settings.logoDisplayOption,
       proposalTemplate: settings.proposalTemplate

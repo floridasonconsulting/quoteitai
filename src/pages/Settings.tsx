@@ -622,6 +622,18 @@ export default function Settings() {
     // Immediately invalidate settings cache
     localStorage.removeItem('quote-it-settings');
     
+    // Clear service worker API cache
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      const messageChannel = new MessageChannel();
+      messageChannel.port1.onmessage = (event) => {
+        console.log('[Settings] Service worker API cache cleared:', event.data);
+      };
+      navigator.serviceWorker.controller.postMessage(
+        { type: 'CLEAR_API_CACHE' },
+        [messageChannel.port2]
+      );
+    }
+    
     // Update formData optimistically with correct type
     setFormData(prev => ({ ...prev, proposalTemplate: newTemplate }));
     

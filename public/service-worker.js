@@ -232,6 +232,16 @@ self.addEventListener('message', (event) => {
     );
   }
   
+  // Clear only API/dynamic caches (for settings updates)
+  if (event.data && event.data.type === 'CLEAR_API_CACHE') {
+    event.waitUntil(
+      caches.delete(DYNAMIC_CACHE).then(() => {
+        console.log('[SW] API cache cleared for settings update');
+        event.ports[0]?.postMessage({ success: true });
+      })
+    );
+  }
+  
   // Clear all caches on auth errors
   if (event.data && event.data.type === 'CLEAR_AUTH_CACHE') {
     event.waitUntil(
