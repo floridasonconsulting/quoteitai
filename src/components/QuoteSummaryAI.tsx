@@ -71,70 +71,68 @@ Key Items: ${quote.items.slice(0, 3).map(i => sanitizeForAI(i.name, 50)).join(',
     }
   };
 
-  if (!summary && !summaryAI.isLoading) {
-    return (
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Executive Summary
-          </CardTitle>
-          <CardDescription>
-            Generate an AI-powered executive summary to highlight the value of this quote
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AIButton
-            onClick={generateSummary}
-            isLoading={summaryAI.isLoading}
-            size="default"
-            className="w-full"
-          >
-            Generate Executive Summary
-          </AIButton>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Executive Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Textarea
-            value={summary}
-            onChange={(e) => handleSummaryChange(e.target.value)}
-            rows={4}
-            className="resize-none"
-            placeholder="AI-generated summary will appear here..."
-          />
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
+      {!summary && !summaryAI.isLoading ? (
+        <Card className="border-dashed">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Executive Summary
+            </CardTitle>
+            <CardDescription>
+              Generate an AI-powered executive summary to highlight the value of this quote
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AIButton
               onClick={generateSummary}
-              disabled={summaryAI.isLoading}
+              isLoading={summaryAI.isLoading}
+              size="default"
+              className="w-full"
             >
-              Regenerate
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                navigator.clipboard.writeText(summary);
-              }}
-            >
-              Copy
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              Generate Executive Summary
+            </AIButton>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Executive Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Textarea
+              value={summary}
+              onChange={(e) => handleSummaryChange(e.target.value)}
+              rows={4}
+              className="resize-none"
+              placeholder="AI-generated summary will appear here..."
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={generateSummary}
+                disabled={summaryAI.isLoading}
+              >
+                Regenerate
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(summary);
+                }}
+              >
+                Copy
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <AIUpgradeDialog
         isOpen={showUpgradeDialog}
