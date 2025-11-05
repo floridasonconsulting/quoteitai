@@ -462,7 +462,7 @@ export default function PublicQuoteView() {
         )}
 
         {/* Download PDF */}
-        <Card>
+        <Card className="mb-6">
           <CardContent className="pt-6">
             <Button onClick={handleDownloadPDF} variant="outline" className="w-full">
               <Download className="h-4 w-4 mr-2" />
@@ -470,6 +470,17 @@ export default function PublicQuoteView() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Footer Branding - Only show for non-Max AI tier */}
+        {!isMaxAITier && (
+          <Card className="border-muted">
+            <CardContent className="pt-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Powered by <span className="font-semibold">Quote-it AI</span>
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

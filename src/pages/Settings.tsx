@@ -194,20 +194,69 @@ export default function Settings() {
         .from('company-logos')
         .upload(fileName, file, { upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        if (uploadError.message.includes('duplicate')) {
+          throw new Error('A logo with this name already exists. Please try again.');
+        }
+        throw uploadError;
+      }
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('company-logos')
         .getPublicUrl(fileName);
 
+      // Verify the URL is accessible
+      try {
+        const response = await fetch(publicUrl, { method: 'HEAD' });
+        if (!response.ok) {
+          throw new Error('Logo uploaded but not accessible');
+        }
+      } catch (fetchError) {
+        console.warn('Logo verification failed, but continuing:', fetchError);
+      }
+
       setFormData({ ...formData, logo: publicUrl });
       toast.success('Logo uploaded successfully');
     } catch (error) {
       console.error('Logo upload error:', error);
-      toast.error('Failed to upload logo');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload logo';
+      toast.error(errorMessage);
+      
+      // Reset file input
+      e.target.value = '';
     } finally {
       setUploadingLogo(false);
+    }
+  };
+
+  const handleLogoDelete = async () => {
+    if (!formData.logo || !user?.id) return;
+
+    try {
+      // Extract file path from URL
+      const url = new URL(formData.logo);
+      const pathMatch = url.pathname.match(/\/company-logos\/(.+)$/);
+      
+      if (pathMatch) {
+        const filePath = pathMatch[1];
+        const { error: deleteError } = await supabase.storage
+          .from('company-logos')
+          .remove([filePath]);
+
+        if (deleteError) {
+          console.error('Delete error:', deleteError);
+          // Continue anyway - file might already be deleted
+        }
+      }
+
+      // Clear logo from settings
+      setFormData({ ...formData, logo: undefined });
+      toast.success('Logo removed successfully');
+    } catch (error) {
+      console.error('Logo deletion error:', error);
+      toast.error('Failed to remove logo');
     }
   };
 
@@ -759,11 +808,40 @@ export default function Settings() {
               )}
               {formData.logo && (
                 <div className="mt-2 p-4 border rounded-lg bg-muted/30">
-                  <p className="text-sm font-medium mb-2">Current Logo:</p>
+                  <div className="flex items-start justify-between mb-2">
+                    <p className="text-sm font-medium">Current Logo:</p>
+                    {isMaxAITier && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 text-destructive hover:text-destructive">
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remove Logo?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will remove your custom logo from all quotes and reset your favicon to default.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleLogoDelete} className="bg-destructive hover:bg-destructive/90">
+                              Remove
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                   <img
                     src={formData.logo}
                     alt="Company Logo"
                     className="h-20 object-contain bg-background p-2 rounded"
+                    onError={(e) => {
+                      console.error('Logo failed to load:', formData.logo);
+                      e.currentTarget.src = '/placeholder.svg';
+                    }}
                   />
                   {isMaxAITier && (
                     <p className="text-xs text-muted-foreground mt-2">
