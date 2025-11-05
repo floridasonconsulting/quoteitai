@@ -107,13 +107,13 @@ serve(async (req) => {
     if (featureConfig.tier === "pro" && userTier === "free") {
       return new Response(
         JSON.stringify({ error: "This feature requires a Pro or Max AI subscription", requiresUpgrade: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
     if (featureConfig.tier === "max" && (userTier === "free" || userTier === "pro")) {
       return new Response(
         JSON.stringify({ error: "This feature requires a Max AI subscription", requiresUpgrade: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 

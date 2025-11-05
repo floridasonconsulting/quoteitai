@@ -42,24 +42,7 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
         body: { featureType, prompt, context },
       });
 
-      // Check for upgrade requirement first (can be in data even with error status)
-      if (data?.requiresUpgrade) {
-        // Determine which tier is needed based on the error message
-        const needsMax = data.error?.toLowerCase().includes('max');
-        const requiredTier = needsMax ? 'max' : 'pro';
-        
-        // Call the upgrade callback if provided
-        options?.onUpgradeRequired?.(requiredTier);
-        
-        // Return upgrade info instead of showing error toast
-        return {
-          needsUpgrade: true,
-          requiredTier,
-          featureName: featureType
-        };
-      }
-
-      // Handle network/invoke errors (after checking for upgrade)
+      // Handle network/invoke errors
       if (error) {
         console.error('AI invoke error:', error);
         toast.error('Connection Error', {
@@ -69,9 +52,22 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
         return null;
       }
 
-      // Handle edge function response errors
+      // Check for upgrade requirement (now returned with 200 status)
+      if (data?.requiresUpgrade) {
+        const needsMax = data.error?.toLowerCase().includes('max');
+        const requiredTier = needsMax ? 'max' : 'pro';
+        
+        options?.onUpgradeRequired?.(requiredTier);
+        
+        return {
+          needsUpgrade: true,
+          requiredTier,
+          featureName: featureType
+        };
+      }
+
+      // Handle other errors
       if (data?.error) {
-        // Other errors (rate limits, etc.)
         toast.error('AI Request Failed', {
           description: data.error,
           duration: 5000,
