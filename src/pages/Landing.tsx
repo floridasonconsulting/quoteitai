@@ -256,6 +256,9 @@ export default function Landing() {
           </div>
           <nav className="hidden md:flex gap-6">
             <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Features</button>
+            <button onClick={() => document.getElementById('benefits')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Benefits</button>
+            <button onClick={() => document.getElementById('comparison')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Comparison</button>
+            <button onClick={() => document.getElementById('screenshots')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Demo</button>
             <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Pricing</button>
             <button onClick={() => document.getElementById('testimonials')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Testimonials</button>
             <button onClick={() => navigate('/help')} className="text-sm hover:text-primary transition-colors">Help</button>
@@ -378,7 +381,7 @@ export default function Landing() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-16">
+      <section id="benefits" className="py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Quote-it AI?</h2>
@@ -404,7 +407,7 @@ export default function Landing() {
       </section>
 
       {/* Competitive Comparison Section */}
-      <section className="py-16 bg-muted/30">
+      <section id="comparison" className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
