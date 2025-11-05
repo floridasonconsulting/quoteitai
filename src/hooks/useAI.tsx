@@ -42,7 +42,24 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
         body: { featureType, prompt, context },
       });
 
-      // Handle network/invoke errors
+      // Check for upgrade requirement first (can be in data even with error status)
+      if (data?.requiresUpgrade) {
+        // Determine which tier is needed based on the error message
+        const needsMax = data.error?.toLowerCase().includes('max');
+        const requiredTier = needsMax ? 'max' : 'pro';
+        
+        // Call the upgrade callback if provided
+        options?.onUpgradeRequired?.(requiredTier);
+        
+        // Return upgrade info instead of showing error toast
+        return {
+          needsUpgrade: true,
+          requiredTier,
+          featureName: featureType
+        };
+      }
+
+      // Handle network/invoke errors (after checking for upgrade)
       if (error) {
         console.error('AI invoke error:', error);
         toast.error('Connection Error', {
@@ -54,28 +71,11 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
 
       // Handle edge function response errors
       if (data?.error) {
-        // Check if this is a tier restriction
-        if (data.requiresUpgrade) {
-          // Determine which tier is needed based on the error message
-          const needsMax = data.error.toLowerCase().includes('max');
-          const requiredTier = needsMax ? 'max' : 'pro';
-          
-          // Call the upgrade callback if provided
-          options?.onUpgradeRequired?.(requiredTier);
-          
-          // Return upgrade info instead of showing error toast
-          return {
-            needsUpgrade: true,
-            requiredTier,
-            featureName: featureType
-          };
-        } else {
-          // Other errors (rate limits, etc.)
-          toast.error('AI Request Failed', {
-            description: data.error,
-            duration: 5000,
-          });
-        }
+        // Other errors (rate limits, etc.)
+        toast.error('AI Request Failed', {
+          description: data.error,
+          duration: 5000,
+        });
         options?.onError?.(data.error);
         return null;
       }
