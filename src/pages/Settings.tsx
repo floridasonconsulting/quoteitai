@@ -702,8 +702,8 @@ export default function Settings() {
     pro_monthly: {
       name: 'Pro Monthly',
       price: '$9.99/month',
-      priceId: 'price_pro_monthly_placeholder',
-      productId: 'prod_pro_monthly_placeholder',
+      priceId: 'price_1SPTGFFe05N9s8ojqPOfbsBO',
+      productId: 'prod_TMBdXO8oZcVkfV',
       features: [
         '50 quotes per month',
         'Unlimited customers',
@@ -715,8 +715,8 @@ export default function Settings() {
     pro_annual: {
       name: 'Pro Annual',
       price: '$99/year',
-      priceId: 'price_pro_annual_placeholder',
-      productId: 'prod_pro_annual_placeholder',
+      priceId: 'price_1SPTGPFe05N9s8ojPuL611il',
+      productId: 'prod_TMBdpTblCywgQf',
       features: [
         '600 quotes per year',
         'Unlimited customers',
@@ -729,8 +729,8 @@ export default function Settings() {
     max_monthly: {
       name: 'Max AI Monthly',
       price: '$19.99/month',
-      priceId: 'price_max_monthly_placeholder',
-      productId: 'prod_max_monthly_placeholder',
+      priceId: 'price_1SPTGQFe05N9s8ojREGE4yhs',
+      productId: 'prod_TMBdc6WfCWbNVm',
       features: [
         'Unlimited quotes',
         'Unlimited customers',
@@ -744,8 +744,8 @@ export default function Settings() {
     max_annual: {
       name: 'Max AI Annual',
       price: '$199/year',
-      priceId: 'price_max_annual_placeholder',
-      productId: 'prod_max_annual_placeholder',
+      priceId: 'price_1SPTGQFe05N9s8ojtcXQuj1p',
+      productId: 'prod_TMBd1KM25jZncG',
       features: [
         'Unlimited quotes',
         'Unlimited customers',
