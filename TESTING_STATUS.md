@@ -43,6 +43,10 @@
 ### Recent Fixes (2025):
 - ✅ Fixed localStorage key mismatch in persistence test ('customers' → 'customers-local-v1')
 - ✅ Added proper test wrappers for AuthContext tests
+- ✅ Added ResizeObserver polyfill to prevent Radix UI errors
+- ✅ Fixed all Supabase mock chains to return proper Promise resolutions
+- ✅ Enhanced mock data for user_roles, company_settings, and quotes tables
+- ✅ Fixed PublicQuoteView useParams mock to use shareToken instead of id
 
 ## ✅ White-Label Branding Tests (COMPLETED & FIXED)
 
