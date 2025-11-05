@@ -2,13 +2,16 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import * as AuthContext from '@/contexts/AuthContext';
+import { ThemeProvider } from '@/components/ThemeProvider';
 import Settings from '@/pages/Settings';
 import PublicQuoteView from '@/pages/PublicQuoteView';
 
 vi.mock('@/integrations/supabase/client');
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>{children}</BrowserRouter>
+  <BrowserRouter>
+    <ThemeProvider>{children}</ThemeProvider>
+  </BrowserRouter>
 );
 
 describe('Max AI Tier Features', () => {

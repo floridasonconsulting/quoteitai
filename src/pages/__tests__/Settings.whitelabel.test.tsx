@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import Settings from '../Settings';
 import * as AuthContext from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 const mockToast = vi.fn();
 vi.mock('@/hooks/use-toast', () => ({
@@ -15,7 +16,9 @@ vi.mock('@/hooks/use-toast', () => ({
 const renderSettings = () => {
   return render(
     <BrowserRouter>
-      <Settings />
+      <ThemeProvider>
+        <Settings />
+      </ThemeProvider>
     </BrowserRouter>
   );
 };
@@ -32,8 +35,6 @@ describe('Settings - White-Label Branding', () => {
         isMaxAITier: false,
         userRole: 'pro',
       } as any);
-
-      renderSettings();
 
       const { getByText } = renderSettings();
       expect(getByText(/Upgrade to Max AI/i)).toBeInTheDocument();

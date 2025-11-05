@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import PublicQuoteView from '../PublicQuoteView';
 import * as AuthContext from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -11,6 +12,32 @@ vi.mock('react-router-dom', async () => {
     useParams: () => ({ id: 'quote-123' }),
   };
 });
+
+// Mock Supabase with quote data
+vi.mock('@/integrations/supabase/client', () => ({
+  supabase: {
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn(() => Promise.resolve({ 
+            data: {
+              id: 'quote-123',
+              quote_number: 'Q-001',
+              title: 'Test Quote',
+              customer_name: 'Test Customer',
+              items: [],
+              subtotal: 100,
+              tax: 10,
+              total: 110,
+              status: 'sent',
+            }, 
+            error: null 
+          })),
+        })),
+      })),
+    })),
+  },
+}));
 
 const renderPublicQuoteView = () => {
   return render(

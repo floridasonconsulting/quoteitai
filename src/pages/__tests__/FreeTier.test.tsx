@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import * as AuthContext from '@/contexts/AuthContext';
+import { ThemeProvider } from '@/components/ThemeProvider';
 import Dashboard from '@/pages/Dashboard';
 import NewQuote from '@/pages/NewQuote';
 import Settings from '@/pages/Settings';
@@ -13,6 +14,7 @@ vi.mock('@/integrations/supabase/client', () => ({
       select: vi.fn(() => ({
         eq: vi.fn(() => ({
           order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+          single: vi.fn(() => Promise.resolve({ data: {}, error: null })),
         })),
       })),
     })),
@@ -23,7 +25,9 @@ vi.mock('@/integrations/supabase/client', () => ({
 }));
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>{children}</BrowserRouter>
+  <BrowserRouter>
+    <ThemeProvider>{children}</ThemeProvider>
+  </BrowserRouter>
 );
 
 describe('Free Tier Features', () => {

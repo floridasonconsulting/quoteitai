@@ -376,7 +376,7 @@ describe('Local Database Operations', () => {
       LocalDB.addLocalCustomer(customer);
 
       // Simulate page reload by reading directly from localStorage
-      const stored = JSON.parse(localStorage.getItem('customers') || '[]');
+      const stored = JSON.parse(localStorage.getItem('customers-local-v1') || '[]');
       expect(stored).toHaveLength(1);
       expect(stored[0].id).toBe('cust-1');
     });

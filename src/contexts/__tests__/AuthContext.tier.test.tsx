@@ -4,9 +4,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AuthProvider, useAuth } from '../AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { ReactNode } from 'react';
+import { BrowserRouter } from 'react-router-dom';
 
 const wrapper = ({ children }: { children: ReactNode }) => (
-  <AuthProvider>{children}</AuthProvider>
+  <BrowserRouter>
+    <AuthProvider>{children}</AuthProvider>
+  </BrowserRouter>
 );
 
 describe('AuthContext - Tier-Based Access', () => {
