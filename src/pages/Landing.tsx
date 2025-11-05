@@ -579,7 +579,7 @@ export default function Landing() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="h-5 w-5 text-primary" />
+                <img src="/logo.png" alt="Quote-it AI" className="h-5 w-5" />
                 <span className="font-bold">Quote-it AI</span>
               </div>
               <p className="text-sm text-muted-foreground">
