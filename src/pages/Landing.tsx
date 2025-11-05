@@ -388,8 +388,107 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Competitive Comparison Section */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Professional Tools at an Unbeatable Price
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Get enterprise-level features without enterprise pricing
+            </p>
+          </div>
+          
+          <div className="max-w-5xl mx-auto">
+            <Card>
+              <CardContent className="p-6 md:p-8">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-4 px-4 font-semibold">Feature</th>
+                        <th className="text-center py-4 px-4 font-semibold">Quote-it AI</th>
+                        <th className="text-center py-4 px-4 font-semibold text-muted-foreground">PandaDoc</th>
+                        <th className="text-center py-4 px-4 font-semibold text-muted-foreground">Proposify</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b">
+                        <td className="py-4 px-4">Professional HTML Emails</td>
+                        <td className="text-center py-4 px-4">
+                          <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
+                        </td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">$49/mo</td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">$49/mo</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-4 px-4">Editable Email Templates</td>
+                        <td className="text-center py-4 px-4">
+                          <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
+                        </td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">Limited</td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">Add-on</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-4 px-4">AI-Powered Features</td>
+                        <td className="text-center py-4 px-4">
+                          <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
+                        </td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">Extra cost</td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">Not available</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-4 px-4">Mobile App</td>
+                        <td className="text-center py-4 px-4">
+                          <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
+                        </td>
+                        <td className="text-center py-4 px-4">
+                          <CheckCircle2 className="h-5 w-5 text-muted-foreground mx-auto" />
+                        </td>
+                        <td className="text-center py-4 px-4">
+                          <CheckCircle2 className="h-5 w-5 text-muted-foreground mx-auto" />
+                        </td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-4 px-4">Quote Aging Tracking</td>
+                        <td className="text-center py-4 px-4">
+                          <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
+                        </td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">Limited</td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">Basic</td>
+                      </tr>
+                      <tr className="bg-primary/5">
+                        <td className="py-4 px-4 font-semibold">Starting Price</td>
+                        <td className="text-center py-4 px-4">
+                          <div className="text-2xl font-bold text-primary">$9.99/mo</div>
+                          <div className="text-xs text-muted-foreground">or $99/year</div>
+                        </td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">
+                          <div className="text-xl font-semibold">$49+/mo</div>
+                        </td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">
+                          <div className="text-xl font-semibold">$49+/mo</div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-8 text-center">
+                  <p className="text-lg font-semibold mb-4">Save up to $468/year vs competitors</p>
+                  <Button size="lg" onClick={() => navigate('/auth')}>
+                    Start Free Trial
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Interactive Screenshots Section */}
-      <section id="screenshots" className="py-20 bg-muted/30">
+      <section id="screenshots" className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <Badge variant="secondary" className="mb-4">
