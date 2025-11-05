@@ -253,7 +253,7 @@ export default function Landing() {
       </header>
 
       {/* Hero Banner with Screenshots */}
-      <section className="py-12 md:py-20 bg-gradient-to-br from-primary/5 via-background to-accent/5">
+      <section className="py-16 bg-gradient-to-br from-primary/5 via-background to-accent/5">
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left: Feature highlights */}
@@ -340,9 +340,9 @@ export default function Landing() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-muted/30">
+      <section id="features" className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything You Need</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Powerful features designed to streamline your quoting process and grow your business
@@ -363,9 +363,9 @@ export default function Landing() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-20">
+      <section className="py-16">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Quote-it AI?</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Transform how you create and manage quotes
@@ -389,9 +389,9 @@ export default function Landing() {
       </section>
 
       {/* Competitive Comparison Section */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Professional Tools at an Unbeatable Price
             </h2>
@@ -488,9 +488,9 @@ export default function Landing() {
       </section>
 
       {/* Interactive Screenshots Section */}
-      <section id="screenshots" className="py-20">
+      <section id="screenshots" className="py-16">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <Badge variant="secondary" className="mb-4">
               <MousePointerClick className="h-3 w-3 mr-1" />
               Interactive Preview
@@ -542,9 +542,9 @@ export default function Landing() {
       </section>
 
       {/* Workflow Demonstrations */}
-      <section className="py-20">
+      <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Common Workflows Made Simple</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               See how Quote-it AI streamlines your daily tasks
@@ -586,9 +586,9 @@ export default function Landing() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-muted/30">
+      <section id="pricing" className="py-16">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Choose the plan that fits your needs. Upgrade or downgrade anytime.
@@ -635,9 +635,9 @@ export default function Landing() {
       </section>
 
       {/* Testimonials Section */}
-      <section id="testimonials" className="py-20">
+      <section id="testimonials" className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Loved by Professionals</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               See what our users have to say about Quote-it AI
@@ -660,7 +660,7 @@ export default function Landing() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-primary text-primary-foreground">
+      <section className="py-16 bg-primary text-primary-foreground">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Transform Your Quoting Process?</h2>
           <p className="text-lg mb-8 max-w-2xl mx-auto opacity-90">
@@ -673,7 +673,7 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t py-12">
+      <footer className="border-t py-8">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
