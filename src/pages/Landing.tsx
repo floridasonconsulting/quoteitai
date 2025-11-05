@@ -19,7 +19,8 @@ import {
   MousePointerClick,
   ArrowRight,
   Star,
-  Play
+  Play,
+  Mail
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Autoplay from "embla-carousel-autoplay";
@@ -61,6 +62,11 @@ export default function Landing() {
       description: "Generate branded, polished quote documents with custom company information"
     },
     {
+      icon: Mail,
+      title: "Professional Email Communication",
+      description: "Send branded HTML emails with editable templates, download buttons, and automated follow-ups"
+    },
+    {
       icon: Clock,
       title: "Quote Aging Tracking",
       description: "Visual indicators show quote freshness - never miss a follow-up opportunity"
@@ -78,6 +84,12 @@ export default function Landing() {
       title: "Save Time",
       stat: "10x faster",
       description: "Create professional quotes in minutes, not hours, with AI automation"
+    },
+    {
+      icon: Mail,
+      title: "Professional Communication",
+      stat: "100% branded",
+      description: "Send beautiful, customized emails that reinforce your brand and close more deals"
     },
     {
       icon: TrendingUp,
@@ -105,6 +117,7 @@ export default function Landing() {
       features: [
         "Basic features",
         "Limited quotes per month",
+        "Basic email notifications",
         "Standard PDF export",
         "Email support"
       ],
@@ -116,9 +129,11 @@ export default function Landing() {
       price: "$9.99",
       period: "per month",
       annualPrice: "$99/year (save $20)",
-      description: "For growing businesses",
+      description: "For growing businesses with professional communication",
       features: [
         "50 quotes per month",
+        "Professional HTML emails",
+        "Editable email templates",
         "Basic AI features",
         "Customer management",
         "Item catalog",
@@ -133,9 +148,11 @@ export default function Landing() {
       price: "$19.99",
       period: "per month",
       annualPrice: "$199/year (save $40)",
-      description: "Unlimited power",
+      description: "Unlimited quotes + automated professional emails",
       features: [
         "Unlimited quotes",
+        "Unlimited professional emails",
+        "Advanced email automation",
         "Advanced AI features",
         "AI quote generation",
         "AI terms & conditions",
@@ -154,6 +171,11 @@ export default function Landing() {
       role: "Contractor, BuildRight Co."
     },
     {
+      quote: "The professional HTML emails have transformed how we communicate with clients. Our quotes look amazing and the download button makes it so easy for customers.",
+      author: "Jennifer Rodriguez",
+      role: "Business Owner, JR Services"
+    },
+    {
       quote: "The aging alerts are a game-changer. We're following up at the perfect time and closing more deals.",
       author: "Michael Chen",
       role: "Sales Consultant"
@@ -168,7 +190,7 @@ export default function Landing() {
   const heroFeatures = [
     { icon: Sparkles, text: "AI-powered quote generation" },
     { icon: BarChart3, text: "Real-time analytics dashboard" },
-    { icon: Clock, text: "Smart aging alerts" },
+    { icon: Mail, text: "Professional email automation" },
     { icon: Smartphone, text: "Works on any device" }
   ];
 
@@ -180,6 +202,13 @@ export default function Landing() {
       icon: FileText,
       description: 'From customer selection to PDF generation in under 60 seconds',
       steps: ['Select customer', 'Add items', 'AI generates details', 'Export PDF']
+    },
+    {
+      id: 'email-quote',
+      title: 'Email a Quote',
+      icon: Mail,
+      description: 'Send professional branded emails with one click',
+      steps: ['Create quote & generate AI summary', 'Customize email subject & body', 'Preview branded HTML email', 'Send with download button']
     },
     {
       id: 'track-quotes',
@@ -240,7 +269,7 @@ export default function Landing() {
                 </span>
               </h1>
               <p className="text-xl text-muted-foreground">
-                Smart quote management powered by AI. Track quotes, manage customers, and never miss a follow-up opportunity.
+                Smart quote management powered by AI. Create quotes, send professional branded emails, and close more deals with automated follow-ups.
               </p>
               <div className="grid grid-cols-2 gap-4">
                 {heroFeatures.map((feature, idx) => (
@@ -374,10 +403,11 @@ export default function Landing() {
           </div>
           
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 mb-8 h-auto">
+            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 mb-8 h-auto">
               <TabsTrigger value="dashboard" className="text-xs sm:text-sm">Dashboard</TabsTrigger>
               <TabsTrigger value="quotes" className="text-xs sm:text-sm">Quotes</TabsTrigger>
               <TabsTrigger value="new-quote" className="text-xs sm:text-sm">Create</TabsTrigger>
+              <TabsTrigger value="email-editor" className="text-xs sm:text-sm">Email</TabsTrigger>
               <TabsTrigger value="customers" className="text-xs sm:text-sm">Customers</TabsTrigger>
               <TabsTrigger value="items" className="text-xs sm:text-sm">Catalog</TabsTrigger>
               <TabsTrigger value="mobile" className="text-xs sm:text-sm">Mobile</TabsTrigger>

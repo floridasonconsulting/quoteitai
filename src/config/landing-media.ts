@@ -59,6 +59,14 @@ export const interactiveScreenshots: MediaAsset[] = [
     category: "ai-features",
   },
   {
+    id: "email-editor",
+    title: "Email Editor",
+    description: "Customize and preview professional emails",
+    image: "/screenshots/email-editor.png",
+    badge: "Pro Feature",
+    category: "core",
+  },
+  {
     id: "customers",
     title: "Customers",
     description: "Customer management",
