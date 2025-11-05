@@ -19,6 +19,7 @@ interface AuthContextType {
   subscription: SubscriptionData | null;
   userRole: UserRole | null;
   isAdmin: boolean;
+  isMaxAITier: boolean;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -43,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const roleCheckInProgress = useRef(false);
 
   const isAdmin = userRole === 'admin';
+  const isMaxAITier = userRole === 'max' || userRole === 'admin';
 
   const checkUserRole = async (sessionToUse?: Session | null) => {
     // Prevent duplicate role checks
@@ -330,6 +332,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         subscription,
         userRole,
         isAdmin,
+        isMaxAITier,
         loading,
         signUp,
         signIn,

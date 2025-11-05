@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Home, Users, Package, FileText, Settings, Moon, Sun, CreditCard, LogOut, HelpCircle, Activity, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { SyncIndicator } from '@/components/SyncIndicator';
 import { useNotificationsSystem } from '@/hooks/useNotificationsSystem';
+import { useDynamicFavicon } from '@/hooks/useDynamicFavicon';
+import { getSettings } from '@/lib/db-service';
 
 interface LayoutProps {
   children: ReactNode;
@@ -29,8 +31,23 @@ export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const { signOut, userRole } = useAuth();
+  const { signOut, userRole, user } = useAuth();
   const { unreadCount, markAllAsRead } = useNotificationsSystem();
+  const [companyLogo, setCompanyLogo] = useState<string>();
+
+  // Load company logo for dynamic favicon
+  useEffect(() => {
+    if (user?.id) {
+      getSettings(user.id).then(settings => {
+        if (settings.logo) {
+          setCompanyLogo(settings.logo);
+        }
+      }).catch(console.error);
+    }
+  }, [user?.id]);
+
+  // Apply dynamic favicon for Max AI tier
+  useDynamicFavicon(companyLogo);
 
   return (
     <div className="min-h-screen flex flex-col bg-background pb-16 md:pb-0">

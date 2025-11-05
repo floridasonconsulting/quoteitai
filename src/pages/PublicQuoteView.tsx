@@ -17,23 +17,40 @@ export default function PublicQuoteView() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [settings, setSettings] = useState<CompanySettings | null>(null);
+  const [isMaxAITier, setIsMaxAITier] = useState(false);
 
   useEffect(() => {
     loadQuote();
   }, [shareToken]);
 
-  // Update browser title with company name
+  // Update browser title and favicon with company branding
   useEffect(() => {
     const originalTitle = document.title;
+    const originalFavicon = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
+    const originalFaviconHref = originalFavicon?.href;
     
     if (settings?.name) {
       document.title = `${settings.name} - Proposal`;
+      
+      // Apply custom favicon for Max AI tier users
+      if (isMaxAITier && settings.logo) {
+        let faviconLink = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
+        if (!faviconLink) {
+          faviconLink = document.createElement('link');
+          faviconLink.rel = 'icon';
+          document.head.appendChild(faviconLink);
+        }
+        faviconLink.href = settings.logo;
+      }
     }
 
     return () => {
       document.title = originalTitle;
+      if (originalFaviconHref && originalFavicon) {
+        originalFavicon.href = originalFaviconHref;
+      }
     };
-  }, [settings]);
+  }, [settings, isMaxAITier]);
 
   const loadQuote = async () => {
     if (!shareToken) return;
@@ -125,6 +142,17 @@ export default function PublicQuoteView() {
           terms: settingsData.terms,
           proposalTemplate: (settingsData.proposal_template as 'classic' | 'modern' | 'detailed') || 'classic',
         });
+      }
+
+      // Check if quote owner is Max AI tier (for white-label branding)
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', quoteData.user_id)
+        .single();
+
+      if (roleData && (roleData.role === 'max' || roleData.role === 'admin')) {
+        setIsMaxAITier(true);
       }
 
       // Update viewed_at timestamp

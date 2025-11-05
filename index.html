@@ -23,7 +23,7 @@
     
     <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/VEekRH7w9FZzmIFS6hWKoZzPh8q1/social-images/social-1759413979040-Quote-it.png">
     
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="manifest" href="/manifest.json" id="pwa-manifest" />
     
     <!-- Preload critical above-the-fold screenshot -->
     <link rel="preload" as="image" href="/screenshots/dashboard.png" fetchpriority="high">
@@ -40,5 +40,47 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Dynamic manifest loading for white-label branding -->
+    <script>
+      // Update manifest link for Max AI tier users with custom branding
+      const updateManifest = () => {
+        try {
+          const authKey = 'sb-onxyqhixydadpnkvdtvm-auth-token';
+          const authData = localStorage.getItem(authKey);
+          
+          if (authData) {
+            const parsedAuth = JSON.parse(authData);
+            const userId = parsedAuth?.user?.id;
+            
+            if (userId) {
+              const manifestLink = document.getElementById('pwa-manifest');
+              const supabaseUrl = 'https://onxyqhixydadpnkvdtvm.supabase.co';
+              const dynamicManifestUrl = `${supabaseUrl}/functions/v1/generate-manifest?userId=${userId}`;
+              
+              if (manifestLink) {
+                manifestLink.setAttribute('href', dynamicManifestUrl);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Failed to update manifest:', error);
+        }
+      };
+      
+      // Update on page load
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', updateManifest);
+      } else {
+        updateManifest();
+      }
+      
+      // Update on auth state change
+      window.addEventListener('storage', (e) => {
+        if (e.key?.includes('auth-token')) {
+          updateManifest();
+        }
+      });
+    </script>
   </body>
 </html>

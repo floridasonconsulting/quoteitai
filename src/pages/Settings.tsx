@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset, AlertTriangle, ChevronDown, RefreshCw, Shield, Sparkles, AlertCircle, Upload, Download, FileDown, Check, Loader2, Zap, Database, CheckCircle, XCircle, Clock, CreditCard, Activity } from 'lucide-react';
+import { Building2, Save, Trash2, Bell, Sun, Moon, Sunset, AlertTriangle, ChevronDown, RefreshCw, Shield, Sparkles, AlertCircle, Upload, Download, FileDown, Check, Loader2, Zap, Database, CheckCircle, XCircle, Clock, CreditCard, Activity, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -52,7 +52,7 @@ export default function Settings() {
   const navigate = useNavigate();
   const { permission, requestPermission, isSupported } = useNotifications();
   const { themeMode, setThemeMode } = useTheme();
-  const { user, userRole, isAdmin, updateUserRole, checkUserRole, subscription, refreshSubscription } = useAuth();
+  const { user, userRole, isAdmin, isMaxAITier, updateUserRole, checkUserRole, subscription, refreshSubscription } = useAuth();
   const { queueChange, pauseSync, resumeSync, isOnline, isSyncing, pendingCount, failedCount } = useSyncManager();
   const { getActiveOperations } = useLoadingState();
   
@@ -74,6 +74,7 @@ export default function Settings() {
   const [subscriptionOpen, setSubscriptionOpen] = useState(false);
   const [templatePreference, setTemplatePreference] = useState(getTemplatePreference());
   const templateDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [cacheInfo, setCacheInfo] = useState({
     customers: localStorage.getItem('customers-cache')?.length || 0,
     items: localStorage.getItem('items-cache')?.length || 0,
@@ -160,14 +161,53 @@ export default function Settings() {
     }
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, logo: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+    if (!file || !user?.id) return;
+
+    // Check if user is Max AI tier
+    if (!isMaxAITier) {
+      toast.error('White-label branding is exclusive to Max AI tier');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo file size must be less than 2MB');
+      return;
+    }
+
+    // Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Logo must be PNG, JPG, WEBP, or SVG');
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/logo.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('company-logos')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('company-logos')
+        .getPublicUrl(fileName);
+
+      setFormData({ ...formData, logo: publicUrl });
+      toast.success('Logo uploaded successfully');
+    } catch (error) {
+      console.error('Logo upload error:', error);
+      toast.error('Failed to upload logo');
+    } finally {
+      setUploadingLogo(false);
     }
   };
 
@@ -636,6 +676,7 @@ export default function Settings() {
         'Unlimited items',
         'Advanced AI features',
         'AI-powered quote generation',
+        'White-label branding (custom logo & favicon)',
         'Priority support',
       ],
     },
@@ -650,6 +691,7 @@ export default function Settings() {
         'Unlimited items',
         'Advanced AI features',
         'AI-powered quote generation',
+        'White-label branding (custom logo & favicon)',
         '24/7 priority support',
         'Save $40 vs monthly',
       ],
@@ -666,33 +708,68 @@ export default function Settings() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Company Information - Moved to Top */}
-        <Card>
+        {/* White-Label Branding Section - Max AI Tier Only */}
+        <Card className={isMaxAITier ? 'border-primary/50 shadow-lg' : 'border-muted'}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Company Information
+              <Crown className="h-5 w-5 text-primary" />
+              White-Label Branding
+              {isMaxAITier ? (
+                <Badge variant="default" className="ml-2">Max AI</Badge>
+              ) : (
+                <Badge variant="outline" className="ml-2">Max AI Required</Badge>
+              )}
             </CardTitle>
             <CardDescription>
-              This information will appear on your quotes
+              {isMaxAITier 
+                ? 'Customize your brand identity with custom logo and favicon'
+                : 'Upgrade to Max AI tier to unlock white-label branding features'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {!isMaxAITier && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  White-label branding is exclusive to Max AI tier subscribers. This includes custom logo uploads,
+                  dynamic favicon for your quotes, and complete brand customization.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <div className="space-y-2">
-              <Label htmlFor="logo">Company Logo</Label>
+              <Label htmlFor="logo">Company Logo for Branding</Label>
               <Input
                 id="logo"
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
                 onChange={handleLogoUpload}
+                disabled={!isMaxAITier || uploadingLogo}
               />
+              <p className="text-xs text-muted-foreground">
+                {isMaxAITier 
+                  ? 'Upload your logo (max 2MB, PNG/JPG/WEBP/SVG). This will be used as your custom favicon and on quotes.'
+                  : 'Upgrade to Max AI to upload custom logos'}
+              </p>
+              {uploadingLogo && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Uploading logo...
+                </div>
+              )}
               {formData.logo && (
-                <div className="mt-2">
+                <div className="mt-2 p-4 border rounded-lg bg-muted/30">
+                  <p className="text-sm font-medium mb-2">Current Logo:</p>
                   <img
                     src={formData.logo}
                     alt="Company Logo"
-                    className="h-20 object-contain"
+                    className="h-20 object-contain bg-background p-2 rounded"
                   />
+                  {isMaxAITier && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      ✓ This logo is being used as your custom favicon
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -704,21 +781,37 @@ export default function Settings() {
                 onValueChange={(value: 'logo' | 'name' | 'both') => 
                   setFormData({ ...formData, logoDisplayOption: value })
                 }
+                disabled={!isMaxAITier}
               >
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="logo" id="logo-only" />
+                  <RadioGroupItem value="logo" id="logo-only" disabled={!isMaxAITier} />
                   <Label htmlFor="logo-only" className="font-normal cursor-pointer">Logo only</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="name" id="name-only" />
+                  <RadioGroupItem value="name" id="name-only" disabled={!isMaxAITier} />
                   <Label htmlFor="name-only" className="font-normal cursor-pointer">Company name only</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="both" id="both" />
+                  <RadioGroupItem value="both" id="both" disabled={!isMaxAITier} />
                   <Label htmlFor="both" className="font-normal cursor-pointer">Both logo and name</Label>
                 </div>
               </RadioGroup>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Company Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Company Information
+            </CardTitle>
+            <CardDescription>
+              This information will appear on your quotes
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
 
             <div className="space-y-2">
               <Label>Proposal Template</Label>
