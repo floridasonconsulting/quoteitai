@@ -20,15 +20,30 @@ import {
   ArrowRight,
   Star,
   Play,
-  Mail
+  Mail,
+  ChevronUp
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Autoplay from "embla-carousel-autoplay";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { heroScreenshots, interactiveScreenshots } from "@/config/landing-media";
 
 export default function Landing() {
   const navigate = useNavigate();
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const features = [
     {
@@ -714,6 +729,18 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+
+      {/* Scroll to Top Button */}
+      <Button
+        onClick={scrollToTop}
+        size="icon"
+        className={`fixed bottom-6 right-6 rounded-full shadow-lg transition-all duration-300 z-40 ${
+          showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16 pointer-events-none'
+        }`}
+        aria-label="Scroll to top"
+      >
+        <ChevronUp className="h-5 w-5" />
+      </Button>
     </div>
   );
 }
