@@ -2,8 +2,21 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { supabase } from '@/integrations/supabase/client';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { ReactNode } from 'react';
 
 vi.mock('@/integrations/supabase/client');
+
+// Mock useAuth directly without AuthProvider to avoid context issues
+vi.mock('@/contexts/AuthContext', () => ({
+  AuthProvider: ({ children }: { children: ReactNode }) => children,
+  useAuth: () => ({
+    user: { id: 'test-user-id', email: 'test@example.com' },
+    userRole: 'free',
+    isMaxAITier: false,
+    loading: false,
+  }),
+}));
 
 // Mock online/offline events
 const mockOnline = () => {

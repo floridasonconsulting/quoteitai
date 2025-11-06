@@ -318,8 +318,8 @@ async function createWithCache<T>(
     if (!userId) {
       console.warn(`⚠️ No user ID - saving ${table} to localStorage only. Sign in to save to database.`);
     }
-    const cached = getStorageItem<T[]>(cacheKey, []);
-    setStorageItem<T[]>(cacheKey, [...cached, itemWithUser]);
+    const cached = getCachedData<T>(cacheKey) || [];
+    setCachedData<T>(cacheKey, [...cached, itemWithUser]);
     queueChange?.({ type: 'create', table, data: toSnakeCase(itemWithUser) });
     return itemWithUser;
   }
