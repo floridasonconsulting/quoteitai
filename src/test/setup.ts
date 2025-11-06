@@ -9,9 +9,8 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 };
 
-// Mock Supabase client with comprehensive chain support
-vi.mock('@/integrations/supabase/client', () => {
-  // Create reusable mock chain builders with defensive returns
+// CRITICAL: Use vi.hoisted() to ensure mock factories are created BEFORE any imports
+const { createSelectChain, createUpdateChain, createDeleteChain, createFromHandler } = vi.hoisted(() => {
   const createSelectChain = () => {
     const chain = {
       eq: vi.fn(() => ({
@@ -55,21 +54,22 @@ vi.mock('@/integrations/supabase/client', () => {
     })),
   });
 
-  // Create a persistent from handler that returns consistent mock objects
-  const createFromHandler = () => {
-    const fromMock = {
-      select: vi.fn((...args) => createSelectChain()),
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({ data: null, error: null }),
-        })),
+  const createFromHandler = () => ({
+    select: vi.fn((...args) => createSelectChain()),
+    insert: vi.fn(() => ({
+      select: vi.fn(() => ({
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
       })),
-      update: vi.fn(() => createUpdateChain()),
-      delete: vi.fn(() => createDeleteChain()),
-    };
-    return fromMock;
-  };
+    })),
+    update: vi.fn(() => createUpdateChain()),
+    delete: vi.fn(() => createDeleteChain()),
+  });
 
+  return { createSelectChain, createUpdateChain, createDeleteChain, createFromHandler };
+});
+
+// Now mock the Supabase client using the hoisted factories
+vi.mock('@/integrations/supabase/client', () => {
   return {
     supabase: {
       auth: {
