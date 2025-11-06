@@ -11,29 +11,38 @@ global.ResizeObserver = class ResizeObserver {
 
 // Mock Supabase client with comprehensive chain support
 vi.mock('@/integrations/supabase/client', () => {
-  // Create reusable mock chain builders
-  const createSelectChain = () => ({
-    eq: vi.fn(() => ({
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+  // Create reusable mock chain builders with defensive returns
+  const createSelectChain = () => {
+    const chain = {
+      eq: vi.fn(() => ({
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        order: vi.fn(() => ({
+          limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+        })),
+      })),
       order: vi.fn(() => ({
         limit: vi.fn().mockResolvedValue({ data: [], error: null }),
       })),
-    })),
-    order: vi.fn(() => ({
-      limit: vi.fn().mockResolvedValue({ data: [], error: null }),
-    })),
-  });
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    // Make it thenable so it can be awaited directly
+    Object.assign(chain, Promise.resolve({ data: [], error: null }));
+    return chain;
+  };
 
   const createUpdateChain = () => {
-    const eqChain = {
-      eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+    const updateResult = { data: null, error: null };
+    const eqResult = {
+      ...updateResult,
+      eq: vi.fn(() => updateResult),
       select: vi.fn(() => ({
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
       })),
     };
     return {
-      eq: vi.fn(() => eqChain),
+      eq: vi.fn(() => eqResult),
       select: vi.fn(() => ({
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
       })),
@@ -46,6 +55,21 @@ vi.mock('@/integrations/supabase/client', () => {
     })),
   });
 
+  // Create a persistent from handler that returns consistent mock objects
+  const createFromHandler = () => {
+    const fromMock = {
+      select: vi.fn((...args) => createSelectChain()),
+      insert: vi.fn(() => ({
+        select: vi.fn(() => ({
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        })),
+      })),
+      update: vi.fn(() => createUpdateChain()),
+      delete: vi.fn(() => createDeleteChain()),
+    };
+    return fromMock;
+  };
+
   return {
     supabase: {
       auth: {
@@ -57,16 +81,7 @@ vi.mock('@/integrations/supabase/client', () => {
           data: { subscription: { unsubscribe: vi.fn() } },
         })),
       },
-      from: vi.fn(() => ({
-        select: vi.fn(() => createSelectChain()),
-        insert: vi.fn(() => ({
-          select: vi.fn(() => ({
-            single: vi.fn().mockResolvedValue({ data: null, error: null }),
-          })),
-        })),
-        update: vi.fn(() => createUpdateChain()),
-        delete: vi.fn(() => createDeleteChain()),
-      })),
+      from: vi.fn((table) => createFromHandler()),
       storage: {
         from: vi.fn(() => ({
           upload: vi.fn().mockResolvedValue({ data: null, error: null }),
