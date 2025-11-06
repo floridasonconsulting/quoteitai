@@ -33,26 +33,19 @@ const { createSelectChain, createUpdateChain, createDeleteChain, createFromHandl
   };
 
   const createUpdateChain = () => {
-    const updateResult = { data: null, error: null };
-    const eqResult = {
-      ...updateResult,
-      eq: vi.fn(() => updateResult),
+    const chain = {
+      eq: vi.fn().mockResolvedValue({ data: null, error: null }),
       select: vi.fn(() => ({
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
       })),
     };
-    return {
-      eq: vi.fn(() => eqResult),
-      select: vi.fn(() => ({
-        single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      })),
-    };
+    // Make it thenable so it can be awaited directly
+    Object.assign(chain, Promise.resolve({ data: null, error: null }));
+    return chain;
   };
 
   const createDeleteChain = () => ({
-    eq: vi.fn(() => ({
-      eq: vi.fn().mockResolvedValue({ data: null, error: null }),
-    })),
+    eq: vi.fn().mockResolvedValue({ data: null, error: null }),
   });
 
   const createFromHandler = () => ({
@@ -82,7 +75,10 @@ vi.mock('@/integrations/supabase/client', () => {
           data: { subscription: { unsubscribe: vi.fn() } },
         })),
       },
-      from: vi.fn((table) => createFromHandler()),
+      from: vi.fn((table) => {
+        const handler = createFromHandler();
+        return handler;
+      }),
       storage: {
         from: vi.fn(() => ({
           upload: vi.fn().mockResolvedValue({ data: null, error: null }),
