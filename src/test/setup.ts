@@ -75,7 +75,10 @@ vi.mock('@/integrations/supabase/client', () => {
           data: { subscription: { unsubscribe: vi.fn() } },
         })),
       },
-      from: (table) => createFromHandler(),
+      from: vi.fn((table) => {
+        const handler = createFromHandler();
+        return handler;
+      }),
       storage: {
         from: vi.fn(() => ({
           upload: vi.fn().mockResolvedValue({ data: null, error: null }),
