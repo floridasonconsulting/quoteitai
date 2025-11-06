@@ -6,8 +6,6 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import Settings from '@/pages/Settings';
 import PublicQuoteView from '@/pages/PublicQuoteView';
 
-vi.mock('@/integrations/supabase/client');
-
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <BrowserRouter>
     <ThemeProvider>{children}</ThemeProvider>

@@ -5,8 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ReactNode } from 'react';
 
-vi.mock('@/integrations/supabase/client');
-
 // Mock useAuth directly without AuthProvider to avoid context issues
 vi.mock('@/contexts/AuthContext', () => ({
   AuthProvider: ({ children }: { children: ReactNode }) => children,
