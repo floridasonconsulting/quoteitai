@@ -58,6 +58,7 @@
 - ✅ **CRITICAL FIX**: Removed redundant `vi.mock('@/integrations/supabase/client')` calls from test files that were overriding the setup.ts mock
 - ✅ **CRITICAL FIX**: Fixed useSyncManager tests to not override the comprehensive Supabase mock - tests now properly mock full `.select().eq().maybeSingle()` chains
 - ✅ **CRITICAL FIX**: Enhanced Supabase mock to return table-aware mock data (company_settings with logo_url, user_roles, etc.) for better test coverage
+- ✅ **CRITICAL FIX**: Fixed Settings white-label test text matcher to match actual component text ("Company Logo for Branding")
 - ✅ **PROGRESS**: 111 tests now passing (up from 75) - white-label, tier-based, and offline CRUD tests working
 - ✅ Strengthened Supabase mock with comprehensive chain builders and thenable select chains for robustness
 

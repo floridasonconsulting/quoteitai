@@ -41,7 +41,7 @@ describe('Settings - White-Label Branding', () => {
       expect(getByText(/White-label branding is available/i)).toBeInTheDocument();
     });
 
-    it('should show logo upload for Max AI tier users', () => {
+    it('should show logo upload for Max AI tier users', async () => {
       vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
         user: { id: 'user-123' },
         isMaxAITier: true,
@@ -50,8 +50,10 @@ describe('Settings - White-Label Branding', () => {
 
       const { getByText, queryByText } = renderSettings();
 
-      expect(getByText(/Upload Company Logo/i)).toBeInTheDocument();
-      expect(queryByText(/Upgrade to Max AI/i)).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(getByText(/Company Logo for Branding/i)).toBeInTheDocument();
+        expect(queryByText(/Upgrade to Max AI/i)).not.toBeInTheDocument();
+      });
     });
   });
 
@@ -71,7 +73,7 @@ describe('Settings - White-Label Branding', () => {
         type: 'image/png',
       });
 
-      const input = getByLabelText(/Upload Company Logo/i) as HTMLInputElement;
+      const input = getByLabelText(/Company Logo for Branding/i) as HTMLInputElement;
       const user = userEvent.setup();
       
       await user.upload(input, file);
@@ -94,7 +96,7 @@ describe('Settings - White-Label Branding', () => {
         type: 'application/pdf',
       });
 
-      const input = getByLabelText(/Upload Company Logo/i) as HTMLInputElement;
+      const input = getByLabelText(/Company Logo for Branding/i) as HTMLInputElement;
       const user = userEvent.setup();
       
       await user.upload(input, file);
@@ -134,7 +136,7 @@ describe('Settings - White-Label Branding', () => {
       const { getByLabelText } = renderSettings();
 
       const file = new File(['logo'], 'logo.png', { type: 'image/png' });
-      const input = getByLabelText(/Upload Company Logo/i) as HTMLInputElement;
+      const input = getByLabelText(/Company Logo for Branding/i) as HTMLInputElement;
       const user = userEvent.setup();
       
       await user.upload(input, file);
