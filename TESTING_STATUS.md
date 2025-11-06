@@ -53,6 +53,7 @@
 - ✅ **CRITICAL FIX**: Fixed useSyncManager context conflict by removing `AuthProvider` wrapper and mocking `useAuth` directly
 - ✅ **CRITICAL FIX**: Fixed Supabase `createUpdateChain()` to properly handle `.update().eq()` method chains
 - ✅ **CRITICAL FIX**: Fixed Supabase `.from().select()` chain failure - refactored to use `createFromHandler()` that creates fresh mock objects for each call
+- ✅ **CRITICAL FIX**: Fixed Vitest module hoisting issue - moved ENTIRE Supabase mock object creation into `vi.hoisted()` scope (not just factories) to ensure the mock is fully constructed BEFORE any module imports
 - ✅ Strengthened Supabase mock with comprehensive chain builders and thenable select chains for robustness
 
 ## ✅ White-Label Branding Tests (COMPLETED & FIXED)

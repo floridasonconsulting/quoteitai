@@ -9,9 +9,9 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 };
 
-// Mock Supabase client with comprehensive chain support
-vi.mock('@/integrations/supabase/client', () => {
-  // Create reusable mock chain builders with defensive returns
+// CRITICAL: Use vi.hoisted() to ensure ALL mock creation happens BEFORE any imports
+const { mockSupabase } = vi.hoisted(() => {
+  // Create mock factory functions
   const createSelectChain = () => {
     const chain = {
       eq: vi.fn(() => ({
@@ -55,46 +55,50 @@ vi.mock('@/integrations/supabase/client', () => {
     })),
   });
 
-  // Create a persistent from handler that returns consistent mock objects
-  const createFromHandler = () => {
-    const fromMock = {
-      select: vi.fn((...args) => createSelectChain()),
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+  const createFromHandler = () => ({
+    select: vi.fn((...args) => createSelectChain()),
+    insert: vi.fn(() => ({
+      select: vi.fn(() => ({
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      })),
+    })),
+    update: vi.fn(() => createUpdateChain()),
+    delete: vi.fn(() => createDeleteChain()),
+  });
+
+  // Create the entire Supabase mock object in hoisted scope
+  const mockSupabase = {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({
+        data: { session: null },
+        error: null,
+      }),
+      onAuthStateChange: vi.fn(() => ({
+        data: { subscription: { unsubscribe: vi.fn() } },
+      })),
+    },
+    from: vi.fn((table) => createFromHandler()),
+    storage: {
+      from: vi.fn(() => ({
+        upload: vi.fn().mockResolvedValue({ data: null, error: null }),
+        remove: vi.fn().mockResolvedValue({ data: null, error: null }),
+        getPublicUrl: vi.fn(() => ({
+          data: { publicUrl: 'https://example.com/logo.png' },
         })),
       })),
-      update: vi.fn(() => createUpdateChain()),
-      delete: vi.fn(() => createDeleteChain()),
-    };
-    return fromMock;
+    },
+    functions: {
+      invoke: vi.fn().mockResolvedValue({ data: null, error: null }),
+    },
   };
 
+  return { mockSupabase };
+});
+
+// Now use the hoisted mock
+vi.mock('@/integrations/supabase/client', () => {
   return {
-    supabase: {
-      auth: {
-        getSession: vi.fn().mockResolvedValue({
-          data: { session: null },
-          error: null,
-        }),
-        onAuthStateChange: vi.fn(() => ({
-          data: { subscription: { unsubscribe: vi.fn() } },
-        })),
-      },
-      from: vi.fn((table) => createFromHandler()),
-      storage: {
-        from: vi.fn(() => ({
-          upload: vi.fn().mockResolvedValue({ data: null, error: null }),
-          remove: vi.fn().mockResolvedValue({ data: null, error: null }),
-          getPublicUrl: vi.fn(() => ({
-            data: { publicUrl: 'https://example.com/logo.png' },
-          })),
-        })),
-      },
-      functions: {
-        invoke: vi.fn().mockResolvedValue({ data: null, error: null }),
-      },
-    },
+    supabase: mockSupabase,
   };
 });
 
