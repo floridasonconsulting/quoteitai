@@ -11,36 +11,80 @@ global.ResizeObserver = class ResizeObserver {
 
 // CRITICAL: Use vi.hoisted() to hoist factory functions BEFORE module imports
 const { createSelectChain, createUpdateChain, createDeleteChain, createFromHandler } = vi.hoisted(() => {
-  // Create mock factory functions
-  const createSelectChain = () => {
+  // Create mock factory functions with table-aware data
+  const getMockDataForTable = (tableName: string) => {
+    const mockData: Record<string, any> = {
+      company_settings: {
+        id: 'settings-1',
+        user_id: 'user-123',
+        logo_url: 'https://example.com/logo.png',
+        logo_display_option: 'name',
+        proposal_template: 'detailed',
+        notify_email_accepted: true,
+        notify_email_declined: true,
+      },
+      user_roles: {
+        user_id: 'user-123',
+        role: 'max',
+      },
+      quotes: [],
+      customers: [],
+      items: [],
+    };
+    return mockData[tableName] || null;
+  };
+
+  const createSelectChain = (tableName?: string) => {
+    const mockData = tableName ? getMockDataForTable(tableName) : null;
     const chain = {
       eq: vi.fn(() => ({
-        single: vi.fn().mockResolvedValue({ data: null, error: null }),
-        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        single: vi.fn().mockResolvedValue({ 
+          data: mockData, 
+          error: null 
+        }),
+        maybeSingle: vi.fn().mockResolvedValue({ 
+          data: mockData, 
+          error: null 
+        }),
         order: vi.fn(() => ({
-          limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+          limit: vi.fn().mockResolvedValue({ 
+            data: Array.isArray(mockData) ? mockData : (mockData ? [mockData] : []), 
+            error: null 
+          }),
         })),
       })),
       order: vi.fn(() => ({
-        limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+        limit: vi.fn().mockResolvedValue({ 
+          data: Array.isArray(mockData) ? mockData : (mockData ? [mockData] : []), 
+          error: null 
+        }),
       })),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      single: vi.fn().mockResolvedValue({ 
+        data: mockData, 
+        error: null 
+      }),
+      maybeSingle: vi.fn().mockResolvedValue({ 
+        data: mockData, 
+        error: null 
+      }),
     };
     // Make it thenable so it can be awaited directly
-    Object.assign(chain, Promise.resolve({ data: [], error: null }));
+    Object.assign(chain, Promise.resolve({ 
+      data: Array.isArray(mockData) ? mockData : (mockData ? [mockData] : []), 
+      error: null 
+    }));
     return chain;
   };
 
   const createUpdateChain = () => {
     const chain = {
-      eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+      eq: vi.fn().mockResolvedValue({ data: {}, error: null }),
       select: vi.fn(() => ({
-        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        single: vi.fn().mockResolvedValue({ data: {}, error: null }),
       })),
     };
     // Make it thenable so it can be awaited directly
-    Object.assign(chain, Promise.resolve({ data: null, error: null }));
+    Object.assign(chain, Promise.resolve({ data: {}, error: null }));
     return chain;
   };
 
@@ -48,11 +92,11 @@ const { createSelectChain, createUpdateChain, createDeleteChain, createFromHandl
     eq: vi.fn().mockResolvedValue({ data: null, error: null }),
   });
 
-  const createFromHandler = () => ({
-    select: vi.fn(() => createSelectChain()),
+  const createFromHandler = (tableName: string) => ({
+    select: vi.fn(() => createSelectChain(tableName)),
     insert: vi.fn(() => ({
       select: vi.fn(() => ({
-        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        single: vi.fn().mockResolvedValue({ data: {}, error: null }),
       })),
     })),
     update: vi.fn(() => createUpdateChain()),
@@ -76,7 +120,7 @@ vi.mock('@/integrations/supabase/client', () => {
         })),
       },
       from: vi.fn((table) => {
-        const handler = createFromHandler();
+        const handler = createFromHandler(table);
         return handler;
       }),
       storage: {
