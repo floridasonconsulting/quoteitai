@@ -9,8 +9,8 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 };
 
-// CRITICAL: Use vi.hoisted() to ensure ALL mock creation happens BEFORE any imports
-const { mockSupabase } = vi.hoisted(() => {
+// CRITICAL: Use vi.hoisted() to hoist factory functions BEFORE module imports
+const { createSelectChain, createUpdateChain, createDeleteChain, createFromHandler } = vi.hoisted(() => {
   // Create mock factory functions
   const createSelectChain = () => {
     const chain = {
@@ -56,7 +56,7 @@ const { mockSupabase } = vi.hoisted(() => {
   });
 
   const createFromHandler = () => ({
-    select: vi.fn((...args) => createSelectChain()),
+    select: vi.fn(() => createSelectChain()),
     insert: vi.fn(() => ({
       select: vi.fn(() => ({
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
@@ -66,39 +66,36 @@ const { mockSupabase } = vi.hoisted(() => {
     delete: vi.fn(() => createDeleteChain()),
   });
 
-  // Create the entire Supabase mock object in hoisted scope
-  const mockSupabase = {
-    auth: {
-      getSession: vi.fn().mockResolvedValue({
-        data: { session: null },
-        error: null,
-      }),
-      onAuthStateChange: vi.fn(() => ({
-        data: { subscription: { unsubscribe: vi.fn() } },
-      })),
-    },
-    from: vi.fn((table) => createFromHandler()),
-    storage: {
-      from: vi.fn(() => ({
-        upload: vi.fn().mockResolvedValue({ data: null, error: null }),
-        remove: vi.fn().mockResolvedValue({ data: null, error: null }),
-        getPublicUrl: vi.fn(() => ({
-          data: { publicUrl: 'https://example.com/logo.png' },
-        })),
-      })),
-    },
-    functions: {
-      invoke: vi.fn().mockResolvedValue({ data: null, error: null }),
-    },
-  };
-
-  return { mockSupabase };
+  return { createSelectChain, createUpdateChain, createDeleteChain, createFromHandler };
 });
 
-// Now use the hoisted mock
+// Now mock Supabase using the hoisted factories
 vi.mock('@/integrations/supabase/client', () => {
   return {
-    supabase: mockSupabase,
+    supabase: {
+      auth: {
+        getSession: vi.fn().mockResolvedValue({
+          data: { session: null },
+          error: null,
+        }),
+        onAuthStateChange: vi.fn(() => ({
+          data: { subscription: { unsubscribe: vi.fn() } },
+        })),
+      },
+      from: vi.fn((table) => createFromHandler()),
+      storage: {
+        from: vi.fn(() => ({
+          upload: vi.fn().mockResolvedValue({ data: null, error: null }),
+          remove: vi.fn().mockResolvedValue({ data: null, error: null }),
+          getPublicUrl: vi.fn(() => ({
+            data: { publicUrl: 'https://example.com/logo.png' },
+          })),
+        })),
+      },
+      functions: {
+        invoke: vi.fn().mockResolvedValue({ data: null, error: null }),
+      },
+    },
   };
 });
 
