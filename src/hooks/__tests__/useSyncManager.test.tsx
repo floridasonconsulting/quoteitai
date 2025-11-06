@@ -7,24 +7,16 @@ import { ReactNode } from 'react';
 
 vi.mock('@/integrations/supabase/client');
 
-// Mock useAuth to provide a test user
-vi.mock('@/contexts/AuthContext', async () => {
-  const actual = await vi.importActual('@/contexts/AuthContext');
-  return {
-    ...actual,
-    useAuth: () => ({
-      user: { id: 'test-user-id', email: 'test@example.com' },
-      userRole: 'free',
-      isMaxAITier: false,
-      loading: false,
-    }),
-  };
-});
-
-// Wrapper with AuthProvider
-const wrapper = ({ children }: { children: ReactNode }) => (
-  <AuthProvider>{children}</AuthProvider>
-);
+// Mock useAuth directly without AuthProvider to avoid context issues
+vi.mock('@/contexts/AuthContext', () => ({
+  AuthProvider: ({ children }: { children: ReactNode }) => children,
+  useAuth: () => ({
+    user: { id: 'test-user-id', email: 'test@example.com' },
+    userRole: 'free',
+    isMaxAITier: false,
+    loading: false,
+  }),
+}));
 
 // Mock online/offline events
 const mockOnline = () => {
@@ -51,7 +43,7 @@ describe('useSyncManager', () => {
   });
 
   it('should initialize with online status', () => {
-    const { result } = renderHook(() => useSyncManager(), { wrapper });
+    const { result } = renderHook(() => useSyncManager());
 
     expect(result.current.isOnline).toBe(true);
     expect(result.current.isSyncing).toBe(false);
@@ -59,7 +51,7 @@ describe('useSyncManager', () => {
   });
 
   it('should detect offline status', async () => {
-    const { result } = renderHook(() => useSyncManager(), { wrapper });
+    const { result } = renderHook(() => useSyncManager());
 
     act(() => {
       mockOffline();
@@ -72,7 +64,7 @@ describe('useSyncManager', () => {
 
   it('should detect online status', async () => {
     mockOffline();
-    const { result } = renderHook(() => useSyncManager(), { wrapper });
+    const { result } = renderHook(() => useSyncManager());
 
     act(() => {
       mockOnline();
@@ -85,7 +77,7 @@ describe('useSyncManager', () => {
 
   it('should queue changes when offline', () => {
     mockOffline();
-    const { result } = renderHook(() => useSyncManager(), { wrapper });
+    const { result } = renderHook(() => useSyncManager());
 
     act(() => {
       result.current.queueChange({
@@ -105,7 +97,7 @@ describe('useSyncManager', () => {
     }));
 
     mockOffline();
-    const { result } = renderHook(() => useSyncManager(), { wrapper });
+    const { result } = renderHook(() => useSyncManager());
 
     act(() => {
       result.current.queueChange({
@@ -138,7 +130,7 @@ describe('useSyncManager', () => {
       insert: mockInsert,
     }));
 
-    const { result } = renderHook(() => useSyncManager(), { wrapper });
+    const { result } = renderHook(() => useSyncManager());
 
     act(() => {
       result.current.queueChange({
@@ -174,7 +166,7 @@ describe('useSyncManager', () => {
       insert: mockInsert,
     }));
 
-    const { result } = renderHook(() => useSyncManager(), { wrapper });
+    const { result } = renderHook(() => useSyncManager());
 
     act(() => {
       result.current.queueChange({
@@ -198,7 +190,7 @@ describe('useSyncManager', () => {
   });
 
   it('should pause and resume sync', () => {
-    const { result } = renderHook(() => useSyncManager(), { wrapper });
+    const { result } = renderHook(() => useSyncManager());
 
     act(() => {
       result.current.pauseSync();
@@ -219,7 +211,7 @@ describe('useSyncManager', () => {
       insert: mockInsert,
     }));
 
-    const { result } = renderHook(() => useSyncManager(), { wrapper });
+    const { result } = renderHook(() => useSyncManager());
 
     act(() => {
       result.current.pauseSync();
@@ -239,7 +231,7 @@ describe('useSyncManager', () => {
   });
 
   it('should persist pending changes to localStorage', () => {
-    const { result } = renderHook(() => useSyncManager(), { wrapper });
+    const { result } = renderHook(() => useSyncManager());
 
     act(() => {
       result.current.queueChange({
@@ -271,7 +263,7 @@ describe('useSyncManager', () => {
       delete: mockDelete,
     }));
 
-    const { result } = renderHook(() => useSyncManager(), { wrapper });
+    const { result } = renderHook(() => useSyncManager());
 
     act(() => {
       result.current.queueChange({

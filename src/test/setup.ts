@@ -25,17 +25,20 @@ vi.mock('@/integrations/supabase/client', () => {
     })),
   });
 
-  const createUpdateChain = () => ({
-    eq: vi.fn(() => ({
+  const createUpdateChain = () => {
+    const eqChain = {
       eq: vi.fn().mockResolvedValue({ data: null, error: null }),
       select: vi.fn(() => ({
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
       })),
-    })),
-    select: vi.fn(() => ({
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-    })),
-  });
+    };
+    return {
+      eq: vi.fn(() => eqChain),
+      select: vi.fn(() => ({
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      })),
+    };
+  };
 
   const createDeleteChain = () => ({
     eq: vi.fn(() => ({
