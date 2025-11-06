@@ -49,6 +49,9 @@
 - ✅ Fixed PublicQuoteView useParams mock to use shareToken instead of id
 - ✅ Added missing `.update()` method to Supabase mock chain
 - ✅ Fixed offline-crud tests to expect `user_id` field in results (matches db-service behavior)
+- ✅ **CRITICAL FIX**: Fixed cache format mismatch in `db-service.ts` - replaced `getStorageItem/setStorageItem` with `getCachedData/setCachedData` in all CRUD functions
+- ✅ Added `AuthProvider` wrapper to all `useSyncManager` tests to fix 11 failing tests
+- ✅ Strengthened Supabase mock with comprehensive chain builders for robustness
 
 ## ✅ White-Label Branding Tests (COMPLETED & FIXED)
 
