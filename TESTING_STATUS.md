@@ -55,6 +55,7 @@
 - ✅ **CRITICAL FIX**: Fixed Supabase `.from().select()` chain failure - refactored to use `createFromHandler()` that creates fresh mock objects for each call
 - ✅ **CRITICAL FIX**: Properly wrapped `from` method with `vi.fn()` that explicitly returns the handler object to ensure mock methods are available
 - ✅ **CRITICAL FIX**: Made `createUpdateChain()` thenable to match Supabase API behavior and allow `.update().eq()` to be awaited
+- ✅ **CRITICAL FIX**: Removed redundant `vi.mock('@/integrations/supabase/client')` calls from test files that were overriding the setup.ts mock
 - ✅ **PROGRESS**: 75 tests now passing (up from 0) - white-label, tier-based, and offline CRUD tests working
 - ✅ Strengthened Supabase mock with comprehensive chain builders and thenable select chains for robustness
 

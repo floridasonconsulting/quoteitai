@@ -3,8 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useAI, AIFeatureType } from '@/hooks/useAI';
 import { supabase } from '@/integrations/supabase/client';
 
-vi.mock('@/integrations/supabase/client');
-
 describe('useAI Tier-Based Access Control', () => {
   beforeEach(() => {
     vi.clearAllMocks();
