@@ -619,20 +619,23 @@ export default function Customers() {
                     </CardHeader>
                     <CardContent className="pt-0">
                       {(customer.address || customer.city) && (
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                            [customer.address, customer.city, customer.state, customer.zip]
+                        <div className="flex items-center gap-2 min-w-0 mb-3">
+                          <MapPin className="h-3 w-3 flex-shrink-0" />
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                              [customer.address, customer.city, customer.state, customer.zip]
+                                .filter(Boolean)
+                                .join(', ')
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-muted-foreground hover:text-primary hover:underline break-words"
+                          >
+                            {[customer.address, customer.city, customer.state, customer.zip]
                               .filter(Boolean)
-                              .join(', ')
-                          )}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-muted-foreground hover:text-primary hover:underline mb-3 break-words block"
-                        >
-                          {[customer.address, customer.city, customer.state, customer.zip]
-                            .filter(Boolean)
-                            .join(', ')}
-                        </a>
+                              .join(', ')}
+                          </a>
+                        </div>
                       )}
                       <div className="flex gap-2">
                         <Button
