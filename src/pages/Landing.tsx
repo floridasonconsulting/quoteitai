@@ -360,7 +360,7 @@ export default function Landing() {
       {/* Features Section */}
       <section id="features" className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
+          <div className="text-center mb-12 animate-fade-in">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything You Need</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Powerful features designed to streamline your quoting process and grow your business
@@ -368,7 +368,7 @@ export default function Landing() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, idx) => (
-              <Card key={idx}>
+              <Card key={idx} className="hover-scale animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
                 <CardHeader>
                   <feature.icon className="h-10 w-10 text-primary mb-2" />
                   <CardTitle className="text-lg">{feature.title}</CardTitle>
@@ -383,7 +383,7 @@ export default function Landing() {
       {/* Benefits Section */}
       <section id="benefits" className="py-16">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
+          <div className="text-center mb-12 animate-fade-in">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Quote-it AI?</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Transform how you create and manage quotes
@@ -391,8 +391,8 @@ export default function Landing() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {benefits.map((benefit, idx) => (
-              <div key={idx} className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+              <div key={idx} className="text-center animate-fade-in" style={{ animationDelay: `${idx * 100}ms` }}>
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4 hover-scale">
                   <benefit.icon className="h-8 w-8 text-primary" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2">{benefit.title}</h3>
@@ -606,7 +606,7 @@ export default function Landing() {
       {/* Pricing Section */}
       <section id="pricing" className="py-16">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
+          <div className="text-center mb-12 animate-fade-in">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Choose the plan that fits your needs. Upgrade or downgrade anytime.
@@ -614,7 +614,7 @@ export default function Landing() {
           </div>
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {pricingPlans.map((plan, idx) => (
-              <Card key={idx} className={plan.highlighted ? "border-primary shadow-lg scale-105" : ""}>
+              <Card key={idx} className={`hover-scale animate-fade-in ${plan.highlighted ? "border-primary shadow-lg scale-105" : ""}`} style={{ animationDelay: `${idx * 100}ms` }}>
                 <CardHeader>
                   {plan.highlighted && (
                     <Badge className="mb-2 w-fit">Most Popular</Badge>
@@ -655,7 +655,7 @@ export default function Landing() {
       {/* Testimonials Section */}
       <section id="testimonials" className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
+          <div className="text-center mb-12 animate-fade-in">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Loved by Professionals</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               See what our users have to say about Quote-it AI
@@ -663,7 +663,7 @@ export default function Landing() {
           </div>
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {testimonials.map((testimonial, idx) => (
-              <Card key={idx}>
+              <Card key={idx} className="hover-scale animate-fade-in" style={{ animationDelay: `${idx * 100}ms` }}>
                 <CardContent className="pt-6">
                   <p className="text-muted-foreground mb-4">"{testimonial.quote}"</p>
                   <div>
