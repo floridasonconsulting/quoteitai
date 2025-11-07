@@ -27,10 +27,21 @@ import { useNavigate } from "react-router-dom";
 import Autoplay from "embla-carousel-autoplay";
 import { useRef, useState, useEffect } from "react";
 import { heroScreenshots, interactiveScreenshots } from "@/config/landing-media";
+import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
 
 export default function Landing() {
   const navigate = useNavigate();
   const [showScrollTop, setShowScrollTop] = useState(false);
+  
+  // Intersection observers for scroll animations
+  const featuresSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
+  const benefitsSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
+  const comparisonSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
+  const screenshotsSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
+  const workflowSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
+  const pricingSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
+  const testimonialsSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
+  const ctaSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -358,9 +369,15 @@ export default function Landing() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-16 bg-muted/30">
+      <section 
+        id="features" 
+        ref={featuresSection.ref}
+        className={`py-16 bg-muted/30 transition-all duration-700 ${
+          featuresSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        }`}
+      >
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12 animate-fade-in">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything You Need</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Powerful features designed to streamline your quoting process and grow your business
@@ -368,7 +385,15 @@ export default function Landing() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, idx) => (
-              <Card key={idx} className="hover-scale animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
+              <Card 
+                key={idx} 
+                className={`hover-scale transition-all duration-500 ${
+                  featuresSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+                }`}
+                style={{ 
+                  transitionDelay: featuresSection.isVisible ? `${idx * 50}ms` : '0ms' 
+                }}
+              >
                 <CardHeader>
                   <feature.icon className="h-10 w-10 text-primary mb-2" />
                   <CardTitle className="text-lg">{feature.title}</CardTitle>
@@ -381,9 +406,15 @@ export default function Landing() {
       </section>
 
       {/* Benefits Section */}
-      <section id="benefits" className="py-16">
+      <section 
+        id="benefits" 
+        ref={benefitsSection.ref}
+        className={`py-16 transition-all duration-700 ${
+          benefitsSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        }`}
+      >
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12 animate-fade-in">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Quote-it AI?</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Transform how you create and manage quotes
@@ -391,7 +422,15 @@ export default function Landing() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {benefits.map((benefit, idx) => (
-              <div key={idx} className="text-center animate-fade-in" style={{ animationDelay: `${idx * 100}ms` }}>
+              <div 
+                key={idx} 
+                className={`text-center transition-all duration-500 ${
+                  benefitsSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+                }`}
+                style={{ 
+                  transitionDelay: benefitsSection.isVisible ? `${idx * 100}ms` : '0ms' 
+                }}
+              >
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4 hover-scale">
                   <benefit.icon className="h-8 w-8 text-primary" />
                 </div>
@@ -407,7 +446,13 @@ export default function Landing() {
       </section>
 
       {/* Competitive Comparison Section */}
-      <section id="comparison" className="py-16 bg-muted/30">
+      <section 
+        id="comparison" 
+        ref={comparisonSection.ref}
+        className={`py-16 bg-muted/30 transition-all duration-700 ${
+          comparisonSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        }`}
+      >
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -506,7 +551,13 @@ export default function Landing() {
       </section>
 
       {/* Interactive Screenshots Section */}
-      <section id="screenshots" className="py-16">
+      <section 
+        id="screenshots" 
+        ref={screenshotsSection.ref}
+        className={`py-16 transition-all duration-700 ${
+          screenshotsSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        }`}
+      >
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <Badge variant="secondary" className="mb-4">
@@ -560,7 +611,12 @@ export default function Landing() {
       </section>
 
       {/* Workflow Demonstrations */}
-      <section className="py-16 bg-muted/30">
+      <section 
+        ref={workflowSection.ref}
+        className={`py-16 bg-muted/30 transition-all duration-700 ${
+          workflowSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        }`}
+      >
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Common Workflows Made Simple</h2>
@@ -604,9 +660,15 @@ export default function Landing() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-16">
+      <section 
+        id="pricing" 
+        ref={pricingSection.ref}
+        className={`py-16 transition-all duration-700 ${
+          pricingSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        }`}
+      >
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12 animate-fade-in">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Choose the plan that fits your needs. Upgrade or downgrade anytime.
@@ -614,7 +676,15 @@ export default function Landing() {
           </div>
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {pricingPlans.map((plan, idx) => (
-              <Card key={idx} className={`hover-scale animate-fade-in ${plan.highlighted ? "border-primary shadow-lg scale-105" : ""}`} style={{ animationDelay: `${idx * 100}ms` }}>
+              <Card 
+                key={idx} 
+                className={`hover-scale transition-all duration-500 ${plan.highlighted ? "border-primary shadow-lg scale-105" : ""} ${
+                  pricingSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+                }`}
+                style={{ 
+                  transitionDelay: pricingSection.isVisible ? `${idx * 100}ms` : '0ms' 
+                }}
+              >
                 <CardHeader>
                   {plan.highlighted && (
                     <Badge className="mb-2 w-fit">Most Popular</Badge>
@@ -653,9 +723,15 @@ export default function Landing() {
       </section>
 
       {/* Testimonials Section */}
-      <section id="testimonials" className="py-16 bg-muted/30">
+      <section 
+        id="testimonials" 
+        ref={testimonialsSection.ref}
+        className={`py-16 bg-muted/30 transition-all duration-700 ${
+          testimonialsSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        }`}
+      >
         <div className="container mx-auto px-4">
-          <div className="text-center mb-12 animate-fade-in">
+          <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Loved by Professionals</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               See what our users have to say about Quote-it AI
@@ -663,7 +739,15 @@ export default function Landing() {
           </div>
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {testimonials.map((testimonial, idx) => (
-              <Card key={idx} className="hover-scale animate-fade-in" style={{ animationDelay: `${idx * 100}ms` }}>
+              <Card 
+                key={idx} 
+                className={`hover-scale transition-all duration-500 ${
+                  testimonialsSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+                }`}
+                style={{ 
+                  transitionDelay: testimonialsSection.isVisible ? `${idx * 100}ms` : '0ms' 
+                }}
+              >
                 <CardContent className="pt-6">
                   <p className="text-muted-foreground mb-4">"{testimonial.quote}"</p>
                   <div>
@@ -678,7 +762,12 @@ export default function Landing() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-primary text-primary-foreground">
+      <section 
+        ref={ctaSection.ref}
+        className={`py-16 bg-primary text-primary-foreground transition-all duration-700 ${
+          ctaSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        }`}
+      >
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Transform Your Quoting Process?</h2>
           <p className="text-lg mb-8 max-w-2xl mx-auto opacity-90">
