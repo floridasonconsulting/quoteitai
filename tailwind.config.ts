@@ -1,5 +1,6 @@
 import type { Config } from "tailwindcss";
 
+// Force rebuild to regenerate animation utilities
 export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
