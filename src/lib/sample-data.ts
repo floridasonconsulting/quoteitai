@@ -1,7 +1,14 @@
 import { Quote, Customer, Item, CompanySettings } from '@/types';
-import { addCustomer, addItem, addQuote } from './db-service';
+import { addCustomer, addItem, addQuote, getCustomers, getItems } from './db-service';
 import { generateQuoteNumber } from './quote-utils';
 import { saveSettings } from './db-service';
+
+// Helper to calculate date X days ago
+const daysAgo = (days: number): string => {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date.toISOString();
+};
 
 const sampleCompanySettings: CompanySettings = {
   name: 'ProField Services',
@@ -384,11 +391,245 @@ export const generateSampleData = async (
     });
     await Promise.all(itemInserts);
 
+    // Fetch inserted customers and items to get their IDs
+    const insertedCustomers = await getCustomers(userId);
+    const insertedItems = await getItems(userId);
+
+    if (insertedCustomers.length === 0 || insertedItems.length === 0) {
+      console.warn('No customers or items found - skipping quote generation');
+    } else {
+      // Generate 18 sample quotes with proper age distribution
+      const quoteResults = {
+        fresh: 0,
+        warm: 0,
+        aging: 0,
+        stale: 0,
+        draft: 0,
+        failed: 0,
+      };
+
+      // Helper to create quote items
+      const createQuoteItems = (itemNames: string[], quantities: number[]) => {
+        return itemNames.map((name, idx) => {
+          const item = insertedItems.find(i => i.name === name);
+          if (!item) return null;
+          const qty = quantities[idx] || 1;
+          return {
+            itemId: item.id,
+            name: item.name,
+            description: item.description,
+            quantity: qty,
+            price: item.finalPrice,
+            total: qty * item.finalPrice,
+          };
+        }).filter(Boolean);
+      };
+
+      // Fresh quotes (0-7 days sent)
+      const freshQuotes = [
+        {
+          customerName: 'The Johnson Family',
+          title: 'Plumbing Emergency Repair',
+          items: createQuoteItems(['Drain Cleaning', 'Pipe Repair'], [1, 2]),
+          daysAgo: 2,
+          status: 'sent' as const,
+        },
+        {
+          customerName: 'Martinez Property Management',
+          title: 'Electrical Panel Upgrade',
+          items: createQuoteItems(['Panel Upgrade', 'Circuit Breaker Repair'], [1, 1]),
+          daysAgo: 4,
+          status: 'sent' as const,
+        },
+        {
+          customerName: 'The Chen Residence',
+          title: 'Bathroom Remodel',
+          items: createQuoteItems(['Fixture Installation', 'Drywall Repair', 'Interior Painting'], [2, 3, 8]),
+          daysAgo: 6,
+          status: 'sent' as const,
+        },
+        {
+          customerName: 'Westside Apartments LLC',
+          title: 'Deck Staining',
+          items: createQuoteItems(['Deck Repair', 'General Labor'], [4, 8]),
+          daysAgo: 7,
+          status: 'sent' as const,
+        },
+        {
+          customerName: 'Garcia Family Home',
+          title: 'Kitchen Fixture Install',
+          items: createQuoteItems(['Lighting Installation', 'Light Fixtures'], [3, 4]),
+          daysAgo: 5,
+          status: 'sent' as const,
+        },
+      ];
+
+      // Warm quotes (8-14 days sent)
+      const warmQuotes = [
+        {
+          customerName: 'Highland Realty Group',
+          title: 'HVAC Service Call',
+          items: createQuoteItems(['Emergency Call-Out', 'General Labor'], [1, 2]),
+          daysAgo: 9,
+          status: 'sent' as const,
+        },
+        {
+          customerName: 'Thompson Home Renovations',
+          title: 'Flooring Installation',
+          items: createQuoteItems(['Laminate Flooring', 'General Labor'], [250, 16]),
+          daysAgo: 11,
+          status: 'sent' as const,
+        },
+        {
+          customerName: 'Summit Commercial Properties',
+          title: 'Exterior Painting',
+          items: createQuoteItems(['Interior Painting', 'General Labor'], [20, 12]),
+          daysAgo: 13,
+          status: 'sent' as const,
+        },
+        {
+          customerName: 'The Anderson Estate',
+          title: 'Drywall Repair',
+          items: createQuoteItems(['Drywall Repair', 'Interior Painting'], [6, 4]),
+          daysAgo: 14,
+          status: 'sent' as const,
+        },
+      ];
+
+      // Aging quotes (15-30 days sent)
+      const agingQuotes = [
+        {
+          customerName: 'Downtown Retail Center',
+          title: 'Fence Repair',
+          items: createQuoteItems(['Carpentry Services', 'General Labor'], [8, 4]),
+          daysAgo: 18,
+          status: 'sent' as const,
+        },
+        {
+          customerName: 'Riverside Townhomes HOA',
+          title: 'Gutter Cleaning',
+          items: createQuoteItems(['General Labor', 'Emergency Call-Out'], [4, 1]),
+          daysAgo: 22,
+          status: 'sent' as const,
+        },
+        {
+          customerName: 'Miller Small Business',
+          title: 'Water Heater Replacement',
+          items: createQuoteItems(['Water Heater Service', 'Pipe Repair'], [1, 3]),
+          daysAgo: 26,
+          status: 'accepted' as const,
+        },
+        {
+          customerName: 'Westside Apartments LLC',
+          title: 'Appliance Repair',
+          items: createQuoteItems(['Outlet Installation', 'General Labor'], [3, 2]),
+          daysAgo: 29,
+          status: 'sent' as const,
+        },
+      ];
+
+      // Stale quotes (31+ days sent)
+      const staleQuotes = [
+        {
+          customerName: 'Highland Realty Group',
+          title: 'Roof Inspection',
+          items: createQuoteItems(['Project Consultation', 'General Labor'], [2, 4]),
+          daysAgo: 35,
+          status: 'sent' as const,
+        },
+        {
+          customerName: 'Martinez Property Management',
+          title: 'Pool Maintenance',
+          items: createQuoteItems(['General Labor', 'Emergency Call-Out'], [8, 1]),
+          daysAgo: 42,
+          status: 'sent' as const,
+        },
+        {
+          customerName: 'Thompson Home Renovations',
+          title: 'Kitchen Remodel',
+          items: createQuoteItems(['Kitchen Countertops', 'Cabinet Refacing Kit', 'General Labor'], [35, 1, 24]),
+          daysAgo: 50,
+          status: 'declined' as const,
+        },
+      ];
+
+      // Draft quotes (no sent date)
+      const draftQuotes = [
+        {
+          customerName: 'The Chen Residence',
+          title: 'Bathroom Renovation',
+          items: createQuoteItems(['Fixture Installation', 'Drywall Repair', 'Interior Painting', 'Light Fixtures'], [3, 8, 12, 2]),
+          daysAgo: null,
+          status: 'draft' as const,
+        },
+        {
+          customerName: 'Garcia Family Home',
+          title: 'Outdoor Lighting Installation',
+          items: createQuoteItems(['Lighting Installation', 'Light Fixtures', 'Outlet Installation'], [6, 8, 4]),
+          daysAgo: null,
+          status: 'draft' as const,
+        },
+      ];
+
+      // Insert all quotes
+      const allQuoteGroups = [
+        { quotes: freshQuotes, category: 'fresh' },
+        { quotes: warmQuotes, category: 'warm' },
+        { quotes: agingQuotes, category: 'aging' },
+        { quotes: staleQuotes, category: 'stale' },
+        { quotes: draftQuotes, category: 'draft' },
+      ];
+
+      for (const group of allQuoteGroups) {
+        for (const quoteData of group.quotes) {
+          try {
+            const customer = insertedCustomers.find(c => c.name === quoteData.customerName);
+            if (!customer || !quoteData.items || quoteData.items.length === 0) {
+              quoteResults.failed++;
+              continue;
+            }
+
+            const subtotal = quoteData.items.reduce((sum, item: any) => sum + item.total, 0);
+            const tax = subtotal * 0.08;
+            const total = subtotal + tax;
+
+            const quote: Omit<Quote, 'id' | 'createdAt'> = {
+              quoteNumber: generateQuoteNumber(),
+              customerId: customer.id,
+              customerName: customer.name,
+              title: quoteData.title,
+              items: quoteData.items as any,
+              subtotal,
+              tax,
+              total,
+              status: quoteData.status,
+              sentDate: quoteData.daysAgo !== null ? daysAgo(quoteData.daysAgo) : null,
+              followUpDate: null,
+              notes: '',
+              updatedAt: new Date().toISOString(),
+            };
+
+            await addQuote(userId, quote as Quote);
+            quoteResults[group.category as keyof typeof quoteResults]++;
+            console.log(`[Sample Data] Created ${group.category} quote:`, quote.quoteNumber, quote.title);
+          } catch (error) {
+            console.error(`Failed to create ${group.category} quote:`, error);
+            quoteResults.failed++;
+          }
+        }
+      }
+
+      quotesAdded = quoteResults.fresh + quoteResults.warm + quoteResults.aging + quoteResults.stale + quoteResults.draft;
+      
+      console.log('Sample quotes generation results:', quoteResults);
+    }
+
     console.log('Sample data generation results:', { 
       customersAddedToDb, 
       customersFailedToDb,
       itemsAddedToDb, 
-      itemsFailedToDb 
+      itemsFailedToDb,
+      quotesAdded,
     });
 
   } catch (error) {
@@ -408,7 +649,7 @@ export const generateSampleData = async (
     customersFailedToDb,
     itemsAddedToDb,
     itemsFailedToDb,
-    quotesAdded: 0, // Quotes require customer IDs, skipping for now
+    quotesAdded,
     companySettingsAdded,
   };
 };
