@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Plus, Search, Edit, Trash2, Mail, Phone, Download, Upload, RefreshCw, AlertCircle } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Mail, Phone, Download, Upload, RefreshCw, AlertCircle, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -619,11 +619,20 @@ export default function Customers() {
                     </CardHeader>
                     <CardContent className="pt-0">
                       {(customer.address || customer.city) && (
-                        <p className="text-sm text-muted-foreground mb-3 break-words">
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                            [customer.address, customer.city, customer.state, customer.zip]
+                              .filter(Boolean)
+                              .join(', ')
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-muted-foreground hover:text-primary hover:underline mb-3 break-words block"
+                        >
                           {[customer.address, customer.city, customer.state, customer.zip]
                             .filter(Boolean)
                             .join(', ')}
-                        </p>
+                        </a>
                       )}
                       <div className="flex gap-2">
                         <Button
@@ -634,6 +643,25 @@ export default function Customers() {
                         >
                           <Edit className="h-4 w-4 mr-1" />
                           Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const fullAddress = [customer.address, customer.city, customer.state, customer.zip]
+                              .filter(Boolean)
+                              .join(', ');
+                            window.open(
+                              `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`,
+                              '_blank'
+                            );
+                          }}
+                          className="flex-1"
+                          disabled={!customer.address && !customer.city}
+                        >
+                          <MapPin className="h-4 w-4 mr-1" />
+                          Directions
                         </Button>
                         <Button
                           variant="outline"
