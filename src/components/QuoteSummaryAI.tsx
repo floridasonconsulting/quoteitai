@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { AIButton } from '@/components/AIButton';
 import { useAI } from '@/hooks/useAI';
+import { useAuth } from '@/contexts/AuthContext';
 import { AIUpgradeDialog } from '@/components/AIUpgradeDialog';
 import { Quote, Customer } from '@/types';
 import { Sparkles } from 'lucide-react';
@@ -19,6 +20,7 @@ export function QuoteSummaryAI({ quote, customer, onSummaryGenerated }: QuoteSum
   const [summary, setSummary] = useState(quote.executiveSummary || '');
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [requiredTier, setRequiredTier] = useState<'pro' | 'max'>('pro');
+  const { userRole } = useAuth();
 
   const summaryAI = useAI('quote_summary', {
     onSuccess: (content) => {
@@ -37,6 +39,13 @@ export function QuoteSummaryAI({ quote, customer, onSummaryGenerated }: QuoteSum
   };
 
   const generateSummary = async () => {
+    // Client-side tier check for instant feedback
+    if (userRole === 'free') {
+      setRequiredTier('pro');
+      setShowUpgradeDialog(true);
+      return;
+    }
+
     const sanitizedCustomerName = sanitizeForAI(customer?.name, 100) || 'Customer';
     const sanitizedTitle = sanitizeForAI(quote.title, 200);
     const itemCount = quote.items.length;

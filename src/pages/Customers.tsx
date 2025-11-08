@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Plus, Search, Edit, Trash2, Mail, Phone, Download, Upload, RefreshCw, AlertCircle, MapPin } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Mail, Phone, Download, Upload, RefreshCw, AlertCircle, MapPin, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,9 @@ import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from '@/lib
 import { Customer } from '@/types';
 import { toast } from 'sonner';
 import { parseCSVLine, formatCSVLine } from '@/lib/csv-utils';
+import { importCustomersFromCSV } from '@/lib/import-export-utils';
+import { generateCustomerTemplate, downloadTemplate } from '@/lib/csv-template-utils';
+import { ImportOptionsDialog, DuplicateStrategy } from '@/components/ImportOptionsDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { useLoadingState } from '@/hooks/useLoadingState';
@@ -293,49 +296,48 @@ export default function Customers() {
     toast.success('Customers exported successfully');
   };
 
-  const importFromCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    setImportFile(file);
+    setShowImportDialog(true);
+    event.target.value = '';
+  };
 
+  const processImport = async (strategy: DuplicateStrategy) => {
+    if (!importFile || !user?.id) return;
+    
     const reader = new FileReader();
     reader.onload = async (e) => {
       const text = e.target?.result as string;
-      const lines = text.split('\n');
-      const importedCustomers: Customer[] = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-
-        const [name, email, phone, address, city, state, zip, contactFirstName, contactLastName] = parseCSVLine(line);
-        
-        if (name && email) {
-          importedCustomers.push({
-            id: crypto.randomUUID(),
-            name: name.trim(),
-            email: email.trim(),
-            phone: phone?.trim() || '',
-            address: address?.trim() || '',
-            city: city?.trim() || '',
-            state: state?.trim() || '',
-            zip: zip?.trim() || '',
-            contactFirstName: contactFirstName?.trim() || '',
-            contactLastName: contactLastName?.trim() || '',
-            createdAt: new Date().toISOString(),
-          });
-        }
+      const result = await importCustomersFromCSV(text, user.id, strategy);
+      
+      const messages = [];
+      if (result.success > 0) messages.push(`✅ Imported: ${result.success}`);
+      if (result.skipped > 0) messages.push(`⏭️ Skipped: ${result.skipped}`);
+      if (result.overwritten > 0) messages.push(`🔄 Overwritten: ${result.overwritten}`);
+      if (result.failed > 0) messages.push(`❌ Failed: ${result.failed}`);
+      
+      if (result.errors.length > 0) {
+        toast.error(`Import completed with errors:\n${result.errors.slice(0, 3).join('\n')}`);
+      } else {
+        toast.success(messages.join(' | '));
       }
-
-      if (importedCustomers.length > 0) {
-        for (const customer of importedCustomers) {
-          await addCustomer(user?.id, customer, queueChange);
-        }
-        loadCustomers();
-        toast.success(`Imported ${importedCustomers.length} customers`);
-      }
+      
+      await loadCustomers(true); // Force refresh to bypass cache
     };
-    reader.readAsText(file);
-    event.target.value = '';
+    reader.readAsText(importFile);
+    setShowImportDialog(false);
+    setImportFile(null);
+  };
+
+  const handleDownloadTemplate = () => {
+    const template = generateCustomerTemplate();
+    downloadTemplate(template, 'customers-template.csv');
+    toast.success('Customer template downloaded');
   };
 
   return (
@@ -348,6 +350,10 @@ export default function Customers() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
+            <FileText className="h-4 w-4" />
+            <span className="ml-2 hidden sm:inline">Template</span>
+          </Button>
           <Button variant="outline" size="sm" onClick={exportToCSV}>
             <Download className="h-4 w-4" />
             <span className="ml-2 hidden sm:inline">Export</span>
@@ -360,7 +366,7 @@ export default function Customers() {
                 type="file"
                 accept=".csv"
                 className="hidden"
-                onChange={importFromCSV}
+                onChange={handleFileSelect}
               />
             </label>
           </Button>
@@ -683,6 +689,14 @@ export default function Customers() {
           )}
         </CardContent>
       </Card>
+
+      <ImportOptionsDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        onConfirm={processImport}
+        fileName={importFile?.name || ''}
+        entityType="customers"
+      />
     </div>
   );
 }

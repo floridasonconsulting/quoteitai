@@ -5,16 +5,23 @@ export interface ImportResult {
   success: number;
   failed: number;
   skipped: number;
+  overwritten: number;
   errors: string[];
 }
 
-export async function importCustomersFromCSV(csvContent: string, userId: string): Promise<ImportResult> {
+export type DuplicateStrategy = 'skip' | 'overwrite' | 'error';
+
+export async function importCustomersFromCSV(
+  csvContent: string, 
+  userId: string,
+  duplicateStrategy: DuplicateStrategy = 'skip'
+): Promise<ImportResult> {
   const lines = csvContent.trim().split('\n');
   const headers = parseCSVLine(lines[0]);
-  const result: ImportResult = { success: 0, failed: 0, skipped: 0, errors: [] };
+  const result: ImportResult = { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: [] };
 
-  // Import getCustomers to check for duplicates
-  const { getCustomers } = await import('./db-service');
+  // Import customer functions
+  const { getCustomers, updateCustomer } = await import('./db-service');
   const existingCustomers = await getCustomers(userId);
 
   for (let i = 1; i < lines.length; i++) {
@@ -26,13 +33,23 @@ export async function importCustomersFromCSV(csvContent: string, userId: string)
       });
 
       // Check for duplicates by name and email
-      const isDuplicate = existingCustomers.some(
+      const existingCustomer = existingCustomers.find(
         existing => existing.name === customer.name && existing.email === customer.email
       );
 
-      if (isDuplicate) {
-        result.skipped++;
-        continue;
+      if (existingCustomer) {
+        if (duplicateStrategy === 'skip') {
+          result.skipped++;
+          continue;
+        } else if (duplicateStrategy === 'error') {
+          result.failed++;
+          result.errors.push(`Line ${i + 1}: Duplicate customer: ${customer.name} (${customer.email})`);
+          continue;
+        } else if (duplicateStrategy === 'overwrite') {
+          await updateCustomer(userId, existingCustomer.id, customer);
+          result.overwritten++;
+          continue;
+        }
       }
 
       // Don't queue to sync manager - direct DB insert during import
@@ -41,7 +58,6 @@ export async function importCustomersFromCSV(csvContent: string, userId: string)
     } catch (error) {
       result.failed++;
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      // Include specific constraint violations in error message
       if (errorMsg.includes('violates')) {
         result.errors.push(`Line ${i + 1}: Database constraint violation - ${errorMsg}`);
       } else {
@@ -53,13 +69,17 @@ export async function importCustomersFromCSV(csvContent: string, userId: string)
   return result;
 }
 
-export async function importItemsFromCSV(csvContent: string, userId: string): Promise<ImportResult> {
+export async function importItemsFromCSV(
+  csvContent: string, 
+  userId: string,
+  duplicateStrategy: DuplicateStrategy = 'skip'
+): Promise<ImportResult> {
   const lines = csvContent.trim().split('\n');
   const headers = parseCSVLine(lines[0]);
-  const result: ImportResult = { success: 0, failed: 0, skipped: 0, errors: [] };
+  const result: ImportResult = { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: [] };
 
-  // Import getItems to check for duplicates
-  const { getItems } = await import('./db-service');
+  // Import item functions
+  const { getItems, updateItem } = await import('./db-service');
   const existingItems = await getItems(userId);
 
   for (let i = 1; i < lines.length; i++) {
@@ -70,8 +90,20 @@ export async function importItemsFromCSV(csvContent: string, userId: string): Pr
         const value = values[index] || '';
         const headerName = header.trim();
         
-        if (['basePrice', 'markup', 'finalPrice'].includes(headerName)) {
+        if (['basePrice', 'finalPrice'].includes(headerName)) {
           item[headerName] = parseFloat(value) || 0;
+        } else if (headerName === 'markup') {
+          // Parse markup and detect type from format
+          const markupValue = value.trim();
+          if (markupValue.includes('%')) {
+            item.markup = parseFloat(markupValue.replace('%', '')) || 0;
+            if (!item.markupType) item.markupType = 'percentage';
+          } else if (markupValue.includes('$')) {
+            item.markup = parseFloat(markupValue.replace('$', '')) || 0;
+            if (!item.markupType) item.markupType = 'fixed';
+          } else {
+            item.markup = parseFloat(markupValue) || 0;
+          }
         } else {
           item[headerName] = value;
         }
@@ -85,13 +117,23 @@ export async function importItemsFromCSV(csvContent: string, userId: string): Pr
       }
 
       // Check for duplicates by name and category
-      const isDuplicate = existingItems.some(
+      const existingItem = existingItems.find(
         existing => existing.name === item.name && existing.category === item.category
       );
 
-      if (isDuplicate) {
-        result.skipped++;
-        continue;
+      if (existingItem) {
+        if (duplicateStrategy === 'skip') {
+          result.skipped++;
+          continue;
+        } else if (duplicateStrategy === 'error') {
+          result.failed++;
+          result.errors.push(`Line ${i + 1}: Duplicate item: ${item.name} in ${item.category}`);
+          continue;
+        } else if (duplicateStrategy === 'overwrite') {
+          await updateItem(userId, existingItem.id, item);
+          result.overwritten++;
+          continue;
+        }
       }
 
       // Don't queue to sync manager - direct DB insert during import
@@ -100,7 +142,6 @@ export async function importItemsFromCSV(csvContent: string, userId: string): Pr
     } catch (error) {
       result.failed++;
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      // Include specific constraint violations in error message
       if (errorMsg.includes('violates') || errorMsg.includes('constraint')) {
         result.errors.push(`Line ${i + 1}: Database constraint violation - ${errorMsg}`);
       } else {
@@ -115,7 +156,7 @@ export async function importItemsFromCSV(csvContent: string, userId: string): Pr
 export async function importQuotesFromCSV(csvContent: string, userId: string): Promise<ImportResult> {
   const lines = csvContent.trim().split('\n');
   const headers = parseCSVLine(lines[0]);
-  const result: ImportResult = { success: 0, failed: 0, skipped: 0, errors: [] };
+  const result: ImportResult = { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: [] };
 
   // Import getQuotes and addQuote to check for duplicates
   const { getQuotes } = await import('./db-service');

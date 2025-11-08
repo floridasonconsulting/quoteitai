@@ -269,6 +269,24 @@ export default function Settings() {
       await clearAllData();
       
       if (clearCompanyInfo) {
+        // Delete logo from storage if it exists
+        if (formData.logo) {
+          try {
+            const logoPath = formData.logo.split('/').pop();
+            if (logoPath) {
+              const { error: deleteError } = await supabase.storage
+                .from('company-logos')
+                .remove([logoPath]);
+              if (deleteError) {
+                console.error('Error deleting logo:', deleteError);
+              }
+            }
+          } catch (logoError) {
+            console.error('Logo deletion error:', logoError);
+          }
+        }
+        
+        // Clear all company settings including logo field
         await saveSettings(user?.id, {
           name: '',
           address: '',
@@ -280,6 +298,7 @@ export default function Settings() {
           website: '',
           license: '',
           insurance: '',
+          logo: null,
           logoDisplayOption: 'both',
           terms: 'Payment due within 30 days. Thank you for your business!',
         }, queueChange);
@@ -335,6 +354,7 @@ export default function Settings() {
           success: 0,
           failed: allErrors.length,
           skipped: 0,
+          overwritten: 0,
           errors: allErrors
         });
         return;
@@ -374,6 +394,7 @@ export default function Settings() {
         success: totalSuccess,
         failed: totalFailed,
         skipped: totalSkipped,
+        overwritten: customersResult.overwritten + itemsResult.overwritten + quotesResult.overwritten,
         errors: [...customersResult.errors, ...itemsResult.errors, ...quotesResult.errors]
       });
 

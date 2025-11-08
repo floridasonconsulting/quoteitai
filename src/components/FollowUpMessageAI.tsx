@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AIButton } from '@/components/AIButton';
 import { useAI } from '@/hooks/useAI';
+import { useAuth } from '@/contexts/AuthContext';
 import { AIUpgradeDialog } from '@/components/AIUpgradeDialog';
 import { Quote, Customer } from '@/types';
 import { MessageSquare, Copy, Mail } from 'lucide-react';
@@ -29,6 +30,7 @@ export function FollowUpMessageAI({ quote, customer }: FollowUpMessageAIProps) {
   const [isSending, setIsSending] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [requiredTier, setRequiredTier] = useState<'pro' | 'max'>('pro');
+  const { userRole } = useAuth();
 
   const messageAI = useAI('followup_message', {
     onSuccess: (content) => {
@@ -43,6 +45,13 @@ export function FollowUpMessageAI({ quote, customer }: FollowUpMessageAIProps) {
   const generateFollowUp = async () => {
     if (!customer) {
       toast.error('Customer information required');
+      return;
+    }
+
+    // Client-side tier check for instant feedback
+    if (userRole === 'free') {
+      setRequiredTier('pro');
+      setShowUpgradeDialog(true);
       return;
     }
 
