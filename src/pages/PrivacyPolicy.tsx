@@ -1,9 +1,35 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Home, Shield } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function PrivacyPolicy() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
   return (
-    <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <Card>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(user ? '/dashboard' : '/')}>
+              <Home className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-2">
+              <Shield className="h-6 w-6 text-primary" />
+              <span className="text-xl font-bold">Privacy Policy</span>
+            </div>
+          </div>
+          {!user && (
+            <Button onClick={() => navigate('/auth')}>Sign In</Button>
+          )}
+        </div>
+      </header>
+
+      <div className="container mx-auto py-8 px-4 max-w-4xl">
+        <Card>
         <CardHeader>
           <CardTitle className="text-3xl">Privacy Policy</CardTitle>
           <p className="text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
@@ -134,6 +160,7 @@ export default function PrivacyPolicy() {
           </section>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
