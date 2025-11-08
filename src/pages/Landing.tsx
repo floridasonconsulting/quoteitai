@@ -271,7 +271,7 @@ export default function Landing() {
             <button onClick={() => document.getElementById('comparison')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Comparison</button>
             <button onClick={() => document.getElementById('screenshots')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Demo</button>
             <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Pricing</button>
-            <button onClick={() => document.getElementById('testimonials')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Testimonials</button>
+            
             <button onClick={() => navigate('/help')} className="text-sm hover:text-primary transition-colors">Help</button>
           </nav>
           <div className="flex gap-2">
@@ -722,8 +722,8 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section 
+      {/* Testimonials Section - Hidden until we have real reviews */}
+      {/* <section 
         id="testimonials" 
         ref={testimonialsSection.ref}
         className={`py-16 bg-muted/30 transition-all duration-700 ${
@@ -759,7 +759,7 @@ export default function Landing() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
       <section 
