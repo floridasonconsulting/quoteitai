@@ -25,6 +25,7 @@ import Subscription from "./pages/Subscription";
 import Help from "./pages/Help";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import { DemoRecorder } from "./components/DemoRecorder";
 import { useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -132,6 +133,13 @@ function AppContent() {
         <ProtectedRoute>
           <Layout>
             <Subscription />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/demo-recorder" element={
+        <ProtectedRoute>
+          <Layout>
+            <DemoRecorder />
           </Layout>
         </ProtectedRoute>
       } />

@@ -288,6 +288,28 @@ CREATE POLICY "Users can view their own quotes"
   USING (auth.uid() = user_id);
 ```
 
+### 🎬 Demo Recording
+
+The project includes an automated demo recording system for creating marketing materials:
+
+**Access**: Navigate to `/demo-recorder` (requires authentication)
+
+**Features**:
+- Automated screenshot capture of complete quote workflow
+- 14 predefined workflow steps covering all features
+- Configurable timing and element highlighting
+- Bulk frame download for post-processing
+- Manual recording instructions included
+
+**Quick Start**:
+1. Navigate to `/demo-recorder`
+2. Click "Prepare Sample Data"
+3. Click "Start Recording"
+4. Download captured frames
+5. Convert to GIF using ezgif.com or ffmpeg
+
+**Documentation**: See [DEMO_RECORDING_GUIDE.md](./DEMO_RECORDING_GUIDE.md) for complete instructions.
+
 ## 🌐 Deployment
 
 ### Web Deployment (Lovable)
