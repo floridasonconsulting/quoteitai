@@ -21,7 +21,8 @@ import {
   Star,
   Play,
   Mail,
-  ChevronUp
+  ChevronUp,
+  Crown
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Autoplay from "embla-carousel-autoplay";
@@ -86,6 +87,11 @@ export default function Landing() {
       icon: FileText,
       title: "Professional PDFs",
       description: "Generate branded, polished quote documents with custom company information"
+    },
+    {
+      icon: Crown,
+      title: "White-Label Branding",
+      description: "Custom logo and favicon for professional, branded quotes and public views"
     },
     {
       icon: Mail,
@@ -174,10 +180,11 @@ export default function Landing() {
       price: "$19.99",
       period: "per month",
       annualPrice: "$199/year (save $40)",
-      description: "Unlimited quotes + automated professional emails",
+      description: "Unlimited quotes + white-label branding + full AI automation",
       features: [
         "Unlimited quotes",
         "Unlimited professional emails",
+        "White-label branding (custom logo & favicon)",
         "Advanced email automation",
         "Advanced AI features",
         "AI quote generation",
@@ -383,7 +390,7 @@ export default function Landing() {
               Powerful features designed to streamline your quoting process and grow your business
             </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 xl:grid-cols-5 gap-6">
             {features.map((feature, idx) => (
               <Card 
                 key={idx} 
@@ -420,7 +427,7 @@ export default function Landing() {
               Transform how you create and manage quotes
             </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
             {benefits.map((benefit, idx) => (
               <div 
                 key={idx} 
@@ -625,7 +632,7 @@ export default function Landing() {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {workflows.map((workflow) => (
               <Card key={workflow.id} className="hover-scale">
                 <CardHeader>
