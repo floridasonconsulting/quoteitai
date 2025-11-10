@@ -22,6 +22,7 @@ import { useSyncManager } from '@/hooks/useSyncManager';
 import { sanitizeForAI, sanitizeNumber } from '@/lib/input-sanitization';
 import { QuoteSummaryAI } from '@/components/QuoteSummaryAI';
 import { SendQuoteDialog, EmailContent } from '@/components/SendQuoteDialog';
+import { FullQuoteGenerationAI } from '@/components/FullQuoteGenerationAI';
 
 export default function NewQuote() {
   const navigate = useNavigate();
@@ -75,6 +76,19 @@ export default function NewQuote() {
       setQuoteNotes(cleaned);
     },
   });
+
+  const handleQuoteGenerated = (data: {
+    title: string;
+    notes: string;
+    summary: string;
+    suggestedItems: QuoteItem[];
+  }) => {
+    setQuoteTitle(data.title);
+    setQuoteNotes(data.notes);
+    setExecutiveSummary(data.summary);
+    setQuoteItems(data.suggestedItems);
+    toast.success('Quote generated! Review and adjust as needed.');
+  };
 
   useEffect(() => {
     loadData();
@@ -424,6 +438,14 @@ export default function NewQuote() {
       <div className="grid gap-4 lg:gap-6 lg:grid-cols-[1fr_380px]">
         {/* Main Form */}
         <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
+          {/* AI Full Quote Generation */}
+          {!isEditMode && items.length > 0 && (
+            <FullQuoteGenerationAI
+              items={items}
+              onQuoteGenerated={handleQuoteGenerated}
+            />
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

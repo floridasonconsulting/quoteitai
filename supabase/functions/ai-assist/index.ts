@@ -212,7 +212,33 @@ Generate a justification based on the discount percentage and context provided.`
         systemPrompt = "You are a professional email writer. Create a professional email template to send with this quote. Include a warm greeting, quote summary, next steps, and professional closing.";
         break;
       case "full_quote_generation":
-        systemPrompt = "You are a professional business consultant. Based on the project description and available items catalog, suggest a complete quote including recommended items, quantities, and pricing strategy. Return structured data.";
+        systemPrompt = `You are a professional business consultant. Based on the project description and available items catalog, generate a complete quote.
+
+CRITICAL: You MUST return valid JSON in this exact format:
+{
+  "title": "Professional quote title (max 60 characters)",
+  "notes": "Professional terms and conditions (3-4 paragraphs)",
+  "summary": "Executive summary (2-3 sentences highlighting key value and total investment)",
+  "suggestedItems": [
+    {
+      "itemId": "id from catalog",
+      "name": "item name",
+      "description": "item description",
+      "quantity": 1,
+      "price": 100.00,
+      "total": 100.00,
+      "units": "units from catalog"
+    }
+  ]
+}
+
+Rules:
+- Only suggest items that exist in the provided catalog
+- Use exact itemId, name, and units from catalog
+- Calculate total = quantity * price
+- Suggest 3-8 relevant items based on project scope
+- Make notes specific to the project (reference actual details)
+- Summary should mention total value and key deliverables`;
         break;
       case "item_recommendations":
         systemPrompt = "You are a sales consultant. Based on the currently selected items, suggest complementary items from the catalog that are commonly paired together.";
