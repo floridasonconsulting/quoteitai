@@ -35,6 +35,7 @@ export function FullQuoteGenerationAI({ items, onQuoteGenerated }: FullQuoteGene
         setProjectDescription('');
       } catch (error) {
         console.error('Failed to parse AI response:', error);
+        console.error('Raw content received:', content);
         toast.error('AI response format error. Please try again.');
       }
     },

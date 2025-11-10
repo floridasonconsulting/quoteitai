@@ -11,6 +11,14 @@ const logStep = (step: string, details?: any) => {
   console.log(`[AI-ASSIST] ${step}${detailsStr}`);
 };
 
+// Utility to strip markdown code blocks from AI responses
+const stripMarkdownCodeBlocks = (content: string): string => {
+  // Remove ```json and ``` wrappers, also handle ```javascript, ```ts, etc.
+  const codeBlockPattern = /^```(?:json|javascript|typescript|ts|js)?\s*\n?([\s\S]*?)\n?```$/;
+  const match = content.trim().match(codeBlockPattern);
+  return match ? match[1].trim() : content.trim();
+};
+
 // Feature configuration with tier restrictions and limits
 const FEATURE_CONFIG = {
   // Pro Tier Features
@@ -214,7 +222,9 @@ Generate a justification based on the discount percentage and context provided.`
       case "full_quote_generation":
         systemPrompt = `You are a professional business consultant. Based on the project description and available items catalog, generate a complete quote.
 
-CRITICAL: You MUST return valid JSON in this exact format:
+CRITICAL RESPONSE FORMAT: Return ONLY the raw JSON object below. Do NOT wrap it in markdown code blocks. Do NOT include \`\`\`json or \`\`\` markers. Return ONLY the JSON object itself.
+
+Required JSON format:
 {
   "title": "Professional quote title (max 60 characters)",
   "notes": "Professional terms and conditions (3-4 paragraphs)",
@@ -233,6 +243,7 @@ CRITICAL: You MUST return valid JSON in this exact format:
 }
 
 Rules:
+- Return ONLY raw JSON, no markdown formatting
 - Only suggest items that exist in the provided catalog
 - Use exact itemId, name, and units from catalog
 - Calculate total = quantity * price
@@ -293,9 +304,12 @@ Rules:
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    let content = data.choices?.[0]?.message?.content;
 
     if (!content) throw new Error("No content in AI response");
+
+    // Strip markdown code blocks if present
+    content = stripMarkdownCodeBlocks(content);
 
     logStep("AI response received", { contentLength: content.length });
 
