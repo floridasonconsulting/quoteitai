@@ -12,8 +12,17 @@ import {
   Image as ImageIcon,
   CheckCircle2,
   AlertCircle,
-  Loader2
+  Loader2,
+  Film,
+  ImagePlay
 } from 'lucide-react';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 import { 
   quoteWorkflowSteps, 
   recordStep, 
@@ -24,6 +33,12 @@ import {
   type RecordingSession,
   type RecordingFrame
 } from '@/lib/demo-recorder';
+import {
+  generateMP4,
+  generateGIF,
+  downloadBlob,
+  estimateFileSizes
+} from '@/lib/video-generator';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -34,6 +49,11 @@ export function DemoRecorder() {
   const [isPreparing, setIsPreparing] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [videoStatus, setVideoStatus] = useState('');
+  const [videoQuality, setVideoQuality] = useState<'high' | 'medium' | 'low'>('medium');
+  const [gifWidth, setGifWidth] = useState<number>(1024);
 
   const handlePrepare = async () => {
     setIsPreparing(true);
@@ -129,6 +149,70 @@ export function DemoRecorder() {
     link.click();
     URL.revokeObjectURL(url);
     toast.success('Instructions downloaded');
+  };
+
+  const handleGenerateMP4 = async () => {
+    if (!session || session.frames.length === 0) return;
+
+    setIsGeneratingVideo(true);
+    setError(null);
+    setVideoProgress(0);
+    setVideoStatus('Starting...');
+
+    try {
+      const blob = await generateMP4(session.frames, {
+        fps: 2,
+        quality: videoQuality,
+        onProgress: (progress, status) => {
+          setVideoProgress(progress);
+          setVideoStatus(status);
+        },
+      });
+
+      const filename = `quote-workflow-${Date.now()}.mp4`;
+      downloadBlob(blob, filename);
+      toast.success(`MP4 video generated! (${(blob.size / 1024 / 1024).toFixed(2)}MB)`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to generate video';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsGeneratingVideo(false);
+      setVideoProgress(0);
+      setVideoStatus('');
+    }
+  };
+
+  const handleGenerateGIF = async () => {
+    if (!session || session.frames.length === 0) return;
+
+    setIsGeneratingVideo(true);
+    setError(null);
+    setVideoProgress(0);
+    setVideoStatus('Starting...');
+
+    try {
+      const blob = await generateGIF(session.frames, {
+        fps: 2,
+        width: gifWidth,
+        onProgress: (progress, status) => {
+          setVideoProgress(progress);
+          setVideoStatus(status);
+        },
+      });
+
+      const filename = `quote-workflow-${Date.now()}.gif`;
+      downloadBlob(blob, filename);
+      toast.success(`GIF generated! (${(blob.size / 1024 / 1024).toFixed(2)}MB)`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to generate GIF';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsGeneratingVideo(false);
+      setVideoProgress(0);
+      setVideoStatus('');
+    }
   };
 
   const progress = session 
@@ -239,25 +323,124 @@ export function DemoRecorder() {
           {/* Export Section */}
           {session && session.frames.length > 0 && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Step 3: Export Frames</h3>
+              <h3 className="text-lg font-semibold">Step 3: Export Media</h3>
               <p className="text-sm text-muted-foreground">
-                Download frames and convert to GIF using tools like ezgif.com or ffmpeg
+                Generate video/GIF automatically or download frames for manual editing
               </p>
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  onClick={handleDownloadFrames}
-                  variant="outline"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download All Frames ({session.frames.length})
-                </Button>
-                <Button
-                  onClick={handleExportSession}
-                  variant="outline"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Export Session Data
-                </Button>
+
+              {/* Video Generation */}
+              <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+                <h4 className="font-medium text-sm">Automated Video Generation</h4>
+                
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium">MP4 Quality</label>
+                    <Select
+                      value={videoQuality}
+                      onValueChange={(value: 'high' | 'medium' | 'low') => setVideoQuality(value)}
+                      disabled={isGeneratingVideo}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="high">High (Best Quality)</SelectItem>
+                        <SelectItem value="medium">Medium (Balanced)</SelectItem>
+                        <SelectItem value="low">Low (Smaller Size)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium">GIF Width</label>
+                    <Select
+                      value={gifWidth.toString()}
+                      onValueChange={(value) => setGifWidth(parseInt(value))}
+                      disabled={isGeneratingVideo}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1920">1920px (Full HD)</SelectItem>
+                        <SelectItem value="1280">1280px (HD)</SelectItem>
+                        <SelectItem value="1024">1024px (Balanced)</SelectItem>
+                        <SelectItem value="800">800px (Smaller)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    onClick={handleGenerateMP4}
+                    disabled={isGeneratingVideo}
+                    className="flex-1 sm:flex-initial"
+                  >
+                    {isGeneratingVideo ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Film className="h-4 w-4 mr-2" />
+                        Generate MP4
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleGenerateGIF}
+                    disabled={isGeneratingVideo}
+                    variant="secondary"
+                    className="flex-1 sm:flex-initial"
+                  >
+                    {isGeneratingVideo ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <ImagePlay className="h-4 w-4 mr-2" />
+                        Generate GIF
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {isGeneratingVideo && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span>{videoStatus}</span>
+                      <span>{videoProgress}%</span>
+                    </div>
+                    <Progress value={videoProgress} />
+                  </div>
+                )}
+              </div>
+
+              {/* Manual Export */}
+              <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+                <h4 className="font-medium text-sm">Manual Export</h4>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    onClick={handleDownloadFrames}
+                    variant="outline"
+                    disabled={isGeneratingVideo}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Frames ({session.frames.length})
+                  </Button>
+                  <Button
+                    onClick={handleExportSession}
+                    variant="outline"
+                    disabled={isGeneratingVideo}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Export Session Data
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -316,16 +499,16 @@ export function DemoRecorder() {
             </div>
           </div>
 
-          {/* Post-Processing Tips */}
+          {/* Video Generation Info */}
           <div className="space-y-4 p-4 bg-muted rounded-lg">
-            <h3 className="text-lg font-semibold">Post-Processing Tips</h3>
+            <h3 className="text-lg font-semibold">About Automated Video Generation</h3>
             <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
-              <li>Use ezgif.com or ffmpeg to convert frames to GIF</li>
-              <li>Target file size: under 5MB for web</li>
-              <li>Frame rate: 15-20 fps for smooth animation</li>
-              <li>Add text overlays to highlight key features</li>
-              <li>Optimize with gifsicle or ImageOptim</li>
-              <li>Consider creating both GIF and MP4 versions</li>
+              <li><strong>MP4:</strong> Best for web embedding, social media, and presentations</li>
+              <li><strong>GIF:</strong> Works everywhere, auto-plays, but larger file sizes</li>
+              <li><strong>Frame Rate:</strong> 2 FPS optimized for step-by-step demos</li>
+              <li><strong>Processing:</strong> Runs entirely in your browser using FFmpeg WebAssembly</li>
+              <li><strong>Quality:</strong> High quality preserves details but increases file size</li>
+              <li><strong>No Upload:</strong> All processing happens locally - your frames never leave your device</li>
             </ul>
           </div>
         </CardContent>
