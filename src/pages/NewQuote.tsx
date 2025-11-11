@@ -414,7 +414,7 @@ export default function NewQuote() {
   };
 
   return (
-    <div className="max-w-[1800px] mx-auto space-y-4 pb-20 md:pb-6">
+    <div className="max-w-[1800px] mx-auto space-y-4 pb-20 md:pb-6 px-4 md:px-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
