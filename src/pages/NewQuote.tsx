@@ -437,7 +437,7 @@ export default function NewQuote() {
 
       <div className="grid gap-4 lg:gap-6 lg:grid-cols-[1fr_380px]">
         {/* Main Form */}
-        <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
+        <div className="lg:col-span-2 space-y-6 order-1 lg:order-1">
           {/* AI Full Quote Generation */}
           {!isEditMode && items.length > 0 && (
             <FullQuoteGenerationAI
@@ -686,7 +686,7 @@ Format as clear, professional terms and conditions.`;
         </div>
 
         {/* Sidebar - Item Catalog */}
-        <div className="space-y-6 order-1 lg:order-2">
+        <div className="space-y-6 order-2 lg:order-2">
           <Card className="sticky top-6">
             <CardHeader className="space-y-3">
               <CardTitle>Item Catalog</CardTitle>
