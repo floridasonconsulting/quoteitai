@@ -235,10 +235,22 @@ export async function recordStep(
  * Downloads a single frame as PNG
  */
 export function downloadFrame(frame: RecordingFrame, filename?: string) {
+  const downloadName = filename || `${frame.stepId}-${frame.timestamp}.png`;
+  console.log(`[Demo Recorder] Downloading frame: ${downloadName}`);
+  
   const link = document.createElement('a');
-  link.download = filename || `${frame.stepId}-${frame.timestamp}.png`;
   link.href = frame.imageData;
+  link.download = downloadName;
+  link.style.display = 'none';
+  
+  // Append to body to ensure it works in all browsers
+  document.body.appendChild(link);
   link.click();
+  
+  // Clean up after a short delay
+  setTimeout(() => {
+    document.body.removeChild(link);
+  }, 100);
 }
 
 /**
@@ -255,11 +267,11 @@ export function downloadAllFrames(frames: RecordingFrame[]) {
 /**
  * Prepares the application with sample data for recording
  */
-export async function prepareForRecording(): Promise<void> {
+export async function prepareForRecording(userId: string): Promise<void> {
   console.log('[Demo Recorder] Preparing sample data...');
   
   try {
-    const result = await prepareSampleDataForScreenshots();
+    const result = await prepareSampleDataForScreenshots(userId);
     console.log('[Demo Recorder] Sample data prepared:', result);
     
     // Wait a bit for data to settle

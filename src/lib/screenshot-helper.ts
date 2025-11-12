@@ -81,9 +81,9 @@ export const screenshotPresets: ScreenshotPreset[] = [
  * Prepares the app with sample data for screenshots
  * Call this before capturing screenshots to ensure realistic data
  */
-export async function prepareSampleDataForScreenshots() {
+export async function prepareSampleDataForScreenshots(userId: string) {
   try {
-    const result = await generateSampleData(undefined, false);
+    const result = await generateSampleData(userId, false);
     console.log('[Screenshot Helper] Sample data generated:', result);
     return result;
   } catch (error) {

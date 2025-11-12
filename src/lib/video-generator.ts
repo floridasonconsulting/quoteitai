@@ -214,12 +214,23 @@ export async function generateGIF(
  * Download a blob as a file
  */
 export function downloadBlob(blob: Blob, filename: string): void {
+  console.log(`[Video Generator] Downloading ${filename} (${(blob.size / 1024 / 1024).toFixed(2)}MB)`);
+  
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
+  link.style.display = 'none';
+  
+  // Append to body to ensure it works in all browsers
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  
+  // Clean up after a short delay
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, 100);
 }
 
 /**

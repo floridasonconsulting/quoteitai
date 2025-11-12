@@ -41,9 +41,11 @@ import {
 } from '@/lib/video-generator';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function DemoRecorder() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [session, setSession] = useState<RecordingSession | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
@@ -56,11 +58,18 @@ export function DemoRecorder() {
   const [gifWidth, setGifWidth] = useState<number>(1024);
 
   const handlePrepare = async () => {
+    if (!user) {
+      const message = 'You must be logged in to prepare sample data';
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
     setIsPreparing(true);
     setError(null);
     
     try {
-      await prepareForRecording();
+      await prepareForRecording(user.id);
       toast.success('Sample data prepared successfully');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to prepare sample data';
@@ -72,6 +81,13 @@ export function DemoRecorder() {
   };
 
   const handleStartRecording = async () => {
+    if (!user) {
+      const message = 'You must be logged in to start recording';
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
     setIsRecording(true);
     setError(null);
     setCurrentStepIndex(0);
