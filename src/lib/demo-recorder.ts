@@ -254,13 +254,27 @@ export function downloadFrame(frame: RecordingFrame, filename?: string) {
 }
 
 /**
- * Downloads all frames as a ZIP (requires manual GIF conversion)
+ * Downloads all frames as individual PNG files
+ * Returns a promise that resolves when all downloads are initiated
  */
-export function downloadAllFrames(frames: RecordingFrame[]) {
-  frames.forEach((frame, index) => {
-    setTimeout(() => {
-      downloadFrame(frame, `frame-${String(index + 1).padStart(3, '0')}-${frame.stepId}.png`);
-    }, index * 200); // Stagger downloads
+export function downloadAllFrames(frames: RecordingFrame[]): Promise<void> {
+  return new Promise((resolve) => {
+    console.log(`[Demo Recorder] Starting download of ${frames.length} frames...`);
+    
+    frames.forEach((frame, index) => {
+      setTimeout(() => {
+        const filename = `frame-${String(index + 1).padStart(3, '0')}-${frame.stepId}.png`;
+        downloadFrame(frame, filename);
+        
+        // Resolve when last frame download is initiated
+        if (index === frames.length - 1) {
+          setTimeout(() => {
+            console.log(`[Demo Recorder] All ${frames.length} frame downloads initiated`);
+            resolve();
+          }, 200);
+        }
+      }, index * 300); // Increased stagger to 300ms for better browser compatibility
+    });
   });
 }
 

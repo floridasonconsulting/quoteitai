@@ -141,10 +141,17 @@ export function DemoRecorder() {
     }
   };
 
-  const handleDownloadFrames = () => {
+  const handleDownloadFrames = async () => {
     if (session && session.frames.length > 0) {
-      downloadAllFrames(session.frames);
-      toast.success(`Downloading ${session.frames.length} frames`);
+      toast.loading(`Starting download of ${session.frames.length} frames...`);
+      try {
+        await downloadAllFrames(session.frames);
+        toast.success(`All ${session.frames.length} frames downloaded! Check your downloads folder.`, {
+          duration: 5000
+        });
+      } catch (error) {
+        toast.error('Some frames may not have downloaded. Please check browser permissions.');
+      }
     }
   };
 
@@ -436,27 +443,35 @@ export function DemoRecorder() {
                 )}
               </div>
 
-              {/* Manual Export */}
+              {/* Download All Frames - Primary Action */}
+              <div className="space-y-3">
+                <Button
+                  onClick={handleDownloadFrames}
+                  size="lg"
+                  variant="default"
+                  disabled={isGeneratingVideo}
+                  className="w-full"
+                >
+                  <Download className="h-5 w-5 mr-2" />
+                  Download All Frames ({session.frames.length} PNG files)
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Individual PNG files will be downloaded to your default downloads folder
+                </p>
+              </div>
+
+              {/* Additional Export Options */}
               <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
-                <h4 className="font-medium text-sm">Manual Export</h4>
-                <div className="flex gap-2 flex-wrap">
-                  <Button
-                    onClick={handleDownloadFrames}
-                    variant="outline"
-                    disabled={isGeneratingVideo}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Frames ({session.frames.length})
-                  </Button>
-                  <Button
-                    onClick={handleExportSession}
-                    variant="outline"
-                    disabled={isGeneratingVideo}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Export Session Data
-                  </Button>
-                </div>
+                <h4 className="font-medium text-sm">Additional Options</h4>
+                <Button
+                  onClick={handleExportSession}
+                  variant="outline"
+                  disabled={isGeneratingVideo}
+                  className="w-full"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export Session Metadata (JSON)
+                </Button>
               </div>
             </div>
           )}
