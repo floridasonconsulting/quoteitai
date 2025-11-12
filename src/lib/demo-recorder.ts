@@ -44,7 +44,7 @@ export const quoteWorkflowSteps: RecordingStep[] = [
     id: 'navigate-create',
     name: 'Navigate to Create Quote',
     description: 'Click the "New Quote" button',
-    route: '/new-quote',
+    route: '/quotes/new',
     delay: 1500,
     captureFullPage: true
   },

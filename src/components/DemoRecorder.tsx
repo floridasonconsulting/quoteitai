@@ -125,6 +125,14 @@ export function DemoRecorder() {
       setSession({ ...newSession });
       toast.success('Recording completed!');
       
+      // Scroll to export section after completion
+      setTimeout(() => {
+        const exportSection = document.querySelector('[data-export-section]');
+        if (exportSection) {
+          exportSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 500);
+      
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Recording failed';
       setError(message);
@@ -143,6 +151,11 @@ export function DemoRecorder() {
 
   const handleDownloadFrames = async () => {
     if (session && session.frames.length > 0) {
+      // Show alert about browser permissions
+      toast.info('Starting download... Your browser may ask to allow multiple downloads.', {
+        duration: 6000
+      });
+      
       toast.loading(`Starting download of ${session.frames.length} frames...`);
       try {
         await downloadAllFrames(session.frames);
@@ -150,7 +163,7 @@ export function DemoRecorder() {
           duration: 5000
         });
       } catch (error) {
-        toast.error('Some frames may not have downloaded. Please check browser permissions.');
+        toast.error('Some frames may not have downloaded. Check browser permissions and try again.');
       }
     }
   };
@@ -343,12 +356,15 @@ export function DemoRecorder() {
             </Alert>
           )}
 
-          {/* Export Section */}
+          {/* Export Section - Prominent Display */}
           {session && session.frames.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Step 3: Export Media</h3>
+            <div className="space-y-4 p-6 border-2 border-primary/20 rounded-lg bg-primary/5" data-export-section>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-6 w-6 text-green-600" />
+                <h3 className="text-xl font-bold">Recording Complete! ({session.frames.length} frames captured)</h3>
+              </div>
               <p className="text-sm text-muted-foreground">
-                Generate video/GIF automatically or download frames for manual editing
+                Choose how you want to export your recorded workflow:
               </p>
 
               {/* Video Generation */}
@@ -444,19 +460,23 @@ export function DemoRecorder() {
               </div>
 
               {/* Download All Frames - Primary Action */}
-              <div className="space-y-3">
+              <div className="space-y-3 p-4 bg-background rounded-lg border-2 border-primary">
+                <div className="flex items-center gap-2 mb-2">
+                  <Download className="h-5 w-5 text-primary" />
+                  <h4 className="font-semibold text-lg">Download Screenshots</h4>
+                </div>
                 <Button
                   onClick={handleDownloadFrames}
                   size="lg"
                   variant="default"
                   disabled={isGeneratingVideo}
-                  className="w-full"
+                  className="w-full h-12 text-base"
                 >
                   <Download className="h-5 w-5 mr-2" />
-                  Download All Frames ({session.frames.length} PNG files)
+                  Download All {session.frames.length} Frames (PNG)
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
-                  Individual PNG files will be downloaded to your default downloads folder
+                  ⚠️ Your browser may ask for permission to download multiple files. Each frame will download as a separate PNG file to your downloads folder.
                 </p>
               </div>
 
