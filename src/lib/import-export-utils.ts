@@ -16,7 +16,17 @@ export async function importCustomersFromCSV(
   userId: string,
   duplicateStrategy: DuplicateStrategy = 'skip'
 ): Promise<ImportResult> {
-  const lines = csvContent.trim().split('\n');
+  // Handle all line ending types and filter empty lines
+  const lines = csvContent
+    .trim()
+    .split(/\r?\n|\r/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+    
+  if (lines.length < 2) {
+    return { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: ['CSV file is empty or has no data rows'] };
+  }
+  
   const headers = parseCSVLine(lines[0]);
   const result: ImportResult = { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: [] };
 
@@ -27,6 +37,16 @@ export async function importCustomersFromCSV(
   for (let i = 1; i < lines.length; i++) {
     try {
       const values = parseCSVLine(lines[i]);
+      
+      // Validate column count
+      if (values.length !== headers.length) {
+        result.failed++;
+        result.errors.push(
+          `Line ${i + 1}: Column count mismatch. Expected ${headers.length} columns, found ${values.length}`
+        );
+        continue;
+      }
+      
       const customer: any = {};
       headers.forEach((header, index) => {
         customer[header.trim()] = values[index] || '';
@@ -74,7 +94,17 @@ export async function importItemsFromCSV(
   userId: string,
   duplicateStrategy: DuplicateStrategy = 'skip'
 ): Promise<ImportResult> {
-  const lines = csvContent.trim().split('\n');
+  // Handle all line ending types and filter empty lines
+  const lines = csvContent
+    .trim()
+    .split(/\r?\n|\r/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+    
+  if (lines.length < 2) {
+    return { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: ['CSV file is empty or has no data rows'] };
+  }
+  
   const headers = parseCSVLine(lines[0]);
   const result: ImportResult = { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: [] };
 
@@ -85,6 +115,16 @@ export async function importItemsFromCSV(
   for (let i = 1; i < lines.length; i++) {
     try {
       const values = parseCSVLine(lines[i]);
+      
+      // Validate column count
+      if (values.length !== headers.length) {
+        result.failed++;
+        result.errors.push(
+          `Line ${i + 1}: Column count mismatch. Expected ${headers.length} columns, found ${values.length}`
+        );
+        continue;
+      }
+      
       const item: any = {};
       headers.forEach((header, index) => {
         const value = values[index] || '';
@@ -154,7 +194,17 @@ export async function importItemsFromCSV(
 }
 
 export async function importQuotesFromCSV(csvContent: string, userId: string): Promise<ImportResult> {
-  const lines = csvContent.trim().split('\n');
+  // Handle all line ending types and filter empty lines
+  const lines = csvContent
+    .trim()
+    .split(/\r?\n|\r/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+    
+  if (lines.length < 2) {
+    return { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: ['CSV file is empty or has no data rows'] };
+  }
+  
   const headers = parseCSVLine(lines[0]);
   const result: ImportResult = { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: [] };
 
@@ -167,6 +217,16 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
   for (let i = 1; i < lines.length; i++) {
     try {
       const values = parseCSVLine(lines[i]);
+      
+      // Validate column count
+      if (values.length !== headers.length) {
+        result.failed++;
+        result.errors.push(
+          `Line ${i + 1}: Column count mismatch. Expected ${headers.length} columns, found ${values.length}`
+        );
+        continue;
+      }
+      
       const quote: any = {};
       headers.forEach((header, index) => {
         const value = values[index] || '';
