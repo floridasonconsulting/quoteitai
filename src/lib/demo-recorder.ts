@@ -28,6 +28,9 @@ export interface RecordingSession {
   completed: boolean;
 }
 
+// Storage key for sessionStorage
+const SESSION_STORAGE_KEY = 'demo-recorder-session';
+
 /**
  * Quote Creation Workflow Steps
  */
@@ -315,6 +318,60 @@ export function exportSessionData(session: RecordingSession): void {
   link.href = url;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Save recording session to sessionStorage
+ */
+export function saveSessionToStorage(session: RecordingSession): boolean {
+  try {
+    const serialized = JSON.stringify(session);
+    
+    // Check if data is too large (sessionStorage limit is typically 5-10MB)
+    const sizeInMB = new Blob([serialized]).size / (1024 * 1024);
+    if (sizeInMB > 8) {
+      console.warn(`Session data is large (${sizeInMB.toFixed(2)}MB). May exceed storage limits.`);
+    }
+    
+    sessionStorage.setItem(SESSION_STORAGE_KEY, serialized);
+    return true;
+  } catch (error) {
+    if (error instanceof Error && error.name === 'QuotaExceededError') {
+      console.error('SessionStorage quota exceeded. Session data is too large.');
+    } else {
+      console.error('Failed to save session to storage:', error);
+    }
+    return false;
+  }
+}
+
+/**
+ * Load recording session from sessionStorage
+ */
+export function loadSessionFromStorage(): RecordingSession | null {
+  try {
+    const serialized = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (!serialized) {
+      return null;
+    }
+    
+    const session = JSON.parse(serialized) as RecordingSession;
+    return session;
+  } catch (error) {
+    console.error('Failed to load session from storage:', error);
+    return null;
+  }
+}
+
+/**
+ * Clear recording session from sessionStorage
+ */
+export function clearSessionFromStorage(): void {
+  try {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch (error) {
+    console.error('Failed to clear session from storage:', error);
+  }
 }
 
 /**

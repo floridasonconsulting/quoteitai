@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
@@ -14,7 +14,8 @@ import {
   AlertCircle,
   Loader2,
   Film,
-  ImagePlay
+  ImagePlay,
+  Trash2
 } from 'lucide-react';
 import { 
   Select,
@@ -30,6 +31,9 @@ import {
   downloadAllFrames,
   exportSessionData,
   generateRecordingInstructions,
+  saveSessionToStorage,
+  loadSessionFromStorage,
+  clearSessionFromStorage,
   type RecordingSession,
   type RecordingFrame
 } from '@/lib/demo-recorder';
@@ -56,6 +60,15 @@ export function DemoRecorder() {
   const [videoStatus, setVideoStatus] = useState('');
   const [videoQuality, setVideoQuality] = useState<'high' | 'medium' | 'low'>('medium');
   const [gifWidth, setGifWidth] = useState<number>(1024);
+
+  // Load existing session from storage on mount
+  useEffect(() => {
+    const savedSession = loadSessionFromStorage();
+    if (savedSession) {
+      setSession(savedSession);
+      toast.info(`Loaded previous recording session with ${savedSession.frames.length} frames`);
+    }
+  }, []);
 
   const handlePrepare = async () => {
     if (!user) {
@@ -117,15 +130,25 @@ export function DemoRecorder() {
         
         newSession.frames.push(frame);
         setSession({ ...newSession });
+        
+        // Save to sessionStorage after each frame
+        saveSessionToStorage(newSession);
 
         toast.success(`Captured: ${step.name}`);
       }
 
       newSession.completed = true;
       setSession({ ...newSession });
+      
+      // Save completed session to storage
+      saveSessionToStorage(newSession);
+      
       toast.success('Recording completed!');
       
-      // Scroll to export section after completion
+      // Navigate back to demo-recorder page
+      navigate('/demo-recorder');
+      
+      // Scroll to export section after navigation
       setTimeout(() => {
         const exportSection = document.querySelector('[data-export-section]');
         if (exportSection) {
@@ -144,9 +167,22 @@ export function DemoRecorder() {
 
   const handleStopRecording = () => {
     setIsRecording(false);
+    setCurrentStepIndex(0);
+    
+    // Save current state before stopping
     if (session) {
-      toast.info('Recording stopped');
+      saveSessionToStorage(session);
     }
+    
+    toast.info('Recording stopped');
+  };
+
+  const handleClearSession = () => {
+    clearSessionFromStorage();
+    setSession(null);
+    setCurrentStepIndex(0);
+    setError(null);
+    toast.success('Session cleared');
   };
 
   const handleDownloadFrames = async () => {
@@ -359,9 +395,20 @@ export function DemoRecorder() {
           {/* Export Section - Prominent Display */}
           {session && session.frames.length > 0 && (
             <div className="space-y-4 p-6 border-2 border-primary/20 rounded-lg bg-primary/5" data-export-section>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-6 w-6 text-green-600" />
-                <h3 className="text-xl font-bold">Recording Complete! ({session.frames.length} frames captured)</h3>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-6 w-6 text-green-600" />
+                  <h3 className="text-xl font-bold">Recording {session.completed ? 'Complete' : 'In Progress'}! ({session.frames.length} frames captured)</h3>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearSession}
+                  disabled={isRecording || isGeneratingVideo}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear Session
+                </Button>
               </div>
               <p className="text-sm text-muted-foreground">
                 Choose how you want to export your recorded workflow:
