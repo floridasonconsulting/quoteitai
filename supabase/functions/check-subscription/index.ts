@@ -88,6 +88,17 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR in check-subscription", { message: errorMessage });
     
+    // Detect session invalidation and return special error code
+    if (errorMessage.includes("session missing") || errorMessage.includes("session not found")) {
+      return new Response(JSON.stringify({ 
+        error: "Session expired. Please sign in again.",
+        code: "SESSION_EXPIRED"
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, // Unauthorized instead of 500
+      });
+    }
+    
     // Return sanitized error to client
     const isDevelopment = Deno.env.get('ENVIRONMENT') === 'development';
     const clientError = isDevelopment 

@@ -135,6 +135,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const { data, error } = await supabase.functions.invoke('check-subscription');
+      
+      // Handle session expiration by forcing re-login
+      if (error && data?.code === 'SESSION_EXPIRED') {
+        console.error('[AuthContext] Session expired, signing out');
+        toast.error('Your session has expired. Please sign in again.');
+        await signOut();
+        return;
+      }
+      
       if (error) throw error;
       setSubscription(data);
     } catch (error) {
