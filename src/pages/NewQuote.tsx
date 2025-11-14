@@ -23,6 +23,8 @@ import { sanitizeForAI, sanitizeNumber } from '@/lib/input-sanitization';
 import { QuoteSummaryAI } from '@/components/QuoteSummaryAI';
 import { SendQuoteDialog, EmailContent } from '@/components/SendQuoteDialog';
 import { FullQuoteGenerationAI } from '@/components/FullQuoteGenerationAI';
+import { PricingOptimizationAI } from '@/components/PricingOptimizationAI';
+import { ItemRecommendationsAI } from '@/components/ItemRecommendationsAI';
 
 export default function NewQuote() {
   const navigate = useNavigate();
@@ -597,12 +599,21 @@ Format as clear, professional terms and conditions.`;
           {/* Quote Items */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <CardTitle>Quote Items</CardTitle>
-                <Button onClick={() => setIsItemDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Custom Item
-                </Button>
+                <div className="flex items-center gap-2">
+                  <ItemRecommendationsAI
+                    currentItems={quoteItems}
+                    availableItems={items}
+                    onAddItem={(item) => {
+                      setQuoteItems([...quoteItems, item]);
+                    }}
+                  />
+                  <Button onClick={() => setIsItemDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Custom Item
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -777,6 +788,17 @@ Format as clear, professional terms and conditions.`;
               </div>
             </CardContent>
           </Card>
+
+          {/* Pricing Optimization */}
+          {quoteItems.length > 0 && (
+            <PricingOptimizationAI
+              quote={{
+                items: quoteItems,
+                total
+              }}
+              customer={selectedCustomer}
+            />
+          )}
         </div>
       </div>
 

@@ -252,10 +252,48 @@ Rules:
 - Summary should mention total value and key deliverables`;
         break;
       case "item_recommendations":
-        systemPrompt = "You are a sales consultant. Based on the currently selected items, suggest complementary items from the catalog that are commonly paired together.";
+        systemPrompt = `You are a sales consultant specializing in item recommendations. Based on the current quote items, suggest 3-5 complementary items from the available catalog.
+
+CRITICAL RESPONSE FORMAT: Return ONLY raw JSON object. Do NOT wrap in markdown code blocks.
+
+Required JSON format:
+{
+  "recommendations": [
+    {
+      "name": "exact item name from catalog",
+      "description": "item description from catalog",
+      "price": 100.00,
+      "priority": "high|medium|low",
+      "reasoning": "Why this item complements current quote (1-2 sentences)",
+      "units": "units from catalog"
+    }
+  ]
+}
+
+Rules:
+- Only suggest items from the provided catalog
+- Prioritize items that are commonly paired with current selections
+- Explain why each item complements the quote
+- Assign priority based on relevance (high/medium/low)
+- Return 3-5 recommendations max`;
         break;
       case "pricing_optimization":
-        systemPrompt = "You are a pricing strategist. Analyze the quote and suggest pricing optimizations based on market rates and historical data.";
+        systemPrompt = `You are a pricing strategist and market analyst. Analyze the provided quote and provide comprehensive pricing optimization recommendations.
+
+Your analysis should cover:
+
+1. Market Position: Compare pricing to typical market rates and competitive positioning
+2. Margin Optimization: Identify opportunities to increase profitability while staying competitive
+3. Bundling Strategy: Suggest package deals that increase perceived value
+4. Psychology: Recommend pricing tactics to increase quote acceptance rates
+
+Format your response as a detailed analysis with:
+- Specific price adjustment recommendations
+- Reasoning for each suggestion
+- Expected impact on profitability and acceptance rate
+- Clear action items the user can implement
+
+Be specific and actionable. Reference actual quote items, quantities, and prices in your recommendations.`;
         break;
       case "follow_up_suggestions":
         systemPrompt = "You are a sales strategist. Suggest optimal follow-up timing and personalized message drafts based on the quote status and customer history.";
