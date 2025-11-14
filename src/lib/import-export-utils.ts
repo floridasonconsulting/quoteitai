@@ -73,7 +73,13 @@ export async function importCustomersFromCSV(
       }
 
       // Don't queue to sync manager - direct DB insert during import
-      await addCustomer(userId, customer);
+      const inserted = await addCustomer(userId, customer);
+      
+      // Update local cache immediately so data appears without navigation
+      const { getCachedData, setCachedData } = await import('./db-service');
+      const cached = getCachedData<any>('customers-cache') || [];
+      setCachedData('customers-cache', [...cached, inserted]);
+      
       result.success++;
     } catch (error) {
       result.failed++;
@@ -177,7 +183,13 @@ export async function importItemsFromCSV(
       }
 
       // Don't queue to sync manager - direct DB insert during import
-      await addItem(userId, item);
+      const inserted = await addItem(userId, item);
+      
+      // Update local cache immediately so data appears without navigation
+      const { getCachedData, setCachedData } = await import('./db-service');
+      const cached = getCachedData<any>('items-cache') || [];
+      setCachedData('items-cache', [...cached, inserted]);
+      
       result.success++;
     } catch (error) {
       result.failed++;
@@ -273,8 +285,13 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
       }
 
       // Import addQuote dynamically to save the quote
-      const { addQuote } = await import('./db-service');
-      await addQuote(userId, quote);
+      const { addQuote, getCachedData, setCachedData } = await import('./db-service');
+      const inserted = await addQuote(userId, quote);
+      
+      // Update local cache immediately so data appears without navigation
+      const cached = getCachedData<any>('quotes-cache') || [];
+      setCachedData('quotes-cache', [...cached, inserted]);
+      
       result.success++;
     } catch (error) {
       result.failed++;

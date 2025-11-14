@@ -376,12 +376,8 @@ export default function Settings() {
       // Reload settings
       await loadSettings();
 
-      // Clear localStorage cache after successful import
-      localStorage.removeItem('customers-cache');
-      localStorage.removeItem('items-cache');
-      localStorage.removeItem('quotes-cache');
-
-      // Dispatch refresh events
+      // Don't clear cache - it was updated during import
+      // Dispatch refresh events so UI components reload
       dispatchDataRefresh('customers-changed');
       dispatchDataRefresh('items-changed');
       dispatchDataRefresh('quotes-changed');
@@ -489,10 +485,7 @@ export default function Settings() {
       toast.loading('Importing company settings...');
       await importCompanySettingsFromCSV(settingsCSV, user.id);
 
-      // Clear localStorage cache
-      localStorage.removeItem('customers-cache');
-      localStorage.removeItem('items-cache');
-      localStorage.removeItem('quotes-cache');
+      // Clear sync queue but keep data cache (updated during import)
       localStorage.removeItem('sync-queue');
 
       // Dispatch refresh events
