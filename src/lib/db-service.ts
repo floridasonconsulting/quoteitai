@@ -84,7 +84,7 @@ interface CacheEntry<T> {
   version: string;
 }
 
-function getCachedData<T>(key: string): T[] | null {
+export function getCachedData<T>(key: string): T[] | null {
   const cached = localStorage.getItem(key);
   if (!cached) return null;
   
@@ -114,7 +114,7 @@ function getCachedData<T>(key: string): T[] | null {
   }
 }
 
-function setCachedData<T>(key: string, data: T[]): void {
+export function setCachedData<T>(key: string, data: T[]): void {
   const entry: CacheEntry<T> = {
     data,
     timestamp: Date.now(),
