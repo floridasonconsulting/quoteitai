@@ -114,6 +114,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadSubscription = async (userId: string) => {
     try {
+      // Ensure we have a valid session before calling the edge function
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.log('[AuthContext] No valid session for subscription check');
+        setSubscription(null);
+        return;
+      }
+
+      // Refresh the session if it's about to expire (less than 5 minutes left)
+      const expiresAt = sessionData.session.expires_at;
+      if (expiresAt && (expiresAt * 1000 - Date.now()) < 300000) {
+        console.log('[AuthContext] Session expiring soon, refreshing...');
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        if (!refreshData.session) {
+          console.error('[AuthContext] Session refresh failed');
+          setSubscription(null);
+          return;
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke('check-subscription');
       if (error) throw error;
       setSubscription(data);
