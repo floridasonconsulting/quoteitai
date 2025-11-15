@@ -123,39 +123,19 @@ export default function Dashboard() {
     }, timeoutDuration);
 
     try {
-      console.log('[Dashboard] Starting progressive data load');
+      console.log('[Dashboard] Starting parallel data load');
       const startTime = Date.now();
       
-      // Phase 1: Load quotes first (highest priority)
-      setLoadingProgress(['Loading quotes...']);
-      const quotesData = await getQuotes(user?.id);
-      console.log('[Dashboard] Quotes loaded:', quotesData.length);
+      setLoadingProgress(['Loading all data...']);
       
-      if (abortControllerRef.current?.signal.aborted) {
-        console.log('[Dashboard] Load aborted after quotes');
-        clearTimeout(timeoutId);
-        stopLoading(operationId);
-        return;
-      }
+      const [quotesData, customersData, itemsData] = await Promise.all([
+        getQuotes(user?.id),
+        getCustomers(user?.id),
+        getItems(user?.id)
+      ]);
       
-      // Phase 2: Load customers (needed for stats)
-      setLoadingProgress(['Quotes loaded', 'Loading customers...']);
-      const customersData = await getCustomers(user?.id);
-      console.log('[Dashboard] Customers loaded:', customersData.length);
-      
-      if (abortControllerRef.current?.signal.aborted) {
-        console.log('[Dashboard] Load aborted after customers');
-        clearTimeout(timeoutId);
-        stopLoading(operationId);
-        return;
-      }
-      
-      // Phase 3: Load items (lowest priority)
-      setLoadingProgress(['Quotes loaded', 'Customers loaded', 'Loading items...']);
-      const itemsData = await getItems(user?.id);
-      console.log('[Dashboard] Items loaded:', itemsData.length);
-      
-      console.log('[Dashboard] All data loaded in', Date.now() - startTime, 'ms');
+      console.log('[Dashboard] All data loaded in parallel:', Date.now() - startTime, 'ms');
+      console.log('[Dashboard] Quotes:', quotesData.length, 'Customers:', customersData.length, 'Items:', itemsData.length);
 
       if (abortControllerRef.current?.signal.aborted) {
         console.log('[Dashboard] Load aborted');

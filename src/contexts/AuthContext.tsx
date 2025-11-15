@@ -39,7 +39,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   
-  // Refs to prevent race conditions (CRITICAL: Must use useRef not useState)
   const isInitializing = useRef(false);
   const roleCheckInProgress = useRef(false);
 
@@ -47,7 +46,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isMaxAITier = userRole === 'max' || userRole === 'admin';
 
   const checkUserRole = async (sessionToUse?: Session | null) => {
-    // Prevent duplicate role checks
     if (roleCheckInProgress.current) {
       console.log('[AuthContext] Role check already in progress, skipping');
       return;
@@ -65,7 +63,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     roleCheckInProgress.current = true;
     
     try {
-      // Add 3-second timeout to prevent hanging
       const rolePromise = supabase.rpc('get_user_role', {
         _user_id: activeSession.user.id,
       });
@@ -78,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('[AuthContext] Error fetching user role:', error);
-        setUserRole('free'); // Default to free on error
+        setUserRole('free');
         return;
       }
 
@@ -86,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUserRole(data as UserRole);
     } catch (error) {
       console.error('[AuthContext] Error checking user role:', error);
-      setUserRole('free'); // Default to free on timeout/error
+      setUserRole('free');
     } finally {
       roleCheckInProgress.current = false;
     }
@@ -104,7 +101,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(data.error);
       }
 
-      // Refresh the role after update
       await checkUserRole();
     } catch (error) {
       console.error('Error updating user role:', error);
@@ -114,7 +110,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadSubscription = async (userId: string) => {
     try {
-      // Ensure we have a valid session before calling the edge function
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         console.log('[AuthContext] No valid session for subscription check');
@@ -122,7 +117,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Refresh the session if it's about to expire (less than 5 minutes left)
       const expiresAt = sessionData.session.expires_at;
       if (expiresAt && (expiresAt * 1000 - Date.now()) < 300000) {
         console.log('[AuthContext] Session expiring soon, refreshing...');
@@ -136,7 +130,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const { data, error } = await supabase.functions.invoke('check-subscription');
       
-      // Handle session expiration by forcing re-login
       if (error && data?.code === 'SESSION_EXPIRED') {
         console.error('[AuthContext] Session expired, signing out');
         toast.error('Your session has expired. Please sign in again.');
@@ -153,120 +146,123 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Prevent duplicate initialization
     if (isInitializing.current) {
       console.log('[AUTH DEBUG] Auth already initializing, skipping');
       return;
     }
     
     isInitializing.current = true;
-    const maxLoadingTimeout: NodeJS.Timeout = setTimeout(() => {
-        console.warn('[AUTH DEBUG] Maximum loading timeout reached - forcing loading to false');
+    
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        
+        const timeoutDuration = existingSession ? 300 : 800;
+        
+        const maxLoadingTimeout: NodeJS.Timeout = setTimeout(() => {
+          console.warn('[AUTH DEBUG] Auth timeout reached - forcing loading to false');
+          setLoading(false);
+          isInitializing.current = false;
+        }, timeoutDuration);
+        
+        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
+          async (event, currentSession) => {
+            clearTimeout(maxLoadingTimeout);
+            console.log('[AUTH DEBUG] Auth state change:', event, 'Session:', !!currentSession);
+            
+            if (currentSession?.refresh_token) {
+              try {
+                if (currentSession.refresh_token.length < 10) {
+                  console.error('[AUTH DEBUG] Invalid refresh token detected');
+                  throw new Error('Invalid refresh token');
+                }
+              } catch (validationError) {
+                console.error('[AUTH DEBUG] Session validation failed:', validationError);
+                localStorage.clear();
+                toast.error('Your session expired. Please sign in again.');
+                setSession(null);
+                setUser(null);
+                setSubscription(null);
+                setUserRole(null);
+                setLoading(false);
+                return;
+              }
+            }
+            
+            if (event === 'TOKEN_REFRESHED' && !currentSession) {
+              console.error('[AUTH DEBUG] Token refresh failed - clearing corrupted data');
+              try {
+                localStorage.clear();
+                if (navigator.serviceWorker.controller) {
+                  navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_AUTH_CACHE' });
+                }
+              } catch (e) {
+                console.error('[AUTH DEBUG] Error clearing storage:', e);
+              }
+              toast.error('Your session expired. Please sign in again.');
+              setSession(null);
+              setUser(null);
+              setSubscription(null);
+              setUserRole(null);
+              setLoading(false);
+              return;
+            }
+            
+            if (event === 'SIGNED_OUT') {
+              console.log('[AUTH DEBUG] Signed out event');
+              try {
+                localStorage.clear();
+              } catch (e) {
+                console.error('[AUTH DEBUG] Error clearing storage on signout:', e);
+              }
+              setSession(null);
+              setUser(null);
+              setSubscription(null);
+              setUserRole(null);
+              setLoading(false);
+              return;
+            }
+            
+            if (!currentSession) {
+              console.log('[AUTH DEBUG] No session');
+              setSession(null);
+              setUser(null);
+              setSubscription(null);
+              setUserRole(null);
+              setLoading(false);
+              return;
+            }
+            
+            setSession(currentSession);
+            setUser(currentSession.user);
+            
+            console.log('[AUTH DEBUG] Setting loading to false');
+            setLoading(false);
+            
+            checkUserRole(currentSession).catch(error => {
+              console.error('[AUTH DEBUG] Background role check failed:', error);
+            });
+            
+            setTimeout(() => {
+              loadSubscription(currentSession.user.id).catch(console.error);
+              checkAndMigrateData(currentSession.user.id).catch(console.error);
+            }, 100);
+          }
+        );
+
+        return () => {
+          clearTimeout(maxLoadingTimeout);
+          authSubscription.unsubscribe();
+          isInitializing.current = false;
+        };
+      } catch (error) {
+        console.error('[AUTH DEBUG] Auth initialization error:', error);
         setLoading(false);
         isInitializing.current = false;
-    }, 2000);
-    
-    // Set up auth state listener with error handling
-    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        clearTimeout(maxLoadingTimeout);
-        console.log('[AUTH DEBUG] Auth state change:', event, 'Session:', !!currentSession);
-        
-        // Validate session has refresh token
-        if (currentSession?.refresh_token) {
-          try {
-            // Basic validation that refresh token looks valid
-            if (currentSession.refresh_token.length < 10) {
-              console.error('[AUTH DEBUG] Invalid refresh token detected');
-              throw new Error('Invalid refresh token');
-            }
-          } catch (validationError) {
-            console.error('[AUTH DEBUG] Session validation failed:', validationError);
-            localStorage.clear();
-            toast.error('Your session expired. Please sign in again.');
-            setSession(null);
-            setUser(null);
-            setSubscription(null);
-            setUserRole(null);
-            setLoading(false);
-            return;
-          }
-        }
-        
-        // Handle token refresh failures
-        if (event === 'TOKEN_REFRESHED' && !currentSession) {
-          console.error('[AUTH DEBUG] Token refresh failed - clearing corrupted data');
-          try {
-            localStorage.clear();
-            // Tell service worker to clear caches
-            if (navigator.serviceWorker.controller) {
-              navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_AUTH_CACHE' });
-            }
-          } catch (e) {
-            console.error('[AUTH DEBUG] Error clearing storage:', e);
-          }
-          toast.error('Your session expired. Please sign in again.');
-          setSession(null);
-          setUser(null);
-          setSubscription(null);
-          setUserRole(null);
-          setLoading(false);
-          return;
-        }
-        
-        // Handle sign out - distinguish intentional vs automatic
-        if (event === 'SIGNED_OUT') {
-          console.log('[AUTH DEBUG] Signed out event');
-          try {
-            localStorage.clear();
-          } catch (e) {
-            console.error('[AUTH DEBUG] Error clearing storage on signout:', e);
-          }
-          setSession(null);
-          setUser(null);
-          setSubscription(null);
-          setUserRole(null);
-          setLoading(false);
-          return;
-        }
-        
-        // No session case
-        if (!currentSession) {
-          console.log('[AUTH DEBUG] No session');
-          setSession(null);
-          setUser(null);
-          setSubscription(null);
-          setUserRole(null);
-          setLoading(false);
-          return;
-        }
-        
-        // Valid session - update state
-        setSession(currentSession);
-        setUser(currentSession.user);
-        
-        // Set loading to false immediately for fast UI
-        console.log('[AUTH DEBUG] Setting loading to false');
-        setLoading(false);
-        
-        // Check role in background (non-blocking) - no await
-        checkUserRole(currentSession).catch(error => {
-          console.error('[AUTH DEBUG] Background role check failed:', error);
-        });
-        
-        // Defer subscription check and data migration even further
-        setTimeout(() => {
-          loadSubscription(currentSession.user.id).catch(console.error);
-          checkAndMigrateData(currentSession.user.id).catch(console.error);
-        }, 100);
       }
-    );
-
-    return () => {
-      clearTimeout(maxLoadingTimeout);
-      authSubscription.unsubscribe();
-      isInitializing.current = false;
     };
+
+    initializeAuth();
   }, []);
 
   const refreshSubscription = async () => {
@@ -288,7 +284,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!error && data.user) {
       toast.success('Account created! You can now sign in.');
       
-      // Auto-generate sample data for new users (fire and forget - don't block signup)
       setTimeout(async () => {
         try {
           const { generateSampleData } = await import('@/lib/sample-data');
@@ -323,9 +318,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut();
     } catch (error) {
       console.error('Sign out error:', error);
-      // Continue with local cleanup even if API call fails
     } finally {
-      // Always clear local state and navigate
       setSession(null);
       setUser(null);
       setSubscription(null);
