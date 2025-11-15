@@ -277,6 +277,7 @@ async function fetchWithCache<T>(
       // Apply 15-second timeout
       const dbQueryPromise = Promise.resolve(
         supabase
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .from(table as any)
           .select('*')
           .eq('user_id', userId)
@@ -334,6 +335,7 @@ async function createWithCache<T>(
   try {
     // Transform camelCase to snake_case for DB
     const dbItem = toSnakeCase(itemWithUser);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await supabase.from(table as any).insert(dbItem as unknown);
     if (error) {
       console.error(`❌ Database insert failed for ${table}:`, error);
@@ -387,6 +389,7 @@ async function updateWithCache<T extends { id: string }>(
     // Transform camelCase to snake_case for DB
     const dbUpdates = toSnakeCase(updates);
     const { error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .from(table as any)
       .update(dbUpdates as unknown)
       .eq('id', id)
@@ -438,6 +441,7 @@ async function deleteWithCache<T extends { id: string }>(
 
   try {
     const { error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .from(table as any)
       .delete()
       .eq('id', id)

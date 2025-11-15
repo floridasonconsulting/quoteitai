@@ -324,7 +324,7 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
       const cached = getCachedData<Quote>('quotes-cache') || [];
       setCachedData('quotes-cache', [...cached, inserted]);
       
-      console.log(`[Import] Successfully added quote: ${(quote as any).quoteNumber}`);
+      console.log(`[Import] Successfully added quote: ${quote.quoteNumber}`);
       result.success++;
     } catch (error) {
       result.failed++;
