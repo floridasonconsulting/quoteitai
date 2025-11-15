@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import { Quote, Customer, CompanySettings } from "@/types";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "./utils";
 
 // Shared PDF generation constants
 const MARGIN = 20;
