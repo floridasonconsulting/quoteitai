@@ -26,6 +26,10 @@ import { FullQuoteGenerationAI } from '@/components/FullQuoteGenerationAI';
 import { PricingOptimizationAI } from '@/components/PricingOptimizationAI';
 import { ItemRecommendationsAI } from '@/components/ItemRecommendationsAI';
 
+interface LocationState {
+  editQuote?: Quote;
+}
+
 export default function NewQuote() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -108,7 +112,9 @@ export default function NewQuote() {
     setItems(itemsData);
     
     // Check if we're editing via navigation state (from QuoteDetail)
-    const editQuote = (location.state as any)?.editQuote;
+    const state = location.state as LocationState | null;
+    const editQuote = state?.editQuote;
+
     if (editQuote) {
       console.log('[NewQuote] Loading quote from navigation state:', editQuote);
       setIsEditMode(true);

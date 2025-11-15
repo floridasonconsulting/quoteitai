@@ -81,15 +81,6 @@ export default function Auth() {
     }
   };
 
-  // Don't render the form if user is already authenticated
-  if (user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Redirecting to dashboard...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
       <Card className="w-full max-w-md">
