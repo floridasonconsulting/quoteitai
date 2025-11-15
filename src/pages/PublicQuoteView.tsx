@@ -205,32 +205,29 @@ export default function PublicQuoteView() {
     if (!quote) return;
 
     try {
-      // Create payment intent
-      const paymentIntent = await createPaymentIntent({
+      // Calculate payment amount
+      const amount = paymentType === 'full' 
+        ? quote.total 
+        : Math.round(quote.total * ((depositPercentage || 30) / 100));
+
+      // Create payment intent and get Checkout URL
+      const { url } = await createPaymentIntent({
         quoteId: quote.id,
-        amount: paymentType === 'full' ? quote.total : Math.round(quote.total * ((depositPercentage || 30) / 100)),
+        amount,
         currency: 'usd',
         paymentType,
         depositPercentage,
       });
 
-      // Get Stripe instance
-      const stripe = await getStripe();
-      if (!stripe) {
-        throw new Error('Stripe not initialized');
-      }
-
       // Redirect to Stripe Checkout
-      const { error } = await stripe.redirectToCheckout({
-        sessionId: paymentIntent.id,
-      });
-
-      if (error) {
-        throw error;
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL returned');
       }
     } catch (error) {
       console.error('Payment error:', error);
-      toast.error('Payment failed. Please try again.');
+      toast.error('Payment initialization failed. Please try again.');
     }
   };
 

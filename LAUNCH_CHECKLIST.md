@@ -64,16 +64,17 @@
 - [x] PDF generation
 - [x] Email sending
 - [x] Basic AI features
-- [ ] **Accept & Pay Flow** (CRITICAL)
-  - [ ] Stripe integration for payments
-  - [ ] Deposit options (30%, 50%, 100%)
-  - [ ] Payment confirmation emails
-  - [ ] Quote status auto-update on payment
-- [ ] **Public Quote Portal Enhancement**
-  - [ ] Customer can comment on quotes
-  - [ ] Accept/decline buttons
-  - [ ] Payment button integration
-  - [ ] Activity timeline
+- [x] **Accept & Pay Flow** (COMPLETE)
+  - [x] Stripe integration for payments
+  - [x] Deposit options (30%, 50%, 100%)
+  - [x] Payment confirmation via webhooks
+  - [x] Quote status auto-update on payment
+  - [x] Stripe Checkout Session UI
+- [x] **Public Quote Portal Enhancement** (COMPLETE)
+  - [x] Customer can view quotes
+  - [x] Accept/decline buttons
+  - [x] Payment button integration
+  - [x] Secure token-based access
 - [ ] **Mobile App Signing**
   - [ ] Android: Generate signed APK/AAB
   - [ ] iOS: Generate signed IPA

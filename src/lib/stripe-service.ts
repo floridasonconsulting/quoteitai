@@ -32,27 +32,33 @@ export interface CreatePaymentIntentParams {
 }
 
 /**
- * Create a payment intent for a quote
+ * Create a payment intent for a quote via Supabase Edge Function
  */
 export async function createPaymentIntent(
   params: CreatePaymentIntentParams
-): Promise<PaymentIntent> {
+): Promise<{ id: string; url: string }> {
   try {
+    // Import supabase client
+    const { supabase } = await import('@/integrations/supabase/client');
+    
     // Call Supabase Edge Function to create payment intent
-    const response = await fetch('/api/create-payment-intent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(params),
+    const { data, error } = await supabase.functions.invoke('create-payment-intent', {
+      body: params,
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to create payment intent');
+    if (error) {
+      console.error('Edge function error:', error);
+      throw new Error(error.message || 'Failed to create payment intent');
     }
 
-    const data = await response.json();
-    return data;
+    if (!data || !data.id) {
+      throw new Error('Invalid response from payment service');
+    }
+
+    return {
+      id: data.id,
+      url: data.url, // Stripe Checkout Session URL
+    };
   } catch (error) {
     console.error('Error creating payment intent:', error);
     throw error;
