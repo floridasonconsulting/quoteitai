@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { Home, Users, Package, FileText, Settings, Moon, Sun, CreditCard, LogOut, HelpCircle, Activity, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,7 @@ import { useDynamicFavicon } from '@/hooks/useDynamicFavicon';
 import { getSettings } from '@/lib/db-service';
 
 interface LayoutProps {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 const navigation = [
@@ -175,7 +175,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Main Content */}
       <main className="flex-1 px-4 py-6 md:ml-64 overflow-x-hidden max-w-full">
-        {children}
+        {children || <Outlet />}
       </main>
 
       {/* Bottom Navigation (Mobile) */}
