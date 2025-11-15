@@ -15,6 +15,20 @@ interface State {
   errorCount: number;
 }
 
+// Type definition for window with optional gtag
+interface WindowWithGtag extends Window {
+  gtag?: (
+    command: 'event',
+    action: 'exception',
+    parameters: {
+      description: string;
+      fatal: boolean;
+    }
+  ) => void;
+}
+// Use declare to extend the global window type
+declare const window: WindowWithGtag;
+
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
@@ -38,8 +52,8 @@ export class ErrorBoundary extends Component<Props, State> {
     }));
 
     // Track error analytics if available
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', 'exception', {
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('event', 'exception', {
         description: error.message,
         fatal: false,
       });

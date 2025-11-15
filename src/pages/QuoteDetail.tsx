@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { QuoteSummaryAI } from '@/components/QuoteSummaryAI';
 import { FollowUpMessageAI } from '@/components/FollowUpMessageAI';
 import { SendQuoteDialog, EmailContent } from '@/components/SendQuoteDialog';
+import { rateLimiter, RATE_LIMITS } from '@/lib/rate-limiter';
 
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -260,7 +261,19 @@ export default function QuoteDetail() {
   };
 
   const handleConfirmSend = async (emailContent: EmailContent) => {
-    if (!quote || !customer) return;
+    if (!quote || !customer || !user) return;
+
+    // Rate limiting check
+    const rateLimitKey = `send-email-${user.id}`;
+    if (!rateLimiter.check(rateLimitKey, RATE_LIMITS.EMAIL_SEND)) {
+      const remainingTime = Math.ceil(rateLimiter.getRemainingTime(rateLimitKey) / 1000);
+      toast({
+        title: 'Rate Limit Reached',
+        description: `Please wait ${remainingTime} seconds before sending another email.`,
+        variant: 'destructive',
+      });
+      return;
+    }
 
     try {
       // Generate share link if it doesn't exist and user wants to include it
