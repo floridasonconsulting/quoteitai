@@ -214,15 +214,20 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
     .filter(line => line.length > 0);
     
   if (lines.length < 2) {
+    console.log('[Import] Quotes CSV is empty or has no data rows');
     return { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: ['CSV file is empty or has no data rows'] };
   }
   
   const headers = parseCSVLine(lines[0]);
   const result: ImportResult = { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: [] };
 
+  console.log(`[Import] Starting quote import with ${lines.length - 1} rows`);
+
   // Import getQuotes and addQuote to check for duplicates
   const { getQuotes } = await import('./db-service');
   const existingQuotes = await getQuotes(userId);
+
+  console.log(`[Import] Found ${existingQuotes.length} existing quotes`);
 
   const validStatuses = ['draft', 'sent', 'accepted', 'declined'];
 
@@ -266,6 +271,7 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
       );
 
       if (isDuplicate) {
+        console.log(`[Import] Skipping duplicate quote: ${quote.quoteNumber}`);
         result.skipped++;
         continue;
       }
@@ -274,6 +280,7 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
       if (!quote.quoteNumber || !quote.customerName || !quote.title) {
         result.failed++;
         result.errors.push(`Line ${i + 1}: Missing required fields (quoteNumber, customerName, or title)`);
+        console.error(`[Import] Quote validation failed at line ${i + 1}: Missing required fields`);
         continue;
       }
 
@@ -281,21 +288,25 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
       if (quote.status && !validStatuses.includes(quote.status)) {
         result.failed++;
         result.errors.push(`Line ${i + 1}: Invalid status "${quote.status}". Must be "draft", "sent", "accepted", or "declined"`);
+        console.error(`[Import] Quote validation failed at line ${i + 1}: Invalid status`);
         continue;
       }
 
       // Import addQuote dynamically to save the quote
       const { addQuote, getCachedData, setCachedData } = await import('./db-service');
+      console.log(`[Import] Adding quote: ${quote.quoteNumber} - ${quote.title}`);
       const inserted = await addQuote(userId, quote);
       
       // Update local cache immediately so data appears without navigation
       const cached = getCachedData<any>('quotes-cache') || [];
       setCachedData('quotes-cache', [...cached, inserted]);
       
+      console.log(`[Import] Successfully added quote: ${quote.quoteNumber}`);
       result.success++;
     } catch (error) {
       result.failed++;
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`[Import] Quote import error at line ${i + 1}:`, error);
       // Include specific constraint violations in error message
       if (errorMsg.includes('violates') || errorMsg.includes('constraint')) {
         result.errors.push(`Line ${i + 1}: Database constraint violation - ${errorMsg}`);
@@ -305,6 +316,7 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
     }
   }
 
+  console.log(`[Import] Quote import complete. Success: ${result.success}, Failed: ${result.failed}, Skipped: ${result.skipped}`);
   return result;
 }
 
