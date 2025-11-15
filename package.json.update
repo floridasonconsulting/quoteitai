@@ -1,0 +1,17 @@
+Add Playwright testing dependencies and scripts to package.json:
+
+```json
+{
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}
+```
+
+Run: npm install @playwright/test --save-dev
+Then: npx playwright install --with-deps chromium
