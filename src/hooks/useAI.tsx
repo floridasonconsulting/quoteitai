@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { rateLimiter, RATE_LIMITS } from '@/lib/rate-limiter';
+import { sanitizeForAI } from '@/lib/input-sanitization';
 
 export type AIFeatureType =
   | 'quote_title'
@@ -34,12 +36,39 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
   const [result, setResult] = useState<string | null>(null);
 
   const generate = async (prompt: string, context?: Record<string, unknown>): Promise<string | AIUpgradeInfo | null> => {
+    // Rate limiting check
+    const userId = (await supabase.auth.getUser()).data.user?.id || 'anonymous';
+    const rateLimitKey = `ai-${featureType}-${userId}`;
+    
+    if (!rateLimiter.check(rateLimitKey, RATE_LIMITS.AI_GENERATION)) {
+      const remainingTime = Math.ceil(rateLimiter.getRemainingTime(rateLimitKey) / 1000);
+      toast.error('Rate Limit Reached', {
+        description: `Please wait ${remainingTime} seconds before trying again.`,
+      });
+      options?.onError?.('Rate limit exceeded');
+      return null;
+    }
+
+    // Sanitize prompt to prevent injection attacks
+    const sanitizedPrompt = sanitizeForAI(prompt);
+    
+    if (!sanitizedPrompt) {
+      toast.error('Invalid Input', {
+        description: 'Please provide valid input for AI generation.',
+      });
+      return null;
+    }
+
     setIsLoading(true);
     setResult(null);
 
     try {
       const { data, error } = await supabase.functions.invoke('ai-assist', {
-        body: { featureType, prompt, context },
+        body: { 
+          featureType, 
+          prompt: sanitizedPrompt, 
+          context 
+        },
       });
 
       // Handle network/invoke errors

@@ -5,6 +5,7 @@ import App from "./App";
 import "./index.css";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { LoadingFallback } from "./components/LoadingFallback";
 
 import AuthPage from "./pages/Auth";
 import {
@@ -38,7 +39,7 @@ const router = createBrowserRouter([
         path: "/dashboard",
         element: (
           <ProtectedRoute>
-            <Suspense fallback={<div>Loading...</div>}>
+            <Suspense fallback={<LoadingFallback />}>
               <LazyDashboard />
             </Suspense>
           </ProtectedRoute>
@@ -48,7 +49,7 @@ const router = createBrowserRouter([
         path: "/quotes",
         element: (
           <ProtectedRoute>
-            <Suspense fallback={<div>Loading...</div>}>
+            <Suspense fallback={<LoadingFallback />}>
               <LazyQuotes />
             </Suspense>
           </ProtectedRoute>
@@ -58,7 +59,7 @@ const router = createBrowserRouter([
         path: "/quotes/new",
         element: (
           <ProtectedRoute>
-            <Suspense fallback={<div>Loading...</div>}>
+            <Suspense fallback={<LoadingFallback />}>
               <LazyNewQuote />
             </Suspense>
           </ProtectedRoute>
@@ -68,7 +69,7 @@ const router = createBrowserRouter([
         path: "/quotes/:id",
         element: (
           <ProtectedRoute>
-            <Suspense fallback={<div>Loading...</div>}>
+            <Suspense fallback={<LoadingFallback />}>
               <LazyQuoteDetail />
             </Suspense>
           </ProtectedRoute>
@@ -78,7 +79,7 @@ const router = createBrowserRouter([
         path: "/customers",
         element: (
           <ProtectedRoute>
-            <Suspense fallback={<div>Loading...</div>}>
+            <Suspense fallback={<LoadingFallback />}>
               <LazyCustomers />
             </Suspense>
           </ProtectedRoute>
@@ -88,7 +89,7 @@ const router = createBrowserRouter([
         path: "/items",
         element: (
           <ProtectedRoute>
-            <Suspense fallback={<div>Loading...</div>}>
+            <Suspense fallback={<LoadingFallback />}>
               <LazyItems />
             </Suspense>
           </ProtectedRoute>
@@ -98,7 +99,7 @@ const router = createBrowserRouter([
         path: "/settings",
         element: (
           <ProtectedRoute>
-            <Suspense fallback={<div>Loading...</div>}>
+            <Suspense fallback={<LoadingFallback />}>
               <LazySettings />
             </Suspense>
           </ProtectedRoute>
@@ -108,7 +109,7 @@ const router = createBrowserRouter([
         path: "/help",
         element: (
           <ProtectedRoute>
-            <Suspense fallback={<div>Loading...</div>}>
+            <Suspense fallback={<LoadingFallback />}>
               <LazyHelp />
             </Suspense>
           </ProtectedRoute>
@@ -118,7 +119,7 @@ const router = createBrowserRouter([
         path: "/diagnostics",
         element: (
           <ProtectedRoute>
-            <Suspense fallback={<div>Loading...</div>}>
+            <Suspense fallback={<LoadingFallback />}>
               <LazyDiagnostics />
             </Suspense>
           </ProtectedRoute>
@@ -128,7 +129,7 @@ const router = createBrowserRouter([
         path: "/subscription",
         element: (
           <ProtectedRoute>
-            <Suspense fallback={<div>Loading...</div>}>
+            <Suspense fallback={<LoadingFallback />}>
               <LazySubscription />
             </Suspense>
           </ProtectedRoute>

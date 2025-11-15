@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, Mail, Trash2, FileText, Calendar, DollarSign, Edit, Clock, Link2, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ export default function QuoteDetail() {
   const [shareLink, setShareLink] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const mainContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!id) {
@@ -40,6 +41,37 @@ export default function QuoteDetail() {
 
     loadQuote();
   }, [id, navigate, user]);
+
+  // Focus management for accessibility
+  useEffect(() => {
+    if (!loading && mainContentRef.current) {
+      mainContentRef.current.focus();
+    }
+  }, [loading]);
+
+  // Keyboard navigation support
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + E to edit
+      if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+        e.preventDefault();
+        navigate(`/quotes/${quote?.id}/edit`);
+      }
+      // Ctrl/Cmd + D to download
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        generatePDF();
+      }
+      // Ctrl/Cmd + M to email
+      if ((e.ctrlKey || e.metaKey) && e.key === 'm') {
+        e.preventDefault();
+        handleEmail();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [quote, navigate]);
 
   const loadQuote = async () => {
     const quotes = await getQuotes(user?.id);
@@ -333,7 +365,15 @@ export default function QuoteDetail() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[60vh]">Loading...</div>;
+    return (
+      <div 
+        className="flex items-center justify-center min-h-[60vh]" 
+        role="status" 
+        aria-live="polite"
+      >
+        <p className="text-muted-foreground">Loading quote details...</p>
+      </div>
+    );
   }
 
   if (!quote) {
@@ -351,55 +391,101 @@ export default function QuoteDetail() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto overflow-x-hidden">
+    <div 
+      className="space-y-6 max-w-4xl mx-auto overflow-x-hidden" 
+      ref={mainContentRef}
+      tabIndex={-1}
+      aria-label="Quote details page"
+    >
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/quotes')}>
-          <ArrowLeft className="h-5 w-5" />
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => navigate('/quotes')}
+          aria-label="Go back to quotes list"
+        >
+          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </Button>
         <div className="flex-1">
-          <h2 className="text-3xl font-bold tracking-tight">{quote.title}</h2>
-          <p className="text-muted-foreground">Quote #{quote.quoteNumber}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{quote.title}</h1>
+          <p className="text-muted-foreground" aria-label="Quote number">
+            Quote #{quote.quoteNumber}
+          </p>
         </div>
-        <Badge variant="outline" className={getStatusColor(quote.status)}>
+        <Badge 
+          variant="outline" 
+          className={getStatusColor(quote.status)}
+          aria-label={`Quote status: ${quote.status}`}
+        >
           {quote.status}
         </Badge>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <Button onClick={() => navigate(`/quotes/${quote.id}/edit`)}>
-          <Edit className="mr-2 h-4 w-4" />
+      <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Quote actions">
+        <Button 
+          onClick={() => navigate(`/quotes/${quote.id}/edit`)}
+          aria-label="Edit quote (Keyboard: Ctrl+E)"
+          aria-keyshortcuts="Control+E"
+        >
+          <Edit className="mr-2 h-4 w-4" aria-hidden="true" />
           Edit
         </Button>
-        <Button onClick={generatePDF}>
-          <Download className="mr-2 h-4 w-4" />
+        <Button 
+          onClick={generatePDF}
+          aria-label="Download quote as PDF (Keyboard: Ctrl+D)"
+          aria-keyshortcuts="Control+D"
+        >
+          <Download className="mr-2 h-4 w-4" aria-hidden="true" />
           Download PDF
         </Button>
         {!shareLink ? (
-          <Button variant="outline" onClick={handleGenerateShareLink}>
-            <Link2 className="mr-2 h-4 w-4" />
+          <Button 
+            variant="outline" 
+            onClick={handleGenerateShareLink}
+            aria-label="Generate shareable link for this quote"
+          >
+            <Link2 className="mr-2 h-4 w-4" aria-hidden="true" />
             Generate Share Link
           </Button>
         ) : (
-          <Button variant="outline" onClick={handleCopyShareLink}>
+          <Button 
+            variant="outline" 
+            onClick={handleCopyShareLink}
+            aria-label={copied ? "Share link copied to clipboard" : "Copy share link to clipboard"}
+            aria-live="polite"
+          >
             {copied ? (
-              <Check className="mr-2 h-4 w-4" />
+              <Check className="mr-2 h-4 w-4" aria-hidden="true" />
             ) : (
-              <Copy className="mr-2 h-4 w-4" />
+              <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
             )}
             {copied ? 'Copied!' : 'Copy Link'}
           </Button>
         )}
-        <Button variant="outline" onClick={handleEmail}>
-          <Mail className="mr-2 h-4 w-4" />
+        <Button 
+          variant="outline" 
+          onClick={handleEmail}
+          aria-label="Send quote via email (Keyboard: Ctrl+M)"
+          aria-keyshortcuts="Control+M"
+        >
+          <Mail className="mr-2 h-4 w-4" aria-hidden="true" />
           Email
         </Button>
-        <Button variant="outline" onClick={() => setFollowUpDialogOpen(true)}>
-          <Clock className="mr-2 h-4 w-4" />
+        <Button 
+          variant="outline" 
+          onClick={() => setFollowUpDialogOpen(true)}
+          aria-label="Schedule follow-up reminder"
+        >
+          <Clock className="mr-2 h-4 w-4" aria-hidden="true" />
           Follow Up
         </Button>
         <FollowUpMessageAI quote={quote} customer={customer} />
-        <Button variant="destructive" onClick={handleDelete}>
-          <Trash2 className="mr-2 h-4 w-4" />
+        <Button 
+          variant="destructive" 
+          onClick={handleDelete}
+          aria-label="Delete this quote permanently"
+        >
+          <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
           Delete
         </Button>
       </div>
@@ -411,13 +497,13 @@ export default function QuoteDetail() {
         customer={customer}
       />
 
-      <Card>
+      <Card aria-labelledby="quote-info-title">
         <CardHeader>
-          <CardTitle>Quote Information</CardTitle>
+          <CardTitle id="quote-info-title">Quote Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div role="region" aria-label="Customer information">
               <p className="text-sm text-muted-foreground">Customer</p>
               <p className="font-medium">{quote.customerName}</p>
               {customer && (customer.contactFirstName || customer.contactLastName) && (
@@ -431,23 +517,32 @@ export default function QuoteDetail() {
               )}
               {customer?.phone && <p className="text-sm">{customer.phone}</p>}
             </div>
-            <div className="space-y-4">
+            <div className="space-y-4" role="region" aria-label="Quote details">
               <div>
                 <p className="text-sm text-muted-foreground">Created</p>
                 <p className="font-medium flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  {new Date(quote.createdAt).toLocaleDateString()}
+                  <Calendar className="h-4 w-4" aria-hidden="true" />
+                  <time dateTime={quote.createdAt}>
+                    {new Date(quote.createdAt).toLocaleDateString()}
+                  </time>
                 </p>
               </div>
               {quote.sentDate && (
                 <div>
                   <p className="text-sm text-muted-foreground">Sent</p>
-                  <p className="font-medium">{new Date(quote.sentDate).toLocaleDateString()}</p>
+                  <p className="font-medium">
+                    <time dateTime={quote.sentDate}>
+                      {new Date(quote.sentDate).toLocaleDateString()}
+                    </time>
+                  </p>
                 </div>
               )}
               <div>
                 <p className="text-sm text-muted-foreground">Total</p>
-                <p className="font-bold text-xl text-primary">
+                <p 
+                  className="font-bold text-xl text-primary"
+                  aria-label={`Quote total: ${formatCurrency(quote.total)}`}
+                >
                   {formatCurrency(quote.total)}
                 </p>
               </div>
@@ -456,7 +551,7 @@ export default function QuoteDetail() {
           {quote.notes && (
             <>
               <Separator />
-              <div>
+              <div role="region" aria-label="Quote notes">
                 <p className="text-sm text-muted-foreground mb-2">Notes</p>
                 <p className="text-sm">{quote.notes}</p>
               </div>
@@ -467,14 +562,19 @@ export default function QuoteDetail() {
 
       <QuoteSummaryAI quote={quote} customer={customer} />
 
-      <Card>
+      <Card aria-labelledby="items-title">
         <CardHeader>
-          <CardTitle>Items</CardTitle>
+          <CardTitle id="items-title">Items</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
+          <div className="space-y-3" role="list" aria-label="Quote line items">
             {quote.items.map((item, index) => (
-              <div key={index} className="p-3 border rounded-lg">
+              <div 
+                key={index} 
+                className="p-3 border rounded-lg"
+                role="listitem"
+                aria-label={`Item ${index + 1}: ${item.name}`}
+              >
                 <p className="font-medium">{item.name}</p>
                 {item.description && (
                   <p className="text-sm text-muted-foreground">{item.description}</p>
@@ -483,9 +583,14 @@ export default function QuoteDetail() {
             ))}
           </div>
           <Separator className="my-4" />
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center" role="region" aria-label="Quote total">
             <p className="text-lg font-bold">Total</p>
-            <p className="text-2xl font-bold text-primary">{formatCurrency(quote.total)}</p>
+            <p 
+              className="text-2xl font-bold text-primary"
+              aria-label={`Total amount: ${formatCurrency(quote.total)}`}
+            >
+              {formatCurrency(quote.total)}
+            </p>
           </div>
         </CardContent>
       </Card>
