@@ -599,9 +599,9 @@ Format as clear, professional terms and conditions.`;
           {/* Quote Items */}
           <Card>
             <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex flex-col gap-3">
                 <CardTitle>Quote Items</CardTitle>
-                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <div className="flex flex-col gap-2">
                   <ItemRecommendationsAI
                     currentItems={quoteItems}
                     availableItems={items}
@@ -609,7 +609,7 @@ Format as clear, professional terms and conditions.`;
                       setQuoteItems([...quoteItems, item]);
                     }}
                   />
-                  <Button onClick={() => setIsItemDialogOpen(true)} className="w-full sm:w-auto">
+                  <Button onClick={() => setIsItemDialogOpen(true)} className="w-full">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Custom Item
                   </Button>
