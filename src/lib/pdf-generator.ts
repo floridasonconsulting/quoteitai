@@ -176,3 +176,166 @@ export function renderTermsAndNotes(
 
 // Exports for use in proposal-templates.ts
 export { MARGIN, LINE_HEIGHT, SECTION_GAP, formatCurrency };
+
+// --- IMPLEMENT MISSING PDF GENERATION FUNCTIONS ---
+
+export function generateClassicPDF(
+  quote: Quote,
+  customer: Customer | null,
+  settings: CompanySettings
+): Blob {
+  const pdf = new jsPDF();
+  let yPos = MARGIN;
+
+  yPos = renderCompanyHeader(pdf, settings, yPos);
+  yPos = renderCompanyContact(pdf, settings, yPos);
+  yPos += SECTION_GAP * 2;
+
+  yPos = renderCustomerInfo(pdf, quote, customer, yPos);
+  yPos += SECTION_GAP * 2;
+  
+  pdf.setFontSize(14);
+  pdf.setFont(undefined, "bold");
+  pdf.text(`Quote #${quote.id}`, MARGIN, yPos);
+  yPos += 8;
+
+  const tableHeaders = [["Item", "Description", "Qty", "Price", "Total"]];
+  const tableData = quote.items.map(item => [
+    item.name,
+    item.description,
+    item.quantity.toString(),
+    formatCurrency(item.price, settings.currency),
+    formatCurrency(item.quantity * item.price, settings.currency),
+  ]);
+
+  (pdf as any).autoTable({
+    startY: yPos,
+    head: tableHeaders,
+    body: tableData,
+    theme: "striped",
+    headStyles: { fillColor: [22, 160, 133] },
+  });
+
+  yPos = (pdf as any).lastAutoTable.finalY + SECTION_GAP * 2;
+
+  pdf.setFontSize(12);
+  pdf.setFont(undefined, "bold");
+  pdf.text(`Total: ${formatCurrency(quote.total, settings.currency)}`, 190 - MARGIN, yPos, { align: 'right' });
+  yPos += SECTION_GAP * 2;
+  
+  yPos = renderTermsAndNotes(pdf, quote, settings, yPos);
+
+  return pdf.output("blob");
+}
+
+export function generateModernPDF(
+  quote: Quote,
+  customer: Customer | null,
+  settings: CompanySettings
+): Blob {
+  const pdf = new jsPDF();
+  let yPos = MARGIN;
+
+  yPos = renderCompanyHeader(pdf, settings, yPos);
+  yPos += SECTION_GAP;
+  
+  pdf.setFontSize(22);
+  pdf.setFont(undefined, "bold");
+  pdf.text(`QUOTE`, 190, MARGIN + 10, { align: 'right' });
+  pdf.setFontSize(10);
+  pdf.text(`#${quote.id}`, 190, MARGIN + 15, { align: 'right' });
+
+  yPos = Math.max(yPos, MARGIN + 20);
+
+  yPos = renderCompanyContact(pdf, settings, yPos);
+  yPos += SECTION_GAP;
+  
+  yPos = renderCustomerInfo(pdf, quote, customer, yPos);
+  yPos += SECTION_GAP * 2;
+
+  (pdf as any).autoTable({
+    startY: yPos,
+    head: [["Item", "Description", "Quantity", "Unit Price", "Line Total"]],
+    body: quote.items.map(item => [
+      item.name,
+      item.description,
+      item.quantity,
+      formatCurrency(item.price, settings.currency),
+      formatCurrency(item.quantity * item.price, settings.currency),
+    ]),
+    theme: "grid",
+    headStyles: { fillColor: [41, 128, 185] },
+  });
+  
+  yPos = (pdf as any).lastAutoTable.finalY + SECTION_GAP * 2;
+
+  pdf.setFontSize(14);
+  pdf.setFont(undefined, "bold");
+  pdf.text(`Total: ${formatCurrency(quote.total, settings.currency)}`, 190 - MARGIN, yPos, { align: 'right' });
+  yPos += SECTION_GAP * 2;
+
+  yPos = renderTermsAndNotes(pdf, quote, settings, yPos);
+
+  return pdf.output("blob");
+}
+
+export function generateDetailedPDF(
+  quote: Quote,
+  customer: Customer | null,
+  settings: CompanySettings
+): Blob {
+  const pdf = new jsPDF();
+  let yPos = MARGIN;
+
+  yPos = renderCompanyHeader(pdf, settings, yPos);
+  yPos = renderCompanyContact(pdf, settings, yPos);
+  yPos += SECTION_GAP * 2;
+  
+  yPos = renderCustomerInfo(pdf, quote, customer, yPos);
+  yPos += SECTION_GAP * 2;
+  
+  pdf.setFontSize(14);
+  pdf.setFont(undefined, "bold");
+  pdf.text(`Detailed Quote #${quote.id}`, MARGIN, yPos);
+  yPos += 8;
+
+  (pdf as any).autoTable({
+    startY: yPos,
+    head: [["Item", "Description", "Qty", "Price", "Total"]],
+    body: quote.items.map(item => [
+      item.name,
+      item.description,
+      item.quantity.toString(),
+      formatCurrency(item.price, settings.currency),
+      formatCurrency(item.quantity * item.price, settings.currency),
+    ]),
+    theme: "plain",
+  });
+
+  yPos = (pdf as any).lastAutoTable.finalY + SECTION_GAP;
+
+  const subtotal = quote.total;
+  const taxRate = settings.taxRate || 0;
+  const tax = subtotal * (taxRate / 100);
+  const finalTotal = subtotal + tax;
+
+  pdf.text(`Subtotal:`, 150, yPos, { align: "right" });
+  pdf.text(formatCurrency(subtotal, settings.currency), 190, yPos, { align: "right" });
+  yPos += LINE_HEIGHT;
+
+  if (taxRate > 0) {
+    pdf.text(`Tax (${taxRate}%):`, 150, yPos, { align: "right" });
+    pdf.text(formatCurrency(tax, settings.currency), 190, yPos, { align: "right" });
+    yPos += LINE_HEIGHT;
+  }
+  
+  yPos += 2;
+  pdf.setFont(undefined, "bold");
+  pdf.text(`Total:`, 150, yPos, { align: "right" });
+  pdf.text(formatCurrency(finalTotal, settings.currency), 190, yPos, { align: "right" });
+  yPos += SECTION_GAP * 2;
+  
+  yPos = renderTermsAndNotes(pdf, quote, settings, yPos);
+
+  return pdf.output("blob");
+}
