@@ -458,7 +458,7 @@ export default function NewQuote() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="customer">Select Customer *</Label>
-                <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId} data-demo="customer-select">
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a customer..." />
                   </SelectTrigger>
@@ -489,6 +489,7 @@ export default function NewQuote() {
                     onChange={(e) => setQuoteTitle(e.target.value)}
                     placeholder="Website Development Project"
                     className="flex-1"
+                    data-demo="title-input"
                   />
                   <AIButton
                     onClick={() => {
@@ -503,6 +504,7 @@ export default function NewQuote() {
                     }}
                     isLoading={titleAI.isLoading}
                     disabled={!selectedCustomerId || quoteItems.length === 0}
+                    data-demo="title-ai-button"
                   />
                 </div>
               </div>
@@ -557,6 +559,7 @@ Format as clear, professional terms and conditions.`;
                     }}
                     isLoading={notesAI.isLoading}
                     disabled={!selectedCustomerId || quoteItems.length === 0}
+                    data-demo="notes-ai-button"
                   >
                     Generate Terms
                   </AIButton>
@@ -567,6 +570,7 @@ Format as clear, professional terms and conditions.`;
                   onChange={(e) => setQuoteNotes(e.target.value)}
                   placeholder="Additional information..."
                   rows={3}
+                  data-demo="notes-textarea"
                 />
               </div>
             </CardContent>
@@ -609,14 +613,14 @@ Format as clear, professional terms and conditions.`;
                       setQuoteItems([...quoteItems, item]);
                     }}
                   />
-                  <Button onClick={() => setIsItemDialogOpen(true)} className="w-full">
+                  <Button onClick={() => setIsItemDialogOpen(true)} className="w-full" data-demo="custom-item-button">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Custom Item
                   </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent data-demo="quote-items-list">
               {quoteItems.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
                   No items added yet. Select items from your catalog or add a custom item.
@@ -733,7 +737,7 @@ Format as clear, professional terms and conditions.`;
                 </SelectContent>
               </Select>
             </CardHeader>
-            <CardContent>
+            <CardContent data-demo="item-catalog">
               {filteredItems.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   {itemSearchTerm ? 'No items match your search' : 'No items in this category'}
@@ -773,7 +777,7 @@ Format as clear, professional terms and conditions.`;
             <CardHeader>
               <CardTitle>Summary</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-2" data-demo="quote-summary">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
                 <span className="font-medium">{formatCurrency(subtotal)}</span>
@@ -804,7 +808,7 @@ Format as clear, professional terms and conditions.`;
 
       {/* Custom Item Dialog */}
       <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
-        <DialogContent>
+        <DialogContent data-demo="custom-item-dialog">
           <DialogHeader>
             <DialogTitle>Add Custom Item</DialogTitle>
             <DialogDescription>
@@ -892,6 +896,7 @@ Format as clear, professional terms and conditions.`;
         }}
         customer={selectedCustomer}
         onConfirm={handleConfirmSend}
+        data-demo="send-dialog"
       />
     </div>
   );
