@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Plus, X, FileText, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +29,7 @@ import { ItemRecommendationsAI } from '@/components/ItemRecommendationsAI';
 export default function NewQuote() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const { user } = useAuth();
   const { queueChange } = useSyncManager();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -94,7 +95,7 @@ export default function NewQuote() {
 
   useEffect(() => {
     loadData();
-  }, [id, navigate, user]);
+  }, [id, location.state, navigate, user]);
 
   const loadData = async () => {
     setLoading(true);
@@ -106,11 +107,23 @@ export default function NewQuote() {
     setCustomers(customersData);
     setItems(itemsData);
     
-    // Load quote for editing if id is provided
-    if (id) {
+    // Check if we're editing via navigation state (from QuoteDetail)
+    const editQuote = (location.state as any)?.editQuote;
+    if (editQuote) {
+      console.log('[NewQuote] Loading quote from navigation state:', editQuote);
+      setIsEditMode(true);
+      setSelectedCustomerId(editQuote.customerId);
+      setQuoteTitle(editQuote.title);
+      setQuoteItems(editQuote.items);
+      setQuoteNotes(editQuote.notes || '');
+      setExecutiveSummary(editQuote.executiveSummary || '');
+    }
+    // Fallback: Load quote for editing if id is provided (old method)
+    else if (id) {
       const quotes = await getQuotes(user?.id);
       const quoteToEdit = quotes.find(q => q.id === id);
       if (quoteToEdit) {
+        console.log('[NewQuote] Loading quote from URL params:', quoteToEdit);
         setIsEditMode(true);
         setSelectedCustomerId(quoteToEdit.customerId);
         setQuoteTitle(quoteToEdit.title);
@@ -118,6 +131,7 @@ export default function NewQuote() {
         setQuoteNotes(quoteToEdit.notes || '');
         setExecutiveSummary(quoteToEdit.executiveSummary || '');
       } else {
+        toast.error('Quote not found');
         navigate('/quotes');
       }
     }

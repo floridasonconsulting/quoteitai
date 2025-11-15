@@ -7,16 +7,28 @@ import { useAuth } from "@/contexts/AuthContext";
 const NotFound = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     console.error("404 Error: User attempted to access non-existent route:", location.pathname);
   }, [location.pathname]);
 
   const handleReturnHome = () => {
+    // Wait for auth to load before making navigation decision
+    if (loading) return;
+    
     // Navigate to dashboard if logged in, landing page if not
-    navigate(user ? '/dashboard' : '/');
+    navigate(user ? '/dashboard' : '/', { replace: true });
   };
+
+  // Don't render button until we know auth state
+  if (loading) {
+    return (
+      <div className="flex min-h-[80vh] items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center">

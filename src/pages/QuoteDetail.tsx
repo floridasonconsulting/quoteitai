@@ -262,7 +262,15 @@ export default function QuoteDetail() {
 
   // Change the edit navigation to use /quotes/new with state
   const handleEdit = () => {
-    navigate('/quotes/new', { state: { editQuote: quote } });
+    if (!quote) return;
+    // Navigate to new quote page with the current quote data as state
+    navigate('/quotes/new', { 
+      state: { 
+        editQuote: quote,
+        editMode: true 
+      },
+      replace: false // Don't replace history
+    });
   };
 
   const handleConfirmSend = async (emailContent: EmailContent) => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,8 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { validatePassword, getPasswordRequirements } from '@/lib/password-validation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Check } from 'lucide-react';
@@ -18,14 +17,18 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Redirect authenticated users to dashboard (only once when user changes)
+  // Redirect authenticated users to dashboard - only run once when user state stabilizes
   useEffect(() => {
-    if (user) {
-      // Use replace to prevent back button from showing auth page
+    // Only redirect if:
+    // 1. User is authenticated
+    // 2. We're still on the auth page
+    // 3. Not in the middle of a sign-in/sign-up flow
+    if (user && location.pathname === '/auth' && !loading) {
       navigate('/dashboard', { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, location.pathname, loading]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,9 +43,11 @@ export default function Auth() {
     
     if (error) {
       toast.error(error.message);
+      setLoading(false);
+    } else {
+      // Success - navigation will happen via useEffect
+      // Don't set loading to false here as we're navigating away
     }
-    
-    setLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -66,12 +71,24 @@ export default function Auth() {
     
     if (error) {
       toast.error(error.message);
+      setLoading(false);
+    } else {
+      // Success - clear form and show success message
+      setEmail('');
+      setPassword('');
+      setLoading(false);
+      toast.success('Account created successfully! Please check your email to verify your account.');
     }
-    
-    setLoading(false);
-    setEmail('');
-    setPassword('');
   };
+
+  // Don't render the form if user is already authenticated
+  if (user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Redirecting to dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
