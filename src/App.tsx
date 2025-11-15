@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useNotifications } from "./hooks/useNotifications";
@@ -46,6 +46,9 @@ function AppRoutes() {
       <Route path="/terms" element={<TermsOfService />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/quotes/public/:id" element={<PublicQuoteView />} />
+      
+      {/* Redirect /AdminDemoRecorder to /admin/demo-recorder */}
+      <Route path="/AdminDemoRecorder" element={<Navigate to="/admin/demo-recorder" replace />} />
       
       <Route element={<Layout />}>
         <Route path="/dashboard" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Dashboard /></Suspense></ProtectedRoute>} />
