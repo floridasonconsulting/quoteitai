@@ -1,128 +1,163 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, Trash2, AlertCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CompanySettings } from "@/types";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Palette, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 interface BrandingSectionProps {
-  settings: CompanySettings;
-  isMaxAITier: boolean;
-  logoPreview: string | null;
-  isUploadingLogo: boolean;
-  onLogoChange: (file: File) => void;
-  onLogoDelete: () => void;
-  onDisplayOptionChange: (value: "logo" | "name" | "both") => void;
+  settings: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    logoUrl?: string;
+  };
+  onUpdate: (updates: Partial<BrandingSectionProps["settings"]>) => Promise<void>;
 }
 
-export function BrandingSection({
-  settings,
-  isMaxAITier,
-  logoPreview,
-  isUploadingLogo,
-  onLogoChange,
-  onLogoDelete,
-  onDisplayOptionChange,
-}: BrandingSectionProps) {
+export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
+  const [primaryColor, setPrimaryColor] = useState(settings.primaryColor || "#3b82f6");
+  const [secondaryColor, setSecondaryColor] = useState(settings.secondaryColor || "#8b5cf6");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      await onUpdate({
+        primaryColor,
+        secondaryColor,
+      });
+      toast.success("Branding updated successfully");
+    } catch (error) {
+      console.error("Failed to update branding:", error);
+      toast.error("Failed to update branding");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image size must be less than 2MB");
+      return;
+    }
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const logoUrl = e.target?.result as string;
+        await onUpdate({ logoUrl });
+        toast.success("Logo uploaded successfully");
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Failed to upload logo:", error);
+      toast.error("Failed to upload logo");
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Branding & Logo</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Palette className="h-5 w-5" />
+          Branding
+        </CardTitle>
+        <CardDescription>
+          Customize your brand colors and logo
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {!isMaxAITier && (
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              <span className="font-semibold">Upgrade to Max AI</span> to unlock white-label branding.
-              Custom logo uploads are available on the Max AI tier.
-            </AlertDescription>
-          </Alert>
-        )}
+      <CardContent className="space-y-6">
+        {/* Logo Upload */}
+        <div className="space-y-3">
+          <Label>Company Logo</Label>
+          {settings.logoUrl && (
+            <div className="mb-3">
+              <img
+                src={settings.logoUrl}
+                alt="Company logo"
+                className="h-16 w-auto object-contain"
+              />
+            </div>
+          )}
+          <div>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleLogoUpload}
+              className="hidden"
+              id="logo-upload"
+            />
+            <label htmlFor="logo-upload">
+              <Button variant="outline" asChild>
+                <span>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Logo
+                </span>
+              </Button>
+            </label>
+            <p className="text-sm text-muted-foreground mt-2">
+              Recommended: PNG or SVG, max 2MB
+            </p>
+          </div>
+        </div>
 
-        {isMaxAITier && (
-          <>
+        {/* Color Pickers */}
+        <div className="space-y-4 pt-4 border-t">
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="logo">Company Logo for Branding</Label>
-              <div className="flex flex-col gap-3">
-                {(logoPreview || settings.logo) && (
-                  <div className="relative w-32 h-32 border-2 border-dashed rounded-lg overflow-hidden">
-                    <img
-                      src={logoPreview || settings.logo}
-                      alt="Company Logo"
-                      className="w-full h-full object-contain p-2"
-                    />
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={isUploadingLogo}
-                    onClick={() => document.getElementById("logo-upload")?.click()}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {isUploadingLogo ? "Uploading..." : "Upload Logo"}
-                  </Button>
-                  {(logoPreview || settings.logo) && (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      onClick={onLogoDelete}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
+              <Label htmlFor="primaryColor">Primary Color</Label>
+              <div className="flex gap-2">
                 <Input
-                  id="logo-upload"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) onLogoChange(file);
-                  }}
+                  id="primaryColor"
+                  type="color"
+                  value={primaryColor}
+                  onChange={(e) => setPrimaryColor(e.target.value)}
+                  className="w-20 h-10 cursor-pointer"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Recommended: Square image, max 2MB (PNG, JPG, or SVG)
-                </p>
+                <Input
+                  type="text"
+                  value={primaryColor}
+                  onChange={(e) => setPrimaryColor(e.target.value)}
+                  placeholder="#3b82f6"
+                  className="flex-1"
+                />
               </div>
             </div>
 
-            <div className="space-y-3">
-              <Label>Logo Display Options</Label>
-              <RadioGroup
-                value={settings.logoDisplayOption || "both"}
-                onValueChange={onDisplayOptionChange}
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="logo" id="logo-only" />
-                  <Label htmlFor="logo-only" className="cursor-pointer font-normal">
-                    Logo Only
-                    <Badge variant="secondary" className="ml-2">White-label</Badge>
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="name" id="name-only" />
-                  <Label htmlFor="name-only" className="cursor-pointer font-normal">
-                    Company Name Only
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="both" id="logo-and-name" />
-                  <Label htmlFor="logo-and-name" className="cursor-pointer font-normal">
-                    Logo + Company Name
-                  </Label>
-                </div>
-              </RadioGroup>
+            <div className="space-y-2">
+              <Label htmlFor="secondaryColor">Secondary Color</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="secondaryColor"
+                  type="color"
+                  value={secondaryColor}
+                  onChange={(e) => setSecondaryColor(e.target.value)}
+                  className="w-20 h-10 cursor-pointer"
+                />
+                <Input
+                  type="text"
+                  value={secondaryColor}
+                  onChange={(e) => setSecondaryColor(e.target.value)}
+                  placeholder="#8b5cf6"
+                  className="flex-1"
+                />
+              </div>
             </div>
-          </>
-        )}
+          </div>
+        </div>
+
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? "Saving..." : "Save Branding"}
+        </Button>
       </CardContent>
     </Card>
   );

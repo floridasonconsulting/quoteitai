@@ -1,63 +1,42 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { CompanySettings } from "@/types";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileText } from "lucide-react";
 
 interface ProposalTemplateSectionProps {
-  settings: CompanySettings;
-  onChange: (value: "classic" | "modern" | "detailed") => void;
+  settings: {
+    proposalTemplate?: string;
+  };
+  onUpdate: (updates: Partial<ProposalTemplateSectionProps["settings"]>) => Promise<void>;
 }
 
-export function ProposalTemplateSection({ settings, onChange }: ProposalTemplateSectionProps) {
+export function ProposalTemplateSection({ settings, onUpdate }: ProposalTemplateSectionProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Proposal Template Style</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="h-5 w-5" />
+          Proposal Template
+        </CardTitle>
+        <CardDescription>
+          Customize the default template for your proposals
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <RadioGroup
-          value={settings.proposalTemplate || "classic"}
-          onValueChange={onChange}
-        >
-          <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-            <RadioGroupItem value="classic" id="classic" className="mt-1" />
-            <div className="flex-1">
-              <Label htmlFor="classic" className="cursor-pointer font-semibold">
-                Classic Template
-              </Label>
-              <p className="text-sm text-muted-foreground mt-1">
-                Traditional business format with logo, company info, and itemized list. 
-                Perfect for formal proposals and established businesses.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-            <RadioGroupItem value="modern" id="modern" className="mt-1" />
-            <div className="flex-1">
-              <Label htmlFor="modern" className="cursor-pointer font-semibold">
-                Modern Template
-              </Label>
-              <p className="text-sm text-muted-foreground mt-1">
-                Clean, minimal design with accent bars and two-column layout. 
-                Great for creative industries and tech-focused businesses.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-            <RadioGroupItem value="detailed" id="detailed" className="mt-1" />
-            <div className="flex-1">
-              <Label htmlFor="detailed" className="cursor-pointer font-semibold">
-                Detailed Template
-              </Label>
-              <p className="text-sm text-muted-foreground mt-1">
-                Comprehensive format with bordered sections, signature blocks, and extensive terms. 
-                Ideal for construction, contractors, and complex projects.
-              </p>
-            </div>
-          </div>
-        </RadioGroup>
+      <CardContent>
+        <div className="space-y-2">
+          <Label htmlFor="proposalTemplate">Default Template</Label>
+          <Textarea
+            id="proposalTemplate"
+            value={settings.proposalTemplate || ""}
+            onChange={(e) => onUpdate({ proposalTemplate: e.target.value })}
+            placeholder="Enter your default proposal template..."
+            rows={10}
+            className="font-mono text-sm"
+          />
+          <p className="text-sm text-muted-foreground">
+            Use variables: {"{company_name}"}, {"{customer_name}"}, {"{quote_total}"}
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
