@@ -36,7 +36,7 @@ describe('AuthContext - Tier-Based Access', () => {
             data: { role: 'max' },
             error: null,
         }),
-      } as any);
+      } as ReturnType<typeof supabase.from>);
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -63,7 +63,7 @@ describe('AuthContext - Tier-Based Access', () => {
             data: { role: 'admin' },
             error: null,
         }),
-      } as any);
+      } as ReturnType<typeof supabase.from>);
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -90,7 +90,7 @@ describe('AuthContext - Tier-Based Access', () => {
             data: { role: 'pro' },
             error: null,
         }),
-      } as any);
+      } as ReturnType<typeof supabase.from>);
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -117,7 +117,7 @@ describe('AuthContext - Tier-Based Access', () => {
             data: { role: 'free' },
             error: null,
         }),
-      } as any);
+      } as ReturnType<typeof supabase.from>);
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -146,7 +146,7 @@ describe('AuthContext - Tier-Based Access', () => {
             data: { role: 'max' },
             error: null,
         }),
-      } as any);
+      } as ReturnType<typeof supabase.from>);
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -173,7 +173,7 @@ describe('AuthContext - Tier-Based Access', () => {
             data: { role: 'pro' },
             error: null,
         }),
-      } as any);
+      } as ReturnType<typeof supabase.from>);
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 

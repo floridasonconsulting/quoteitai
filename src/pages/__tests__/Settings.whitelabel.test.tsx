@@ -154,7 +154,7 @@ describe('Settings - White-Label Branding', () => {
             }),
           }),
         }),
-      } as any);
+      } as ReturnType<typeof supabase.from>);
 
       const { getByLabelText } = renderSettings();
 
@@ -197,7 +197,7 @@ describe('Settings - White-Label Branding', () => {
             single: mockSelect,
           }),
         }),
-      } as any);
+      } as ReturnType<typeof supabase.from>);
 
       const { getByRole } = renderSettings();
 
@@ -230,7 +230,7 @@ describe('Settings - White-Label Branding', () => {
             }),
           }),
         }),
-      } as any);
+      } as ReturnType<typeof supabase.from>);
 
       const { getByRole } = renderSettings();
       const user = userEvent.setup();

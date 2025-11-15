@@ -55,7 +55,7 @@ export async function importCustomersFromCSV(
 
       // Check for duplicates by name and email
       const existingCustomer = existingCustomers.find(
-        existing => existing.name === (customer as any).name && existing.email === (customer as any).email
+        existing => existing.name === customer.name && existing.email === customer.email
       );
 
       if (existingCustomer) {
@@ -64,7 +64,7 @@ export async function importCustomersFromCSV(
           continue;
         } else if (duplicateStrategy === 'error') {
           result.failed++;
-          result.errors.push(`Line ${i + 1}: Duplicate customer: ${(customer as any).name} (${(customer as any).email})`);
+          result.errors.push(`Line ${i + 1}: Duplicate customer: ${customer.name} (${customer.email})`);
           continue;
         } else if (duplicateStrategy === 'overwrite') {
           await updateCustomer(userId, existingCustomer.id, customer as Customer);
@@ -165,7 +165,7 @@ export async function importItemsFromCSV(
 
       // Check for duplicates by name and category
       const existingItem = existingItems.find(
-        existing => existing.name === (item as any).name && existing.category === (item as any).category
+        existing => existing.name === item.name && existing.category === item.category
       );
 
       if (existingItem) {
@@ -174,7 +174,7 @@ export async function importItemsFromCSV(
           continue;
         } else if (duplicateStrategy === 'error') {
           result.failed++;
-          result.errors.push(`Line ${i + 1}: Duplicate item: ${(item as any).name} in ${(item as any).category}`);
+          result.errors.push(`Line ${i + 1}: Duplicate item: ${item.name} in ${item.category}`);
           continue;
         } else if (duplicateStrategy === 'overwrite') {
           await updateItem(userId, existingItem.id, item as Item);
@@ -270,17 +270,17 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
 
       // Check for duplicates by quoteNumber
       const isDuplicate = existingQuotes.some(
-        existing => existing.quoteNumber === (quote as any).quoteNumber
+        existing => existing.quoteNumber === quote.quoteNumber
       );
 
       if (isDuplicate) {
-        console.log(`[Import] Skipping duplicate quote: ${(quote as any).quoteNumber}`);
+        console.log(`[Import] Skipping duplicate quote: ${quote.quoteNumber}`);
         result.skipped++;
         continue;
       }
 
       // Validate required fields
-      if (!(quote as any).quoteNumber || !(quote as any).customerName || !(quote as any).title) {
+      if (!quote.quoteNumber || !quote.customerName || !quote.title) {
         result.failed++;
         result.errors.push(`Line ${i + 1}: Missing required fields (quoteNumber, customerName, or title)`);
         console.error(`[Import] Quote validation failed at line ${i + 1}: Missing required fields`);
@@ -288,36 +288,36 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
       }
 
       // Validate status
-      if ((quote as any).status && !validStatuses.includes((quote as any).status)) {
+      if (quote.status && !validStatuses.includes(quote.status)) {
         result.failed++;
-        result.errors.push(`Line ${i + 1}: Invalid status "${(quote as any).status}". Must be "draft", "sent", "accepted", or "declined"`);
+        result.errors.push(`Line ${i + 1}: Invalid status "${quote.status}". Must be "draft", "sent", "accepted", or "declined"`);
         console.error(`[Import] Quote validation failed at line ${i + 1}: Invalid status`);
         continue;
       }
 
       // Map customerName to actual customer UUID
-      if ((quote as any).customerName) {
+      if (quote.customerName) {
         const matchingCustomer = existingCustomers.find(
-          c => c.name === (quote as any).customerName
+          c => c.name === quote.customerName
         );
         
         if (matchingCustomer) {
-          (quote as any).customer_id = matchingCustomer.id;
-          console.log(`[Import] Mapped customer "${(quote as any).customerName}" to UUID: ${matchingCustomer.id}`);
+          quote.customer_id = matchingCustomer.id;
+          console.log(`[Import] Mapped customer "${quote.customerName}" to UUID: ${matchingCustomer.id}`);
         } else {
-          (quote as any).customer_id = null;
-          console.log(`[Import] No matching customer found for "${(quote as any).customerName}", setting customer_id to null`);
+          quote.customer_id = null;
+          console.log(`[Import] No matching customer found for "${quote.customerName}", setting customer_id to null`);
         }
       } else {
-        (quote as any).customer_id = null;
+        quote.customer_id = null;
       }
 
       // Remove customerId from CSV if it exists (not a valid UUID)
-      delete (quote as any).customerId;
+      delete (quote as Partial<Quote & { customerId: string }>).customerId;
 
       // Import addQuote dynamically to save the quote
       const { addQuote, getCachedData, setCachedData } = await import('./db-service');
-      console.log(`[Import] Adding quote: ${(quote as any).quoteNumber} - ${(quote as any).title}`);
+      console.log(`[Import] Adding quote: ${quote.quoteNumber} - ${quote.title}`);
       const inserted = await addQuote(userId, quote as Quote);
       
       // Update local cache immediately so data appears without navigation

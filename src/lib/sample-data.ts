@@ -598,7 +598,7 @@ export const generateSampleData = async (
               customerId: customer.id,
               customerName: customer.name,
               title: quoteData.title,
-              items: quoteData.items as any,
+              items: quoteData.items as QuoteItem[],
               subtotal,
               tax,
               total,

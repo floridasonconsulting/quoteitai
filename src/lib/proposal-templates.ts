@@ -509,9 +509,18 @@ export async function generateDetailedPDF(quote: Quote, customer: Customer | nul
   pdf.setFontSize(9);
   pdf.text(quote.customerName, MARGIN + 3, yPos);
   yPos += LINE_HEIGHT;
-  if (customer?.address) pdf.text(customer.address, MARGIN + 3, yPos), yPos += LINE_HEIGHT;
-  if (customer?.city) pdf.text(`${customer.city}, ${customer.state} ${customer.zip}`.trim(), MARGIN + 3, yPos), yPos += LINE_HEIGHT;
-  if (customer?.phone) pdf.text(`Phone: ${customer.phone}`, MARGIN + 3, yPos), yPos += LINE_HEIGHT;
+  if (customer?.address) {
+    pdf.text(customer.address, MARGIN + 3, yPos);
+    yPos += LINE_HEIGHT;
+  }
+  if (customer?.city) {
+    pdf.text(`${customer.city}, ${customer.state} ${customer.zip}`.trim(), MARGIN + 3, yPos);
+    yPos += LINE_HEIGHT;
+  }
+  if (customer?.phone) {
+    pdf.text(`Phone: ${customer.phone}`, MARGIN + 3, yPos);
+    yPos += LINE_HEIGHT;
+  }
   
   yPos += 8;
   

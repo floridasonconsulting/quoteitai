@@ -327,7 +327,7 @@ async function createWithCache<T>(
     }
     const cached = getCachedData<T>(cacheKey) || [];
     setCachedData<T>(cacheKey, [...cached, itemWithUser]);
-    queueChange?.({ type: 'create', table, data: toSnakeCase(itemWithUser) as T & {id: string} });
+    queueChange?.({ type: 'create', table, data: itemWithUser as ChangeData });
     return itemWithUser;
   }
 
@@ -356,7 +356,7 @@ async function createWithCache<T>(
     // Fallback to cache
     const cached = getCachedData<T>(cacheKey) || [];
     setCachedData<T>(cacheKey, [...cached, itemWithUser as T]);
-    queueChange?.({ type: 'create', table, data: toSnakeCase(itemWithUser) as T & {id: string} });
+    queueChange?.({ type: 'create', table, data: itemWithUser as ChangeData });
     throw error; // Re-throw so caller knows it failed
   }
 }
@@ -379,7 +379,7 @@ async function updateWithCache<T extends { id: string }>(
       item.id === id ? { ...item, ...updates } as T : item
     );
     setCachedData<T>(cacheKey, updated);
-    queueChange?.({ type: 'update', table, data: toSnakeCase({ id, ...updates }) as T & {id: string} });
+    queueChange?.({ type: 'update', table, data: { id, ...updates } as ChangeData });
     return updated.find(item => item.id === id)!;
   }
 
@@ -415,7 +415,7 @@ async function updateWithCache<T extends { id: string }>(
       item.id === id ? { ...item, ...updates } as T : item
     );
     setCachedData<T>(cacheKey, updated);
-    queueChange?.({ type: 'update', table, data: toSnakeCase({ id, ...updates }) as T & {id: string} });
+    queueChange?.({ type: 'update', table, data: { id, ...updates } as ChangeData });
     return updated.find(item => item.id === id)!;
   }
 }
@@ -432,7 +432,7 @@ async function deleteWithCache<T extends { id: string }>(
     // Offline: update cache and queue
     const cached = getCachedData<T>(cacheKey) || [];
     setCachedData<T>(cacheKey, cached.filter(item => item.id !== id));
-    queueChange?.({ type: 'delete', table, data: { id } });
+    queueChange?.({ type: 'delete', table, data: { id } as Partial<T> });
     return;
   }
 
@@ -458,7 +458,7 @@ async function deleteWithCache<T extends { id: string }>(
     // Fallback to cache
     const cached = getCachedData<T>(cacheKey) || [];
     setCachedData<T>(cacheKey, cached.filter(item => item.id !== id));
-    queueChange?.({ type: 'delete', table, data: { id } });
+    queueChange?.({ type: 'delete', table, data: { id } as Partial<T> });
   }
 }
 
