@@ -40,44 +40,44 @@ function AppRoutes() {
   const isPublicPage = publicPages.includes(location.pathname) || location.pathname.startsWith('/quotes/public');
 
   return (
-    &lt;Routes&gt;
-      &lt;Route path="/" element={isPublicPage ? &lt;Landing /&gt; : &lt;Layout&gt;&lt;Dashboard /&gt;&lt;/Layout&gt;} /&gt;
-      &lt;Route path="/auth" element={&lt;AuthPage /&gt;} /&gt;
-      &lt;Route path="/terms" element={&lt;TermsOfService /&gt;} /&gt;
-      &lt;Route path="/privacy" element={&lt;PrivacyPolicy /&gt;} /&gt;
-      &lt;Route path="/quotes/public/:id" element={&lt;PublicQuoteView /&gt;} /&gt;
+    <Routes>
+      <Route path="/" element={isPublicPage ? <Landing /> : <Layout><Dashboard /></Layout>} />
+      <Route path="/auth" element={<AuthPage />} />
+      <Route path="/terms" element={<TermsOfService />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/quotes/public/:id" element={<PublicQuoteView />} />
       
-      &lt;Route element={&lt;Layout /&gt;}&gt;
-        &lt;Route path="/dashboard" element={&lt;ProtectedRoute&gt;&lt;Suspense fallback={&lt;LoadingFallback /&gt;}&gt;&lt;Dashboard /&gt;&lt;/Suspense&gt;&lt;/ProtectedRoute&gt;} /&gt;
-        &lt;Route path="/quotes" element={&lt;ProtectedRoute&gt;&lt;Suspense fallback={&lt;LoadingFallback /&gt;}&gt;&lt;Quotes /&gt;&lt;/Suspense&gt;&lt;/ProtectedRoute&gt;} /&gt;
-        &lt;Route path="/quotes/new" element={&lt;ProtectedRoute&gt;&lt;Suspense fallback={&lt;LoadingFallback /&gt;}&gt;&lt;NewQuote /&gt;&lt;/Suspense&gt;&lt;/ProtectedRoute&gt;} /&gt;
-        &lt;Route path="/quotes/:id" element={&lt;ProtectedRoute&gt;&lt;Suspense fallback={&lt;LoadingFallback /&gt;}&gt;&lt;QuoteDetail /&gt;&lt;/Suspense&gt;&lt;/ProtectedRoute&gt;} /&gt;
-        &lt;Route path="/customers" element={&lt;ProtectedRoute&gt;&lt;Suspense fallback={&lt;LoadingFallback /&gt;}&gt;&lt;Customers /&gt;&lt;/Suspense&gt;&lt;/ProtectedRoute&gt;} /&gt;
-        &lt;Route path="/items" element={&lt;ProtectedRoute&gt;&lt;Suspense fallback={&lt;LoadingFallback /&gt;}&gt;&lt;Items /&gt;&lt;/Suspense&gt;&lt;/ProtectedRoute&gt;} /&gt;
-        &lt;Route path="/settings" element={&lt;ProtectedRoute&gt;&lt;Suspense fallback={&lt;LoadingFallback /&gt;}&gt;&lt;Settings /&gt;&lt;/Suspense&gt;&lt;/ProtectedRoute&gt;} /&gt;
-        &lt;Route path="/help" element={&lt;ProtectedRoute&gt;&lt;Suspense fallback={&lt;LoadingFallback /&gt;}&gt;&lt;Help /&gt;&lt;/Suspense&gt;&lt;/ProtectedRoute&gt;} /&gt;
-        &lt;Route path="/diagnostics" element={&lt;ProtectedRoute&gt;&lt;Suspense fallback={&lt;LoadingFallback /&gt;}&gt;&lt;Diagnostics /&gt;&lt;/Suspense&gt;&lt;/ProtectedRoute&gt;} /&gt;
-        &lt;Route path="/subscription" element={&lt;ProtectedRoute&gt;&lt;Suspense fallback={&lt;LoadingFallback /&gt;}&gt;&lt;Subscription /&gt;&lt;/Suspense&gt;&lt;/ProtectedRoute&gt;} /&gt;
-        &lt;Route path="/admin/demo-recorder" element={&lt;ProtectedRoute&gt;&lt;Suspense fallback={&lt;LoadingFallback /&gt;}&gt;&lt;AdminDemoRecorder /&gt;&lt;/Suspense&gt;&lt;/ProtectedRoute&gt;} /&gt;
-      &lt;/Route&gt;
+      <Route element={<Layout />}>
+        <Route path="/dashboard" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Dashboard /></Suspense></ProtectedRoute>} />
+        <Route path="/quotes" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Quotes /></Suspense></ProtectedRoute>} />
+        <Route path="/quotes/new" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><NewQuote /></Suspense></ProtectedRoute>} />
+        <Route path="/quotes/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><QuoteDetail /></Suspense></ProtectedRoute>} />
+        <Route path="/customers" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Customers /></Suspense></ProtectedRoute>} />
+        <Route path="/items" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Items /></Suspense></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Settings /></Suspense></ProtectedRoute>} />
+        <Route path="/help" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Help /></Suspense></ProtectedRoute>} />
+        <Route path="/diagnostics" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Diagnostics /></Suspense></ProtectedRoute>} />
+        <Route path="/subscription" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Subscription /></Suspense></ProtectedRoute>} />
+        <Route path="/admin/demo-recorder" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><AdminDemoRecorder /></Suspense></ProtectedRoute>} />
+      </Route>
       
-      &lt;Route path="*" element={&lt;NotFound /&gt;} /&gt;
-    &lt;/Routes&gt;
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 }
 
 const App = () => (
-  &lt;QueryClientProvider client={queryClient}&gt;
-    &lt;ThemeProvider&gt;
-      &lt;TooltipProvider&gt;
-        &lt;AuthProvider&gt;
-          &lt;Toaster /&gt;
-          &lt;Sonner /&gt;
-          &lt;AppRoutes /&gt;
-        &lt;/AuthProvider&gt;
-      &lt;/TooltipProvider&gt;
-    &lt;/ThemeProvider&gt;
-  &lt;/QueryClientProvider&gt;
+  <QueryClientProvider client={queryClient}>
+    <ThemeProvider>
+      <TooltipProvider>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <AppRoutes />
+        </AuthProvider>
+      </TooltipProvider>
+    </ThemeProvider>
+  </QueryClientProvider>
 );
 
 export default App;
