@@ -15,8 +15,10 @@ function AppContent() {
   useNotifications();
 
   // Pages that should NOT have the Layout (public pages)
-  const publicPages = ['/', '/auth', '/terms', '/privacy', '/quotes/public'];
-  const isPublicPage = publicPages.some(page => location.pathname.startsWith(page));
+  const publicPages = ['/', '/auth', '/terms', '/privacy'];
+  
+  // Check if current path is a public page (exact match or starts with /quotes/public)
+  const isPublicPage = publicPages.includes(location.pathname) || location.pathname.startsWith('/quotes/public');
 
   // If it's a public page, render without Layout
   if (isPublicPage) {
