@@ -1,4 +1,4 @@
-import React, { Suspense } from "react";
+import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App";
@@ -25,6 +25,11 @@ import PublicQuoteView from "./pages/PublicQuoteView";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Landing from "./pages/Landing";
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Quotes = lazy(() => import("./pages/Quotes"));
+const Diagnostics = lazy(() => import("./pages/Diagnostics"));
+const AdminDemoRecorder = lazy(() => import("./pages/AdminDemoRecorder"));
 
 const router = createBrowserRouter([
   {
@@ -120,7 +125,17 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Suspense fallback={<LoadingFallback />}>
-              <LazyDiagnostics />
+              <Diagnostics />
+            </Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/admin/demo-recorder",
+        element: (
+          <ProtectedRoute>
+            <Suspense fallback={<LoadingFallback />}>
+              <AdminDemoRecorder />
             </Suspense>
           </ProtectedRoute>
         ),
