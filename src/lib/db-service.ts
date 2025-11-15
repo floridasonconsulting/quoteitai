@@ -334,7 +334,7 @@ async function createWithCache<T>(
   try {
     // Transform camelCase to snake_case for DB
     const dbItem = toSnakeCase(itemWithUser);
-    const { error } = await supabase.from(table as any).insert(dbItem as any);
+    const { error } = await supabase.from(table as any).insert(dbItem as unknown);
     if (error) {
       console.error(`❌ Database insert failed for ${table}:`, error);
       throw error;
@@ -388,7 +388,7 @@ async function updateWithCache<T extends { id: string }>(
     const dbUpdates = toSnakeCase(updates);
     const { error } = await supabase
       .from(table as any)
-      .update(dbUpdates as any)
+      .update(dbUpdates as unknown)
       .eq('id', id)
       .eq('user_id', userId);
     

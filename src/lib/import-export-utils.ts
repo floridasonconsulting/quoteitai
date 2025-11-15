@@ -50,7 +50,7 @@ export async function importCustomersFromCSV(
       
       const customer: Partial<Customer> = {};
       headers.forEach((header, index) => {
-        (customer as Record<string, any>)[header.trim()] = values[index] || '';
+        (customer as Record<string, unknown>)[header.trim()] = values[index] || '';
       });
 
       // Check for duplicates by name and email
@@ -138,7 +138,7 @@ export async function importItemsFromCSV(
         const headerName = header.trim();
         
         if (['basePrice', 'finalPrice'].includes(headerName)) {
-          (item as Record<string, any>)[headerName] = parseFloat(value) || 0;
+          (item as Record<string, unknown>)[headerName] = parseFloat(value) || 0;
         } else if (headerName === 'markup') {
           // Parse markup and detect type from format
           const markupValue = value.trim();
@@ -152,7 +152,7 @@ export async function importItemsFromCSV(
             item.markup = parseFloat(markupValue) || 0;
           }
         } else {
-          (item as Record<string, any>)[headerName] = value;
+          (item as Record<string, unknown>)[headerName] = value;
         }
       });
 
@@ -255,16 +255,16 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
         if (headerName === 'items') {
           // Parse JSON for items array
           try {
-            (quote as Record<string, any>)[headerName] = value ? JSON.parse(value) : [];
+            (quote as Record<string, unknown>)[headerName] = value ? JSON.parse(value) : [];
           } catch (e) {
-            (quote as Record<string, any>)[headerName] = [];
+            (quote as Record<string, unknown>)[headerName] = [];
           }
         } else if (['subtotal', 'tax', 'total'].includes(headerName)) {
-          (quote as Record<string, any>)[headerName] = parseFloat(value) || 0;
+          (quote as Record<string, unknown>)[headerName] = parseFloat(value) || 0;
         } else if (['sentDate', 'followUpDate'].includes(headerName)) {
-          (quote as Record<string, any>)[headerName] = value || null;
+          (quote as Record<string, unknown>)[headerName] = value || null;
         } else {
-          (quote as Record<string, any>)[headerName] = value;
+          (quote as Record<string, unknown>)[headerName] = value;
         }
       });
 
@@ -352,7 +352,7 @@ export async function importCompanySettingsFromCSV(csvContent: string, userId: s
     if (values.length >= 2) {
       const field = values[0].trim();
       const value = values[1].trim();
-      (settings as Record<string, any>)[field] = value;
+      (settings as Record<string, unknown>)[field] = value;
     }
   }
 
