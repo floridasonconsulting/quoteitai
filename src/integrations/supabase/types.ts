@@ -58,6 +58,8 @@ export type Database = {
           name: string | null
           notify_email_accepted: boolean | null
           notify_email_declined: boolean | null
+          onboarding_completed: boolean | null
+          onboarding_skipped: boolean | null
           phone: string | null
           proposal_template: string | null
           state: string | null
@@ -80,6 +82,8 @@ export type Database = {
           name?: string | null
           notify_email_accepted?: boolean | null
           notify_email_declined?: boolean | null
+          onboarding_completed?: boolean | null
+          onboarding_skipped?: boolean | null
           phone?: string | null
           proposal_template?: string | null
           state?: string | null
@@ -102,6 +106,8 @@ export type Database = {
           name?: string | null
           notify_email_accepted?: boolean | null
           notify_email_declined?: boolean | null
+          onboarding_completed?: boolean | null
+          onboarding_skipped?: boolean | null
           phone?: string | null
           proposal_template?: string | null
           state?: string | null

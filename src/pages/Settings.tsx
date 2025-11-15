@@ -337,11 +337,14 @@ export default function Settings() {
 
     try {
       // Load CSV files
+      console.log('[Import] Step 1: Loading CSV files...');
       toast.loading('Loading CSV files...');
       const customersCSV = await loadSampleDataFile('customers.csv');
       const itemsCSV = await loadSampleDataFile('items.csv');
       const quotesCSV = await loadSampleDataFile('quotes.csv');
       const settingsCSV = await loadSampleDataFile('company-settings.csv');
+
+      console.log('[Import] CSV files loaded');
 
       // Validate CSVs first
       const itemsValidation = validateItemsCSV(itemsCSV);
@@ -349,6 +352,7 @@ export default function Settings() {
       
       if (!itemsValidation.valid || !quotesValidation.valid) {
         const allErrors = [...itemsValidation.errors, ...quotesValidation.errors];
+        console.error('[Import] Validation failed:', allErrors);
         toast.error(`Validation failed: ${allErrors[0]}`);
         setImportResult({
           success: 0,
@@ -360,16 +364,23 @@ export default function Settings() {
         return;
       }
 
-      // Import data with progress feedback
+      // Import data with progress feedback - MUST import in order: customers -> items -> quotes
+      console.log('[Import] Step 2: Importing customers...');
       toast.loading('Importing customers...');
       const customersResult = await importCustomersFromCSV(customersCSV, user.id);
+      console.log('[Import] Customers imported:', customersResult);
       
+      console.log('[Import] Step 3: Importing items...');
       toast.loading('Importing items...');
       const itemsResult = await importItemsFromCSV(itemsCSV, user.id);
+      console.log('[Import] Items imported:', itemsResult);
       
+      console.log('[Import] Step 4: Importing quotes...');
       toast.loading('Importing quotes...');
       const quotesResult = await importQuotesFromCSV(quotesCSV, user.id);
+      console.log('[Import] Quotes imported:', quotesResult);
       
+      console.log('[Import] Step 5: Importing company settings...');
       toast.loading('Importing company settings...');
       await importCompanySettingsFromCSV(settingsCSV, user.id);
 
@@ -385,6 +396,15 @@ export default function Settings() {
       const totalSuccess = customersResult.success + itemsResult.success + quotesResult.success;
       const totalFailed = customersResult.failed + itemsResult.failed + quotesResult.failed;
       const totalSkipped = customersResult.skipped + itemsResult.skipped + quotesResult.skipped;
+
+      console.log('[Import] Import complete:', {
+        customers: customersResult,
+        items: itemsResult,
+        quotes: quotesResult,
+        totalSuccess,
+        totalFailed,
+        totalSkipped
+      });
 
       setImportResult({
         success: totalSuccess,
@@ -450,10 +470,12 @@ export default function Settings() {
 
     try {
       // Clear existing data
+      console.log('[Clear & Import] Step 1: Clearing database...');
       toast.loading('Clearing database...');
       await clearDatabaseData(user.id);
       await clearAllData();
 
+      console.log('[Clear & Import] Step 2: Database cleared. Importing sample data...');
       toast.success('Database cleared. Importing sample data...');
 
       // Load CSV files
@@ -462,26 +484,40 @@ export default function Settings() {
       const quotesCSV = await loadSampleDataFile('quotes.csv');
       const settingsCSV = await loadSampleDataFile('company-settings.csv');
 
+      console.log('[Clear & Import] CSV files loaded:', {
+        customers: customersCSV.substring(0, 100),
+        items: itemsCSV.substring(0, 100),
+        quotes: quotesCSV.substring(0, 100)
+      });
+
       // Validate before importing
       const itemsValidation = validateItemsCSV(itemsCSV);
       const quotesValidation = validateQuotesCSV(quotesCSV);
       
       if (!itemsValidation.valid || !quotesValidation.valid) {
         const allErrors = [...itemsValidation.errors, ...quotesValidation.errors];
+        console.error('[Clear & Import] Validation failed:', allErrors);
         toast.error(`Validation failed: ${allErrors[0]}`);
         return;
       }
 
-      // Import with progress feedback
+      // Import with progress feedback - MUST import in order: customers -> items -> quotes
+      console.log('[Clear & Import] Step 3: Importing customers...');
       toast.loading('Importing customers...');
       const customersResult = await importCustomersFromCSV(customersCSV, user.id);
+      console.log('[Clear & Import] Customers imported:', customersResult);
       
+      console.log('[Clear & Import] Step 4: Importing items...');
       toast.loading('Importing items...');
       const itemsResult = await importItemsFromCSV(itemsCSV, user.id);
+      console.log('[Clear & Import] Items imported:', itemsResult);
       
+      console.log('[Clear & Import] Step 5: Importing quotes...');
       toast.loading('Importing quotes...');
       const quotesResult = await importQuotesFromCSV(quotesCSV, user.id);
+      console.log('[Clear & Import] Quotes imported:', quotesResult);
       
+      console.log('[Clear & Import] Step 6: Importing company settings...');
       toast.loading('Importing company settings...');
       await importCompanySettingsFromCSV(settingsCSV, user.id);
 
@@ -495,6 +531,14 @@ export default function Settings() {
 
       const totalSuccess = customersResult.success + itemsResult.success + quotesResult.success;
       const totalFailed = customersResult.failed + itemsResult.failed + quotesResult.failed;
+
+      console.log('[Clear & Import] Import complete:', {
+        customers: customersResult,
+        items: itemsResult,
+        quotes: quotesResult,
+        totalSuccess,
+        totalFailed
+      });
 
       if (totalFailed > 0) {
         toast.warning(`Import completed with errors. ${totalSuccess} records imported, ${totalFailed} failed.`);
