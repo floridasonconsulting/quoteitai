@@ -32,7 +32,7 @@ describe('Database Service - Repository Pattern', () => {
       const mockSelect = vi.fn().mockReturnValue({
         eq: vi.fn().mockResolvedValue({ data: [], error: null }),
       });
-      (supabase.from as any) = vi.fn(() => ({ select: mockSelect }));
+      vi.mocked(supabase.from).mockReturnValue({ select: mockSelect } as any);
       await dbService.getCustomers('user-1');
       expect(supabase.from).toHaveBeenCalledWith('customers');
       expect(mockSelect).toHaveBeenCalledWith('*');

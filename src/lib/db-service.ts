@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Customer, Item, Quote, CompanySettings } from '@/types';
+import { Customer, Item, Quote, CompanySettings, QueueChange } from '@/types';
 import { getStorageItem, setStorageItem } from './storage';
 import * as LocalDB from './local-db';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
@@ -15,7 +15,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // Request pooling to limit concurrent Supabase requests
 const MAX_CONCURRENT_REQUESTS = 2;
-const requestQueue: Array<() => Promise<any>> = [];
+const requestQueue: Array<() => Promise<unknown>> = [];
 let activeRequests = 0;
 
 async function executeWithPool<T>(requestFn: () => Promise<T>): Promise<T> {
@@ -33,7 +33,7 @@ async function executeWithPool<T>(requestFn: () => Promise<T>): Promise<T> {
 
 // Request deduplication map with timestamp tracking and abort controllers
 interface InFlightRequest {
-  promise: Promise<any>;
+  promise: Promise<unknown>;
   startTime: number;
   abortController: AbortController;
 }
@@ -41,9 +41,16 @@ interface InFlightRequest {
 const inFlightRequests = new Map<string, InFlightRequest>();
 const MAX_REQUEST_AGE = 20000; // 20 seconds max age for in-flight requests
 
+// Extend window type for debugging
+declare global {
+  interface Window {
+    __inFlightRequests: Map<string, InFlightRequest>;
+  }
+}
+
 // Expose for debugging in Diagnostics page
 if (typeof window !== 'undefined') {
-  (window as any).__inFlightRequests = inFlightRequests;
+  window.__inFlightRequests = inFlightRequests;
 }
 
 // Clear all in-flight requests (emergency cleanup)
@@ -157,35 +164,35 @@ export async function clearAllCaches(): Promise<void> {
 }
 
 // Transformation functions to convert between camelCase (frontend) and snake_case (database)
-export function toSnakeCase(obj: any): any {
+export function toSnakeCase(obj: unknown): unknown {
   if (!obj || typeof obj !== 'object') return obj;
   
   if (Array.isArray(obj)) {
     return obj.map(item => toSnakeCase(item));
   }
   
-  const snakeCaseObj: any = {};
+  const snakeCaseObj: Record<string, unknown> = {};
   for (const key in obj) {
-    if (obj.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
       const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-      snakeCaseObj[snakeKey] = toSnakeCase(obj[key]);
+      snakeCaseObj[snakeKey] = toSnakeCase((obj as Record<string, unknown>)[key]);
     }
   }
   return snakeCaseObj;
 }
 
-export function toCamelCase(obj: any): any {
+export function toCamelCase(obj: unknown): unknown {
   if (!obj || typeof obj !== 'object') return obj;
   
   if (Array.isArray(obj)) {
     return obj.map(item => toCamelCase(item));
   }
   
-  const camelCaseObj: any = {};
+  const camelCaseObj: Record<string, unknown> = {};
   for (const key in obj) {
-    if (obj.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
       const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-      camelCaseObj[camelKey] = toCamelCase(obj[key]);
+      camelCaseObj[camelKey] = toCamelCase((obj as Record<string, unknown>)[key]);
     }
   }
   return camelCaseObj;
@@ -210,7 +217,7 @@ async function dedupedRequest<T>(key: string, requestFn: () => Promise<T>): Prom
   if (existing) {
     const age = Date.now() - existing.startTime;
     console.log(`[Dedup] Reusing in-flight request for ${key} (age: ${age}ms)`);
-    return existing.promise;
+    return existing.promise as Promise<T>;
   }
 
   console.log(`[Dedup] Starting new request for ${key}`);
@@ -242,7 +249,7 @@ async function dedupedRequest<T>(key: string, requestFn: () => Promise<T>): Prom
     abortController
   });
   
-  return promise;
+  return promise as Promise<T>;
 }
 
 // Generic fetch with cache and deduplication
@@ -309,7 +316,7 @@ async function createWithCache<T>(
   table: string,
   cacheKey: string,
   item: T,
-  queueChange?: (change: any) => void
+  queueChange?: (change: QueueChange) => void
 ): Promise<T> {
   const itemWithUser = { ...item, user_id: userId } as T;
 
@@ -320,7 +327,7 @@ async function createWithCache<T>(
     }
     const cached = getCachedData<T>(cacheKey) || [];
     setCachedData<T>(cacheKey, [...cached, itemWithUser]);
-    queueChange?.({ type: 'create', table, data: toSnakeCase(itemWithUser) });
+    queueChange?.({ type: 'create', table, data: toSnakeCase(itemWithUser) as T & {id: string} });
     return itemWithUser;
   }
 
@@ -349,7 +356,7 @@ async function createWithCache<T>(
     // Fallback to cache
     const cached = getCachedData<T>(cacheKey) || [];
     setCachedData<T>(cacheKey, [...cached, itemWithUser as T]);
-    queueChange?.({ type: 'create', table, data: toSnakeCase(itemWithUser) });
+    queueChange?.({ type: 'create', table, data: toSnakeCase(itemWithUser) as T & {id: string} });
     throw error; // Re-throw so caller knows it failed
   }
 }
@@ -361,7 +368,7 @@ async function updateWithCache<T extends { id: string }>(
   cacheKey: string,
   id: string,
   updates: Partial<T>,
-  queueChange?: (change: any) => void
+  queueChange?: (change: QueueChange) => void
 ): Promise<T> {
   const updatedItem = { ...updates, id } as T;
   
@@ -372,7 +379,7 @@ async function updateWithCache<T extends { id: string }>(
       item.id === id ? { ...item, ...updates } as T : item
     );
     setCachedData<T>(cacheKey, updated);
-    queueChange?.({ type: 'update', table, data: toSnakeCase({ id, ...updates }) });
+    queueChange?.({ type: 'update', table, data: toSnakeCase({ id, ...updates }) as T & {id: string} });
     return updated.find(item => item.id === id)!;
   }
 
@@ -408,7 +415,7 @@ async function updateWithCache<T extends { id: string }>(
       item.id === id ? { ...item, ...updates } as T : item
     );
     setCachedData<T>(cacheKey, updated);
-    queueChange?.({ type: 'update', table, data: toSnakeCase({ id, ...updates }) });
+    queueChange?.({ type: 'update', table, data: toSnakeCase({ id, ...updates }) as T & {id: string} });
     return updated.find(item => item.id === id)!;
   }
 }
@@ -419,7 +426,7 @@ async function deleteWithCache<T extends { id: string }>(
   table: string,
   cacheKey: string,
   id: string,
-  queueChange?: (change: any) => void
+  queueChange?: (change: QueueChange) => void
 ): Promise<void> {
   if (!navigator.onLine || !userId) {
     // Offline: update cache and queue
@@ -459,44 +466,44 @@ async function deleteWithCache<T extends { id: string }>(
 export const getCustomers = (userId: string | undefined) => 
   fetchWithCache<Customer>(userId, 'customers', CACHE_KEYS.CUSTOMERS);
 
-export const addCustomer = (userId: string | undefined, customer: Customer, queueChange?: (change: any) => void): Promise<Customer> =>
+export const addCustomer = (userId: string | undefined, customer: Customer, queueChange?: (change: QueueChange) => void): Promise<Customer> =>
   createWithCache(userId, 'customers', CACHE_KEYS.CUSTOMERS, customer, queueChange);
 
-export const updateCustomer = (userId: string | undefined, id: string, updates: Partial<Customer>, queueChange?: (change: any) => void): Promise<Customer> =>
+export const updateCustomer = (userId: string | undefined, id: string, updates: Partial<Customer>, queueChange?: (change: QueueChange) => void): Promise<Customer> =>
   updateWithCache(userId, 'customers', CACHE_KEYS.CUSTOMERS, id, updates, queueChange);
 
-export const deleteCustomer = (userId: string | undefined, id: string, queueChange?: (change: any) => void) =>
+export const deleteCustomer = (userId: string | undefined, id: string, queueChange?: (change: QueueChange) => void) =>
   deleteWithCache<Customer>(userId, 'customers', CACHE_KEYS.CUSTOMERS, id, queueChange);
 
 // Items
 export const getItems = (userId: string | undefined) =>
   fetchWithCache<Item>(userId, 'items', CACHE_KEYS.ITEMS);
 
-export const addItem = (userId: string | undefined, item: Item, queueChange?: (change: any) => void): Promise<Item> =>
+export const addItem = (userId: string | undefined, item: Item, queueChange?: (change: QueueChange) => void): Promise<Item> =>
   createWithCache(userId, 'items', CACHE_KEYS.ITEMS, item, queueChange);
 
-export const updateItem = (userId: string | undefined, id: string, updates: Partial<Item>, queueChange?: (change: any) => void): Promise<Item> =>
+export const updateItem = (userId: string | undefined, id: string, updates: Partial<Item>, queueChange?: (change: QueueChange) => void): Promise<Item> =>
   updateWithCache(userId, 'items', CACHE_KEYS.ITEMS, id, updates, queueChange);
 
-export const deleteItem = (userId: string | undefined, id: string, queueChange?: (change: any) => void) =>
+export const deleteItem = (userId: string | undefined, id: string, queueChange?: (change: QueueChange) => void) =>
   deleteWithCache<Item>(userId, 'items', CACHE_KEYS.ITEMS, id, queueChange);
 
 // Quotes
 export const getQuotes = (userId: string | undefined) =>
   fetchWithCache<Quote>(userId, 'quotes', CACHE_KEYS.QUOTES);
 
-export const addQuote = (userId: string | undefined, quote: Quote, queueChange?: (change: any) => void) =>
+export const addQuote = (userId: string | undefined, quote: Quote, queueChange?: (change: QueueChange) => void) =>
   createWithCache(userId, 'quotes', CACHE_KEYS.QUOTES, quote, queueChange);
 
-export const updateQuote = (userId: string | undefined, id: string, updates: Partial<Quote>, queueChange?: (change: any) => void) =>
+export const updateQuote = (userId: string | undefined, id: string, updates: Partial<Quote>, queueChange?: (change: QueueChange) => void) =>
   updateWithCache(userId, 'quotes', CACHE_KEYS.QUOTES, id, updates, queueChange);
 
-export const deleteQuote = (userId: string | undefined, id: string, queueChange?: (change: any) => void) =>
+export const deleteQuote = (userId: string | undefined, id: string, queueChange?: (change: QueueChange) => void) =>
   deleteWithCache<Quote>(userId, 'quotes', CACHE_KEYS.QUOTES, id, queueChange);
 
 // Company Settings
-export const getSettings = async (userId: string | undefined): Promise<any> => {
-  const defaultSettings = {
+export const getSettings = async (userId: string | undefined): Promise<CompanySettings> => {
+  const defaultSettings: CompanySettings = {
     name: '',
     address: '',
     city: '',
@@ -515,7 +522,7 @@ export const getSettings = async (userId: string | undefined): Promise<any> => {
   };
 
   if (!userId) {
-    return getStorageItem('quote-it-settings', defaultSettings);
+    return getStorageItem<CompanySettings>('quote-it-settings', defaultSettings);
   }
 
   try {
@@ -563,11 +570,11 @@ export const getSettings = async (userId: string | undefined): Promise<any> => {
     return defaultSettings;
   } catch (error) {
     console.error('Error fetching settings:', error);
-    return getStorageItem('quote-it-settings', defaultSettings);
+    return getStorageItem<CompanySettings>('quote-it-settings', defaultSettings);
   }
 };
 
-export const saveSettings = async (userId: string | undefined, settings: any, queueChange?: (change: any) => void): Promise<void> => {
+export const saveSettings = async (userId: string | undefined, settings: CompanySettings, queueChange?: (change: QueueChange) => void): Promise<void> => {
   if (!userId) return;
 
   try {

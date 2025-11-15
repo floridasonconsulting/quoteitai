@@ -83,7 +83,7 @@ export function removeFollowUpNotification(quoteId: string): void {
   localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(filtered));
 }
 
-export function showNotification(title: string, body: string, data?: any): void {
+export function showNotification(title: string, body: string, data?: Record<string, unknown>): void {
   if (Notification.permission === 'granted') {
     const notification = new Notification(title, {
       body,

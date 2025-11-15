@@ -6,6 +6,8 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import Dashboard from '@/pages/Dashboard';
 import NewQuote from '@/pages/NewQuote';
 import Settings from '@/pages/Settings';
+import { useAuth } from '@/contexts/AuthContext';
+import { User } from '@supabase/supabase-js';
 
 // Mock Supabase
 vi.mock('@/integrations/supabase/client', () => ({
@@ -24,6 +26,27 @@ vi.mock('@/integrations/supabase/client', () => ({
   },
 }));
 
+type MockAuthContext = Partial<ReturnType<typeof useAuth>>;
+
+const getMockAuthContext = (overrides: MockAuthContext): ReturnType<typeof useAuth> => {
+  const defaultValues: ReturnType<typeof useAuth> = {
+    user: null,
+    session: null,
+    subscription: null,
+    userRole: 'free',
+    isAdmin: false,
+    isMaxAITier: false,
+    loading: false,
+    signUp: vi.fn(),
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    updateUserRole: vi.fn(),
+    checkUserRole: vi.fn(),
+    refreshSubscription: vi.fn(),
+  };
+  return { ...defaultValues, ...overrides };
+};
+
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <BrowserRouter>
     <ThemeProvider>{children}</ThemeProvider>
@@ -36,13 +59,13 @@ describe('Free Tier Features', () => {
   });
 
   it('should block AI features and show upgrade prompt', async () => {
-    vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-      user: { id: 'test-user' } as any,
+    vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+      user: { id: 'test-user' } as User,
       userRole: 'free',
       isMaxAITier: false,
       isAdmin: false,
       loading: false,
-    } as any);
+    }));
 
     render(<NewQuote />, { wrapper });
 
@@ -56,13 +79,13 @@ describe('Free Tier Features', () => {
   });
 
   it('should block email sending and show upgrade prompt', async () => {
-    vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-      user: { id: 'test-user' } as any,
+    vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+      user: { id: 'test-user' } as User,
       userRole: 'free',
       isMaxAITier: false,
       isAdmin: false,
       loading: false,
-    } as any);
+    }));
 
     render(<Dashboard />, { wrapper });
 
@@ -75,13 +98,13 @@ describe('Free Tier Features', () => {
   });
 
   it('should not show white-label branding options', async () => {
-    vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-      user: { id: 'test-user' } as any,
+    vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+      user: { id: 'test-user' } as User,
       userRole: 'free',
       isMaxAITier: false,
       isAdmin: false,
       loading: false,
-    } as any);
+    }));
 
     render(<Settings />, { wrapper });
 
@@ -93,26 +116,26 @@ describe('Free Tier Features', () => {
   });
 
   it('should allow basic customer viewing', async () => {
-    vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-      user: { id: 'test-user' } as any,
+    vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+      user: { id: 'test-user' } as User,
       userRole: 'free',
       isMaxAITier: false,
       isAdmin: false,
       loading: false,
-    } as any);
+    }));
 
     // Free tier can view customers but with limitations
     // Implementation depends on actual feature set
   });
 
   it('should enforce quote limits for free tier', async () => {
-    vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-      user: { id: 'test-user' } as any,
+    vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+      user: { id: 'test-user' } as User,
       userRole: 'free',
       isMaxAITier: false,
       isAdmin: false,
       loading: false,
-    } as any);
+    }));
 
     // Test that free tier has quote creation limits
     // This would check usage tracking

@@ -33,7 +33,7 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
-  const generate = async (prompt: string, context?: any): Promise<string | AIUpgradeInfo | null> => {
+  const generate = async (prompt: string, context?: Record<string, unknown>): Promise<string | AIUpgradeInfo | null> => {
     setIsLoading(true);
     setResult(null);
 

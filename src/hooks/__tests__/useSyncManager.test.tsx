@@ -2,17 +2,22 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { supabase } from '@/integrations/supabase/client';
-import { AuthProvider } from '@/contexts/AuthContext';
 import { ReactNode } from 'react';
 
 // Mock useAuth directly without AuthProvider to avoid context issues
 vi.mock('@/contexts/AuthContext', () => ({
-  AuthProvider: ({ children }: { children: ReactNode }) => children,
   useAuth: () => ({
     user: { id: 'test-user-id', email: 'test@example.com' },
+    session: { access_token: 'test-token', user: { id: 'test-user-id' } },
+    subscription: null,
     userRole: 'free',
+    isAdmin: false,
     isMaxAITier: false,
     loading: false,
+    signUp: vi.fn(),
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    refreshSubscription: vi.fn(),
   }),
 }));
 
@@ -81,7 +86,7 @@ describe('useSyncManager', () => {
       result.current.queueChange({
         type: 'create',
         table: 'customers',
-        data: { name: 'Test Customer' },
+        data: { name: 'Test Customer', id: crypto.randomUUID() },
       });
     });
 
@@ -117,12 +122,10 @@ describe('useSyncManager', () => {
   it('should handle sync failures and retry', async () => {
     // Create a custom mock that fails once then succeeds
     let callCount = 0;
-    const mockFrom = vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-        })),
-      })),
+    const mockFrom = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
       insert: vi.fn(() => {
         callCount++;
         if (callCount === 1) {
@@ -130,9 +133,9 @@ describe('useSyncManager', () => {
         }
         return Promise.resolve({ data: {}, error: null });
       }),
-    }));
+    });
 
-    vi.mocked(supabase.from).mockImplementation(mockFrom as any);
+    vi.mocked(supabase.from).mockImplementation(mockFrom);
 
     const { result } = renderHook(() => useSyncManager());
 
@@ -164,16 +167,14 @@ describe('useSyncManager', () => {
   });
 
   it('should move failed changes to failed queue after max retries', async () => {
-    const mockFrom = vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-        })),
-      })),
+    const mockFrom = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
       insert: vi.fn().mockRejectedValue(new Error('Network error')),
-    }));
+    });
 
-    vi.mocked(supabase.from).mockImplementation(mockFrom as any);
+    vi.mocked(supabase.from).mockImplementation(mockFrom);
 
     const { result } = renderHook(() => useSyncManager());
 
@@ -181,7 +182,7 @@ describe('useSyncManager', () => {
       result.current.queueChange({
         type: 'create',
         table: 'customers',
-        data: { name: 'Test Customer', id: 'test-customer-5' },
+        data: { name: 'Test Customer', id: crypto.randomUUID() },
       });
     });
 
@@ -254,22 +255,22 @@ describe('useSyncManager', () => {
   });
 
   it('should handle different change types (create, update, delete)', async () => {
-    const mockFrom = vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-        })),
-      })),
+    const mockUpdate = {
+      eq: vi.fn().mockResolvedValue({ data: {}, error: null }),
+    };
+    const mockDelete = {
+      eq: vi.fn().mockResolvedValue({ data: {}, error: null }),
+    };
+    const mockFrom = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
       insert: vi.fn().mockResolvedValue({ data: {}, error: null }),
-      update: vi.fn(() => ({
-        eq: vi.fn().mockResolvedValue({ data: {}, error: null }),
-      })),
-      delete: vi.fn(() => ({
-        eq: vi.fn().mockResolvedValue({ data: {}, error: null }),
-      })),
-    }));
+      update: vi.fn().mockReturnValue(mockUpdate),
+      delete: vi.fn().mockReturnValue(mockDelete),
+    });
 
-    vi.mocked(supabase.from).mockImplementation(mockFrom as any);
+    vi.mocked(supabase.from).mockImplementation(mockFrom);
 
     const { result } = renderHook(() => useSyncManager());
 

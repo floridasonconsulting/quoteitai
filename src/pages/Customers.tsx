@@ -73,9 +73,10 @@ export default function Customers() {
       setError(null);
       setRetryCount(0);
       console.log(`[Customers] Loaded ${data.length} customers successfully`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[Customers] Load failed:', err);
-      const errorMsg = err.message === 'Request timeout' 
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      const errorMsg = errorMessage === 'Request timeout' 
         ? 'Loading is taking longer than expected. Try clearing cache or check your connection.'
         : 'Failed to load customers. Please try again.';
       setError(errorMsg);

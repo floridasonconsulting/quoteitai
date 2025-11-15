@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const logStep = (step: string, details?: any) => {
+const logStep = (step: string, details?: unknown) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
   console.log(`[AI-ASSIST] ${step}${detailsStr}`);
 };
@@ -400,7 +400,9 @@ Be specific and actionable. Reference actual quote items, quantities, and prices
           });
         }
       }
-    } catch {}
+    } catch {
+      // Silently ignore logging errors
+    }
 
     // Return sanitized error to client
     const isDevelopment = Deno.env.get('ENVIRONMENT') === 'development';

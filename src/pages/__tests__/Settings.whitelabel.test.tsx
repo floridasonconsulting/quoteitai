@@ -7,11 +7,34 @@ import Settings from '../Settings';
 import * as AuthContext from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { useAuth } from '@/contexts/AuthContext';
+import { User } from '@supabase/supabase-js';
 
 const mockToast = vi.fn();
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: mockToast }),
 }));
+
+type MockAuthContext = Partial<ReturnType<typeof useAuth>>;
+
+const getMockAuthContext = (overrides: MockAuthContext): ReturnType<typeof useAuth> => {
+  const defaultValues: ReturnType<typeof useAuth> = {
+    user: null,
+    session: null,
+    subscription: null,
+    userRole: 'free',
+    isAdmin: false,
+    isMaxAITier: false,
+    loading: false,
+    signUp: vi.fn(),
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    updateUserRole: vi.fn(),
+    checkUserRole: vi.fn(),
+    refreshSubscription: vi.fn(),
+  };
+  return { ...defaultValues, ...overrides };
+};
 
 const renderSettings = () => {
   return render(
@@ -30,11 +53,11 @@ describe('Settings - White-Label Branding', () => {
 
   describe('Tier-Based Access Control', () => {
     it('should show upgrade prompt for non-Max AI tier users', () => {
-      vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-        user: { id: 'user-123' },
+      vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+        user: { id: 'user-123' } as User,
         isMaxAITier: false,
         userRole: 'pro',
-      } as any);
+      }));
 
       const { getByText } = renderSettings();
       expect(getByText(/Upgrade to Max AI/i)).toBeInTheDocument();
@@ -42,11 +65,11 @@ describe('Settings - White-Label Branding', () => {
     });
 
     it('should show logo upload for Max AI tier users', async () => {
-      vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-        user: { id: 'user-123' },
+      vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+        user: { id: 'user-123' } as User,
         isMaxAITier: true,
         userRole: 'max',
-      } as any);
+      }));
 
       const { getByText, queryByText } = renderSettings();
 
@@ -59,11 +82,11 @@ describe('Settings - White-Label Branding', () => {
 
   describe('Logo Upload Functionality', () => {
     beforeEach(() => {
-      vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-        user: { id: 'user-123' },
+      vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+        user: { id: 'user-123' } as User,
         isMaxAITier: true,
         userRole: 'max',
-      } as any);
+      }));
     });
 
     it('should validate file size (max 2MB)', async () => {
@@ -121,7 +144,7 @@ describe('Settings - White-Label Branding', () => {
         getPublicUrl: () => ({
           data: { publicUrl: 'https://example.com/logo.png' },
         }),
-      } as any);
+      } as ReturnType<typeof supabase.storage.from>);
 
       vi.mocked(supabase.from).mockReturnValue({
         update: () => ({
@@ -155,11 +178,11 @@ describe('Settings - White-Label Branding', () => {
 
   describe('Logo Delete Functionality', () => {
     beforeEach(() => {
-      vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-        user: { id: 'user-123' },
+      vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+        user: { id: 'user-123' } as User,
         isMaxAITier: true,
         userRole: 'max',
-      } as any);
+      }));
     });
 
     it('should show remove button when logo exists', async () => {
@@ -189,7 +212,7 @@ describe('Settings - White-Label Branding', () => {
 
       vi.mocked(supabase.storage.from).mockReturnValue({
         remove: mockRemove,
-      } as any);
+      } as ReturnType<typeof supabase.storage.from>);
 
       vi.mocked(supabase.from).mockReturnValue({
         select: () => ({

@@ -87,9 +87,10 @@ export default function Items() {
       setError(null);
       setRetryCount(0);
       console.log(`[Items] Loaded ${data.length} items successfully`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[Items] Load failed:', err);
-      const errorMsg = err.message === 'Request timeout'
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      const errorMsg = errorMessage === 'Request timeout'
         ? 'Loading is taking longer than expected. Try clearing cache or check your connection.'
         : 'Failed to load items. Please try again.';
       setError(errorMsg);

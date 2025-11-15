@@ -1,5 +1,6 @@
 import { parseCSVLine } from './csv-utils';
 import { addCustomer, addItem, saveSettings } from './db-service';
+import { Customer, Item, Quote, CompanySettings } from '@/types';
 
 export interface ImportResult {
   success: number;
@@ -47,14 +48,14 @@ export async function importCustomersFromCSV(
         continue;
       }
       
-      const customer: any = {};
+      const customer: Partial<Customer> = {};
       headers.forEach((header, index) => {
-        customer[header.trim()] = values[index] || '';
+        (customer as Record<string, any>)[header.trim()] = values[index] || '';
       });
 
       // Check for duplicates by name and email
       const existingCustomer = existingCustomers.find(
-        existing => existing.name === customer.name && existing.email === customer.email
+        existing => existing.name === (customer as any).name && existing.email === (customer as any).email
       );
 
       if (existingCustomer) {
@@ -63,21 +64,21 @@ export async function importCustomersFromCSV(
           continue;
         } else if (duplicateStrategy === 'error') {
           result.failed++;
-          result.errors.push(`Line ${i + 1}: Duplicate customer: ${customer.name} (${customer.email})`);
+          result.errors.push(`Line ${i + 1}: Duplicate customer: ${(customer as any).name} (${(customer as any).email})`);
           continue;
         } else if (duplicateStrategy === 'overwrite') {
-          await updateCustomer(userId, existingCustomer.id, customer);
+          await updateCustomer(userId, existingCustomer.id, customer as Customer);
           result.overwritten++;
           continue;
         }
       }
 
       // Don't queue to sync manager - direct DB insert during import
-      const inserted = await addCustomer(userId, customer);
+      const inserted = await addCustomer(userId, customer as Customer);
       
       // Update local cache immediately so data appears without navigation
       const { getCachedData, setCachedData } = await import('./db-service');
-      const cached = getCachedData<any>('customers-cache') || [];
+      const cached = getCachedData<Customer>('customers-cache') || [];
       setCachedData('customers-cache', [...cached, inserted]);
       
       result.success++;
@@ -131,13 +132,13 @@ export async function importItemsFromCSV(
         continue;
       }
       
-      const item: any = {};
+      const item: Partial<Item> = {};
       headers.forEach((header, index) => {
         const value = values[index] || '';
         const headerName = header.trim();
         
         if (['basePrice', 'finalPrice'].includes(headerName)) {
-          item[headerName] = parseFloat(value) || 0;
+          (item as Record<string, any>)[headerName] = parseFloat(value) || 0;
         } else if (headerName === 'markup') {
           // Parse markup and detect type from format
           const markupValue = value.trim();
@@ -151,7 +152,7 @@ export async function importItemsFromCSV(
             item.markup = parseFloat(markupValue) || 0;
           }
         } else {
-          item[headerName] = value;
+          (item as Record<string, any>)[headerName] = value;
         }
       });
 
@@ -164,7 +165,7 @@ export async function importItemsFromCSV(
 
       // Check for duplicates by name and category
       const existingItem = existingItems.find(
-        existing => existing.name === item.name && existing.category === item.category
+        existing => existing.name === (item as any).name && existing.category === (item as any).category
       );
 
       if (existingItem) {
@@ -173,21 +174,21 @@ export async function importItemsFromCSV(
           continue;
         } else if (duplicateStrategy === 'error') {
           result.failed++;
-          result.errors.push(`Line ${i + 1}: Duplicate item: ${item.name} in ${item.category}`);
+          result.errors.push(`Line ${i + 1}: Duplicate item: ${(item as any).name} in ${(item as any).category}`);
           continue;
         } else if (duplicateStrategy === 'overwrite') {
-          await updateItem(userId, existingItem.id, item);
+          await updateItem(userId, existingItem.id, item as Item);
           result.overwritten++;
           continue;
         }
       }
 
       // Don't queue to sync manager - direct DB insert during import
-      const inserted = await addItem(userId, item);
+      const inserted = await addItem(userId, item as Item);
       
       // Update local cache immediately so data appears without navigation
       const { getCachedData, setCachedData } = await import('./db-service');
-      const cached = getCachedData<any>('items-cache') || [];
+      const cached = getCachedData<Item>('items-cache') || [];
       setCachedData('items-cache', [...cached, inserted]);
       
       result.success++;
@@ -246,7 +247,7 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
         continue;
       }
       
-      const quote: any = {};
+      const quote: Partial<Quote> = {};
       headers.forEach((header, index) => {
         const value = values[index] || '';
         const headerName = header.trim();
@@ -254,32 +255,32 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
         if (headerName === 'items') {
           // Parse JSON for items array
           try {
-            quote[headerName] = value ? JSON.parse(value) : [];
+            (quote as Record<string, any>)[headerName] = value ? JSON.parse(value) : [];
           } catch (e) {
-            quote[headerName] = [];
+            (quote as Record<string, any>)[headerName] = [];
           }
         } else if (['subtotal', 'tax', 'total'].includes(headerName)) {
-          quote[headerName] = parseFloat(value) || 0;
+          (quote as Record<string, any>)[headerName] = parseFloat(value) || 0;
         } else if (['sentDate', 'followUpDate'].includes(headerName)) {
-          quote[headerName] = value || null;
+          (quote as Record<string, any>)[headerName] = value || null;
         } else {
-          quote[headerName] = value;
+          (quote as Record<string, any>)[headerName] = value;
         }
       });
 
       // Check for duplicates by quoteNumber
       const isDuplicate = existingQuotes.some(
-        existing => existing.quoteNumber === quote.quoteNumber
+        existing => existing.quoteNumber === (quote as any).quoteNumber
       );
 
       if (isDuplicate) {
-        console.log(`[Import] Skipping duplicate quote: ${quote.quoteNumber}`);
+        console.log(`[Import] Skipping duplicate quote: ${(quote as any).quoteNumber}`);
         result.skipped++;
         continue;
       }
 
       // Validate required fields
-      if (!quote.quoteNumber || !quote.customerName || !quote.title) {
+      if (!(quote as any).quoteNumber || !(quote as any).customerName || !(quote as any).title) {
         result.failed++;
         result.errors.push(`Line ${i + 1}: Missing required fields (quoteNumber, customerName, or title)`);
         console.error(`[Import] Quote validation failed at line ${i + 1}: Missing required fields`);
@@ -287,43 +288,43 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
       }
 
       // Validate status
-      if (quote.status && !validStatuses.includes(quote.status)) {
+      if ((quote as any).status && !validStatuses.includes((quote as any).status)) {
         result.failed++;
-        result.errors.push(`Line ${i + 1}: Invalid status "${quote.status}". Must be "draft", "sent", "accepted", or "declined"`);
+        result.errors.push(`Line ${i + 1}: Invalid status "${(quote as any).status}". Must be "draft", "sent", "accepted", or "declined"`);
         console.error(`[Import] Quote validation failed at line ${i + 1}: Invalid status`);
         continue;
       }
 
       // Map customerName to actual customer UUID
-      if (quote.customerName) {
+      if ((quote as any).customerName) {
         const matchingCustomer = existingCustomers.find(
-          c => c.name === quote.customerName
+          c => c.name === (quote as any).customerName
         );
         
         if (matchingCustomer) {
-          quote.customer_id = matchingCustomer.id;
-          console.log(`[Import] Mapped customer "${quote.customerName}" to UUID: ${matchingCustomer.id}`);
+          (quote as any).customer_id = matchingCustomer.id;
+          console.log(`[Import] Mapped customer "${(quote as any).customerName}" to UUID: ${matchingCustomer.id}`);
         } else {
-          quote.customer_id = null;
-          console.log(`[Import] No matching customer found for "${quote.customerName}", setting customer_id to null`);
+          (quote as any).customer_id = null;
+          console.log(`[Import] No matching customer found for "${(quote as any).customerName}", setting customer_id to null`);
         }
       } else {
-        quote.customer_id = null;
+        (quote as any).customer_id = null;
       }
 
       // Remove customerId from CSV if it exists (not a valid UUID)
-      delete quote.customerId;
+      delete (quote as any).customerId;
 
       // Import addQuote dynamically to save the quote
       const { addQuote, getCachedData, setCachedData } = await import('./db-service');
-      console.log(`[Import] Adding quote: ${quote.quoteNumber} - ${quote.title}`);
-      const inserted = await addQuote(userId, quote);
+      console.log(`[Import] Adding quote: ${(quote as any).quoteNumber} - ${(quote as any).title}`);
+      const inserted = await addQuote(userId, quote as Quote);
       
       // Update local cache immediately so data appears without navigation
-      const cached = getCachedData<any>('quotes-cache') || [];
+      const cached = getCachedData<Quote>('quotes-cache') || [];
       setCachedData('quotes-cache', [...cached, inserted]);
       
-      console.log(`[Import] Successfully added quote: ${quote.quoteNumber}`);
+      console.log(`[Import] Successfully added quote: ${(quote as any).quoteNumber}`);
       result.success++;
     } catch (error) {
       result.failed++;
@@ -344,18 +345,18 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
 
 export async function importCompanySettingsFromCSV(csvContent: string, userId: string): Promise<void> {
   const lines = csvContent.trim().split('\n');
-  const settings: any = {};
+  const settings: Partial<CompanySettings> = {};
 
   for (let i = 1; i < lines.length; i++) {
     const values = parseCSVLine(lines[i]);
     if (values.length >= 2) {
       const field = values[0].trim();
       const value = values[1].trim();
-      settings[field] = value;
+      (settings as Record<string, any>)[field] = value;
     }
   }
 
-  await saveSettings(userId, settings);
+  await saveSettings(userId, settings as CompanySettings);
 }
 
 // Validation function to pre-check CSV data
@@ -368,7 +369,7 @@ export function validateItemsCSV(csvContent: string): { valid: boolean; errors: 
   
   for (let i = 1; i < lines.length; i++) {
     const values = parseCSVLine(lines[i]);
-    const item: any = {};
+    const item: Record<string, string> = {};
     headers.forEach((header, index) => {
       item[header.trim()] = values[index] || '';
     });
@@ -401,7 +402,7 @@ export function validateQuotesCSV(csvContent: string): { valid: boolean; errors:
   
   for (let i = 1; i < lines.length; i++) {
     const values = parseCSVLine(lines[i]);
-    const quote: any = {};
+    const quote: Record<string, string> = {};
     headers.forEach((header, index) => {
       quote[header.trim()] = values[index] || '';
     });

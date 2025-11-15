@@ -9,7 +9,7 @@ const corsHeaders = {
 interface AnalyticsEvent {
   event: string;
   timestamp: string;
-  payload?: Record<string, any>;
+  payload?: Record<string, unknown>;
 }
 
 // Batch processing queue

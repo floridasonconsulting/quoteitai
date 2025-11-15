@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from '../AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { ReactNode } from 'react';
 import { BrowserRouter } from 'react-router-dom';
+import { Session } from '@supabase/supabase-js';
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <BrowserRouter>
@@ -23,19 +24,17 @@ describe('AuthContext - Tier-Based Access', () => {
         data: {
           session: {
             user: { id: 'user-123', email: 'test@example.com' },
-          } as any,
+          } as Partial<Session> as Session,
         },
         error: null,
       });
 
       vi.mocked(supabase.from).mockReturnValue({
-        select: () => ({
-          eq: () => ({
-            single: vi.fn().mockResolvedValue({
-              data: { role: 'max' },
-              error: null,
-            }),
-          }),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+            data: { role: 'max' },
+            error: null,
         }),
       } as any);
 
@@ -52,19 +51,17 @@ describe('AuthContext - Tier-Based Access', () => {
         data: {
           session: {
             user: { id: 'admin-123', email: 'admin@example.com' },
-          } as any,
+          } as Partial<Session> as Session,
         },
         error: null,
       });
 
       vi.mocked(supabase.from).mockReturnValue({
-        select: () => ({
-          eq: () => ({
-            single: vi.fn().mockResolvedValue({
-              data: { role: 'admin' },
-              error: null,
-            }),
-          }),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+            data: { role: 'admin' },
+            error: null,
         }),
       } as any);
 
@@ -81,19 +78,17 @@ describe('AuthContext - Tier-Based Access', () => {
         data: {
           session: {
             user: { id: 'user-456', email: 'pro@example.com' },
-          } as any,
+          } as Partial<Session> as Session,
         },
         error: null,
       });
 
       vi.mocked(supabase.from).mockReturnValue({
-        select: () => ({
-          eq: () => ({
-            single: vi.fn().mockResolvedValue({
-              data: { role: 'pro' },
-              error: null,
-            }),
-          }),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+            data: { role: 'pro' },
+            error: null,
         }),
       } as any);
 
@@ -110,19 +105,17 @@ describe('AuthContext - Tier-Based Access', () => {
         data: {
           session: {
             user: { id: 'user-789', email: 'free@example.com' },
-          } as any,
+          } as Partial<Session> as Session,
         },
         error: null,
       });
 
       vi.mocked(supabase.from).mockReturnValue({
-        select: () => ({
-          eq: () => ({
-            single: vi.fn().mockResolvedValue({
-              data: { role: 'free' },
-              error: null,
-            }),
-          }),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+            data: { role: 'free' },
+            error: null,
         }),
       } as any);
 
@@ -141,19 +134,17 @@ describe('AuthContext - Tier-Based Access', () => {
         data: {
           session: {
             user: { id: 'user-123', email: 'test@example.com' },
-          } as any,
+          } as Partial<Session> as Session,
         },
         error: null,
       });
 
       vi.mocked(supabase.from).mockReturnValue({
-        select: () => ({
-          eq: () => ({
-            single: vi.fn().mockResolvedValue({
-              data: { role: 'max' },
-              error: null,
-            }),
-          }),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+            data: { role: 'max' },
+            error: null,
         }),
       } as any);
 
@@ -170,19 +161,17 @@ describe('AuthContext - Tier-Based Access', () => {
         data: {
           session: {
             user: { id: 'user-456', email: 'pro@example.com' },
-          } as any,
+          } as Partial<Session> as Session,
         },
         error: null,
       });
 
       vi.mocked(supabase.from).mockReturnValue({
-        select: () => ({
-          eq: () => ({
-            single: vi.fn().mockResolvedValue({
-              data: { role: 'pro' },
-              error: null,
-            }),
-          }),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+            data: { role: 'pro' },
+            error: null,
         }),
       } as any);
 

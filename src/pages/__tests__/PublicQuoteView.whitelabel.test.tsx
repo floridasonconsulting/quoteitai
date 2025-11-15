@@ -4,6 +4,8 @@ import { BrowserRouter } from 'react-router-dom';
 import PublicQuoteView from '../PublicQuoteView';
 import * as AuthContext from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { User } from '@supabase/supabase-js';
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -13,75 +15,85 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+const mockQuoteSelect = {
+  eq: vi.fn().mockReturnThis(),
+  single: vi.fn().mockResolvedValue({
+    data: {
+      id: 'quote-123',
+      share_token: 'test-share-token',
+      quote_number: 'Q-001',
+      title: 'Test Quote',
+      customer_name: 'Test Customer',
+      customer_id: 'customer-1',
+      user_id: 'user-123',
+      items: [],
+      subtotal: 100,
+      tax: 10,
+      total: 110,
+      status: 'sent',
+    },
+    error: null,
+  }),
+};
+
+const mockRoleSelect = (role: string) => ({
+  eq: vi.fn().mockReturnThis(),
+  single: vi.fn().mockResolvedValue({
+    data: { role },
+    error: null,
+  }),
+});
+
+const mockSettingsSelect = (logoUrl: string | null) => ({
+  eq: vi.fn().mockReturnThis(),
+  single: vi.fn().mockResolvedValue({
+    data: { logo: logoUrl },
+    error: null,
+  }),
+});
+
 // Mock Supabase with quote data
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: vi.fn((table: string) => {
       if (table === 'quotes') {
-        return {
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              single: vi.fn(() =>
-                Promise.resolve({
-                  data: {
-                    id: 'quote-123',
-                    share_token: 'test-share-token',
-                    quote_number: 'Q-001',
-                    title: 'Test Quote',
-                    customer_name: 'Test Customer',
-                    customer_id: 'customer-1',
-                    user_id: 'user-123',
-                    items: [],
-                    subtotal: 100,
-                    tax: 10,
-                    total: 110,
-                    status: 'sent',
-                  },
-                  error: null,
-                })
-              ),
-            })),
-          })),
-        };
+        return { select: vi.fn(() => mockQuoteSelect) };
       }
       if (table === 'user_roles') {
-        return {
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              single: vi.fn(() =>
-                Promise.resolve({
-                  data: { role: 'free' },
-                  error: null,
-                })
-              ),
-            })),
-          })),
-        };
+        return { select: vi.fn(() => mockRoleSelect('free')) };
       }
       if (table === 'company_settings') {
-        return {
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              single: vi.fn(() =>
-                Promise.resolve({
-                  data: { logo: null },
-                  error: null,
-                })
-              ),
-            })),
-          })),
-        };
+        return { select: vi.fn(() => mockSettingsSelect(null)) };
       }
       return {
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            single: vi.fn(() => Promise.resolve({ data: null, error: null })),
-          })),
-        })),
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
       };
     }),
   },
 }));
+
+type MockAuthContext = Partial<ReturnType<typeof useAuth>>;
+
+const getMockAuthContext = (overrides: MockAuthContext): ReturnType<typeof useAuth> => {
+  const defaultValues: ReturnType<typeof useAuth> = {
+    user: null,
+    session: null,
+    subscription: null,
+    userRole: 'free',
+    isAdmin: false,
+    isMaxAITier: false,
+    loading: false,
+    signUp: vi.fn(),
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    updateUserRole: vi.fn(),
+    checkUserRole: vi.fn(),
+    refreshSubscription: vi.fn(),
+  };
+  return { ...defaultValues, ...overrides };
+};
 
 const renderPublicQuoteView = () => {
   return render(
@@ -99,11 +111,11 @@ describe('PublicQuoteView - White-Label Branding', () => {
 
   describe('Tier-Based Footer Display', () => {
     it('should show "Powered by Quote-it AI" footer for Pro tier users', async () => {
-      vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-        user: { id: 'user-123' },
+      vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+        user: { id: 'user-123' } as User,
         isMaxAITier: false,
         userRole: 'pro',
-      } as any);
+      }));
 
       const { findByText, getByText } = renderPublicQuoteView();
 
@@ -114,11 +126,11 @@ describe('PublicQuoteView - White-Label Branding', () => {
     });
 
     it('should NOT show footer for Max AI tier users', async () => {
-      vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-        user: { id: 'user-123' },
+      vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+        user: { id: 'user-123' } as User,
         isMaxAITier: true,
         userRole: 'max',
-      } as any);
+      }));
 
       const { queryByText } = renderPublicQuoteView();
 
@@ -128,11 +140,11 @@ describe('PublicQuoteView - White-Label Branding', () => {
     });
 
     it('should show footer for Free tier users', async () => {
-      vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-        user: { id: 'user-123' },
+      vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+        user: { id: 'user-123' } as User,
         isMaxAITier: false,
         userRole: 'free',
-      } as any);
+      }));
 
       const { findByText } = renderPublicQuoteView();
 
@@ -148,11 +160,11 @@ describe('PublicQuoteView - White-Label Branding', () => {
       originalFavicon.href = '/favicon.png';
       document.head.appendChild(originalFavicon);
 
-      vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-        user: { id: 'user-123' },
+      vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+        user: { id: 'user-123' } as User,
         isMaxAITier: true,
         userRole: 'max',
-      } as any);
+      }));
 
       // Mock company settings with logo
       const companyLogo = 'https://example.com/company-logo.png';
@@ -170,11 +182,11 @@ describe('PublicQuoteView - White-Label Branding', () => {
       originalFavicon.href = '/favicon.png';
       document.head.appendChild(originalFavicon);
 
-      vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-        user: { id: 'user-123' },
+      vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+        user: { id: 'user-123' } as User,
         isMaxAITier: false,
         userRole: 'pro',
-      } as any);
+      }));
 
       renderPublicQuoteView();
 
@@ -185,11 +197,11 @@ describe('PublicQuoteView - White-Label Branding', () => {
 
   describe('Browser Title Customization', () => {
     it('should use company name in title for Max AI tier users', async () => {
-      vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
-        user: { id: 'user-123' },
+      vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+        user: { id: 'user-123' } as User,
         isMaxAITier: true,
         userRole: 'max',
-      } as any);
+      }));
 
       renderPublicQuoteView();
 

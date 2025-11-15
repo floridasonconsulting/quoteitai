@@ -20,7 +20,7 @@ interface DiagnosticEvent {
   type: 'info' | 'warning' | 'error' | 'critical';
   category: 'template' | 'request' | 'db' | 'sync' | 'storage';
   message: string;
-  data?: any;
+  data?: unknown;
 }
 
 export default function Diagnostics() {
@@ -28,9 +28,9 @@ export default function Diagnostics() {
   const { isOnline, isSyncing, pendingCount, failedCount } = useSyncManager();
   const { getActiveOperations } = useLoadingState();
   const [events, setEvents] = useState<DiagnosticEvent[]>([]);
-  const [inFlightRequests, setInFlightRequests] = useState<Record<string, any>>({});
+  const [inFlightRequests, setInFlightRequests] = useState<Record<string, unknown>>({});
   const [refreshKey, setRefreshKey] = useState(0);
-  const [aiTestResult, setAiTestResult] = useState<any>(null);
+  const [aiTestResult, setAiTestResult] = useState<unknown>(null);
   const [aiTesting, setAiTesting] = useState(false);
   const [dbTemplate, setDbTemplate] = useState<string | null>(null);
   
@@ -74,11 +74,12 @@ export default function Diagnostics() {
   useEffect(() => {
     const checkRequests = () => {
       // Access global inFlightRequests if exposed
-      const requests = (window as any).__inFlightRequests || {};
-      setInFlightRequests(requests);
+      const requests = (window as { __inFlightRequests?: Map<string, unknown> }).__inFlightRequests ?? {};
+      const requestObject = Object.fromEntries(requests.entries());
+      setInFlightRequests(requestObject);
       
-      if (Object.keys(requests).length > 0) {
-        addEvent('warning', 'request', `${Object.keys(requests).length} in-flight requests detected`, requests);
+      if (Object.keys(requestObject).length > 0) {
+        addEvent('warning', 'request', `${Object.keys(requestObject).length} in-flight requests detected`, requestObject);
       }
     };
 
@@ -87,7 +88,7 @@ export default function Diagnostics() {
     return () => clearInterval(interval);
   }, [refreshKey]);
 
-  const addEvent = (type: DiagnosticEvent['type'], category: DiagnosticEvent['category'], message: string, data?: any) => {
+  const addEvent = (type: DiagnosticEvent['type'], category: DiagnosticEvent['category'], message: string, data?: unknown) => {
     const event: DiagnosticEvent = {
       id: `${Date.now()}-${Math.random()}`,
       timestamp: Date.now(),
@@ -351,7 +352,7 @@ export default function Diagnostics() {
                   <div key={key} className="mb-3 p-2 border-l-2 border-yellow-500 bg-muted/50">
                     <div className="font-mono text-xs font-semibold">{key}</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Age: {value.age || 'unknown'}ms
+                      Age: {typeof value === 'object' && value && 'startTime' in value ? `${Date.now() - (value as {startTime: number}).startTime}ms` : 'unknown'}
                     </div>
                   </div>
                 ))}
@@ -384,21 +385,27 @@ export default function Diagnostics() {
           </div>
           
           {aiTestResult && (
-            <Alert variant={aiTestResult.success ? "default" : "destructive"}>
+            <Alert variant={
+              typeof aiTestResult === 'object' && aiTestResult && 'success' in aiTestResult && (aiTestResult as {success: boolean}).success
+                ? "default"
+                : "destructive"
+            }>
               <AlertDescription>
                 <div className="space-y-2">
                   <div className="font-semibold">
-                    {aiTestResult.success ? '✓ AI Access Granted' : '✗ AI Access Denied'}
+                    {typeof aiTestResult === 'object' && aiTestResult && 'success' in aiTestResult && (aiTestResult as {success: boolean}).success
+                      ? '✓ AI Access Granted'
+                      : '✗ AI Access Denied'}
                   </div>
-                  {aiTestResult.error && (
-                    <div className="text-sm">Error: {aiTestResult.error}</div>
+                  {typeof aiTestResult === 'object' && aiTestResult && 'error' in aiTestResult && (
+                    <div className="text-sm">Error: {String((aiTestResult as {error: unknown}).error)}</div>
                   )}
-                  {aiTestResult.requiresUpgrade && (
+                  {typeof aiTestResult === 'object' && aiTestResult && 'requiresUpgrade' in aiTestResult && (
                     <div className="text-sm">Upgrade to Pro or Max tier required</div>
                   )}
-                  {aiTestResult.success && (
+                  {typeof aiTestResult === 'object' && aiTestResult && 'success' in aiTestResult && (aiTestResult as {success: boolean}).success && 'content' in aiTestResult && (
                     <div className="text-xs text-muted-foreground mt-2">
-                      Content length: {aiTestResult.content?.length || 0} chars
+                      Content length: {String((aiTestResult as {content?: string}).content)?.length || 0} chars
                     </div>
                   )}
                 </div>

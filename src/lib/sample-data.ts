@@ -589,7 +589,7 @@ export const generateSampleData = async (
               continue;
             }
 
-            const subtotal = quoteData.items.reduce((sum, item: any) => sum + item.total, 0);
+            const subtotal = quoteData.items.reduce((sum, item) => sum + item.total, 0);
             const tax = subtotal * 0.08;
             const total = subtotal + tax;
 
@@ -603,14 +603,14 @@ export const generateSampleData = async (
               tax,
               total,
               status: quoteData.status,
-              sentDate: quoteData.daysAgo !== null ? daysAgo(quoteData.daysAgo) : null,
-              followUpDate: null,
+              sentDate: quoteData.daysAgo !== null ? daysAgo(quoteData.daysAgo as number) : undefined,
+              followUpDate: undefined,
               notes: '',
               updatedAt: new Date().toISOString(),
             };
 
             await addQuote(userId, quote as Quote);
-            quoteResults[group.category as keyof typeof quoteResults]++;
+            (quoteResults as Record<string, number>)[group.category]++;
             console.log(`[Sample Data] Created ${group.category} quote:`, quote.quoteNumber, quote.title);
           } catch (error) {
             console.error(`Failed to create ${group.category} quote:`, error);

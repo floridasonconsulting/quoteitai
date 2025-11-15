@@ -186,7 +186,7 @@ const handler = async (req: Request): Promise<Response> => {
         },
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in send-follow-up-email function:", error);
     return new Response(
       JSON.stringify({ 

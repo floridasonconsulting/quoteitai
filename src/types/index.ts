@@ -84,3 +84,12 @@ export interface CompanySettings {
   notifyEmailAccepted?: boolean;
   notifyEmailDeclined?: boolean;
 }
+
+// For offline sync queue
+export type ChangeData = (Partial<Customer> | Partial<Item> | Partial<Quote> | Partial<CompanySettings>) & { id?: string };
+
+export type QueueChange = {
+  type: 'create' | 'update' | 'delete' | 'upsert';
+  table: string;
+  data: ChangeData;
+};

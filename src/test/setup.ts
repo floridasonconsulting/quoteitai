@@ -13,7 +13,7 @@ global.ResizeObserver = class ResizeObserver {
 const { createSelectChain, createUpdateChain, createDeleteChain, createFromHandler } = vi.hoisted(() => {
   // Create mock factory functions with table-aware data
   const getMockDataForTable = (tableName: string) => {
-    const mockData: Record<string, any> = {
+    const mockData = {
       company_settings: {
         id: 'settings-1',
         user_id: 'user-123',
@@ -31,7 +31,7 @@ const { createSelectChain, createUpdateChain, createDeleteChain, createFromHandl
       customers: [],
       items: [],
     };
-    return mockData[tableName] || null;
+    return mockData[tableName as keyof typeof mockData] || null;
   };
 
   const createSelectChain = (tableName?: string) => {

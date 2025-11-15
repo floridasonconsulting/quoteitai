@@ -457,24 +457,33 @@ export async function generateDetailedPDF(quote: Quote, customer: Customer | nul
   // Company details prominent
   pdf.setFontSize(9);
   pdf.setFont(undefined, 'normal');
-  if (settings.address) pdf.text(settings.address, MARGIN, yPos), yPos += LINE_HEIGHT;
+  if (settings.address) {
+    pdf.text(settings.address, MARGIN, yPos);
+    yPos += LINE_HEIGHT;
+  }
   if (settings.city || settings.state) {
     pdf.text(`${settings.city || ''}, ${settings.state || ''} ${settings.zip || ''}`.trim(), MARGIN, yPos);
     yPos += LINE_HEIGHT;
   }
-  if (settings.phone) pdf.text(`Phone: ${settings.phone}`, MARGIN, yPos), yPos += LINE_HEIGHT;
-  if (settings.email) pdf.text(`Email: ${settings.email}`, MARGIN, yPos), yPos += LINE_HEIGHT;
+  if (settings.phone) {
+    pdf.text(`Phone: ${settings.phone}`, MARGIN, yPos);
+    yPos += LINE_HEIGHT;
+  }
+  if (settings.email) {
+    pdf.text(`Email: ${settings.email}`, MARGIN, yPos);
+    yPos += LINE_HEIGHT;
+  }
   if (settings.license) {
     pdf.setFont(undefined, 'bold');
     pdf.text(`License: ${settings.license}`, MARGIN, yPos);
-    pdf.setFont(undefined, 'normal');
     yPos += LINE_HEIGHT;
+    pdf.setFont(undefined, 'normal');
   }
   if (settings.insurance) {
     pdf.setFont(undefined, 'bold');
     pdf.text(`Insurance: ${settings.insurance}`, MARGIN, yPos);
-    pdf.setFont(undefined, 'normal');
     yPos += LINE_HEIGHT;
+    pdf.setFont(undefined, 'normal');
   }
   
   yPos += SECTION_GAP;

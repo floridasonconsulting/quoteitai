@@ -66,7 +66,16 @@ export default function Settings() {
   const [dangerZoneOpen, setDangerZoneOpen] = useState(false);
   const [generatingSample, setGeneratingSample] = useState(false);
   const [includeCompanySettings, setIncludeCompanySettings] = useState(true);
-  const [sampleDataResult, setSampleDataResult] = useState<any>(null);
+
+  interface SampleDataResult {
+    customersAddedToDb: number;
+    customersFailedToDb: number;
+    itemsAddedToDb: number;
+    itemsFailedToDb: number;
+    quotesAdded: number;
+    companySettingsAdded: boolean;
+  }
+  const [sampleDataResult, setSampleDataResult] = useState<SampleDataResult | null>(null);
   const [clearingSampleData, setClearingSampleData] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);

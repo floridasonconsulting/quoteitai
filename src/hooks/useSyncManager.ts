@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { Customer, Item, Quote } from '@/types';
 
+type ChangeData = (Partial<Customer> | Partial<Item> | Partial<Quote>) & { id: string };
 interface PendingChange {
   id: string;
   type: 'create' | 'update' | 'delete';
   table: 'customers' | 'items' | 'quotes';
-  data: any;
+  data: ChangeData;
   timestamp: string;
 }
 

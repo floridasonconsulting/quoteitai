@@ -21,11 +21,10 @@ describe('useAI Tier-Based Access Control', () => {
 
     proTierFeatures.forEach((feature) => {
       it(`should allow ${feature} for Pro tier users`, async () => {
-        const mockInvoke = vi.fn().mockResolvedValue({
+        const mockInvoke = vi.mocked(supabase.functions.invoke).mockResolvedValue({
           data: { content: 'AI generated content' },
           error: null,
         });
-        (supabase.functions.invoke as any) = mockInvoke;
 
         const { result } = renderHook(() => useAI(feature));
 
@@ -43,14 +42,13 @@ describe('useAI Tier-Based Access Control', () => {
       });
 
       it(`should block ${feature} for Free tier users`, async () => {
-        const mockInvoke = vi.fn().mockResolvedValue({
+        const mockInvoke = vi.mocked(supabase.functions.invoke).mockResolvedValue({
           data: {
             requiresUpgrade: true,
             error: 'This feature requires Pro tier',
           },
           error: null,
         });
-        (supabase.functions.invoke as any) = mockInvoke;
 
         const onUpgradeRequired = vi.fn();
         const { result } = renderHook(() =>
@@ -66,13 +64,12 @@ describe('useAI Tier-Based Access Control', () => {
     });
 
     it('should enforce 30/month limit for followup_message in Pro tier', async () => {
-      const mockInvoke = vi.fn().mockResolvedValue({
+      const mockInvoke = vi.mocked(supabase.functions.invoke).mockResolvedValue({
         data: {
           error: 'Monthly AI request limit reached',
         },
         error: null,
       });
-      (supabase.functions.invoke as any) = mockInvoke;
 
       const { result } = renderHook(() => useAI('followup_message'));
 
@@ -96,11 +93,10 @@ describe('useAI Tier-Based Access Control', () => {
 
     maxAIFeatures.forEach((feature) => {
       it(`should allow ${feature} for Max AI tier users`, async () => {
-        const mockInvoke = vi.fn().mockResolvedValue({
+        const mockInvoke = vi.mocked(supabase.functions.invoke).mockResolvedValue({
           data: { content: 'AI generated content' },
           error: null,
         });
-        (supabase.functions.invoke as any) = mockInvoke;
 
         const { result } = renderHook(() => useAI(feature));
 
@@ -118,14 +114,13 @@ describe('useAI Tier-Based Access Control', () => {
       });
 
       it(`should block ${feature} for Pro tier users`, async () => {
-        const mockInvoke = vi.fn().mockResolvedValue({
+        const mockInvoke = vi.mocked(supabase.functions.invoke).mockResolvedValue({
           data: {
             requiresUpgrade: true,
             error: 'This feature requires Max AI tier',
           },
           error: null,
         });
-        (supabase.functions.invoke as any) = mockInvoke;
 
         const onUpgradeRequired = vi.fn();
         const { result } = renderHook(() =>
@@ -140,14 +135,13 @@ describe('useAI Tier-Based Access Control', () => {
       });
 
       it(`should block ${feature} for Free tier users`, async () => {
-        const mockInvoke = vi.fn().mockResolvedValue({
+        const mockInvoke = vi.mocked(supabase.functions.invoke).mockResolvedValue({
           data: {
             requiresUpgrade: true,
             error: 'This feature requires Max AI tier',
           },
           error: null,
         });
-        (supabase.functions.invoke as any) = mockInvoke;
 
         const onUpgradeRequired = vi.fn();
         const { result } = renderHook(() =>
@@ -165,11 +159,10 @@ describe('useAI Tier-Based Access Control', () => {
 
   describe('AI Error Handling', () => {
     it('should handle network errors gracefully', async () => {
-      const mockInvoke = vi.fn().mockResolvedValue({
+      const mockInvoke = vi.mocked(supabase.functions.invoke).mockResolvedValue({
         data: null,
         error: new Error('Network error'),
       });
-      (supabase.functions.invoke as any) = mockInvoke;
 
       const onError = vi.fn();
       const { result } = renderHook(() =>
@@ -185,13 +178,12 @@ describe('useAI Tier-Based Access Control', () => {
     });
 
     it('should handle AI service errors gracefully', async () => {
-      const mockInvoke = vi.fn().mockResolvedValue({
+      const mockInvoke = vi.mocked(supabase.functions.invoke).mockResolvedValue({
         data: {
           error: 'AI service unavailable',
         },
         error: null,
       });
-      (supabase.functions.invoke as any) = mockInvoke;
 
       const onError = vi.fn();
       const { result } = renderHook(() =>
@@ -206,14 +198,13 @@ describe('useAI Tier-Based Access Control', () => {
     });
 
     it('should return upgrade info when upgrade is required', async () => {
-      const mockInvoke = vi.fn().mockResolvedValue({
+      const mockInvoke = vi.mocked(supabase.functions.invoke).mockResolvedValue({
         data: {
           requiresUpgrade: true,
           error: 'This feature requires Max AI tier',
         },
         error: null,
       });
-      (supabase.functions.invoke as any) = mockInvoke;
 
       const { result } = renderHook(() => useAI('full_quote_generation'));
 

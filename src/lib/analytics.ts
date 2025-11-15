@@ -6,7 +6,7 @@
 interface AnalyticsEvent {
   event: string;
   timestamp: string;
-  payload?: Record<string, any>;
+  payload?: Record<string, unknown>;
 }
 
 interface QueuedEvent {
@@ -42,7 +42,7 @@ if (typeof window !== 'undefined') {
  * Send analytics event without blocking UI
  * Uses requestIdleCallback to defer processing during critical rendering
  */
-export function sendAnalytics(eventName: string, payload?: Record<string, any>): void {
+export function sendAnalytics(eventName: string, payload?: Record<string, unknown>): void {
   const event: AnalyticsEvent = {
     event: eventName,
     timestamp: new Date().toISOString(),
@@ -218,6 +218,6 @@ export function trackPageView(pageName: string): void {
 /**
  * Track user action (non-blocking)
  */
-export function trackAction(actionName: string, metadata?: Record<string, any>): void {
+export function trackAction(actionName: string, metadata?: Record<string, unknown>): void {
   sendAnalytics('user_action', { action: actionName, ...metadata });
 }
