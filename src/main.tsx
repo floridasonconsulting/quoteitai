@@ -153,20 +153,19 @@ const router = createBrowserRouter([
       { path: "auth", element: <AuthPage /> },
       { path: "terms", element: <TermsOfService /> },
       { path: "privacy", element: <PrivacyPolicy /> },
+      { path: "*", element: <NotFound /> },
     ],
   },
   {
     path: "/quotes/public/:id",
     element: <PublicQuoteView />,
   },
-  {
-    path: "*",
-    element: <NotFound />,
-  },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   </React.StrictMode>
 );
