@@ -19,9 +19,11 @@ export default function Auth() {
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
+  // Redirect authenticated users to dashboard (only once when user changes)
   useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      // Use replace to prevent back button from showing auth page
+      navigate('/dashboard', { replace: true });
     }
   }, [user, navigate]);
 

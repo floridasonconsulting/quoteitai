@@ -56,7 +56,7 @@ export default function QuoteDetail() {
       // Ctrl/Cmd + E to edit
       if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
         e.preventDefault();
-        navigate(`/quotes/${quote?.id}/edit`);
+        handleEdit();
       }
       // Ctrl/Cmd + D to download
       if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
@@ -260,6 +260,11 @@ export default function QuoteDetail() {
     setSendDialogOpen(true);
   };
 
+  // Change the edit navigation to use /quotes/new with state
+  const handleEdit = () => {
+    navigate('/quotes/new', { state: { editQuote: quote } });
+  };
+
   const handleConfirmSend = async (emailContent: EmailContent) => {
     if (!quote || !customer || !user) return;
 
@@ -436,7 +441,7 @@ export default function QuoteDetail() {
 
       <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Quote actions">
         <Button 
-          onClick={() => navigate(`/quotes/${quote.id}/edit`)}
+          onClick={handleEdit}
           aria-label="Edit quote (Keyboard: Ctrl+E)"
           aria-keyshortcuts="Control+E"
         >

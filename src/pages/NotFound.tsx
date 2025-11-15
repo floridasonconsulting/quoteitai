@@ -2,14 +2,21 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Home, AlertTriangle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const NotFound = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     console.error("404 Error: User attempted to access non-existent route:", location.pathname);
   }, [location.pathname]);
+
+  const handleReturnHome = () => {
+    // Navigate to dashboard if logged in, landing page if not
+    navigate(user ? '/dashboard' : '/');
+  };
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center">
@@ -26,9 +33,9 @@ const NotFound = () => {
             The page you're looking for doesn't exist or has been moved.
           </p>
         </div>
-        <Button onClick={() => navigate('/')} size="lg">
+        <Button onClick={handleReturnHome} size="lg">
           <Home className="mr-2 h-5 w-5" />
-          Return to Dashboard
+          {user ? 'Return to Dashboard' : 'Return to Home'}
         </Button>
       </div>
     </div>
