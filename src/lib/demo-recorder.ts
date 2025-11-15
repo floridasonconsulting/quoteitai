@@ -32,6 +32,60 @@ export interface RecordingSession {
 const SESSION_STORAGE_KEY = 'demo-recorder-session';
 
 /**
+ * Waits for DOM to be fully ready and stable before capturing
+ */
+async function waitForDOMReady(): Promise<void> {
+  // Wait for DOM to be fully loaded
+  if (document.readyState !== 'complete') {
+    await new Promise<void>(resolve => {
+      window.addEventListener('load', () => resolve(), { once: true });
+    });
+  }
+  
+  // Additional wait for dynamic content and animations to settle
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Wait for any pending images to load
+  const images = Array.from(document.images);
+  await Promise.all(
+    images
+      .filter(img => !img.complete)
+      .map(img => new Promise(resolve => {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      }))
+  );
+}
+
+/**
+ * Checks if a specific element exists and is visible in the DOM
+ */
+function waitForElement(selector: string, timeout: number = 5000): Promise<HTMLElement> {
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now();
+    
+    const checkElement = () => {
+      const element = document.querySelector(selector) as HTMLElement;
+      
+      if (element && element.offsetParent !== null) {
+        resolve(element);
+        return;
+      }
+      
+      if (Date.now() - startTime > timeout) {
+        console.warn(`Element ${selector} not found within ${timeout}ms`);
+        reject(new Error(`Timeout waiting for element: ${selector}`));
+        return;
+      }
+      
+      requestAnimationFrame(checkElement);
+    };
+    
+    checkElement();
+  });
+}
+
+/**
  * Quote Creation Workflow Steps
  */
 export const quoteWorkflowSteps: RecordingStep[] = [
@@ -153,11 +207,18 @@ export async function captureScreenshot(
   captureFullPage: boolean = true
 ): Promise<string> {
   try {
+    // Wait for DOM to be fully ready
+    await waitForDOMReady();
+    
     let element: HTMLElement;
     
     if (selector) {
-      const selectedElement = document.querySelector(selector) as HTMLElement;
-      element = selectedElement || document.body;
+      try {
+        element = await waitForElement(selector, 3000);
+      } catch (error) {
+        console.warn(`Element ${selector} not found, capturing body instead`);
+        element = document.body;
+      }
     } else {
       element = document.body;
     }
@@ -188,31 +249,51 @@ export async function recordStep(
 ): Promise<RecordingFrame> {
   console.log(`[Demo Recorder] Recording step: ${step.name}`);
 
+  // Wait for DOM to be ready first
+  await waitForDOMReady();
+
   // Wait for the specified delay
   await new Promise(resolve => setTimeout(resolve, step.delay));
 
   // Perform any custom action
   if (step.action) {
     await step.action();
-    // Wait a bit after action completes
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait a bit after action completes for UI to settle
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await waitForDOMReady();
   }
 
   // Highlight element if selector provided
   let highlightedElement: HTMLElement | null = null;
   if (step.selector) {
-    highlightedElement = document.querySelector(step.selector) as HTMLElement;
-    if (highlightedElement) {
-      highlightedElement.style.outline = '3px solid #3b82f6';
-      highlightedElement.style.outlineOffset = '2px';
+    try {
+      highlightedElement = await waitForElement(step.selector, 2000);
+      if (highlightedElement) {
+        highlightedElement.style.outline = '3px solid #3b82f6';
+        highlightedElement.style.outlineOffset = '2px';
+        highlightedElement.style.transition = 'outline 0.3s ease';
+        
+        // Scroll element into view smoothly
+        highlightedElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'center'
+        });
+        
+        // Wait for scroll to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    } catch (error) {
+      console.warn(`Could not highlight element ${step.selector}:`, error);
     }
   }
 
   // Capture screenshot
   const imageData = await captureScreenshot(step.selector, step.captureFullPage);
 
-  // Remove highlight
+  // Remove highlight with fade out
   if (highlightedElement) {
+    highlightedElement.style.transition = 'outline 0.3s ease';
     highlightedElement.style.outline = '';
     highlightedElement.style.outlineOffset = '';
   }
