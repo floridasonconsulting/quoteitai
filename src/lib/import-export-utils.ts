@@ -223,11 +223,13 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
 
   console.log(`[Import] Starting quote import with ${lines.length - 1} rows`);
 
-  // Import getQuotes and addQuote to check for duplicates
-  const { getQuotes } = await import('./db-service');
+  // Import getQuotes, getCustomers and addQuote to check for duplicates
+  const { getQuotes, getCustomers } = await import('./db-service');
   const existingQuotes = await getQuotes(userId);
+  const existingCustomers = await getCustomers(userId);
 
   console.log(`[Import] Found ${existingQuotes.length} existing quotes`);
+  console.log(`[Import] Found ${existingCustomers.length} existing customers for mapping`);
 
   const validStatuses = ['draft', 'sent', 'accepted', 'declined'];
 
@@ -291,6 +293,26 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
         console.error(`[Import] Quote validation failed at line ${i + 1}: Invalid status`);
         continue;
       }
+
+      // Map customerName to actual customer UUID
+      if (quote.customerName) {
+        const matchingCustomer = existingCustomers.find(
+          c => c.name === quote.customerName
+        );
+        
+        if (matchingCustomer) {
+          quote.customer_id = matchingCustomer.id;
+          console.log(`[Import] Mapped customer "${quote.customerName}" to UUID: ${matchingCustomer.id}`);
+        } else {
+          quote.customer_id = null;
+          console.log(`[Import] No matching customer found for "${quote.customerName}", setting customer_id to null`);
+        }
+      } else {
+        quote.customer_id = null;
+      }
+
+      // Remove customerId from CSV if it exists (not a valid UUID)
+      delete quote.customerId;
 
       // Import addQuote dynamically to save the quote
       const { addQuote, getCachedData, setCachedData } = await import('./db-service');
