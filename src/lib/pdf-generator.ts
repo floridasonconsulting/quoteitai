@@ -1,11 +1,28 @@
 import jsPDF from "jspdf";
+import autoTable, { UserOptions } from "jspdf-autotable";
 import { Quote, Customer, CompanySettings } from "@/types";
-import { formatCurrency } from "./utils";
+
+// Helper function to format currency, assuming it's in utils
+// If not, we might need to create it. For now, assuming it exists.
+export const formatCurrency = (amount: number, currency: string = "USD") => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+  }).format(amount);
+};
+
 
 // Shared PDF generation constants
 const MARGIN = 20;
 const LINE_HEIGHT = 5;
 const SECTION_GAP = 8;
+
+// Extend jsPDF interface to include autoTable properties
+interface jsPDFWithAutoTable extends jsPDF {
+  lastAutoTable: {
+    finalY: number;
+  };
+}
 
 // Common PDF header rendering
 export function renderCompanyHeader(
@@ -175,16 +192,16 @@ export function renderTermsAndNotes(
 }
 
 // Exports for use in proposal-templates.ts
-export { MARGIN, LINE_HEIGHT, SECTION_GAP, formatCurrency };
+export { MARGIN, LINE_HEIGHT, SECTION_GAP };
 
-// --- IMPLEMENT MISSING PDF GENERATION FUNCTIONS ---
+// --- IMPLEMENT PDF GENERATION FUNCTIONS ---
 
 export function generateClassicPDF(
   quote: Quote,
   customer: Customer | null,
   settings: CompanySettings
 ): Blob {
-  const pdf = new jsPDF();
+  const pdf = new jsPDF() as jsPDFWithAutoTable;
   let yPos = MARGIN;
 
   yPos = renderCompanyHeader(pdf, settings, yPos);
@@ -208,15 +225,15 @@ export function generateClassicPDF(
     formatCurrency(item.quantity * item.price, settings.currency),
   ]);
 
-  (pdf as any).autoTable({
+  autoTable(pdf, {
     startY: yPos,
     head: tableHeaders,
     body: tableData,
     theme: "striped",
     headStyles: { fillColor: [22, 160, 133] },
-  });
+  } as UserOptions);
 
-  yPos = (pdf as any).lastAutoTable.finalY + SECTION_GAP * 2;
+  yPos = pdf.lastAutoTable.finalY + SECTION_GAP * 2;
 
   pdf.setFontSize(12);
   pdf.setFont(undefined, "bold");
@@ -233,7 +250,7 @@ export function generateModernPDF(
   customer: Customer | null,
   settings: CompanySettings
 ): Blob {
-  const pdf = new jsPDF();
+  const pdf = new jsPDF() as jsPDFWithAutoTable;
   let yPos = MARGIN;
 
   yPos = renderCompanyHeader(pdf, settings, yPos);
@@ -253,7 +270,7 @@ export function generateModernPDF(
   yPos = renderCustomerInfo(pdf, quote, customer, yPos);
   yPos += SECTION_GAP * 2;
 
-  (pdf as any).autoTable({
+  autoTable(pdf, {
     startY: yPos,
     head: [["Item", "Description", "Quantity", "Unit Price", "Line Total"]],
     body: quote.items.map(item => [
@@ -265,9 +282,9 @@ export function generateModernPDF(
     ]),
     theme: "grid",
     headStyles: { fillColor: [41, 128, 185] },
-  });
+  } as UserOptions);
   
-  yPos = (pdf as any).lastAutoTable.finalY + SECTION_GAP * 2;
+  yPos = pdf.lastAutoTable.finalY + SECTION_GAP * 2;
 
   pdf.setFontSize(14);
   pdf.setFont(undefined, "bold");
@@ -284,7 +301,7 @@ export function generateDetailedPDF(
   customer: Customer | null,
   settings: CompanySettings
 ): Blob {
-  const pdf = new jsPDF();
+  const pdf = new jsPDF() as jsPDFWithAutoTable;
   let yPos = MARGIN;
 
   yPos = renderCompanyHeader(pdf, settings, yPos);
@@ -299,7 +316,7 @@ export function generateDetailedPDF(
   pdf.text(`Detailed Quote #${quote.id}`, MARGIN, yPos);
   yPos += 8;
 
-  (pdf as any).autoTable({
+  autoTable(pdf, {
     startY: yPos,
     head: [["Item", "Description", "Qty", "Price", "Total"]],
     body: quote.items.map(item => [
@@ -310,9 +327,9 @@ export function generateDetailedPDF(
       formatCurrency(item.quantity * item.price, settings.currency),
     ]),
     theme: "plain",
-  });
+  } as UserOptions);
 
-  yPos = (pdf as any).lastAutoTable.finalY + SECTION_GAP;
+  yPos = pdf.lastAutoTable.finalY + SECTION_GAP;
 
   const subtotal = quote.total;
   const taxRate = settings.taxRate || 0;
