@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -21,8 +21,8 @@ interface AuthContextType {
   isAdmin: boolean;
   isMaxAITier: boolean;
   loading: boolean;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   refreshSubscription: () => Promise<void>;
   checkUserRole: (sessionToUse?: Session | null) => Promise<void>;
@@ -71,10 +71,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Role check timeout')), 3000)
+        setTimeout(() => reject(new Error("Role check timeout")), 3000)
       );
       
-      const { data, error } = await Promise.race([rolePromise, timeoutPromise]) as any;
+      const { data, error } = await Promise.race([rolePromise, timeoutPromise]) as { data: unknown, error: AuthError | null };
 
       if (error) {
         console.error('[AuthContext] Error fetching user role:', error);
@@ -160,29 +160,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     isInitializing.current = true;
-    let maxLoadingTimeout: NodeJS.Timeout;
-    
-    // Wrap in try-catch to handle corrupted localStorage
-    try {
-      // Test localStorage access
-      localStorage.getItem('test');
-    } catch (storageError) {
-      console.error('[AUTH DEBUG] localStorage corrupted, clearing:', storageError);
-      try {
-        localStorage.clear();
-      } catch (e) {
-        console.error('[AUTH DEBUG] Cannot clear localStorage:', e);
-      }
-      setLoading(false);
-      isInitializing.current = false;
-      return;
-    }
-    
-    // Reduced maximum timeout to 2 seconds for faster initial load
-    maxLoadingTimeout = setTimeout(() => {
-      console.warn('[AUTH DEBUG] Maximum loading timeout reached - forcing loading to false');
-      setLoading(false);
-      isInitializing.current = false;
+    const maxLoadingTimeout: NodeJS.Timeout = setTimeout(() => {
+        console.warn('[AUTH DEBUG] Maximum loading timeout reached - forcing loading to false');
+        setLoading(false);
+        isInitializing.current = false;
     }, 2000);
     
     // Set up auth state listener with error handling

@@ -162,7 +162,7 @@ Create a warm, professional follow-up that references the quote and encourages a
 
       toast.success('Follow-up email sent successfully!');
       setIsOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending follow-up email:', error);
       
       // Fallback to mailto if edge function fails

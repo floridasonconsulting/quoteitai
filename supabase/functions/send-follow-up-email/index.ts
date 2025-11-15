@@ -56,7 +56,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     let recipientEmail = customerEmail;
     let testWarning = "";
-    let actualRecipient = customerEmail;
+    const actualRecipient = customerEmail;
     
     if (isTestMode && resendAccountEmail) {
       const domain = customerEmail.split("@")[1];

@@ -23,7 +23,7 @@ const BATCH_SIZE = 5;
 const BATCH_DELAY = 2000; // 2 seconds
 
 // Queue management
-let eventQueue: QueuedEvent[] = [];
+const eventQueue: QueuedEvent[] = [];
 let batchTimeout: ReturnType<typeof setTimeout> | null = null;
 let isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
 

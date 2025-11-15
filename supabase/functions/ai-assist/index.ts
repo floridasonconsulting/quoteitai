@@ -146,7 +146,7 @@ serve(async (req) => {
 
     // Build system prompts based on feature type
     let systemPrompt = "You are a professional business assistant for a quoting application.";
-    let userPrompt = prompt;
+    const userPrompt = prompt;
 
     switch (featureType) {
       case "quote_title":
