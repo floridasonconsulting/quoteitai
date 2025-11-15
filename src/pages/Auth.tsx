@@ -24,11 +24,14 @@ export default function Auth() {
     // Only redirect if:
     // 1. User is authenticated
     // 2. We're still on the auth page
-    // 3. Not in the middle of a sign-in/sign-up flow
-    if (user && location.pathname === '/auth' && !loading) {
-      navigate('/dashboard', { replace: true });
+    if (user && location.pathname === '/auth') {
+      // Small delay to ensure state is fully settled
+      const timer = setTimeout(() => {
+        navigate('/dashboard', { replace: true });
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [user, navigate, location.pathname, loading]);
+  }, [user, navigate, location.pathname]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,8 +48,9 @@ export default function Auth() {
       toast.error(error.message);
       setLoading(false);
     } else {
-      // Success - navigation will happen via useEffect
-      // Don't set loading to false here as we're navigating away
+      // Success - don't set loading to false, let the useEffect handle navigation
+      // The user state will update, triggering the redirect useEffect
+      toast.success('Signed in successfully');
     }
   };
 
