@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Building2, Mail, Phone, MapPin, Calendar, FileText, Check, X, Loader2, Download } from 'lucide-react';
+import { Building2, Mail, Phone, MapPin, Calendar, FileText, Check, X, Loader2, Download, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Quote, Customer, CompanySettings, QuoteItem } from '@/types';
 import { generateClassicPDF, generateModernPDF, generateDetailedPDF } from '@/lib/proposal-templates';
+import { PaymentDialog } from '@/components/PaymentDialog';
+import { createPaymentIntent, getStripe } from '@/lib/stripe-service';
 
 export default function PublicQuoteView() {
   const { shareToken } = useParams<{ shareToken: string }>();
@@ -18,6 +20,7 @@ export default function PublicQuoteView() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [isMaxAITier, setIsMaxAITier] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
 
   useEffect(() => {
     loadQuote();
@@ -174,7 +177,6 @@ export default function PublicQuoteView() {
 
     setUpdating(true);
     try {
-      // Call edge function instead of direct update
       const { data, error } = await supabase.functions.invoke('update-quote-status', {
         body: { shareToken, status: newStatus }
       });
@@ -183,11 +185,52 @@ export default function PublicQuoteView() {
 
       setQuote({ ...quote, status: newStatus });
       toast.success(`Quote ${newStatus === 'accepted' ? 'accepted' : 'declined'} successfully!`);
+      
+      // If accepted, show payment dialog
+      if (newStatus === 'accepted') {
+        setPaymentDialogOpen(true);
+      }
     } catch (error) {
       console.error('Error updating quote status:', error);
       toast.error('Failed to update quote status');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleConfirmPayment = async (
+    paymentType: 'full' | 'deposit',
+    depositPercentage?: number
+  ) => {
+    if (!quote) return;
+
+    try {
+      // Create payment intent
+      const paymentIntent = await createPaymentIntent({
+        quoteId: quote.id,
+        amount: paymentType === 'full' ? quote.total : Math.round(quote.total * ((depositPercentage || 30) / 100)),
+        currency: 'usd',
+        paymentType,
+        depositPercentage,
+      });
+
+      // Get Stripe instance
+      const stripe = await getStripe();
+      if (!stripe) {
+        throw new Error('Stripe not initialized');
+      }
+
+      // Redirect to Stripe Checkout
+      const { error } = await stripe.redirectToCheckout({
+        sessionId: paymentIntent.id,
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast.error('Payment failed. Please try again.');
     }
   };
 
@@ -309,7 +352,7 @@ export default function PublicQuoteView() {
                   ) : (
                     <Check className="h-4 w-4 mr-2" />
                   )}
-                  Accept Proposal
+                  Accept & Pay
                 </Button>
                 <Button
                   onClick={() => handleStatusUpdate('declined')}
@@ -326,6 +369,31 @@ export default function PublicQuoteView() {
                   Decline Proposal
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Show payment button if quote is accepted but not paid */}
+        {quote.status === 'accepted' && (
+          <Card className="mb-6 border-green-500 bg-green-50 dark:bg-green-950">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2 text-green-700 dark:text-green-300">
+                <Check className="h-5 w-5" />
+                Proposal Accepted
+              </CardTitle>
+              <CardDescription>
+                Complete your payment to finalize this quote.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={() => setPaymentDialogOpen(true)}
+                size="lg"
+                className="w-full"
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Make Payment
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -481,6 +549,14 @@ export default function PublicQuoteView() {
             </CardContent>
           </Card>
         )}
+
+        {/* Payment Dialog */}
+        <PaymentDialog
+          open={paymentDialogOpen}
+          onOpenChange={setPaymentDialogOpen}
+          quoteTotal={quote.total}
+          onConfirmPayment={handleConfirmPayment}
+        />
       </div>
     </div>
   );
