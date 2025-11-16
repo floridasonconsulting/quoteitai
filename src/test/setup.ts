@@ -180,3 +180,11 @@ beforeAll(() => {
     })),
   });
 });
+
+vi.mock('@/integrations/rate-limiter', () => {
+  return {
+    rateLimiter: {
+      allowRequest: vi.fn().mockResolvedValue(true),
+    },
+  };
+});
