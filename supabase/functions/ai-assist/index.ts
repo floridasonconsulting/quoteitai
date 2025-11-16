@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { checkRateLimit } from "../_shared/rate-limiter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,6 +69,39 @@ serve(async (req) => {
 
     const { featureType, prompt, context } = await req.json();
     logStep("Request received", { featureType });
+
+    // CRITICAL: Server-side rate limiting to prevent API abuse
+    const rateLimit = checkRateLimit(user.id, "AI_GENERATION");
+    if (!rateLimit.allowed) {
+      logStep("Rate limit exceeded", { 
+        userId: user.id, 
+        remaining: rateLimit.remaining, 
+        resetIn: rateLimit.resetIn 
+      });
+      
+      return new Response(
+        JSON.stringify({ 
+          error: `Rate limit exceeded. You can make ${rateLimit.limit} AI requests per minute. Please try again in ${rateLimit.resetIn} seconds.`,
+          rateLimitExceeded: true,
+          resetIn: rateLimit.resetIn,
+        }),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            "Content-Type": "application/json",
+            "X-RateLimit-Limit": rateLimit.limit.toString(),
+            "X-RateLimit-Remaining": rateLimit.remaining.toString(),
+            "X-RateLimit-Reset": rateLimit.resetIn.toString(),
+          }, 
+          status: 429 
+        }
+      );
+    }
+
+    logStep("Rate limit check passed", { 
+      remaining: rateLimit.remaining, 
+      limit: rateLimit.limit 
+    });
 
     // Check if feature exists
     const featureConfig = FEATURE_CONFIG[featureType as keyof typeof FEATURE_CONFIG];

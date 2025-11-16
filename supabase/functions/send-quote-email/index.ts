@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.58.0';
+import { checkRateLimit } from "../_shared/rate-limiter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -49,6 +50,31 @@ serve(async (req) => {
     }: SendQuoteEmailRequest = await req.json();
 
     console.log(`Sending quote email to ${customerEmail} for quote ${quoteNumber}`);
+
+    // CRITICAL: Validate logo URL to prevent SSRF attacks
+    if (companyLogo) {
+      try {
+        const logoUrl = new URL(companyLogo);
+        const ALLOWED_DOMAINS = ['supabase.co', 'quoteit.ai', 'localhost'];
+        const isAllowed = ALLOWED_DOMAINS.some(domain => 
+          logoUrl.hostname === domain || logoUrl.hostname.endsWith(`.${domain}`)
+        );
+        
+        if (!isAllowed) {
+          console.warn(`⚠️ Rejected logo URL from disallowed domain: ${logoUrl.hostname}`);
+          throw new Error(`Logo URL domain not allowed: ${logoUrl.hostname}`);
+        }
+        
+        // Only allow HTTPS (except localhost for development)
+        if (logoUrl.protocol !== 'https:' && !logoUrl.hostname.includes('localhost')) {
+          throw new Error('Only HTTPS URLs are allowed for logos');
+        }
+      } catch (error) {
+        console.error('Invalid logo URL:', error);
+        // Continue without logo rather than failing the entire email
+        companyLogo = undefined;
+      }
+    }
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     if (!resendApiKey) {
