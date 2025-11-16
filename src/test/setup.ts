@@ -181,7 +181,7 @@ beforeAll(() => {
   });
 });
 
-vi.mock('@/integrations/rate-limiter', () => {
+vi.mock('@/lib/rate-limiter', () => {
   return {
     rateLimiter: {
       allowRequest: vi.fn().mockResolvedValue(true),
