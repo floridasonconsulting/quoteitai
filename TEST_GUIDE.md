@@ -42,7 +42,7 @@ npx playwright install --with-deps
 ### Run All Tests
 
 ```bash
-npm run test:all
+npm test
 ```
 
 ### Run Tests Individually

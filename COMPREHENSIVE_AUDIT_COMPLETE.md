@@ -1317,7 +1317,7 @@ npm install
 npx playwright install --with-deps
 
 # Run full test suite
-npm run test:all
+npm test
 
 # Review results
 npx playwright show-report

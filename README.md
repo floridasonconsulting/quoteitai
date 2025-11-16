@@ -262,6 +262,10 @@ npm run dev          # Start dev server (port 8080)
 npm run build        # Build for production
 npm run preview      # Preview production build
 npm run lint         # Run ESLint
+npm test             # Run all tests
+npm run test:watch   # Run tests in watch mode
+npm run test:ui      # Run tests with UI
+npm run test:coverage # Run tests with coverage
 ```
 
 ### Database Migrations
