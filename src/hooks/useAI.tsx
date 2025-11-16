@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { rateLimiter, RATE_LIMITS } from '@/lib/rate-limiter';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limiter';
 import { sanitizeForAI } from '@/lib/input-sanitization';
 
 export type AIFeatureType =
@@ -38,12 +38,11 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
   const generate = async (prompt: string, context?: Record<string, unknown>): Promise<string | AIUpgradeInfo | null> => {
     // Rate limiting check
     const userId = (await supabase.auth.getUser()).data.user?.id || 'anonymous';
-    const rateLimitKey = `ai-${featureType}-${userId}`;
+    const rateLimitResult = checkRateLimit(userId, 'AI_GENERATION');
     
-    if (!rateLimiter.check(rateLimitKey, RATE_LIMITS.AI_GENERATION)) {
-      const remainingTime = Math.ceil(rateLimiter.getRemainingTime(rateLimitKey) / 1000);
+    if (!rateLimitResult.allowed) {
       toast.error('Rate Limit Reached', {
-        description: `Please wait ${remainingTime} seconds before trying again.`,
+        description: `Please wait ${rateLimitResult.resetIn} seconds before trying again.`,
       });
       options?.onError?.('Rate limit exceeded');
       return null;
