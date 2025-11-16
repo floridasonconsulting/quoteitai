@@ -184,7 +184,19 @@ beforeAll(() => {
 vi.mock('@/lib/rate-limiter', () => {
   return {
     rateLimiter: {
-      allowRequest: vi.fn().mockResolvedValue(true),
+      checkRateLimit: vi.fn().mockResolvedValue({
+        rateLimit: {
+          limit: 100,
+          remaining: 99,
+          reset: 1688256000,
+        },
+        error: null,
+      }),
+    },
+    RATE_LIMITS: {
+      // Define your rate limits here
+      // For example:
+      // 'some-action': { limit: 10, window: 60 },
     },
   };
 });
