@@ -190,6 +190,8 @@ vi.mock('@/lib/rate-limiter', () => {
         reset: 1688256000,
       },
       error: null,
+      allowed: true,
+      resetIn: 0,
     }),
     RATE_LIMITS: {
       // Define your rate limits here
