@@ -237,13 +237,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSession(currentSession);
             setUser(currentSession.user);
             
-            console.log('[AUTH DEBUG] Setting loading to false');
-            setLoading(false);
+            // Keep loading true until role check completes
+            try {
+              await checkUserRole(currentSession);
+            } catch (error) {
+              console.error('[AUTH DEBUG] Role check failed:', error);
+            } finally {
+              console.log('[AUTH DEBUG] Setting loading to false after role check');
+              setLoading(false);
+            }
             
-            checkUserRole(currentSession).catch(error => {
-              console.error('[AUTH DEBUG] Background role check failed:', error);
-            });
-            
+            // Load subscription and migrate data in background (non-blocking)
             setTimeout(() => {
               loadSubscription(currentSession.user.id).catch(console.error);
               checkAndMigrateData(currentSession.user.id).catch(console.error);
