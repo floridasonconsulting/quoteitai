@@ -59,6 +59,11 @@ describe("AuthContext - Tier-Based Access", () => {
     expect(result.current.userRole).toBeNull();
     expect(result.current.isMaxAITier).toBe(false);
 
+    // Wait for the auth provider to set up the global trigger helper
+    await waitFor(() => {
+      expect(typeof globalThis.triggerAuthStateChange).toBe('function');
+    }, { timeout: 1000 });
+
     // Trigger the sign-in event via the global helper
     globalThis.triggerAuthStateChange("SIGNED_IN", mockSession);
 
