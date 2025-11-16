@@ -52,16 +52,25 @@ describe('Settings - White-Label Branding', () => {
   });
 
   describe('Tier-Based Access Control', () => {
-    it('should show upgrade prompt for non-Max AI tier users', () => {
+    it('should show upgrade prompt for non-Max AI tier users', async () => {
       vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
         user: { id: 'user-123' } as User,
         isMaxAITier: false,
         userRole: 'pro',
       }));
 
-      const { getByText } = renderSettings();
-      expect(getByText(/Upgrade to Max AI/i)).toBeInTheDocument();
-      expect(getByText(/White-label branding is available/i)).toBeInTheDocument();
+      const { getByText, queryByText } = renderSettings();
+      
+      // Wait for loading to complete
+      await waitFor(() => {
+        expect(queryByText(/Loading settings/i)).not.toBeInTheDocument();
+      }, { timeout: 3000 });
+
+      // Now check for the upgrade prompt
+      await waitFor(() => {
+        expect(getByText(/Upgrade to Max AI/i)).toBeInTheDocument();
+        expect(getByText(/White-label branding is available/i)).toBeInTheDocument();
+      });
     });
 
     it('should show logo upload for Max AI tier users', async () => {
