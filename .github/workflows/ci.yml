@@ -1,3 +1,4 @@
+
 name: CI/CD Pipeline
 
 on:
@@ -46,7 +47,7 @@ jobs:
         run: npm ci
       
       - name: Run unit tests
-        run: npm test -- --coverage
+        run: npm test -- --coverage --reporter=verbose
       
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
@@ -55,6 +56,13 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/coverage-final.json
           flags: unittests
+      
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        with:
+          lcov-file: ./coverage/lcov.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   e2e-tests:
     name: E2E Tests
@@ -111,6 +119,25 @@ jobs:
       - name: Build application
         run: npm run build
       
+      - name: Analyze bundle size
+        run: |
+          npx vite-bundle-visualizer --output stats.html
+          du -sh dist/* | sort -h > bundle-sizes.txt
+      
+      - name: Upload bundle analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-analysis
+          path: |
+            stats.html
+            bundle-sizes.txt
+      
+      - name: Check bundle size
+        uses: andresz1/size-limit-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          skip_step: install
+      
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -140,7 +167,24 @@ jobs:
           name: build
           path: dist/
       
+      - name: Serve build locally
+        run: npx serve dist -l 8080 &
+      
+      - name: Wait for server
+        run: npx wait-on http://localhost:8080
+      
       - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          urls: |
+            http://localhost:8080
+            http://localhost:8080/dashboard
+            http://localhost:8080/quotes
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+      
+      - name: Comment Lighthouse results on PR
+        if: github.event_name == 'pull_request'
         uses: treosh/lighthouse-ci-action@v11
         with:
           urls: http://localhost:8080
@@ -154,6 +198,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run npm audit
+        run: |
+          npm audit --audit-level=moderate || true
+          npm audit --json > audit-results.json || true
+      
+      - name: Upload audit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit
+          path: audit-results.json
+      
       - name: Run Snyk Security Scan
         uses: snyk/actions/node@master
         continue-on-error: true
@@ -161,6 +225,28 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --severity-threshold=high
+      
+      - name: Check for critical vulnerabilities
+        run: |
+          CRITICAL=$(npm audit --json | jq '.metadata.vulnerabilities.critical')
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "❌ Critical vulnerabilities found: $CRITICAL"
+            exit 1
+          fi
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          comment-summary-in-pr: always
 
   deploy-preview:
     name: Deploy Preview
@@ -179,11 +265,24 @@ jobs:
       
       - name: Deploy to Vercel Preview
         uses: amondnet/vercel-action@v25
+        id: vercel-deploy
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: ./
+      
+      - name: Comment preview URL on PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `✅ Preview deployed to: ${{ steps.vercel-deploy.outputs.preview-url }}`
+            })
 
   deploy-production:
     name: Deploy to Production
@@ -208,3 +307,11 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: '--prod'
           working-directory: ./
+      
+      - name: Create deployment summary
+        run: |
+          echo "## 🚀 Production Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed to:** https://quoteit.ai" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** main" >> $GITHUB_STEP_SUMMARY
