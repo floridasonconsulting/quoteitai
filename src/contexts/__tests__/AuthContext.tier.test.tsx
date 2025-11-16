@@ -38,18 +38,6 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 describe("AuthContext - Tier-Based Access", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-
-    // Mock the onAuthStateChange to be controllable in a type-safe way
-    vi.mocked(supabase.auth.onAuthStateChange).mockImplementation(
-      (callback: (event: AuthChangeEvent, session: Session | null) => void) => {
-        globalThis.triggerAuthStateChange = (event: AuthChangeEvent, session: Session | null) => {
-          callback(event, session);
-        };
-        return {
-          data: { subscription: { unsubscribe: vi.fn() } },
-        };
-      }
-    );
     
     // Mock getSession for initial load state
     vi.mocked(supabase.auth.getSession).mockResolvedValue({ data: { session: null }, error: null });
