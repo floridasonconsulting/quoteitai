@@ -18,6 +18,7 @@ interface AuthContextType {
   session: Session | null;
   subscription: SubscriptionData | null;
   userRole: UserRole | null;
+  subscriptionTier: UserRole | null; // Alias for userRole for backward compatibility
   isAdmin: boolean;
   isMaxAITier: boolean;
   loading: boolean;
@@ -334,6 +335,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         subscription,
         userRole,
+        subscriptionTier: userRole, // Alias for backward compatibility
         isAdmin,
         isMaxAITier,
         loading,
