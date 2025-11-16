@@ -183,7 +183,7 @@ beforeAll(() => {
 
 vi.mock('@/lib/rate-limiter', () => {
   return {
-    checkRateLimit: vi.fn().mockResolvedValue({
+    checkRateLimit: vi.fn().mockReturnValue({
       rateLimit: {
         limit: 100,
         remaining: 99,
