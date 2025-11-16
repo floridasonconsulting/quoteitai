@@ -42,23 +42,29 @@ const { createSelectChain, createUpdateChain, createDeleteChain, createFromHandl
 
   const createSelectChain = (tableName?: string) => {
     const mockData = tableName ? getMockDataForTable(tableName) : null;
-    const chain = {
-      eq: vi.fn(() => ({
-        single: vi.fn().mockResolvedValue({ 
-          data: mockData, 
-          error: null 
-        }),
-        maybeSingle: vi.fn().mockResolvedValue({ 
-          data: mockData, 
-          error: null 
-        }),
-        order: vi.fn(() => ({
-          limit: vi.fn().mockResolvedValue({ 
-            data: Array.isArray(mockData) ? mockData : (mockData ? [mockData] : []), 
+    
+    // Create a fully chainable select query builder
+    const selectBuilder = {
+      eq: vi.fn((column: string, value: unknown) => {
+        // Filter mock data based on column/value if needed
+        // For now, just return the chainable methods
+        return {
+          single: vi.fn().mockResolvedValue({ 
+            data: mockData, 
             error: null 
           }),
-        })),
-      })),
+          maybeSingle: vi.fn().mockResolvedValue({ 
+            data: mockData, 
+            error: null 
+          }),
+          order: vi.fn(() => ({
+            limit: vi.fn().mockResolvedValue({ 
+              data: Array.isArray(mockData) ? mockData : (mockData ? [mockData] : []), 
+              error: null 
+            }),
+          })),
+        };
+      }),
       order: vi.fn(() => ({
         limit: vi.fn().mockResolvedValue({ 
           data: Array.isArray(mockData) ? mockData : (mockData ? [mockData] : []), 
@@ -74,12 +80,16 @@ const { createSelectChain, createUpdateChain, createDeleteChain, createFromHandl
         error: null 
       }),
     };
-    // Make it thenable so it can be awaited directly
-    Object.assign(chain, Promise.resolve({ 
-      data: Array.isArray(mockData) ? mockData : (mockData ? [mockData] : []), 
-      error: null 
-    }));
-    return chain;
+    
+    // Make the selectBuilder itself a thenable promise
+    // so it can be awaited directly: await supabase.from('table').select('*')
+    return Object.assign(
+      Promise.resolve({ 
+        data: Array.isArray(mockData) ? mockData : (mockData ? [mockData] : []), 
+        error: null 
+      }),
+      selectBuilder
+    );
   };
 
   const createUpdateChain = () => {
