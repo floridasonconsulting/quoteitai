@@ -123,6 +123,10 @@ vi.mock('@/integrations/supabase/client', () => {
         const handler = createFromHandler(table);
         return handler;
       }),
+      rpc: vi.fn().mockResolvedValue({
+        data: 'free', // Default to free tier
+        error: null,
+      }),
       storage: {
         from: vi.fn(() => ({
           upload: vi.fn().mockResolvedValue({ data: null, error: null }),
