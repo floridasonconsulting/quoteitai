@@ -121,6 +121,10 @@ vi.mock('@/integrations/supabase/client', () => {
           data: { session: null },
           error: null,
         }),
+        getUser: vi.fn().mockResolvedValue({
+          data: { user: null },
+          error: null,
+        }),
         onAuthStateChange: vi.fn((callback) => {
           // Set up global helper for tests to trigger auth state changes
           globalThis.triggerAuthStateChange = (event: AuthChangeEvent, session: Session | null) => {
