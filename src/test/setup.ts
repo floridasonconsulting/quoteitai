@@ -1,6 +1,12 @@
 import '@testing-library/jest-dom';
 import { beforeAll, afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { AuthChangeEvent, Session } from '@supabase/supabase-js';
+
+// Type-safe declaration for our global test helper
+declare global {
+  var triggerAuthStateChange: (event: AuthChangeEvent, session: Session | null) => void;
+}
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
@@ -115,9 +121,15 @@ vi.mock('@/integrations/supabase/client', () => {
           data: { session: null },
           error: null,
         }),
-        onAuthStateChange: vi.fn(() => ({
-          data: { subscription: { unsubscribe: vi.fn() } },
-        })),
+        onAuthStateChange: vi.fn((callback) => {
+          // Set up global helper for tests to trigger auth state changes
+          globalThis.triggerAuthStateChange = (event: AuthChangeEvent, session: Session | null) => {
+            callback(event, session);
+          };
+          return {
+            data: { subscription: { unsubscribe: vi.fn() } },
+          };
+        }),
       },
       from: vi.fn((table) => {
         const handler = createFromHandler(table);
