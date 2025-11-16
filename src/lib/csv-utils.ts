@@ -6,6 +6,7 @@ export function parseCSVLine(line: string): string[] {
   const result: string[] = [];
   let current = '';
   let inQuotes = false;
+  let fieldWasQuoted = false;
   
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
@@ -16,21 +17,27 @@ export function parseCSVLine(line: string): string[] {
         // Escaped quote - add single quote to output
         current += '"';
         i++; // Skip the next quote
+      } else if (!inQuotes && current.length === 0) {
+        // Starting quote at the beginning of a field
+        inQuotes = true;
+        fieldWasQuoted = true;
       } else {
-        // Toggle quote state
-        inQuotes = !inQuotes;
+        // Ending quote
+        inQuotes = false;
       }
     } else if (char === ',' && !inQuotes) {
       // Field separator outside quotes
-      result.push(current.trim());
+      // Only trim if field was NOT quoted
+      result.push(fieldWasQuoted ? current : current.trim());
       current = '';
+      fieldWasQuoted = false;
     } else {
       current += char;
     }
   }
   
   // Add the last field
-  result.push(current.trim());
+  result.push(fieldWasQuoted ? current : current.trim());
   return result;
 }
 
