@@ -8,7 +8,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "./hooks/useNotifications";
 import { Layout } from "@/components/Layout";
-// ErrorBoundary import is removed as it's not used here, but wrapped around AppRoutes in App component.
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoadingFallback } from "./components/LoadingFallback";
 import { useGlobalKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
