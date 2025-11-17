@@ -11,7 +11,7 @@ interface SubscriptionData {
   subscription_end: string | null;
 }
 
-type UserRole = 'admin' | 'free' | 'pro' | 'max';
+type UserRole = 'admin' | 'free' | 'pro' | 'business' | 'max';
 
 interface AuthContextType {
   user: User | null;
