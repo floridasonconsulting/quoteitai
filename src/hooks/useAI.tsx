@@ -18,7 +18,9 @@ export type AIFeatureType =
   | 'pricing_optimization'
   | 'follow_up_suggestions'
   | 'customer_insights'
-  | 'competitive_analysis';
+  | 'competitive_analysis'
+  | 'rfp_response_matching'
+  | 'content_generation';
 
 interface UseAIOptions {
   onSuccess?: (content: string) => void;

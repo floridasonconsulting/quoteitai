@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAI } from '@/hooks/useAI';
@@ -143,7 +142,7 @@ Format as a strategic customer intelligence report with specific, actionable rec
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Analysis Focus</Label>
-            <Select value={analysisType} onValueChange={(value: any) => setAnalysisType(value)}>
+            <Select value={analysisType} onValueChange={(value: 'behavior' | 'preferences' | 'opportunities') => setAnalysisType(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
