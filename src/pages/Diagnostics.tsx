@@ -13,7 +13,7 @@ import { getTemplatePreference } from "@/lib/storage";
 import { getSettings } from "@/lib/db-service";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { StorageCache } from "@/lib/storage-cache";
+import { storageCache } from "@/lib/storage-cache";
 
 interface DiagnosticEvent {
   id: string;
@@ -55,7 +55,7 @@ export default function Diagnostics() {
   const [aiTesting, setAiTesting] = useState(false);
   
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastSyncTime = StorageCache.get("last-sync-time");
+  const lastSyncTime = storageCache.get("last-sync-time");
 
   // Redirect non-admin users
   useEffect(() => {
@@ -86,10 +86,10 @@ export default function Diagnostics() {
   const performSystemCheck = useCallback(async () => {
     try {
       // Check 1: Storage state (using cached reads)
-      const templatePref = StorageCache.get("proposalTemplate") || getTemplatePreference();
-      const customersCache = StorageCache.get("quote-it-customers-cache");
-      const itemsCache = StorageCache.get("quote-it-items-cache");
-      const quotesCache = StorageCache.get("quote-it-quotes-cache");
+      const templatePref = storageCache.get("proposalTemplate") || getTemplatePreference();
+      const customersCache = storageCache.get("quote-it-customers-cache");
+      const itemsCache = storageCache.get("quote-it-items-cache");
+      const quotesCache = storageCache.get("quote-it-quotes-cache");
 
       // Check 2: In-flight requests
       const requests = (window as { __inFlightRequests?: Map<string, unknown> }).__inFlightRequests;
