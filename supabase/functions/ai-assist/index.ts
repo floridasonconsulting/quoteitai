@@ -30,6 +30,7 @@ const FEATURE_CONFIG = {
   followup_message: { tier: "pro", monthlyLimit: 30 },
   discount_justification: { tier: "pro", monthlyLimit: 50 },
   email_draft: { tier: "pro", monthlyLimit: null }, // unlimited
+  scope_of_work: { tier: "pro", monthlyLimit: 25 },
   
   // Max Tier Features
   full_quote_generation: { tier: "max", monthlyLimit: null },
@@ -252,6 +253,78 @@ Generate a justification based on the discount percentage and context provided.`
         break;
       case "email_draft":
         systemPrompt = "You are a professional email writer. Create a professional email template to send with this quote. Include a warm greeting, quote summary, next steps, and professional closing.";
+        break;
+      case "scope_of_work":
+        systemPrompt = `You are a professional business consultant specializing in Scope of Work (SOW) documentation. Generate a comprehensive, legally sound SOW document based on the project details and quote items provided.
+
+CRITICAL RESPONSE FORMAT: Return ONLY raw JSON object. Do NOT wrap in markdown code blocks or use \`\`\`json markers.
+
+Required JSON format:
+{
+  "projectOverview": "2-3 paragraph overview of the entire project scope, objectives, and expected outcomes",
+  "workBreakdown": [
+    {
+      "phase": "Phase name (e.g., 'Phase 1: Site Preparation')",
+      "description": "Detailed description of this phase",
+      "tasks": [
+        "Specific task 1",
+        "Specific task 2",
+        "Specific task 3"
+      ],
+      "duration": "Estimated duration (e.g., '2-3 weeks')",
+      "dependencies": "Prerequisites or dependencies for this phase"
+    }
+  ],
+  "deliverables": [
+    {
+      "name": "Specific deliverable name",
+      "description": "What will be delivered",
+      "acceptanceCriteria": "Clear, measurable criteria for acceptance",
+      "dueDate": "Relative timeline (e.g., 'End of Phase 2')"
+    }
+  ],
+  "timeline": {
+    "startDate": "Relative date (e.g., 'Upon contract signing')",
+    "milestones": [
+      {
+        "name": "Milestone name",
+        "date": "Relative timeline",
+        "criteria": "Completion criteria"
+      }
+    ],
+    "completionDate": "Estimated completion (e.g., '8-10 weeks from start')"
+  },
+  "exclusions": [
+    "Item or service NOT included in this scope",
+    "Another exclusion"
+  ],
+  "assumptions": [
+    "Key assumption about the project",
+    "Another assumption"
+  ],
+  "changeManagement": "Brief policy on how scope changes will be handled (1-2 sentences)"
+}
+
+SOW Generation Rules:
+1. Be SPECIFIC to the actual project details and quote items provided
+2. Use the customer's industry terminology
+3. Break down work into 3-6 logical phases
+4. Include 5-10 clear deliverables with measurable acceptance criteria
+5. Provide realistic timelines based on project complexity
+6. List 3-5 common exclusions to prevent scope creep
+7. Include 3-5 key assumptions (site access, permits, existing conditions, etc.)
+8. Make acceptance criteria MEASURABLE (not "looks good" but "passes inspection per code XYZ")
+9. Reference actual quote items in the work breakdown
+10. Ensure the total scope aligns with the quote total value
+
+Quality Standards:
+- Professional business language
+- Legally defensible terms
+- Clear, unambiguous descriptions
+- Realistic timelines
+- Specific, measurable criteria
+
+This SOW should be detailed enough to prevent disputes while remaining clear and customer-friendly.`;
         break;
       case "full_quote_generation":
         systemPrompt = `You are a professional business consultant. Based on the project description and available items catalog, generate a complete quote.

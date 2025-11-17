@@ -12,6 +12,7 @@ export type AIFeatureType =
   | 'followup_message'
   | 'discount_justification'
   | 'email_draft'
+  | 'scope_of_work'
   | 'full_quote_generation'
   | 'item_recommendations'
   | 'pricing_optimization'
