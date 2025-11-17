@@ -1,4 +1,3 @@
-
 /**
  * QuickBooks Sync Service
  * Manages synchronization between Quote-It AI and QuickBooks
@@ -8,6 +7,13 @@ import { QuickBooksClient } from "./client";
 import { QuickBooksCustomer, QuickBooksInvoice, QuickBooksSyncStatus } from "./types";
 import { Customer, Quote } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
+
+interface QuoteItem {
+  name: string;
+  description?: string;
+  price: number;
+  quantity: number;
+}
 
 export class QuickBooksSyncService {
   private client: QuickBooksClient;
@@ -127,12 +133,12 @@ export class QuickBooksSyncService {
       }
 
       // Parse quote items
-      const items = typeof quote.items === "string" 
+      const items: QuoteItem[] = typeof quote.items === "string" 
         ? JSON.parse(quote.items) 
         : quote.items;
 
       // Create invoice line items
-      const lineItems = items.map((item: any, index: number) => ({
+      const lineItems = items.map((item: QuoteItem, index: number) => ({
         LineNum: index + 1,
         Description: item.description || item.name,
         Amount: item.price * (item.quantity || 1),
