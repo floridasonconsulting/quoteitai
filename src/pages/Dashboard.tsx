@@ -1,113 +1,290 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { getQuotes, getCustomers, getItems } from "@/lib/storage";
-import type { Quote, Customer, Item } from "@/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { flushSync } from "react-dom";
+import { Plus, FileText, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, TrendingUp, DollarSign, Users, FileText, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
-import { format } from "date-fns";
-import { toast } from "sonner";
-import BasicStatCards from "@/components/dashboard/BasicStatCards";
-import AdvancedAnalytics from "@/components/AdvancedAnalytics";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getQuotes, getCustomers, getItems, clearInFlightRequests } from "@/lib/db-service";
+import { getAgingSummary, getQuoteAge } from "@/lib/quote-utils";
+import { Quote, Customer } from "@/types";
+import { formatCurrency } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+import { useLoadingState } from "@/hooks/useLoadingState";
+import { AdvancedAnalytics } from "@/components/AdvancedAnalytics";
+import { BasicStatCards } from "@/components/dashboard/BasicStatCards";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading, userRole } = useAuth();
+  const { startLoading, stopLoading } = useLoadingState();
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const hasLoadedData = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const [stats, setStats] = useState({
+    totalQuotes: 0,
+    totalCustomers: 0,
+    totalItems: 0,
+    pendingValue: 0,
+    acceptanceRate: 0,
+    avgQuoteValue: 0,
+    totalRevenue: 0,
+    declinedValue: 0,
+  });
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [items, setItems] = useState<Item[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const isFetchingRef = useRef(false);
 
-  // Determine if user has access to advanced analytics
-  const hasAdvancedTier = user?.subscription_tier === "business" || user?.subscription_tier === "max_ai";
+  // Determine if user has advanced tier (Business/Max/Admin)
+  const hasAdvancedTier = userRole === "business" || userRole === "max" || userRole === "admin";
 
   useEffect(() => {
-    if (isFetchingRef.current) return;
-    
-    const fetchData = async () => {
-      isFetchingRef.current = true;
-      try {
-        const [quotesData, customersData, itemsData] = await Promise.all([
-          getQuotes(),
-          getCustomers(),
-          getItems()
-        ]);
-        setQuotes(quotesData);
-        setCustomers(customersData);
-        setItems(itemsData);
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-        toast.error("Failed to load dashboard data");
-      } finally {
-        setIsLoading(false);
-        isFetchingRef.current = false;
+    if (user && !hasLoadedData.current) {
+      hasLoadedData.current = true;
+      loadData();
+    }
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
     };
+  }, [user]);
 
-    fetchData();
-  }, []);
+  const loadData = async () => {
+    if (hasLoadedData.current && !loading && quotes.length > 0) {
+      return;
+    }
 
-  // Calculate statistics for all users
-  const stats = {
-    totalQuotes: quotes.length,
-    activeQuotes: quotes.filter(q => q.status === "sent").length,
-    totalRevenue: quotes
-      .filter(q => q.status === "accepted")
-      .reduce((sum, q) => sum + (q.total || 0), 0),
-    acceptanceRate: quotes.length > 0
-      ? (quotes.filter(q => q.status === "accepted").length / quotes.filter(q => q.status !== "draft").length) * 100
-      : 0,
-    totalCustomers: customers.length,
-    totalItems: items.length
+    if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
+      return;
+    }
+
+    clearInFlightRequests();
+
+    abortControllerRef.current = new AbortController();
+    setLoading(true);
+    setError(null);
+
+    const operationId = `dashboard-load-${Date.now()}`;
+    startLoading(operationId, "Loading dashboard data");
+
+    const timeoutDuration = 15000;
+
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError("Loading timeout - data took too long to fetch.");
+      stopLoading(operationId);
+    }, timeoutDuration);
+
+    try {
+      const [quotesData, customersData, itemsData] = await Promise.all([
+        getQuotes(user?.id),
+        getCustomers(user?.id),
+        getItems(user?.id)
+      ]);
+      
+      const pendingValue = quotesData
+        .filter(q => q.status === "sent")
+        .reduce((sum, q) => sum + q.total, 0);
+
+      const sentQuotes = quotesData.filter(q => q.status === "sent" || q.status === "accepted" || q.status === "declined");
+      const acceptedQuotes = quotesData.filter(q => q.status === "accepted");
+      const acceptanceRate = sentQuotes.length > 0 
+        ? (acceptedQuotes.length / sentQuotes.length) * 100 
+        : 0;
+
+      const avgQuoteValue = quotesData.length > 0
+        ? quotesData.reduce((sum, q) => sum + q.total, 0) / quotesData.length
+        : 0;
+
+      const totalRevenue = acceptedQuotes.reduce((sum, q) => sum + q.total, 0);
+      
+      const declinedValue = quotesData
+        .filter(q => q.status === "declined")
+        .reduce((sum, q) => sum + q.total, 0);
+
+      const newStats = {
+        totalQuotes: quotesData.length,
+        totalCustomers: customersData.length,
+        totalItems: itemsData.length,
+        pendingValue,
+        acceptanceRate,
+        avgQuoteValue,
+        totalRevenue,
+        declinedValue,
+      };
+
+      flushSync(() => {
+        setQuotes(quotesData);
+        setCustomers(customersData);
+        setStats(newStats);
+        setRetryCount(0);
+        setError(null);
+        setLoading(false);
+      });
+      
+      clearTimeout(timeoutId);
+      stopLoading(operationId);
+    } catch (error) {
+      clearTimeout(timeoutId);
+      stopLoading(operationId);
+      if (error instanceof Error && error.name !== 'AbortError') {
+        setError("Failed to load dashboard data. Please try again.");
+        toast({
+          title: "Error loading data",
+          description: "Could not load dashboard. Please try refreshing.",
+          variant: "destructive",
+        });
+      }
+      setLoading(false);
+    }
   };
 
-  // Calculate aging summary for Quote Aging Overview
-  const agingSummary = {
-    fresh: quotes.filter(q => {
-      const daysSince = Math.floor((Date.now() - new Date(q.date).getTime()) / (1000 * 60 * 60 * 24));
-      return q.status === "sent" && daysSince <= 7;
-    }).length,
-    warm: quotes.filter(q => {
-      const daysSince = Math.floor((Date.now() - new Date(q.date).getTime()) / (1000 * 60 * 60 * 24));
-      return q.status === "sent" && daysSince > 7 && daysSince <= 14;
-    }).length,
-    aging: quotes.filter(q => {
-      const daysSince = Math.floor((Date.now() - new Date(q.date).getTime()) / (1000 * 60 * 60 * 24));
-      return q.status === "sent" && daysSince > 14 && daysSince <= 30;
-    }).length,
-    stale: quotes.filter(q => {
-      const daysSince = Math.floor((Date.now() - new Date(q.date).getTime()) / (1000 * 60 * 60 * 24));
-      return q.status === "sent" && daysSince > 30;
-    }).length
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    hasLoadedData.current = false;
+    loadData();
   };
 
-  // Get recent quotes for Free/Pro users
-  const recentQuotes = quotes
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5);
+  const handleFullReset = async () => {
+    try {
+      localStorage.removeItem("customers-cache");
+      localStorage.removeItem("items-cache");
+      localStorage.removeItem("quotes-cache");
+      localStorage.removeItem("sync-queue");
+      localStorage.removeItem("failed-sync-queue");
+      
+      if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+        const messageChannel = new MessageChannel();
+        navigator.serviceWorker.controller.postMessage(
+          { type: "CLEAR_ALL_CACHE" },
+          [messageChannel.port2]
+        );
+      }
+      
+      hasLoadedData.current = false;
+      setRetryCount(0);
+      setError(null);
+      
+      setTimeout(() => {
+        loadData();
+      }, 500);
+    } catch (error) {
+      console.error("Error during reset:", error);
+    }
+  };
 
-  if (isLoading) {
+  const agingSummary = getAgingSummary(quotes.filter(q => q.status === "sent"));
+  const recentQuotes = quotes.slice(0, 5);
+
+  const getAgeColor = (age: string) => {
+    switch (age) {
+      case "fresh": return "bg-success/10 text-success border-success/20";
+      case "warm": return "bg-warning/10 text-warning border-warning/20";
+      case "aging": return "bg-destructive/10 text-destructive border-destructive/20";
+      case "stale": return "bg-destructive/20 text-destructive border-destructive/30";
+      default: return "bg-muted text-muted-foreground";
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "accepted": return "bg-success/10 text-success border-success/20";
+      case "sent": return "bg-primary/10 text-primary border-primary/20";
+      case "draft": return "bg-muted text-muted-foreground border-border";
+      case "declined": return "bg-destructive/10 text-destructive border-destructive/20";
+      default: return "bg-muted text-muted-foreground";
+    }
+  };
+
+  if (loading || authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map(i => (
+             <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <Skeleton className="h-4 w-24"/>
+                  <Skeleton className="h-4 w-4"/>
+              </CardHeader>
+              <CardContent>
+                  <Skeleton className="h-8 w-20 mb-1"/>
+                  <Skeleton className="h-3 w-40"/>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-6 w-48 mb-2"/>
+                <Skeleton className="h-4 w-80"/>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[1,2,3,4].map(i => (
+                <div key={i} className="space-y-2 p-3">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-24"/>
+                    <Skeleton className="h-6 w-12"/>
+                  </div>
+                  <Skeleton className="h-2 w-full"/>
+                </div>
+              ))}
+            </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <p className="text-destructive font-medium">{error}</p>
+        {retryCount > 0 && (
+          <p className="text-sm text-muted-foreground">
+            Retry attempt {retryCount} of 3
+          </p>
+        )}
+        <div className="flex gap-2">
+          <Button onClick={handleRetry} disabled={retryCount >= 3}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Retry
+          </Button>
+          <Button variant="outline" onClick={handleFullReset}>
+            Clear Cache & Reset
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => window.location.reload()}
+          >
+            Force Reload Page
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-6 pb-20 md:pb-6">
+    <div className="space-y-6 overflow-x-hidden max-w-full">
       {/* Header - All Users */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
           <p className="text-muted-foreground">
             Welcome back! Here's your business overview.
           </p>
         </div>
-        <Button onClick={() => navigate("/quotes/new")} size="lg" className="w-full md:w-auto">
+        <Button onClick={() => navigate("/quotes/new")} size="lg">
           <Plus className="mr-2 h-5 w-5" />
           New Quote
         </Button>
@@ -119,77 +296,92 @@ export default function Dashboard() {
       {/* Quote Aging Overview - All Users */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Quote Aging Overview
-          </CardTitle>
-          <CardDescription>
-            Track the status of your sent quotes by age
-          </CardDescription>
+          <CardTitle>Quote Aging Overview</CardTitle>
+          <CardDescription>Track the status of your sent quotes</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card className="bg-success/5 border-success/20">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Fresh</p>
-                    <p className="text-xs text-muted-foreground">0-7 days</p>
-                  </div>
-                  <CheckCircle2 className="h-5 w-5 text-success" />
-                </div>
-                <p className="text-3xl font-bold text-success mt-2">{agingSummary.fresh}</p>
-              </CardContent>
-            </Card>
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <div 
+              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+              onClick={() => navigate("/quotes?status=sent&age=fresh")}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Fresh (≤7 days)</span>
+                <Badge variant="outline" className={getAgeColor("fresh")}>
+                  {agingSummary.fresh}
+                </Badge>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-success transition-all"
+                  style={{ width: `${(agingSummary.fresh / Math.max(1, quotes.filter(q=>q.status === 'sent').length)) * 100}%` }}
+                />
+              </div>
+            </div>
 
-            <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Warm</p>
-                    <p className="text-xs text-muted-foreground">8-14 days</p>
-                  </div>
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                </div>
-                <p className="text-3xl font-bold text-primary mt-2">{agingSummary.warm}</p>
-              </CardContent>
-            </Card>
+            <div 
+              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+              onClick={() => navigate("/quotes?status=sent&age=warm")}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Warm (8-14 days)</span>
+                <Badge variant="outline" className={getAgeColor("warm")}>
+                  {agingSummary.warm}
+                </Badge>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-warning transition-all"
+                  style={{ width: `${(agingSummary.warm / Math.max(1, quotes.filter(q=>q.status === 'sent').length)) * 100}%` }}
+                />
+              </div>
+            </div>
 
-            <Card className="bg-warning/5 border-warning/20">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Aging</p>
-                    <p className="text-xs text-muted-foreground">15-30 days</p>
-                  </div>
-                  <AlertCircle className="h-5 w-5 text-warning" />
-                </div>
-                <p className="text-3xl font-bold text-warning mt-2">{agingSummary.aging}</p>
-              </CardContent>
-            </Card>
+            <div 
+              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+              onClick={() => navigate("/quotes?status=sent&age=aging")}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Aging (15-30 days)</span>
+                <Badge variant="outline" className={getAgeColor("aging")}>
+                  {agingSummary.aging}
+                </Badge>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-destructive transition-all"
+                  style={{ width: `${(agingSummary.aging / Math.max(1, quotes.filter(q=>q.status === 'sent').length)) * 100}%` }}
+                />
+              </div>
+            </div>
 
-            <Card className="bg-destructive/5 border-destructive/20">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Stale</p>
-                    <p className="text-xs text-muted-foreground">30+ days</p>
-                  </div>
-                  <XCircle className="h-5 w-5 text-destructive" />
-                </div>
-                <p className="text-3xl font-bold text-destructive mt-2">{agingSummary.stale}</p>
-              </CardContent>
-            </Card>
+            <div 
+              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+              onClick={() => navigate("/quotes?status=sent&age=stale")}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Stale (&gt;30 days)</span>
+                <Badge variant="outline" className={getAgeColor("stale")}>
+                  {agingSummary.stale}
+                </Badge>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-destructive transition-all"
+                  style={{ width: `${(agingSummary.stale / Math.max(1, quotes.filter(q=>q.status === 'sent').length)) * 100}%` }}
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tiered Content */}
+      {/* Tiered Content - Business/Max users see Advanced Analytics, Free/Pro users see Recent Quotes */}
       {hasAdvancedTier ? (
-        /* Business/Max Users: Show Enhanced Advanced Analytics */
+        /* Business/Max/Admin: Show Advanced Analytics */
         <AdvancedAnalytics quotes={quotes} customers={customers} />
       ) : (
-        /* Free/Pro Users: Show Recent Quotes */
+        /* Free/Pro: Show Recent Quotes */
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -197,69 +389,52 @@ export default function Dashboard() {
                 <CardTitle>Recent Quotes</CardTitle>
                 <CardDescription>Your latest quote activity</CardDescription>
               </div>
-              <Button variant="outline" size="sm" onClick={() => navigate("/quotes")}>
+              <Button variant="outline" onClick={() => navigate("/quotes")}>
                 View All
               </Button>
             </div>
           </CardHeader>
           <CardContent>
             {recentQuotes.length === 0 ? (
-              <div className="text-center py-12">
-                <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No quotes yet</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Create your first quote to get started
-                </p>
-                <Button onClick={() => navigate("/quotes/new")}>
-                  <Plus className="mr-2 h-4 w-4" />
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                <p>No quotes yet. Create your first quote to get started!</p>
+                <Button className="mt-4" onClick={() => navigate("/quotes/new")}>
                   Create Quote
                 </Button>
               </div>
             ) : (
               <div className="space-y-4">
                 {recentQuotes.map((quote) => {
-                  const customer = customers.find(c => c.id === quote.customerId);
+                  const age = getQuoteAge(quote);
                   return (
-                    <Card
+                    <div
                       key={quote.id}
-                      className="cursor-pointer hover:shadow-md transition-shadow"
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
                       onClick={() => navigate(`/quotes/${quote.id}`)}
                     >
-                      <CardContent className="pt-6">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h4 className="font-semibold">{quote.title || "Untitled Quote"}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {customer?.name || "Unknown Customer"}
-                            </p>
-                          </div>
-                          <Badge
-                            variant={
-                              quote.status === "accepted"
-                                ? "default"
-                                : quote.status === "sent"
-                                ? "secondary"
-                                : quote.status === "declined"
-                                ? "destructive"
-                                : "outline"
-                            }
-                          >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium truncate">{quote.title}</p>
+                          <Badge variant="outline" className={getStatusColor(quote.status)}>
                             {quote.status}
                           </Badge>
+                          {quote.status === "sent" && (
+                            <Badge variant="outline" className={getAgeColor(age)}>
+                              {age}
+                            </Badge>
+                          )}
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {format(new Date(quote.date), "MMM d, yyyy")}
-                          </span>
-                          <span className="font-semibold">
-                            ${(quote.total || 0).toLocaleString("en-US", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2
-                            })}
-                          </span>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <span>{quote.customerName}</span>
+                          <span>•</span>
+                          <span>{quote.quoteNumber}</span>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                      <div className="text-right ml-4">
+                        <p className="font-bold">{formatCurrency(quote.total)}</p>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
