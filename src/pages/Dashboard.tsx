@@ -50,8 +50,8 @@ export default function Dashboard() {
 
   // SIMPLIFIED: Load data as soon as we have a user - only run ONCE
   useEffect(() => {
-    // Only load if we have a user AND haven't loaded yet
-    if (user && !hasLoadedData.current && !loading) {
+    // Only load if we have a user AND haven't loaded yet (removed loading check)
+    if (user && !hasLoadedData.current) {
       console.log('[Dashboard] Initiating first data load');
       hasLoadedData.current = true;
       loadData();
