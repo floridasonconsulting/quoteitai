@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
-import { flushSync } from 'react-dom';
 import { Plus, Users, Package, FileText, Clock, TrendingUp, Target, DollarSign, TrendingDown, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -136,24 +135,26 @@ export default function Dashboard() {
         loadTime: Date.now() - startTime
       });
 
-      // SIMPLIFIED: Just update state and turn off loading
-      flushSync(() => {
-        setQuotes(quotesData);
-        setCustomers(customersData);
-        setStats({
-          totalQuotes: quotesData.length,
-          totalCustomers: customersData.length,
-          totalItems: itemsData.length,
-          pendingValue,
-          acceptanceRate,
-          avgQuoteValue,
-          totalRevenue,
-          declinedValue,
-        });
-        setRetryCount(0);
-        setError(null);
-        setLoading(false);
+      // SIMPLIFIED: Set all state in one batch
+      setQuotes(quotesData);
+      setCustomers(customersData);
+      setStats({
+        totalQuotes: quotesData.length,
+        totalCustomers: customersData.length,
+        totalItems: itemsData.length,
+        pendingValue,
+        acceptanceRate,
+        avgQuoteValue,
+        totalRevenue,
+        declinedValue,
       });
+      setRetryCount(0);
+      setError(null);
+      
+      // CRITICAL: Set loading to false AFTER all other state is set
+      setTimeout(() => {
+        setLoading(false);
+      }, 0);
       
       console.log('[Dashboard] Data loaded successfully, rendering content');
       clearTimeout(timeoutId);
