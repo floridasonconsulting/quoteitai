@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { Plus, Users, Package, FileText, Clock, TrendingUp, Target, DollarSign, TrendingDown, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -149,15 +150,17 @@ export default function Dashboard() {
         declinedValue,
       };
 
-      // Update all state in one synchronous block
-      setQuotes(quotesData);
-      setCustomers(customersData);
-      setStats(newStats);
-      setRetryCount(0);
-      setError(null);
-      setLoading(false); // Must be last to ensure other state is set first
+      // FORCE SYNCHRONOUS STATE UPDATE using flushSync
+      flushSync(() => {
+        setQuotes(quotesData);
+        setCustomers(customersData);
+        setStats(newStats);
+        setRetryCount(0);
+        setError(null);
+        setLoading(false); // Must be last to ensure other state is set first
+      });
       
-      console.log('[Dashboard] State updated successfully');
+      console.log('[Dashboard] State updated successfully with flushSync');
       clearTimeout(timeoutId);
       stopLoading(operationId);
     } catch (error) {
