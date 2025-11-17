@@ -51,24 +51,32 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen flex flex-col bg-background pb-16 md:pb-0">
+      {/* Skip Navigation Link for Keyboard Users */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
+
       {/* Header */}
-      <header className="sticky top-0 z-40 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+      <header className="sticky top-0 z-40 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60" role="banner">
         <div className="container px-4">
           {/* Desktop: Single Row */}
           <div className="hidden md:flex h-14 items-center justify-between">
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="Quote-it AI" className="h-10 w-auto" />
+              <img src="/logo.png" alt="Quote-it AI Logo" className="h-10 w-auto" />
               <h1 className="text-xl font-bold">Quote-it AI</h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" role="toolbar" aria-label="Quick actions">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate('/help')}
                 className="rounded-full"
-                title="Help & Support"
+                aria-label="Help and support"
               >
-                <HelpCircle className="h-5 w-5" />
+                <HelpCircle className="h-5 w-5" aria-hidden="true" />
               </Button>
               <Button
                 variant="ghost"
@@ -78,11 +86,14 @@ export function Layout({ children }: LayoutProps) {
                   navigate('/quotes?filter=notifications');
                 }}
                 className="rounded-full relative"
-                title="Notifications"
+                aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
               >
-                <Bell className="h-5 w-5" />
+                <Bell className="h-5 w-5" aria-hidden="true" />
                 {unreadCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                  <Badge 
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    aria-label={`${unreadCount} unread notifications`}
+                  >
                     {unreadCount}
                   </Badge>
                 )}
@@ -93,18 +104,22 @@ export function Layout({ children }: LayoutProps) {
                 size="icon"
                 onClick={toggleTheme}
                 className="rounded-full"
-                title="Toggle theme"
+                aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
               >
-                {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+                {theme === 'light' ? (
+                  <Moon className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <Sun className="h-5 w-5" aria-hidden="true" />
+                )}
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={signOut}
                 className="rounded-full"
-                title="Sign out"
+                aria-label="Sign out"
               >
-                <LogOut className="h-5 w-5" />
+                <LogOut className="h-5 w-5" aria-hidden="true" />
               </Button>
             </div>
           </div>
@@ -114,10 +129,10 @@ export function Layout({ children }: LayoutProps) {
             {/* Row 1: Logo + Title + Core Actions */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <img src="/logo.png" alt="Quote-it AI" className="h-8 w-auto" />
+                <img src="/logo.png" alt="Quote-it AI Logo" className="h-8 w-auto" />
                 <h1 className="text-lg font-bold">Quote-it AI</h1>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1" role="toolbar" aria-label="Quick actions">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -126,11 +141,14 @@ export function Layout({ children }: LayoutProps) {
                     navigate('/quotes?filter=notifications');
                   }}
                   className="rounded-full h-9 w-9 relative"
-                  title="Notifications"
+                  aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
                 >
-                  <Bell className="h-4 w-4" />
+                  <Bell className="h-4 w-4" aria-hidden="true" />
                   {unreadCount > 0 && (
-                    <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-[10px]">
+                    <Badge 
+                      className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-[10px]"
+                      aria-label={`${unreadCount} unread notifications`}
+                    >
                       {unreadCount}
                     </Badge>
                   )}
@@ -140,18 +158,22 @@ export function Layout({ children }: LayoutProps) {
                   size="icon"
                   onClick={toggleTheme}
                   className="rounded-full h-9 w-9"
-                  title="Toggle theme"
+                  aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
                 >
-                  {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                  {theme === 'light' ? (
+                    <Moon className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Sun className="h-4 w-4" aria-hidden="true" />
+                  )}
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={signOut}
                   className="rounded-full h-9 w-9"
-                  title="Sign out"
+                  aria-label="Sign out"
                 >
-                  <LogOut className="h-4 w-4" />
+                  <LogOut className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
             </div>
@@ -163,9 +185,10 @@ export function Layout({ children }: LayoutProps) {
                 size="sm"
                 onClick={() => navigate('/help')}
                 className="gap-2"
+                aria-label="Help and support"
               >
-                <HelpCircle className="h-4 w-4" />
-                Help
+                <HelpCircle className="h-4 w-4" aria-hidden="true" />
+                <span>Help</span>
               </Button>
               <SyncIndicator />
             </div>
@@ -174,12 +197,21 @@ export function Layout({ children }: LayoutProps) {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 px-4 py-6 md:ml-64 overflow-x-hidden max-w-full">
+      <main 
+        id="main-content" 
+        className="flex-1 px-4 py-6 md:ml-64 overflow-x-hidden max-w-full"
+        role="main"
+        aria-label="Main content"
+      >
         {children || <Outlet />}
       </main>
 
       {/* Bottom Navigation (Mobile) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden border-t bg-card">
+      <nav 
+        className="fixed bottom-0 left-0 right-0 z-50 md:hidden border-t bg-card"
+        role="navigation"
+        aria-label="Mobile navigation"
+      >
         <div className="flex items-center justify-around h-16">
           {navigation.map((item) => {
             const Icon = item.icon;
@@ -194,8 +226,10 @@ export function Layout({ children }: LayoutProps) {
                     ? 'text-primary'
                     : 'text-muted-foreground hover:text-foreground'
                 )}
+                aria-label={item.name}
+                aria-current={isActive ? 'page' : undefined}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className="h-5 w-5" aria-hidden="true" />
                 <span className="text-xs">{item.name}</span>
               </button>
             );
@@ -204,7 +238,11 @@ export function Layout({ children }: LayoutProps) {
       </nav>
 
       {/* Desktop Navigation */}
-      <nav className="hidden md:block fixed left-0 top-14 bottom-0 w-64 border-r bg-card">
+      <nav 
+        className="hidden md:block fixed left-0 top-14 bottom-0 w-64 border-r bg-card"
+        role="navigation"
+        aria-label="Main navigation"
+      >
         <div className="flex flex-col gap-2 p-4">
           {navigation.map((item) => {
             const Icon = item.icon;
@@ -215,8 +253,10 @@ export function Layout({ children }: LayoutProps) {
                 variant={isActive ? 'secondary' : 'ghost'}
                 onClick={() => navigate(item.path)}
                 className="justify-start"
+                aria-label={item.name}
+                aria-current={isActive ? 'page' : undefined}
               >
-                <Icon className="mr-2 h-5 w-5" />
+                <Icon className="mr-2 h-5 w-5" aria-hidden="true" />
                 {item.name}
               </Button>
             );
@@ -224,7 +264,9 @@ export function Layout({ children }: LayoutProps) {
           {/* Developer Tools Section - Admin Only */}
           {userRole === 'admin' && (
             <div className="mt-auto pt-4 border-t">
-              <div className="text-xs font-semibold text-muted-foreground mb-2 px-3">Developer Tools</div>
+              <div className="text-xs font-semibold text-muted-foreground mb-2 px-3" role="heading" aria-level={2}>
+                Developer Tools
+              </div>
               {devNavigation.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
@@ -234,8 +276,10 @@ export function Layout({ children }: LayoutProps) {
                     variant={isActive ? 'secondary' : 'ghost'}
                     onClick={() => navigate(item.path)}
                     className="justify-start"
+                    aria-label={item.name}
+                    aria-current={isActive ? 'page' : undefined}
                   >
-                    <Icon className="mr-2 h-5 w-5" />
+                    <Icon className="mr-2 h-5 w-5" aria-hidden="true" />
                     {item.name}
                   </Button>
                 );
