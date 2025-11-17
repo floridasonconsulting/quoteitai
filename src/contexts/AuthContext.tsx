@@ -312,7 +312,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     if (!error) {
       toast.success('Signed in successfully!');
-      navigate('/');
+      navigate('/dashboard');
     }
     
     return { error };
