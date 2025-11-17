@@ -357,6 +357,16 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 overflow-x-hidden max-w-full">
+      {/* Debug Banner - Remove after testing */}
+      {userRole && (
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+          <p className="text-sm font-medium">Debug Info: User Role = <span className="font-bold">{userRole}</span></p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Advanced Analytics should be {(userRole === 'business' || userRole === 'max' || userRole === 'admin') ? 'VISIBLE ✓' : 'HIDDEN ✗'}
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
@@ -605,13 +615,9 @@ export default function Dashboard() {
       </Card>
 
       {/* Advanced Analytics - Business/Max/Admin Only */}
-      {(() => {
-        console.log('[Dashboard] User Role:', userRole);
-        console.log('[Dashboard] Should show Advanced Analytics:', userRole === 'business' || userRole === 'max' || userRole === 'admin');
-        return (userRole === 'business' || userRole === 'max' || userRole === 'admin') && (
-          <AdvancedAnalytics quotes={quotes} customers={customers} />
-        );
-      })()}
+      {(userRole === 'business' || userRole === 'max' || userRole === 'admin') && (
+        <AdvancedAnalytics quotes={quotes} customers={customers} />
+      )}
     </div>
   );
 }
