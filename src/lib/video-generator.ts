@@ -1,27 +1,36 @@
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+
 import type { RecordingFrame } from './demo-recorder';
+
+// Type imports only - no runtime FFmpeg import
+type FFmpeg = any;
 
 let ffmpeg: FFmpeg | null = null;
 let isLoaded = false;
 
 /**
- * Initialize FFmpeg instance
+ * Initialize FFmpeg instance with dynamic import
+ * This ensures FFmpeg (~31MB) is only loaded when actually needed
  */
 export async function initFFmpeg(onProgress?: (progress: number) => void): Promise<FFmpeg> {
   if (ffmpeg && isLoaded) {
     return ffmpeg;
   }
 
+  // ✅ DYNAMIC IMPORT - FFmpeg only loads when this function is called
+  const [{ FFmpeg }, { toBlobURL }] = await Promise.all([
+    import('@ffmpeg/ffmpeg'),
+    import('@ffmpeg/util')
+  ]);
+
   ffmpeg = new FFmpeg();
 
   // Set up progress logging
-  ffmpeg.on('log', ({ message }) => {
+  ffmpeg.on('log', ({ message }: { message: string }) => {
     console.log('[FFmpeg]', message);
   });
 
   if (onProgress) {
-    ffmpeg.on('progress', ({ progress }) => {
+    ffmpeg.on('progress', ({ progress }: { progress: number }) => {
       onProgress(Math.round(progress * 100));
     });
   }
@@ -57,6 +66,7 @@ function base64ToBlob(base64: string): Blob {
 
 /**
  * Generate MP4 video from recording frames
+ * FFmpeg is dynamically imported only when this function is called
  */
 export async function generateMP4(
   frames: RecordingFrame[],
@@ -69,6 +79,10 @@ export async function generateMP4(
   const { fps = 2, quality = 'high', onProgress } = options;
 
   onProgress?.(0, 'Initializing FFmpeg...');
+  
+  // ✅ DYNAMIC IMPORT - fetchFile loaded only when needed
+  const { fetchFile } = await import('@ffmpeg/util');
+  
   const ffmpegInstance = await initFFmpeg((progress) => {
     onProgress?.(progress * 0.2, 'Loading FFmpeg...');
   });
@@ -133,6 +147,7 @@ export async function generateMP4(
 
 /**
  * Generate optimized GIF from recording frames
+ * FFmpeg is dynamically imported only when this function is called
  */
 export async function generateGIF(
   frames: RecordingFrame[],
@@ -145,6 +160,10 @@ export async function generateGIF(
   const { fps = 2, width = 1024, onProgress } = options;
 
   onProgress?.(0, 'Initializing FFmpeg...');
+  
+  // ✅ DYNAMIC IMPORT - fetchFile loaded only when needed
+  const { fetchFile } = await import('@ffmpeg/util');
+  
   const ffmpegInstance = await initFFmpeg((progress) => {
     onProgress?.(progress * 0.2, 'Loading FFmpeg...');
   });
