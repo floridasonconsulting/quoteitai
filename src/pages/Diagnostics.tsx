@@ -1,26 +1,38 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle, XCircle, Clock, Database, Network, RefreshCw, Download, Shield, Sparkles } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useSyncManager } from '@/hooks/useSyncManager';
-import { useLoadingState } from '@/hooks/useLoadingState';
-import { getTemplatePreference } from '@/lib/storage';
-import { getSettings } from '@/lib/db-service';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, CheckCircle, XCircle, Clock, Database, Network, RefreshCw, Download, Shield, Sparkles } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSyncManager } from "@/hooks/useSyncManager";
+import { useLoadingState } from "@/hooks/useLoadingState";
+import { getTemplatePreference } from "@/lib/storage";
+import { getSettings } from "@/lib/db-service";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { StorageCache } from "@/lib/storage-cache";
 
 interface DiagnosticEvent {
   id: string;
   timestamp: number;
-  type: 'info' | 'warning' | 'error' | 'critical';
-  category: 'template' | 'request' | 'db' | 'sync' | 'storage';
+  type: "info" | "warning" | "error" | "critical";
+  category: "template" | "request" | "db" | "sync" | "storage";
   message: string;
   data?: unknown;
+}
+
+interface SystemState {
+  templatePref: string;
+  dbTemplate: string | null;
+  cacheStatus: {
+    customers: boolean;
+    items: boolean;
+    quotes: boolean;
+  };
+  inFlightRequests: Record<string, unknown>;
 }
 
 export default function Diagnostics() {
@@ -28,67 +40,37 @@ export default function Diagnostics() {
   const { isOnline, isSyncing, pendingCount, failedCount } = useSyncManager();
   const { getActiveOperations } = useLoadingState();
   const [events, setEvents] = useState<DiagnosticEvent[]>([]);
-  const [inFlightRequests, setInFlightRequests] = useState<Record<string, unknown>>({});
+  const [systemState, setSystemState] = useState<SystemState>({
+    templatePref: "",
+    dbTemplate: null,
+    cacheStatus: {
+      customers: false,
+      items: false,
+      quotes: false
+    },
+    inFlightRequests: {}
+  });
   const [refreshKey, setRefreshKey] = useState(0);
   const [aiTestResult, setAiTestResult] = useState<unknown>(null);
   const [aiTesting, setAiTesting] = useState(false);
-  const [dbTemplate, setDbTemplate] = useState<string | null>(null);
   
-  const lastSyncTime = localStorage.getItem('last-sync-time');
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSyncTime = StorageCache.get("last-sync-time");
 
   // Redirect non-admin users
   useEffect(() => {
-    if (userRole && userRole !== 'admin') {
-      window.location.href = '/dashboard';
+    if (userRole && userRole !== "admin") {
+      window.location.href = "/dashboard";
     }
   }, [userRole]);
 
-  // Monitor localStorage changes
-  useEffect(() => {
-    const checkStorage = () => {
-      try {
-        const templatePref = getTemplatePreference();
-        const customersCache = localStorage.getItem('quote-it-customers-cache');
-        const itemsCache = localStorage.getItem('quote-it-items-cache');
-        const quotesCache = localStorage.getItem('quote-it-quotes-cache');
-        
-        addEvent('info', 'storage', 'Storage check', {
-          templatePreference: templatePref,
-          cacheKeys: {
-            customers: customersCache ? 'present' : 'missing',
-            items: itemsCache ? 'present' : 'missing',
-            quotes: quotesCache ? 'present' : 'missing',
-          }
-        });
-      } catch (error) {
-        addEvent('error', 'storage', 'Storage check failed', { error });
-      }
-    };
-
-    checkStorage();
-    const interval = setInterval(checkStorage, 5000);
-    return () => clearInterval(interval);
-  }, [refreshKey]);
-
-  // Monitor in-flight requests
-  useEffect(() => {
-    const checkRequests = () => {
-      // Access global inFlightRequests if exposed
-      const requests = (window as { __inFlightRequests?: Map<string, unknown> }).__inFlightRequests ?? {};
-      const requestObject = Object.fromEntries(requests.entries());
-      setInFlightRequests(requestObject);
-      
-      if (Object.keys(requestObject).length > 0) {
-        addEvent('warning', 'request', `${Object.keys(requestObject).length} in-flight requests detected`, requestObject);
-      }
-    };
-
-    checkRequests();
-    const interval = setInterval(checkRequests, 2000);
-    return () => clearInterval(interval);
-  }, [refreshKey]);
-
-  const addEvent = (type: DiagnosticEvent['type'], category: DiagnosticEvent['category'], message: string, data?: unknown) => {
+  // Add diagnostic event
+  const addEvent = useCallback((
+    type: DiagnosticEvent["type"],
+    category: DiagnosticEvent["category"],
+    message: string,
+    data?: unknown
+  ) => {
     const event: DiagnosticEvent = {
       id: `${Date.now()}-${Math.random()}`,
       timestamp: Date.now(),
@@ -98,33 +80,104 @@ export default function Diagnostics() {
       data
     };
     setEvents(prev => [event, ...prev].slice(0, 100)); // Keep last 100 events
-  };
+  }, []);
+
+  // Consolidated polling function - runs ALL checks in a single interval
+  const performSystemCheck = useCallback(async () => {
+    try {
+      // Check 1: Storage state (using cached reads)
+      const templatePref = StorageCache.get("proposalTemplate") || getTemplatePreference();
+      const customersCache = StorageCache.get("quote-it-customers-cache");
+      const itemsCache = StorageCache.get("quote-it-items-cache");
+      const quotesCache = StorageCache.get("quote-it-quotes-cache");
+
+      // Check 2: In-flight requests
+      const requests = (window as { __inFlightRequests?: Map<string, unknown> }).__inFlightRequests;
+      const inFlightRequests = requests ? Object.fromEntries(requests.entries()) : {};
+
+      // Check 3: Database template (only if user exists and it's been >10s since last check)
+      let dbTemplate = systemState.dbTemplate;
+      if (user?.id && (!systemState.dbTemplate || refreshKey > 0)) {
+        const settings = await getSettings(user.id);
+        dbTemplate = settings.proposalTemplate;
+      }
+
+      // Update system state in a single setState
+      setSystemState({
+        templatePref,
+        dbTemplate,
+        cacheStatus: {
+          customers: !!customersCache,
+          items: !!itemsCache,
+          quotes: !!quotesCache
+        },
+        inFlightRequests
+      });
+
+      // Log warnings only if issues detected
+      if (Object.keys(inFlightRequests).length > 0) {
+        addEvent(
+          "warning",
+          "request",
+          `${Object.keys(inFlightRequests).length} in-flight requests detected`,
+          inFlightRequests
+        );
+      }
+
+      if (dbTemplate && templatePref !== dbTemplate) {
+        addEvent(
+          "warning",
+          "template",
+          "Template mismatch detected between localStorage and database",
+          { localStorage: templatePref, database: dbTemplate }
+        );
+      }
+    } catch (error) {
+      addEvent("error", "db", "System check failed", { error });
+    }
+  }, [user?.id, systemState.dbTemplate, refreshKey, addEvent]);
+
+  // Single optimized polling interval - runs every 5 seconds (reduced from 3 separate intervals)
+  useEffect(() => {
+    // Initial check on mount
+    performSystemCheck();
+
+    // Set up consolidated polling
+    pollingIntervalRef.current = setInterval(performSystemCheck, 5000);
+
+    // Cleanup on unmount
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [performSystemCheck]);
 
   const handleClearEvents = () => {
     setEvents([]);
-    addEvent('info', 'db', 'Event log cleared', null);
+    addEvent("info", "db", "Event log cleared", null);
   };
 
   const handleExportEvents = () => {
     const dataStr = JSON.stringify(events, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
     const exportFileDefaultName = `diagnostics-${Date.now()}.json`;
     
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
+    const linkElement = document.createElement("a");
+    linkElement.setAttribute("href", dataUri);
+    linkElement.setAttribute("download", exportFileDefaultName);
     linkElement.click();
+    
+    addEvent("info", "db", "Events exported", { count: events.length });
   };
 
   const handleRefresh = async () => {
     setRefreshKey(prev => prev + 1);
-    addEvent('info', 'db', 'Diagnostic refresh triggered', null);
+    addEvent("info", "db", "Diagnostic refresh triggered", null);
     
-    // Fetch current template from DB
-    if (user?.id) {
-      const settings = await getSettings(user.id);
-      setDbTemplate(settings.proposalTemplate);
-    }
+    // Force immediate system check
+    await performSystemCheck();
   };
 
   const handleTestAIAccess = async () => {
@@ -132,10 +185,10 @@ export default function Diagnostics() {
     setAiTestResult(null);
     
     try {
-      const { data, error } = await supabase.functions.invoke('ai-assist', {
+      const { data, error } = await supabase.functions.invoke("ai-assist", {
         body: {
-          featureType: 'quote_title',
-          prompt: 'Test access',
+          featureType: "quote_title",
+          prompt: "Test access",
           context: {}
         }
       });
@@ -146,68 +199,65 @@ export default function Diagnostics() {
           error: error.message,
           data
         });
-        toast.error('AI access test failed: ' + error.message);
+        addEvent("error", "request", "AI access test failed", { error: error.message });
+        toast.error("AI access test failed: " + error.message);
       } else if (data?.error) {
         setAiTestResult({
           success: false,
           error: data.error,
           requiresUpgrade: data.requiresUpgrade
         });
-        toast.error('AI access denied: ' + data.error);
+        addEvent("warning", "request", "AI access denied", data);
+        toast.error("AI access denied: " + data.error);
       } else {
         setAiTestResult({
           success: true,
-          message: 'AI access granted',
+          message: "AI access granted",
           content: data?.content
         });
-        toast.success('AI access test successful');
+        addEvent("info", "request", "AI access test successful", data);
+        toast.success("AI access test successful");
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       setAiTestResult({
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: errorMessage
       });
-      toast.error('AI test failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      addEvent("error", "request", "AI test exception", { error: errorMessage });
+      toast.error("AI test failed: " + errorMessage);
     } finally {
       setAiTesting(false);
     }
   };
 
-  // Load template from DB on mount
-  useEffect(() => {
-    if (user?.id) {
-      getSettings(user.id).then(settings => {
-        setDbTemplate(settings.proposalTemplate);
-      });
-    }
-  }, [user?.id]);
-
-  const getEventIcon = (type: DiagnosticEvent['type']) => {
+  const getEventIcon = (type: DiagnosticEvent["type"]) => {
     switch (type) {
-      case 'info':
+      case "info":
         return <CheckCircle className="h-4 w-4 text-blue-500" />;
-      case 'warning':
+      case "warning":
         return <AlertCircle className="h-4 w-4 text-yellow-500" />;
-      case 'error':
+      case "error":
         return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'critical':
+      case "critical":
         return <XCircle className="h-4 w-4 text-red-700" />;
     }
   };
 
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString() + '.' + date.getMilliseconds();
+    return date.toLocaleTimeString() + "." + date.getMilliseconds();
   };
 
   const activeOps = getActiveOperations();
+  const inFlightCount = Object.keys(systemState.inFlightRequests).length;
 
   return (
     <div className="container max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">System Diagnostics</h1>
-          <p className="text-muted-foreground">Advanced debugging and monitoring</p>
+          <p className="text-muted-foreground">Advanced debugging and monitoring (optimized polling)</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={handleRefresh} variant="outline" size="sm">
@@ -235,7 +285,7 @@ export default function Diagnostics() {
               <div className="flex items-center justify-between">
                 <span className="text-sm">Role</span>
                 <Badge variant="default">
-                  {userRole || 'Loading...'}
+                  {userRole || "Loading..."}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
@@ -258,13 +308,13 @@ export default function Diagnostics() {
               <div className="flex items-center justify-between">
                 <span className="text-sm">Online</span>
                 <Badge variant={isOnline ? "default" : "destructive"}>
-                  {isOnline ? 'Connected' : 'Offline'}
+                  {isOnline ? "Connected" : "Offline"}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm">Syncing</span>
                 <Badge variant={isSyncing ? "default" : "outline"}>
-                  {isSyncing ? 'Active' : 'Idle'}
+                  {isSyncing ? "Active" : "Idle"}
                 </Badge>
               </div>
             </div>
@@ -294,7 +344,7 @@ export default function Diagnostics() {
               </div>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Last Sync</span>
-                <span>{lastSyncTime ? new Date(lastSyncTime).toLocaleTimeString() : 'Never'}</span>
+                <span>{lastSyncTime ? new Date(lastSyncTime).toLocaleTimeString() : "Never"}</span>
               </div>
             </div>
           </CardContent>
@@ -328,10 +378,10 @@ export default function Diagnostics() {
       <Card>
         <CardHeader>
           <CardTitle>Request Deduplication Monitor</CardTitle>
-          <CardDescription>Live view of in-flight database requests</CardDescription>
+          <CardDescription>Live view of in-flight database requests (polling every 5s)</CardDescription>
         </CardHeader>
         <CardContent>
-          {Object.keys(inFlightRequests).length === 0 ? (
+          {inFlightCount === 0 ? (
             <Alert>
               <CheckCircle className="h-4 w-4" />
               <AlertDescription>
@@ -343,16 +393,16 @@ export default function Diagnostics() {
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  ⚠️ {Object.keys(inFlightRequests).length} requests are currently in-flight. 
+                  ⚠️ {inFlightCount} requests are currently in-flight. 
                   If this persists for more than 10 seconds, there may be a deadlock.
                 </AlertDescription>
               </Alert>
               <ScrollArea className="h-[200px] border rounded-lg p-4">
-                {Object.entries(inFlightRequests).map(([key, value]) => (
+                {Object.entries(systemState.inFlightRequests).map(([key, value]) => (
                   <div key={key} className="mb-3 p-2 border-l-2 border-yellow-500 bg-muted/50">
                     <div className="font-mono text-xs font-semibold">{key}</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Age: {typeof value === 'object' && value && 'startTime' in value ? `${Date.now() - (value as {startTime: number}).startTime}ms` : 'unknown'}
+                      Age: {typeof value === "object" && value && "startTime" in value ? `${Date.now() - (value as {startTime: number}).startTime}ms` : "unknown"}
                     </div>
                   </div>
                 ))}
@@ -374,36 +424,36 @@ export default function Diagnostics() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">Current Role: <Badge>{userRole || 'Unknown'}</Badge></p>
+              <p className="text-sm font-medium">Current Role: <Badge>{userRole || "Unknown"}</Badge></p>
               <p className="text-xs text-muted-foreground mt-1">
                 AI features require Pro or Max tier access
               </p>
             </div>
             <Button onClick={handleTestAIAccess} disabled={aiTesting} size="sm">
-              {aiTesting ? 'Testing...' : 'Test AI Access'}
+              {aiTesting ? "Testing..." : "Test AI Access"}
             </Button>
           </div>
           
           {aiTestResult && (
             <Alert variant={
-              typeof aiTestResult === 'object' && aiTestResult && 'success' in aiTestResult && (aiTestResult as {success: boolean}).success
+              typeof aiTestResult === "object" && aiTestResult && "success" in aiTestResult && (aiTestResult as {success: boolean}).success
                 ? "default"
                 : "destructive"
             }>
               <AlertDescription>
                 <div className="space-y-2">
                   <div className="font-semibold">
-                    {typeof aiTestResult === 'object' && aiTestResult && 'success' in aiTestResult && (aiTestResult as {success: boolean}).success
-                      ? '✓ AI Access Granted'
-                      : '✗ AI Access Denied'}
+                    {typeof aiTestResult === "object" && aiTestResult && "success" in aiTestResult && (aiTestResult as {success: boolean}).success
+                      ? "✓ AI Access Granted"
+                      : "✗ AI Access Denied"}
                   </div>
-                  {typeof aiTestResult === 'object' && aiTestResult && 'error' in aiTestResult && (
+                  {typeof aiTestResult === "object" && aiTestResult && "error" in aiTestResult && (
                     <div className="text-sm">Error: {String((aiTestResult as {error: unknown}).error)}</div>
                   )}
-                  {typeof aiTestResult === 'object' && aiTestResult && 'requiresUpgrade' in aiTestResult && (
+                  {typeof aiTestResult === "object" && aiTestResult && "requiresUpgrade" in aiTestResult && (
                     <div className="text-sm">Upgrade to Pro or Max tier required</div>
                   )}
-                  {typeof aiTestResult === 'object' && aiTestResult && 'success' in aiTestResult && (aiTestResult as {success: boolean}).success && 'content' in aiTestResult && (
+                  {typeof aiTestResult === "object" && aiTestResult && "success" in aiTestResult && (aiTestResult as {success: boolean}).success && "content" in aiTestResult && (
                     <div className="text-xs text-muted-foreground mt-2">
                       Content length: {String((aiTestResult as {content?: string}).content)?.length || 0} chars
                     </div>
@@ -419,25 +469,25 @@ export default function Diagnostics() {
       <Card>
         <CardHeader>
           <CardTitle>LocalStorage & Settings State</CardTitle>
-          <CardDescription>Current state of cached data and preferences</CardDescription>
+          <CardDescription>Current state of cached data and preferences (using cached reads)</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <div className="text-sm font-medium mb-1">Template (localStorage)</div>
-                <Badge>{getTemplatePreference()}</Badge>
+                <Badge>{systemState.templatePref || "Not set"}</Badge>
               </div>
               <div>
                 <div className="text-sm font-medium mb-1">Template (Database)</div>
-                <Badge variant={dbTemplate ? "default" : "outline"}>
-                  {dbTemplate || 'Not loaded'}
+                <Badge variant={systemState.dbTemplate ? "default" : "outline"}>
+                  {systemState.dbTemplate || "Not loaded"}
                 </Badge>
               </div>
               <div>
                 <div className="text-sm font-medium mb-1">Match Status</div>
-                <Badge variant={dbTemplate === getTemplatePreference() ? "default" : "destructive"}>
-                  {dbTemplate === getTemplatePreference() ? 'Synced' : 'Mismatch'}
+                <Badge variant={systemState.dbTemplate === systemState.templatePref ? "default" : "destructive"}>
+                  {systemState.dbTemplate === systemState.templatePref ? "Synced" : "Mismatch"}
                 </Badge>
               </div>
             </div>
@@ -446,20 +496,20 @@ export default function Diagnostics() {
             <div className="grid grid-cols-3 gap-2 text-xs">
               <div className="p-2 border rounded">
                 <div className="font-medium">Customers</div>
-                <Badge variant={localStorage.getItem('quote-it-customers-cache') ? "default" : "outline"} className="mt-1">
-                  {localStorage.getItem('quote-it-customers-cache') ? 'Cached' : 'Empty'}
+                <Badge variant={systemState.cacheStatus.customers ? "default" : "outline"} className="mt-1">
+                  {systemState.cacheStatus.customers ? "Cached" : "Empty"}
                 </Badge>
               </div>
               <div className="p-2 border rounded">
                 <div className="font-medium">Items</div>
-                <Badge variant={localStorage.getItem('quote-it-items-cache') ? "default" : "outline"} className="mt-1">
-                  {localStorage.getItem('quote-it-items-cache') ? 'Cached' : 'Empty'}
+                <Badge variant={systemState.cacheStatus.items ? "default" : "outline"} className="mt-1">
+                  {systemState.cacheStatus.items ? "Cached" : "Empty"}
                 </Badge>
               </div>
               <div className="p-2 border rounded">
                 <div className="font-medium">Quotes</div>
-                <Badge variant={localStorage.getItem('quote-it-quotes-cache') ? "default" : "outline"} className="mt-1">
-                  {localStorage.getItem('quote-it-quotes-cache') ? 'Cached' : 'Empty'}
+                <Badge variant={systemState.cacheStatus.quotes ? "default" : "outline"} className="mt-1">
+                  {systemState.cacheStatus.quotes ? "Cached" : "Empty"}
                 </Badge>
               </div>
             </div>
@@ -492,10 +542,10 @@ export default function Diagnostics() {
                   <div 
                     key={event.id} 
                     className={`p-3 border-l-4 rounded ${
-                      event.type === 'critical' ? 'border-red-700 bg-red-50 dark:bg-red-950' :
-                      event.type === 'error' ? 'border-red-500 bg-red-50 dark:bg-red-950' :
-                      event.type === 'warning' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950' :
-                      'border-blue-500 bg-blue-50 dark:bg-blue-950'
+                      event.type === "critical" ? "border-red-700 bg-red-50 dark:bg-red-950" :
+                      event.type === "error" ? "border-red-500 bg-red-50 dark:bg-red-950" :
+                      event.type === "warning" ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950" :
+                      "border-blue-500 bg-blue-50 dark:bg-blue-950"
                     }`}
                   >
                     <div className="flex items-start gap-2">
