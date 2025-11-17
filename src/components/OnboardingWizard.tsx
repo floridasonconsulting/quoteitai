@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { CheckCircle2, Building, Upload, FileText, Palette } from "lucide-react";
-import { getSettings, saveSettings } from "@/lib/storage";
+import { getSettings, saveSettings } from "@/lib/db-service";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface CompanyData {
@@ -326,10 +326,11 @@ export function OnboardingWizard() {
     }
 
     try {
-      // Save company settings
-      const existingSettings = getSettings();
+      // Get existing settings from database
+      const existingSettings = await getSettings(user.id);
       
-      saveSettings({
+      // Merge with new onboarding data
+      const updatedSettings = {
         ...existingSettings,
         name: companyData.name,
         email: companyData.email,
@@ -337,6 +338,15 @@ export function OnboardingWizard() {
         address: companyData.address,
         primary_color: brandingData.primaryColor,
         accent_color: brandingData.accentColor,
+      };
+
+      // Save to database (this will also update localStorage cache)
+      await saveSettings(user.id, updatedSettings);
+
+      console.log("[OnboardingWizard] Settings saved successfully:", {
+        name: updatedSettings.name,
+        email: updatedSettings.email,
+        userId: user.id
       });
 
       // Handle import option
@@ -346,13 +356,15 @@ export function OnboardingWizard() {
         toast.success("Sample data loaded successfully!");
       }
 
-      // Mark onboarding as complete
+      // Mark onboarding as complete for this specific user
       localStorage.setItem(`onboarding_completed_${user.id}`, "true");
+      
+      console.log("[OnboardingWizard] Onboarding marked as complete for user:", user.id);
       
       setIsOpen(false);
       toast.success("Setup complete! You're ready to start quoting.");
     } catch (error) {
-      console.error("Error completing onboarding:", error);
+      console.error("[OnboardingWizard] Error completing onboarding:", error);
       toast.error("There was an error saving your settings. Please try again.");
     }
   };
