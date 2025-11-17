@@ -1,7 +1,8 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limiter';
+import { rateLimiter } from '@/lib/rate-limiter';
 import { sanitizeForAI } from '@/lib/input-sanitization';
 
 export type AIFeatureType =
@@ -34,23 +35,31 @@ export interface AIUpgradeInfo {
   featureName: AIFeatureType;
 }
 
+// Map feature types to rate limit keys
+const FEATURE_RATE_LIMIT_MAP: Record<AIFeatureType, string> = {
+  quote_title: 'ai-assist',
+  notes_generator: 'ai-assist',
+  item_description: 'ai-assist',
+  quote_summary: 'ai-assist',
+  followup_message: 'ai-follow-up',
+  discount_justification: 'ai-assist',
+  email_draft: 'ai-follow-up',
+  scope_of_work: 'ai-assist',
+  full_quote_generation: 'ai-quote-generation',
+  item_recommendations: 'ai-item-recommendations',
+  pricing_optimization: 'ai-pricing-optimization',
+  follow_up_suggestions: 'ai-follow-up',
+  customer_insights: 'ai-assist',
+  competitive_analysis: 'ai-assist',
+  rfp_response_matching: 'ai-assist',
+  content_generation: 'ai-assist',
+};
+
 export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
   const generate = async (prompt: string, context?: Record<string, unknown>): Promise<string | AIUpgradeInfo | null> => {
-    // Rate limiting check
-    const userId = (await supabase.auth.getUser()).data.user?.id || 'anonymous';
-    const rateLimitResult = checkRateLimit(userId, 'AI_GENERATION');
-    
-    if (!rateLimitResult.allowed) {
-      toast.error('Rate Limit Reached', {
-        description: `Please wait ${rateLimitResult.resetIn} seconds before trying again.`,
-      });
-      options?.onError?.('Rate limit exceeded');
-      return null;
-    }
-
     // Sanitize prompt to prevent injection attacks
     const sanitizedPrompt = sanitizeForAI(prompt);
     
@@ -65,23 +74,27 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
     setResult(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('ai-assist', {
-        body: { 
-          featureType, 
-          prompt: sanitizedPrompt, 
-          context 
-        },
-      });
+      // Get the appropriate rate limit key for this feature
+      const rateLimitKey = FEATURE_RATE_LIMIT_MAP[featureType] || 'ai-assist';
 
-      // Handle network/invoke errors
-      if (error) {
-        console.error('AI invoke error:', error);
-        toast.error('Connection Error', {
-          description: 'Failed to connect to AI service. Please try again.',
+      // Wrap the API call with rate limiting
+      const data = await rateLimiter.trackRequest(rateLimitKey, async () => {
+        const { data, error } = await supabase.functions.invoke('ai-assist', {
+          body: { 
+            featureType, 
+            prompt: sanitizedPrompt, 
+            context 
+          },
         });
-        options?.onError?.(error.message);
-        return null;
-      }
+
+        // Handle network/invoke errors
+        if (error) {
+          console.error('AI invoke error:', error);
+          throw new Error('Failed to connect to AI service. Please try again.');
+        }
+
+        return data;
+      });
 
       // Check for upgrade requirement (now returned with 200 status)
       if (data?.requiresUpgrade) {
@@ -120,9 +133,19 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'AI generation failed';
       console.error('AI generation error:', error);
-      toast.error('AI Generation Error', {
-        description: message,
-      });
+      
+      // Special handling for rate limit errors
+      if (message.includes('Rate limit exceeded')) {
+        toast.error('Too Many Requests', {
+          description: message,
+          duration: 5000,
+        });
+      } else {
+        toast.error('AI Generation Error', {
+          description: message,
+        });
+      }
+      
       options?.onError?.(message);
       return null;
     } finally {

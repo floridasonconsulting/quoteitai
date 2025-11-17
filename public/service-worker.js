@@ -3,6 +3,65 @@ const STATIC_CACHE = CACHE_VERSION + '-static';
 const DYNAMIC_CACHE = CACHE_VERSION + '-dynamic';
 const CACHE_EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 hours
 
+// Trusted domains for cache validation (prevent cache poisoning)
+const TRUSTED_DOMAINS = [
+  self.location.origin,
+  'https://*.supabase.co',
+  'https://fonts.googleapis.com',
+  'https://fonts.gstatic.com',
+  'https://cdn.jsdelivr.net',
+  'https://unpkg.com'
+];
+
+// Validate response before caching (prevent cache poisoning)
+function isValidCacheResponse(response, request) {
+  // Only cache successful responses
+  if (!response || response.status < 200 || response.status >= 300) {
+    return false;
+  }
+  
+  // Validate response has required headers
+  if (!response.headers.get('content-type')) {
+    return false;
+  }
+  
+  // Check if domain is trusted
+  const url = new URL(request.url);
+  const isTrusted = TRUSTED_DOMAINS.some(domain => {
+    if (domain.includes('*')) {
+      const pattern = domain.replace('*', '.*');
+      return new RegExp(pattern).test(url.origin);
+    }
+    return url.origin === domain || url.origin.includes(domain);
+  });
+  
+  if (!isTrusted) {
+    console.warn('[SW] Blocked caching from untrusted domain:', url.origin);
+    return false;
+  }
+  
+  // Validate content-type matches expected resource type
+  const contentType = response.headers.get('content-type') || '';
+  const destination = request.destination;
+  
+  if (destination === 'script' && !contentType.includes('javascript')) {
+    console.warn('[SW] Content-Type mismatch for script:', contentType);
+    return false;
+  }
+  
+  if (destination === 'style' && !contentType.includes('css')) {
+    console.warn('[SW] Content-Type mismatch for style:', contentType);
+    return false;
+  }
+  
+  if (destination === 'image' && !contentType.includes('image')) {
+    console.warn('[SW] Content-Type mismatch for image:', contentType);
+    return false;
+  }
+  
+  return true;
+}
+
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -44,7 +103,8 @@ async function staleWhileRevalidate(request, cache) {
   // Start network fetch (don't await)
   const fetchPromise = fetch(request)
     .then(response => {
-      if (response && response.ok) {
+      // Validate response before caching
+      if (response && isValidCacheResponse(response, request)) {
         const clone = response.clone();
         cache.put(request, clone);
       }
@@ -114,7 +174,8 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.status === 200) {
+          // Validate before caching
+          if (isValidCacheResponse(response, request)) {
             const responseClone = response.clone();
             caches.open(STATIC_CACHE).then((cache) => {
               cache.put(request, responseClone);
@@ -136,7 +197,8 @@ self.addEventListener('fetch', (event) => {
         }
         
         return fetch(request).then((response) => {
-          if (response.status === 200) {
+          // Validate before caching
+          if (isValidCacheResponse(response, request)) {
             const responseClone = response.clone();
             caches.open(STATIC_CACHE).then((cache) => {
               cache.put(request, responseClone);
