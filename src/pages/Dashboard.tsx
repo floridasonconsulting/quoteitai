@@ -344,7 +344,9 @@ export default function Dashboard() {
   // keep showing skeleton to prevent blank page
   const hasAnyData = quotes.length > 0 || customers.length > 0 || stats.totalQuotes > 0;
   
-  if (!hasAnyData && !hasLoadedData.current) {
+  // CRITICAL FIX: Only show skeleton if data load hasn't been attempted yet
+  // If hasLoadedData.current is true, we've already tried loading, so show main content even if empty
+  if (!hasAnyData && !hasLoadedData.current && !loading) {
     console.log('[Dashboard] No data yet and load not attempted - showing skeleton');
     return (
       <div className="space-y-6">
@@ -376,12 +378,13 @@ export default function Dashboard() {
     );
   }
 
-  // CRITICAL: If we reach here, we must have data to show or be a new user with no data
+  // CRITICAL: If we reach here, either we have data OR we've attempted loading and can show empty state
   console.log('[Dashboard] Rendering MAIN CONTENT:', { 
     quotesCount: quotes.length, 
     statsTotal: stats.totalQuotes,
     customersCount: customers.length,
-    hasAnyData
+    hasAnyData,
+    hasLoadedData: hasLoadedData.current
   });
 
   return (
