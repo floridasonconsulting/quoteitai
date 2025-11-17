@@ -593,6 +593,11 @@ export function OnboardingWizard() {
     }
   };
 
+  if (isChecking) {
+    // Don't render anything while checking - prevents flash of wizard
+    return null;
+  }
+
   if (!isOpen) {
     return null;
   }
