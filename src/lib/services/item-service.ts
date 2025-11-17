@@ -71,7 +71,27 @@ export async function addItem(
   item: Item,
   queueChange?: (change: QueueChange) => void
 ): Promise<Item> {
-  const itemWithUser = { ...item, user_id: userId } as Item;
+  // CRITICAL FIX: Ensure final_price is always calculated and never null
+  const basePrice = item.basePrice || 0;
+  const markup = item.markup || 0;
+  const markupType = item.markupType || 'percentage';
+  
+  let finalPrice = item.finalPrice;
+  if (!finalPrice || finalPrice === 0) {
+    if (markupType === 'percentage') {
+      finalPrice = basePrice + (basePrice * markup / 100);
+    } else if (markupType === 'fixed') {
+      finalPrice = basePrice + markup;
+    } else {
+      finalPrice = basePrice;
+    }
+  }
+
+  const itemWithUser = { 
+    ...item, 
+    user_id: userId,
+    finalPrice // Ensure calculated finalPrice is used
+  } as Item;
 
   if (!navigator.onLine || !userId) {
     if (!userId) {

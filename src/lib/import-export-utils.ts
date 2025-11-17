@@ -156,6 +156,21 @@ export async function importItemsFromCSV(
         }
       });
 
+      // CRITICAL FIX: Calculate finalPrice if not provided or if it's 0
+      const basePrice = item.basePrice || 0;
+      const markup = item.markup || 0;
+      const markupType = item.markupType || 'percentage';
+      
+      if (!item.finalPrice || item.finalPrice === 0) {
+        if (markupType === 'percentage') {
+          item.finalPrice = basePrice + (basePrice * markup / 100);
+        } else if (markupType === 'fixed') {
+          item.finalPrice = basePrice + markup;
+        } else {
+          item.finalPrice = basePrice;
+        }
+      }
+
       // Validate markup_type
       if (item.markupType && !['percentage', 'fixed'].includes(item.markupType)) {
         result.failed++;
