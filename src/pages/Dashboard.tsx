@@ -379,7 +379,7 @@ export default function Dashboard() {
       {/* Tiered Content - Business/Max users see Advanced Analytics, Free/Pro users see Recent Quotes */}
       {hasAdvancedTier ? (
         /* Business/Max/Admin: Show Advanced Analytics */
-        <AdvancedAnalytics quotes={quotes} customers={customers} />
+        <AdvancedAnalytics />
       ) : (
         /* Free/Pro: Show Recent Quotes */
         <Card>
