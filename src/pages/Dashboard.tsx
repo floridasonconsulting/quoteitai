@@ -68,6 +68,12 @@ export default function Dashboard() {
   }, [user]); // Remove loadData from dependencies to prevent re-runs
 
   const loadData = async () => {
+    // GUARD: Don't run if we've already successfully loaded data
+    if (hasLoadedData.current && !loading && quotes.length > 0) {
+      console.log('[Dashboard] Data already loaded, skipping');
+      return;
+    }
+
     // Don't abort existing load - just skip if one is already running
     if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
       console.log('[Dashboard] Load already in progress, skipping');
