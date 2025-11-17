@@ -348,13 +348,17 @@ export function OnboardingWizard() {
       // Save to database (this will also update localStorage cache)
       await saveSettings(user.id, updatedSettings);
 
-      // Verify the settings were saved by reading them back
+      // Wait a moment for database write to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Verify the settings were saved by reading them back from the database
       const verifySettings = await getSettings(user.id);
       console.log("[OnboardingWizard] Verification - settings after save:", verifySettings);
 
       // Check if settings were actually saved
       if (!verifySettings.name || verifySettings.name !== companyData.name) {
-        throw new Error("Settings verification failed - data was not saved correctly");
+        console.error("[OnboardingWizard] Settings verification failed - data mismatch");
+        throw new Error("Settings were not saved correctly. Please try again.");
       }
 
       console.log("[OnboardingWizard] Settings verified successfully");
@@ -368,13 +372,23 @@ export function OnboardingWizard() {
       }
 
       // Mark onboarding as complete for this specific user
-      localStorage.setItem(`onboarding_completed_${user.id}`, "true");
+      const completionKey = `onboarding_completed_${user.id}`;
+      localStorage.setItem(completionKey, "true");
       
       console.log("[OnboardingWizard] Onboarding marked as complete for user:", user.id);
-      console.log("[OnboardingWizard] Completion flag set:", localStorage.getItem(`onboarding_completed_${user.id}`));
+      console.log("[OnboardingWizard] Completion flag verified:", localStorage.getItem(completionKey));
       
-      setIsOpen(false);
+      // Show success message
       toast.success("Setup complete! Your company information has been saved.");
+      
+      // Wait a moment before closing to ensure everything is saved
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Close the wizard
+      setIsOpen(false);
+      
+      // Optionally refresh the page to ensure all components have the latest data
+      // Uncomment if needed: window.location.reload();
     } catch (error) {
       console.error("[OnboardingWizard] Error completing onboarding:", error);
       
