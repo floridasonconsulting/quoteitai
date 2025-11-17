@@ -48,14 +48,16 @@ export default function Dashboard() {
     hasLoadedData: hasLoadedData.current 
   });
 
-  // SIMPLIFIED: Load data as soon as we have a user
+  // SIMPLIFIED: Load data as soon as we have a user - only run ONCE
   useEffect(() => {
-    if (user && !hasLoadedData.current) {
+    // Only load if we have a user AND haven't loaded yet
+    if (user && !hasLoadedData.current && !loading) {
+      console.log('[Dashboard] Initiating first data load');
       hasLoadedData.current = true;
       loadData();
     }
 
-    // Only abort on unmount, not on re-renders
+    // Only abort on unmount
     return () => {
       if (abortControllerRef.current) {
         console.log('[Dashboard] Component unmounting, aborting load');
@@ -135,10 +137,8 @@ export default function Dashboard() {
         loadTime: Date.now() - startTime
       });
 
-      // Set all state together
-      setQuotes(quotesData);
-      setCustomers(customersData);
-      setStats({
+      // ATOMIC STATE UPDATE: Set everything at once to prevent race conditions
+      const newStats = {
         totalQuotes: quotesData.length,
         totalCustomers: customersData.length,
         totalItems: itemsData.length,
@@ -147,12 +147,17 @@ export default function Dashboard() {
         avgQuoteValue,
         totalRevenue,
         declinedValue,
-      });
+      };
+
+      // Update all state in one synchronous block
+      setQuotes(quotesData);
+      setCustomers(customersData);
+      setStats(newStats);
       setRetryCount(0);
       setError(null);
-      setLoading(false);
+      setLoading(false); // Must be last to ensure other state is set first
       
-      console.log('[Dashboard] Data loaded successfully, rendering content');
+      console.log('[Dashboard] State updated successfully');
       clearTimeout(timeoutId);
       stopLoading(operationId);
     } catch (error) {
