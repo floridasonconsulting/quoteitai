@@ -328,12 +328,12 @@ export function OnboardingWizard() {
     try {
       console.log("[OnboardingWizard] Starting onboarding completion for user:", user.id);
       
-      // Get existing settings from database
+      // Step 1: Get existing settings from database
       console.log("[OnboardingWizard] Fetching existing settings...");
       const existingSettings = await getSettings(user.id);
-      console.log("[OnboardingWizard] Retrieved existing settings:", existingSettings);
+      console.log("[OnboardingWizard] Retrieved existing settings");
       
-      // Merge with new onboarding data
+      // Step 2: Merge with new onboarding data
       const updatedSettings = {
         ...existingSettings,
         name: companyData.name,
@@ -344,32 +344,67 @@ export function OnboardingWizard() {
         accent_color: brandingData.accentColor,
       };
 
-      console.log("[OnboardingWizard] Saving updated settings:", updatedSettings);
+      console.log("[OnboardingWizard] Saving updated settings to database...");
 
-      // Save to database (this will also update localStorage cache)
-      await saveSettings(user.id, updatedSettings);
-      console.log("[OnboardingWizard] saveSettings() completed without errors");
+      // Step 3: Save to database with retry logic
+      let saveSuccessful = false;
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (!saveSuccessful && attempts < maxAttempts) {
+        attempts++;
+        try {
+          console.log(`[OnboardingWizard] Save attempt ${attempts} of ${maxAttempts}...`);
+          
+          // Save to database
+          await saveSettings(user.id, updatedSettings);
+          console.log("[OnboardingWizard] saveSettings() completed");
 
-      // Wait longer for database write to complete (increased from 500ms to 1000ms)
-      console.log("[OnboardingWizard] Waiting 1 second for database write to complete...");
-      await new Promise(resolve => setTimeout(resolve, 1000));
+          // Wait for database write to propagate (2 seconds for safety)
+          console.log("[OnboardingWizard] Waiting for database write to complete...");
+          await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Verify the settings were saved by reading them back from the database
-      console.log("[OnboardingWizard] Verifying settings were saved...");
-      const verifySettings = await getSettings(user.id);
-      console.log("[OnboardingWizard] Verification - settings after save:", verifySettings);
+          // Step 4: Verify the settings were saved by reading them back
+          console.log("[OnboardingWizard] Verifying settings were saved...");
+          const verifySettings = await getSettings(user.id);
+          console.log("[OnboardingWizard] Verification - settings after save:", {
+            expected: updatedSettings.name,
+            actual: verifySettings.name
+          });
 
-      // Check if settings were actually saved
-      if (!verifySettings.name || verifySettings.name !== companyData.name) {
-        console.error("[OnboardingWizard] Settings verification failed - data mismatch");
-        console.error("[OnboardingWizard] Expected name:", companyData.name);
-        console.error("[OnboardingWizard] Got name:", verifySettings.name);
-        throw new Error("Settings were not saved correctly. The database may not be responding. Please try again.");
+          // Check if settings match what we saved
+          if (verifySettings.name === companyData.name && 
+              verifySettings.email === companyData.email) {
+            console.log("[OnboardingWizard] Settings verified successfully ✓");
+            saveSuccessful = true;
+            
+            // Create a backup in localStorage as well (redundancy)
+            const backupKey = `onboarding_backup_${user.id}`;
+            localStorage.setItem(backupKey, JSON.stringify(updatedSettings));
+            console.log("[OnboardingWizard] Backup saved to localStorage");
+          } else {
+            console.warn("[OnboardingWizard] Settings verification failed - data mismatch");
+            if (attempts < maxAttempts) {
+              console.log(`[OnboardingWizard] Retrying... (attempt ${attempts + 1} of ${maxAttempts})`);
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait before retry
+            }
+          }
+        } catch (saveError) {
+          console.error(`[OnboardingWizard] Save attempt ${attempts} failed:`, saveError);
+          if (attempts < maxAttempts) {
+            console.log(`[OnboardingWizard] Retrying... (attempt ${attempts + 1} of ${maxAttempts})`);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait before retry
+          } else {
+            throw saveError; // Re-throw if all attempts failed
+          }
+        }
       }
 
-      console.log("[OnboardingWizard] Settings verified successfully ✓");
+      if (!saveSuccessful) {
+        throw new Error("Failed to save settings after multiple attempts. Please check your internet connection and try again.");
+      }
 
-      // Handle import option
+      // Step 5: Handle import option
       if (importOption === "sample") {
         console.log("[OnboardingWizard] Loading sample data...");
         const { generateSampleData } = await import("@/lib/sample-data");
@@ -377,19 +412,18 @@ export function OnboardingWizard() {
         toast.success("Sample data loaded successfully!");
       }
 
-      // Mark onboarding as complete for this specific user
+      // Step 6: Mark onboarding as complete for this specific user
       const completionKey = `onboarding_completed_${user.id}`;
       localStorage.setItem(completionKey, "true");
       
-      console.log("[OnboardingWizard] Onboarding marked as complete for user:", user.id);
-      console.log("[OnboardingWizard] Completion flag set:", completionKey);
-      console.log("[OnboardingWizard] Completion flag verified:", localStorage.getItem(completionKey));
+      console.log("[OnboardingWizard] Onboarding marked as complete");
+      console.log("[OnboardingWizard] Completion flag:", localStorage.getItem(completionKey));
       
       // Show success message
       toast.success("Setup complete! Your company information has been saved.");
       
-      // Wait a moment before closing to ensure everything is saved
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Wait before closing to ensure all saves are complete
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Close the wizard
       console.log("[OnboardingWizard] Closing wizard...");
@@ -399,14 +433,24 @@ export function OnboardingWizard() {
     } catch (error) {
       console.error("[OnboardingWizard] ERROR during onboarding completion:", error);
       
-      // Provide specific error message
+      // Provide specific error message based on error type
       if (error instanceof Error) {
         console.error("[OnboardingWizard] Error message:", error.message);
         console.error("[OnboardingWizard] Error stack:", error.stack);
-        toast.error(`Failed to save settings: ${error.message}`);
+        
+        // Check for specific error types
+        if (error.message.includes("Failed to fetch") || error.message.includes("network")) {
+          toast.error("Network error. Please check your internet connection and try again.");
+        } else if (error.message.includes("timeout")) {
+          toast.error("The request timed out. Please try again.");
+        } else if (error.message.includes("Failed to save")) {
+          toast.error(error.message); // Use the specific error message
+        } else {
+          toast.error(`Failed to save settings: ${error.message}`);
+        }
       } else {
         console.error("[OnboardingWizard] Unknown error type:", error);
-        toast.error("There was an error saving your settings. Please try again.");
+        toast.error("An unexpected error occurred. Please try again or contact support.");
       }
       
       // Don't close the wizard if there was an error
