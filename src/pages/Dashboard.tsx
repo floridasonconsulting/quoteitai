@@ -105,8 +105,8 @@ export default function Dashboard() {
       console.log('[Dashboard] All data loaded in parallel:', Date.now() - startTime, 'ms');
       console.log('[Dashboard] Quotes:', quotesData.length, 'Customers:', customersData.length, 'Items:', itemsData.length);
 
-      // REMOVED: Don't check for abort here - we want to update state even if aborted
-      // The abort is only for cleanup on unmount
+      // REMOVED: Don't check for abort here - state updates should always happen unless unmounting
+      // The abort is only meant for cleanup on unmount, not to block state updates
 
       const pendingValue = quotesData
         .filter(q => q.status === 'sent')
