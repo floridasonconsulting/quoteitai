@@ -1,4 +1,4 @@
-import { Home, FileText, Users, Settings } from "lucide-react";
+import { Home, FileText, Users, Package, Settings } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +10,7 @@ export function MobileBottomNav() {
     { icon: Home, label: 'Dashboard', path: '/' },
     { icon: FileText, label: 'Quotes', path: '/quotes' },
     { icon: Users, label: 'Customers', path: '/customers' },
+    { icon: Package, label: 'Items', path: '/items' },
     { icon: Settings, label: 'Settings', path: '/settings' }
   ];
 
