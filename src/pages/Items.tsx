@@ -1,27 +1,23 @@
+
 import { useEffect, useState, useRef } from 'react';
-import { Plus, Search, Edit, Trash2, Download, Upload, RefreshCw, AlertCircle, FileText } from 'lucide-react';
+import { Plus, Search, Download, Upload, RefreshCw, AlertCircle, FileText, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getItems, addItem, updateItem, deleteItem } from '@/lib/db-service';
 import { Item } from '@/types';
 import { toast } from 'sonner';
-import { parseCSVLine, formatCSVLine } from '@/lib/csv-utils';
+import { formatCSVLine } from '@/lib/csv-utils';
 import { importItemsFromCSV } from '@/lib/import-export-utils';
 import { generateItemTemplate, downloadTemplate } from '@/lib/csv-template-utils';
 import { ImportOptionsDialog, DuplicateStrategy } from '@/components/ImportOptionsDialog';
-import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { useLoadingState } from '@/hooks/useLoadingState';
-import { supabase } from '@/integrations/supabase/client';
+import { ItemsTable } from '@/components/items/ItemsTable';
+import { ItemForm, type FormData } from '@/components/items/ItemForm';
 
 const CATEGORIES = [
   'General',
@@ -47,16 +43,7 @@ export default function Items() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    category: 'General',
-    basePrice: '',
-    markup: '',
-    markupType: 'percentage' as 'percentage' | 'fixed',
-    units: 'Each',
-  });
-  const { startLoading, stopLoading, isLoading } = useLoadingState();
+  const { startLoading, stopLoading } = useLoadingState();
   const loadingRef = useRef(false);
 
   const loadItems = async (forceRefresh = false) => {
@@ -110,7 +97,7 @@ export default function Items() {
     loadItems();
   }, [user]);
 
-  // Refresh data when navigating back to the page (with delay to prevent excessive reloads)
+  // Refresh data when navigating back to the page
   useEffect(() => {
     let lastFocusTime = Date.now();
     
@@ -148,7 +135,6 @@ export default function Items() {
     if (selectedItems.length === 0) return;
     if (confirm(`Delete ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}?`)) {
       try {
-        // Optimistic update
         const deletedIds = [...selectedItems];
         setItems(prev => prev.filter(i => !deletedIds.includes(i.id)));
         setSelectedItems([]);
@@ -161,7 +147,6 @@ export default function Items() {
       } catch (error) {
         console.error('Error deleting items:', error);
         toast.error('Failed to delete items. Please try again.');
-        // Reload on error to ensure consistency
         await loadItems();
       }
     }
@@ -171,7 +156,6 @@ export default function Items() {
     if (selectedItems.length === 0 || !markup) return;
     
     try {
-      // Optimistic update
       const updatedItems = items.map(item => {
         if (!selectedItems.includes(item.id)) return item;
         
@@ -202,25 +186,13 @@ export default function Items() {
       
       toast.success(`Applied ${markup}${markupType === 'percentage' ? '%' : '$'} markup to ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}`);
       
-      // Clear the markup input
       const input = document.getElementById('bulk-markup') as HTMLInputElement;
       if (input) input.value = '';
     } catch (error) {
       console.error('Error applying bulk markup:', error);
       toast.error('Failed to apply markup. Please try again.');
-      // Reload on error to ensure consistency
       await loadItems();
     }
-  };
-
-  const calculateFinalPrice = () => {
-    const base = parseFloat(formData.basePrice) || 0;
-    const markup = parseFloat(formData.markup) || 0;
-    
-    if (formData.markupType === 'percentage') {
-      return base + (base * markup / 100);
-    }
-    return base + markup;
   };
 
   const filteredItems = items.filter(item => {
@@ -231,17 +203,13 @@ export default function Items() {
     return matchesSearch && matchesCategory;
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name || !formData.basePrice) {
-      toast.error('Name and base price are required');
-      return;
-    }
-
+  const handleFormSubmit = async (formData: FormData) => {
     try {
       const basePrice = parseFloat(formData.basePrice);
       const markup = parseFloat(formData.markup) || 0;
+      const finalPrice = formData.markupType === 'percentage'
+        ? basePrice + (basePrice * markup / 100)
+        : basePrice + markup;
 
       if (editingItem) {
         const updated = await updateItem(user?.id, editingItem.id, {
@@ -249,9 +217,8 @@ export default function Items() {
           category: formData.category.trim(),
           basePrice,
           markup,
-          finalPrice: calculateFinalPrice(),
+          finalPrice,
         }, queueChange);
-        // Optimistic update
         setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
         toast.success('Item updated successfully');
       } else {
@@ -261,35 +228,25 @@ export default function Items() {
           category: formData.category.trim(),
           basePrice,
           markup,
-          finalPrice: calculateFinalPrice(),
+          finalPrice,
           createdAt: new Date().toISOString(),
         };
         const added = await addItem(user?.id, newItem, queueChange);
-        // Optimistic update
         setItems(prev => [...prev, added]);
         toast.success('Item added successfully');
       }
 
-      handleCloseDialog();
+      setIsDialogOpen(false);
+      setEditingItem(null);
     } catch (error) {
       console.error('Error saving item:', error);
       toast.error('Failed to save item. Please try again.');
-      // Reload on error to ensure consistency
       await loadItems();
     }
   };
 
   const handleEdit = (item: Item) => {
     setEditingItem(item);
-    setFormData({
-      name: item.name,
-      description: item.description,
-      category: item.category,
-      basePrice: item.basePrice.toString(),
-      markup: item.markup.toString(),
-      markupType: item.markupType,
-      units: item.units || 'Each',
-    });
     setIsDialogOpen(true);
   };
 
@@ -298,29 +255,13 @@ export default function Items() {
     
     try {
       await deleteItem(user?.id, id, queueChange);
-      // Optimistic update
       setItems(prev => prev.filter(i => i.id !== id));
       toast.success('Item deleted successfully');
     } catch (error) {
       console.error('Error deleting item:', error);
       toast.error('Failed to delete item. Please try again.');
-      // Reload on error
       await loadItems();
     }
-  };
-
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-    setEditingItem(null);
-    setFormData({
-      name: '',
-      description: '',
-      category: 'General',
-      basePrice: '',
-      markup: '',
-      markupType: 'percentage',
-      units: 'Each',
-    });
   };
 
   const handleRetry = () => {
@@ -399,7 +340,7 @@ export default function Items() {
         toast.success(messages.join(' | '));
       }
       
-      await loadItems(true); // Force refresh to bypass cache
+      await loadItems(true);
     };
     reader.readAsText(importFile);
     setShowImportDialog(false);
@@ -442,146 +383,11 @@ export default function Items() {
               />
             </label>
           </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4" />
-                <span className="ml-2 hidden sm:inline">Add Item</span>
-                <span className="ml-2 sm:hidden">Add</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingItem ? 'Edit Item' : 'Add New Item'}
-                </DialogTitle>
-                <DialogDescription>
-                  Fill in the item information below
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Item Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Professional Service"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Detailed description of the item..."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value) => setFormData({ ...formData, category: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CATEGORIES.map(cat => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="units">Units *</Label>
-                    <Select value={formData.units} onValueChange={(value) => setFormData({ ...formData, units: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Each">Each</SelectItem>
-                        <SelectItem value="Per SF">Per SF</SelectItem>
-                        <SelectItem value="Per LF">Per LF</SelectItem>
-                        <SelectItem value="Hour">Hour</SelectItem>
-                        <SelectItem value="Day">Day</SelectItem>
-                        <SelectItem value="Set">Set</SelectItem>
-                        <SelectItem value="Box">Box</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="basePrice">Base Price *</Label>
-                    <Input
-                      id="basePrice"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.basePrice}
-                      onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
-                      placeholder="0.00"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="markup">Markup</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="markup"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={formData.markup}
-                        onChange={(e) => setFormData({ ...formData, markup: e.target.value })}
-                        placeholder="0"
-                      />
-                      <Select
-                        value={formData.markupType}
-                        onValueChange={(value: 'percentage' | 'fixed') =>
-                          setFormData({ ...formData, markupType: value })
-                        }
-                      >
-                        <SelectTrigger className="w-24">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="percentage">%</SelectItem>
-                          <SelectItem value="fixed">$</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-lg bg-muted p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Final Price:</span>
-                    <span className="text-2xl font-bold text-primary">
-                      {formatCurrency(calculateFinalPrice())}
-                    </span>
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">
-                    {editingItem ? 'Update' : 'Add'} Item
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button size="sm" onClick={() => setIsDialogOpen(true)}>
+            <Plus className="h-4 w-4" />
+            <span className="ml-2 hidden sm:inline">Add Item</span>
+            <span className="ml-2 sm:hidden">Add</span>
+          </Button>
         </div>
       </div>
 
@@ -661,25 +467,16 @@ export default function Items() {
       )}
 
       <Card>
-        <CardHeader>
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex items-center gap-3 flex-1">
-              {filteredItems.length > 0 && (
-                <Checkbox
-                  checked={selectedItems.length === filteredItems.length}
-                  onCheckedChange={handleSelectAll}
-                  aria-label="Select all items"
-                />
-              )}
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search items..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search items..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-full md:w-48">
@@ -693,9 +490,8 @@ export default function Items() {
               </SelectContent>
             </Select>
           </div>
-        </CardHeader>
-        <CardContent>
-          {filteredItems.length === 0 ? (
+
+          {filteredItems.length === 0 && !loading ? (
             <div className="text-center py-12 text-muted-foreground">
               {searchTerm || categoryFilter !== 'all' ? (
                 <p>No items found matching your filters</p>
@@ -710,79 +506,24 @@ export default function Items() {
               )}
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredItems.map((item) => (
-                <Card key={item.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-start gap-2 flex-1">
-                        <Checkbox
-                          checked={selectedItems.includes(item.id)}
-                          onCheckedChange={(checked) => handleSelectItem(item.id, checked as boolean)}
-                          aria-label={`Select ${item.name}`}
-                          className="mt-1"
-                        />
-                        <CardTitle className="text-lg">{item.name}</CardTitle>
-                      </div>
-                      <Badge variant="secondary">{item.category}</Badge>
-                    </div>
-                    {item.description && (
-                      <CardDescription className="line-clamp-2">
-                        {item.description}
-                      </CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Units:</span>
-                        <span>{item.units}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Base Price:</span>
-                        <span>{formatCurrency(item.basePrice || 0)}</span>
-                      </div>
-                      {(item.markup || 0) > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Markup:</span>
-                          <span>
-                            {item.markupType === 'percentage'
-                              ? `${item.markup || 0}%`
-                              : formatCurrency(item.markup || 0)}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex justify-between font-semibold pt-1 border-t">
-                        <span>Final Price:</span>
-                        <span className="text-primary">{formatCurrency(item.finalPrice || 0)}</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(item)}
-                        className="flex-1"
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(item.id)}
-                        className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <ItemsTable
+              items={filteredItems}
+              selectedItems={selectedItems}
+              onSelectItem={handleSelectItem}
+              onSelectAll={handleSelectAll}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
           )}
         </CardContent>
       </Card>
+
+      <ItemForm
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        editingItem={editingItem}
+        onSubmit={handleFormSubmit}
+      />
 
       <ImportOptionsDialog
         open={showImportDialog}
