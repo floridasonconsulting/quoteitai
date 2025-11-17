@@ -349,10 +349,10 @@ export function OnboardingWizard() {
 
       console.log("[OnboardingWizard] Step 2: Merged settings:", updatedSettings);
 
-      // Step 3: Save to database with enhanced retry logic
+      // Step 3: Save to database with extended retry logic
       let saveSuccessful = false;
       let attempts = 0;
-      const maxAttempts = 3;
+      const maxAttempts = 5; // Increased from 3 to 5
       
       while (!saveSuccessful && attempts < maxAttempts) {
         attempts++;
@@ -363,64 +363,73 @@ export function OnboardingWizard() {
           await saveSettings(user.id, updatedSettings);
           console.log("[OnboardingWizard] ✓ saveSettings() completed successfully");
 
-          // Wait for database write to propagate
-          console.log("[OnboardingWizard] Waiting 2 seconds for database write...");
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          // Wait longer for database write to propagate (3 seconds instead of 2)
+          console.log("[OnboardingWizard] Waiting 3 seconds for database write propagation...");
+          await new Promise(resolve => setTimeout(resolve, 3000));
 
-          // Step 4: Triple verification
-          console.log("[OnboardingWizard] Step 4: Triple verification starting...");
+          // Step 4: Extended verification loop (verify multiple times)
+          console.log("[OnboardingWizard] Step 4: Extended verification loop starting...");
           
-          // Verification 1: Read from database
-          console.log("[OnboardingWizard] Verification 1: Reading from database...");
-          const dbSettings = await getSettings(user.id);
-          console.log("[OnboardingWizard] Database settings:", {
-            name: dbSettings.name,
-            email: dbSettings.email,
-            expected_name: companyData.name,
-            expected_email: companyData.email
-          });
-
-          // Verification 2: Check localStorage cache
-          console.log("[OnboardingWizard] Verification 2: Checking localStorage cache...");
-          const cachedSettings = localStorage.getItem("quote-it-settings");
-          console.log("[OnboardingWizard] Cached settings exist:", !!cachedSettings);
-
-          // Verification 3: Verify data matches
-          const nameMatches = dbSettings.name === companyData.name;
-          const emailMatches = dbSettings.email === companyData.email;
+          let verificationPassed = false;
+          let verificationAttempts = 0;
+          const maxVerificationAttempts = 3;
           
-          console.log("[OnboardingWizard] Verification 3: Data validation:", {
-            nameMatches,
-            emailMatches,
-            allMatch: nameMatches && emailMatches
-          });
+          while (!verificationPassed && verificationAttempts < maxVerificationAttempts) {
+            verificationAttempts++;
+            console.log(`[OnboardingWizard] Verification attempt ${verificationAttempts} of ${maxVerificationAttempts}...`);
+            
+            // Verification 1: Read from database
+            const dbSettings = await getSettings(user.id);
+            console.log("[OnboardingWizard] Database settings:", {
+              name: dbSettings.name,
+              email: dbSettings.email,
+              expected_name: companyData.name,
+              expected_email: companyData.email
+            });
 
-          if (nameMatches && emailMatches) {
-            console.log("[OnboardingWizard] ✓ All verifications passed!");
-            saveSuccessful = true;
+            // Verification 2: Check localStorage cache
+            const cachedSettings = localStorage.getItem("quote-it-settings");
+            console.log("[OnboardingWizard] Cached settings exist:", !!cachedSettings);
+
+            // Verification 3: Verify data matches
+            const nameMatches = dbSettings.name === companyData.name;
+            const emailMatches = dbSettings.email === companyData.email;
             
-            // Create multiple backup copies
-            console.log("[OnboardingWizard] Creating backup copies...");
-            const backupKey = `onboarding_backup_${user.id}`;
-            const backupData = JSON.stringify(updatedSettings);
-            localStorage.setItem(backupKey, backupData);
-            localStorage.setItem("quote-it-settings", backupData);
-            console.log("[OnboardingWizard] ✓ Backups created in localStorage");
-          } else {
-            console.warn("[OnboardingWizard] ✗ Verification failed - data mismatch!");
-            console.warn("[OnboardingWizard] Name match:", nameMatches);
-            console.warn("[OnboardingWizard] Email match:", emailMatches);
-            
-            if (attempts < maxAttempts) {
-              console.log(`[OnboardingWizard] Retrying... (attempt ${attempts + 1} of ${maxAttempts})`);
+            console.log("[OnboardingWizard] Data validation:", {
+              nameMatches,
+              emailMatches,
+              allMatch: nameMatches && emailMatches
+            });
+
+            if (nameMatches && emailMatches) {
+              console.log("[OnboardingWizard] ✓ Verification passed!");
+              verificationPassed = true;
+              saveSuccessful = true;
+            } else if (verificationAttempts < maxVerificationAttempts) {
+              console.log("[OnboardingWizard] Verification failed, waiting 1 second before retry...");
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
+          }
+          
+          if (verificationPassed) {
+            // Create multiple backup copies in localStorage
+            console.log("[OnboardingWizard] Creating persistent backup copies...");
+            const backupKey = `onboarding_backup_${user.id}`;
+            const backupData = JSON.stringify(updatedSettings);
+            
+            // Store in multiple locations for redundancy
+            localStorage.setItem(backupKey, backupData);
+            localStorage.setItem("quote-it-settings", backupData);
+            localStorage.setItem(`settings_backup_${user.id}`, backupData);
+            console.log("[OnboardingWizard] ✓ Backups created in localStorage (3 locations)");
+          } else {
+            throw new Error("Verification failed after multiple attempts");
           }
         } catch (saveError) {
           console.error(`[OnboardingWizard] ✗ Save attempt ${attempts} failed:`, saveError);
           if (attempts < maxAttempts) {
             console.log(`[OnboardingWizard] Retrying... (attempt ${attempts + 1} of ${maxAttempts})`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds between attempts
           } else {
             throw saveError;
           }
@@ -446,36 +455,50 @@ export function OnboardingWizard() {
         console.log("[OnboardingWizard] Step 5: Skipping sample data (option:", importOption, ")");
       }
 
-      // Step 6: Mark onboarding as complete (with multiple flags)
+      // Step 6: Mark onboarding as complete (with multiple persistent flags)
       console.log("[OnboardingWizard] Step 6: Marking onboarding as complete...");
       const completionKey = `onboarding_completed_${user.id}`;
       const completionTimestamp = new Date().toISOString();
       
-      // Set multiple completion flags for redundancy
+      // Set multiple completion flags for maximum redundancy
       localStorage.setItem(completionKey, "true");
       localStorage.setItem(`${completionKey}_timestamp`, completionTimestamp);
-      localStorage.setItem(`${completionKey}_version`, "2.0"); // Version for future compatibility
+      localStorage.setItem(`${completionKey}_version`, "2.0");
+      localStorage.setItem(`onboarding_status_${user.id}`, "completed"); // Additional flag
       
-      console.log("[OnboardingWizard] ✓ Completion flags set:");
-      console.log("[OnboardingWizard]   - Key:", completionKey);
-      console.log("[OnboardingWizard]   - Value:", localStorage.getItem(completionKey));
+      // Also store in sessionStorage as additional backup
+      sessionStorage.setItem(completionKey, "true");
+      sessionStorage.setItem(`onboarding_status_${user.id}`, "completed");
+      
+      console.log("[OnboardingWizard] ✓ Completion flags set in multiple locations:");
+      console.log("[OnboardingWizard]   - localStorage:", localStorage.getItem(completionKey));
+      console.log("[OnboardingWizard]   - sessionStorage:", sessionStorage.getItem(completionKey));
       console.log("[OnboardingWizard]   - Timestamp:", completionTimestamp);
       
-      // Final verification: Check the completion flag was set
-      const verifyCompletion = localStorage.getItem(completionKey);
-      console.log("[OnboardingWizard] Final verification - completion flag:", verifyCompletion);
+      // Final verification: Check ALL completion flags
+      const localFlag = localStorage.getItem(completionKey);
+      const sessionFlag = sessionStorage.getItem(completionKey);
+      const statusFlag = localStorage.getItem(`onboarding_status_${user.id}`);
       
-      if (verifyCompletion !== "true") {
-        console.error("[OnboardingWizard] ✗ ERROR: Completion flag not set correctly!");
+      console.log("[OnboardingWizard] Final verification - all flags:", {
+        localFlag,
+        sessionFlag,
+        statusFlag
+      });
+      
+      if (localFlag !== "true" || sessionFlag !== "true" || statusFlag !== "completed") {
+        console.error("[OnboardingWizard] ✗ ERROR: Not all completion flags were set correctly!");
         throw new Error("Failed to mark onboarding as complete. Please try again.");
       }
+      
+      console.log("[OnboardingWizard] ✓ All completion flags verified!");
       
       // Show success message
       toast.success("Setup complete! Your company information has been saved.");
       
-      // Wait before closing
-      console.log("[OnboardingWizard] Waiting 500ms before closing...");
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait before closing to ensure all storage operations complete
+      console.log("[OnboardingWizard] Waiting 1 second before closing...");
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Close the wizard
       console.log("[OnboardingWizard] Closing wizard...");
