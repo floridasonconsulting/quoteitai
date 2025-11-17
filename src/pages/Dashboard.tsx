@@ -49,30 +49,19 @@ export default function Dashboard() {
     hasLoadedData: hasLoadedData.current 
   });
 
-  // IMPROVED: Load data as soon as we have a user, even if auth is still loading
+  // SIMPLIFIED: Load data as soon as we have a user
   useEffect(() => {
-    console.log('[Dashboard] Effect triggered:', { 
-      authLoading, 
-      user: !!user, 
-      hasLoadedData: hasLoadedData.current 
-    });
-
-    // Load data when we have a user and haven't loaded yet
-    // Don't wait for authLoading to be false - start loading immediately
     if (user && !hasLoadedData.current) {
-      console.log('[Dashboard] Starting data load for user:', user.id);
       hasLoadedData.current = true;
       loadData();
     }
 
-    // Cleanup on unmount
     return () => {
       if (abortControllerRef.current) {
-        console.log('[Dashboard] Cleanup: Aborting pending requests');
         abortControllerRef.current.abort();
       }
     };
-  }, [user]); // Only depend on user, not authLoading
+  }, [user]);
 
   const loadData = async () => {
     if (abortControllerRef.current) {
@@ -147,37 +136,35 @@ export default function Dashboard() {
         loadTime: Date.now() - startTime
       });
 
-      // Update state with loaded data
-      flushSync(() => {
-        setQuotes(quotesData);
-        setCustomers(customersData);
-        setStats({
-          totalQuotes: quotesData.length,
-          totalCustomers: customersData.length,
-          totalItems: itemsData.length,
-          pendingValue,
-          acceptanceRate,
-          avgQuoteValue,
-          totalRevenue,
-          declinedValue,
-        });
-        setRetryCount(0);
-        setError(null);
-        setLoading(false); // Turn off loading immediately after state update
+      // SIMPLIFIED: Just update state and turn off loading
+      setQuotes(quotesData);
+      setCustomers(customersData);
+      setStats({
+        totalQuotes: quotesData.length,
+        totalCustomers: customersData.length,
+        totalItems: itemsData.length,
+        pendingValue,
+        acceptanceRate,
+        avgQuoteValue,
+        totalRevenue,
+        declinedValue,
       });
+      setRetryCount(0);
+      setError(null);
+      setLoading(false);
       
-      console.log('[Dashboard] Loading complete, data ready for render');
+      console.log('[Dashboard] Data loaded successfully, rendering content');
       clearTimeout(timeoutId);
       stopLoading(operationId);
     } catch (error) {
       clearTimeout(timeoutId);
       stopLoading(operationId);
-      console.error('[Dashboard] Error:', error, 'Duration:', Date.now() - loadStartTime, 'ms');
+      console.error('[Dashboard] Error:', error);
       setError('Failed to load dashboard data. Please try again.');
       setLoading(false);
       toast({
         title: 'Error loading data',
-        description: 'Could not load dashboard. Check console for details.',
+        description: 'Could not load dashboard. Please try refreshing.',
         variant: 'destructive',
       });
     }
@@ -250,29 +237,16 @@ export default function Dashboard() {
   // CRITICAL: Log before every render path
   console.log('[Dashboard] Render path check:', { loading, error, quotesCount: quotes.length, authLoading, user: !!user, hasLoadedData: hasLoadedData.current });
 
-  // Show skeleton UI while auth is loading OR while data is loading
+  // SIMPLIFIED: Show skeleton only while loading OR while auth is loading
   if (loading || authLoading) {
-    console.log('[Dashboard] Rendering SKELETON UI', { loading, authLoading });
     return (
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:flex sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <Skeleton className="h-8 w-64 mb-2" />
             <Skeleton className="h-4 w-96" />
           </div>
-          <div className="flex gap-2">
-            <Skeleton className="h-10 w-32" />
-            {retryCount > 0 && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleRetry}
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Retry
-              </Button>
-            )}
-          </div>
+          <Skeleton className="h-10 w-32" />
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map(i => (
@@ -324,15 +298,7 @@ export default function Dashboard() {
     );
   }
 
-  // CRITICAL: If we reach here, we should ALWAYS render the main content
-  // Even if there's no data yet, we'll show empty states with helpful messages
-  console.log('[Dashboard] Rendering MAIN CONTENT:', { 
-    quotesCount: quotes.length, 
-    statsTotal: stats.totalQuotes,
-    customersCount: customers.length,
-    hasLoadedData: hasLoadedData.current
-  });
-
+  // SIMPLIFIED: Just render content - no complex checks
   return (
     <div className="space-y-6 overflow-x-hidden max-w-full">
       {/* Debug Banner - Remove after testing */}

@@ -7,31 +7,16 @@ import { AlertCircle, CheckCircle, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 
 export function StripeSection() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [testMode, setTestMode] = useState(true);
+  const [isConnected] = useState(false);
+  const [error] = useState<string | null>(null);
+  const [testMode] = useState(true);
 
-  const handleConnect = async () => {
-    try {
-      setError(null);
-      toast.info("Stripe integration coming soon!");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to connect to Stripe";
-      setError(message);
-      toast.error(message);
-    }
+  const handleConnect = () => {
+    toast.info("Stripe integration coming soon! This feature is currently in development.");
   };
 
-  const handleDisconnect = async () => {
-    try {
-      setError(null);
-      setIsConnected(false);
-      toast.success("Disconnected from Stripe");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to disconnect";
-      setError(message);
-      toast.error(message);
-    }
+  const handleDisconnect = () => {
+    toast.info("Stripe integration coming soon!");
   };
 
   return (
@@ -65,7 +50,7 @@ export function StripeSection() {
             <p className="text-sm text-muted-foreground">
               Connect your Stripe account to enable payment processing for your quotes.
             </p>
-            <Button onClick={handleConnect} className="w-full">
+            <Button onClick={handleConnect} className="w-full" variant="secondary">
               <CreditCard className="h-4 w-4 mr-2" />
               Connect Stripe
             </Button>
@@ -92,7 +77,7 @@ export function StripeSection() {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Stripe payment processing is currently in development. Full functionality coming soon!
+            <strong>Coming Soon:</strong> Stripe payment processing is currently in development. Full functionality will be available in a future update!
           </AlertDescription>
         </Alert>
       </CardContent>

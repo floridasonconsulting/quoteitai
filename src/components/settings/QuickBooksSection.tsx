@@ -7,53 +7,21 @@ import { AlertCircle, CheckCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 export function QuickBooksSection() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [isConnected] = useState(false);
+  const [isSyncing] = useState(false);
+  const [error] = useState<string | null>(null);
+  const [lastSync] = useState<Date | null>(null);
 
-  const handleConnect = async () => {
-    try {
-      setError(null);
-      toast.info("QuickBooks integration coming soon!");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to connect to QuickBooks";
-      setError(message);
-      toast.error(message);
-    }
+  const handleConnect = () => {
+    toast.info("QuickBooks integration coming soon! This feature is currently in development.");
   };
 
-  const handleDisconnect = async () => {
-    try {
-      setError(null);
-      setIsConnected(false);
-      setLastSync(null);
-      toast.success("Disconnected from QuickBooks");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to disconnect";
-      setError(message);
-      toast.error(message);
-    }
+  const handleDisconnect = () => {
+    toast.info("QuickBooks integration coming soon!");
   };
 
-  const handleSync = async () => {
-    try {
-      setError(null);
-      setIsSyncing(true);
-      toast.info("Syncing with QuickBooks...");
-      
-      // Sync logic would go here
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setLastSync(new Date());
-      toast.success("QuickBooks sync completed!");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to sync with QuickBooks";
-      setError(message);
-      toast.error(message);
-    } finally {
-      setIsSyncing(false);
-    }
+  const handleSync = () => {
+    toast.info("QuickBooks integration coming soon!");
   };
 
   return (
@@ -87,7 +55,7 @@ export function QuickBooksSection() {
             <p className="text-sm text-muted-foreground">
               Connect your QuickBooks Online account to automatically sync customer data and create invoices.
             </p>
-            <Button onClick={handleConnect} className="w-full">
+            <Button onClick={handleConnect} className="w-full" variant="secondary">
               Connect QuickBooks
             </Button>
           </div>
@@ -123,7 +91,7 @@ export function QuickBooksSection() {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            QuickBooks integration is currently in development. Full functionality coming soon!
+            <strong>Coming Soon:</strong> QuickBooks integration is currently in development. Full functionality will be available in a future update!
           </AlertDescription>
         </Alert>
       </CardContent>
