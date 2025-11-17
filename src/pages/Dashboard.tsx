@@ -605,9 +605,13 @@ export default function Dashboard() {
       </Card>
 
       {/* Advanced Analytics - Business/Max/Admin Only */}
-      {(userRole === 'business' || userRole === 'max' || userRole === 'admin') && (
-        <AdvancedAnalytics quotes={quotes} customers={customers} />
-      )}
+      {(() => {
+        console.log('[Dashboard] User Role:', userRole);
+        console.log('[Dashboard] Should show Advanced Analytics:', userRole === 'business' || userRole === 'max' || userRole === 'admin');
+        return (userRole === 'business' || userRole === 'max' || userRole === 'admin') && (
+          <AdvancedAnalytics quotes={quotes} customers={customers} />
+        );
+      })()}
     </div>
   );
 }
