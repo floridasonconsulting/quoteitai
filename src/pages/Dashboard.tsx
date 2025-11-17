@@ -135,7 +135,7 @@ export default function Dashboard() {
         loadTime: Date.now() - startTime
       });
 
-      // SIMPLIFIED: Set all state in one batch
+      // Set all state together
       setQuotes(quotesData);
       setCustomers(customersData);
       setStats({
@@ -150,11 +150,7 @@ export default function Dashboard() {
       });
       setRetryCount(0);
       setError(null);
-      
-      // CRITICAL: Set loading to false AFTER all other state is set
-      setTimeout(() => {
-        setLoading(false);
-      }, 0);
+      setLoading(false); // Set loading false directly, no setTimeout
       
       console.log('[Dashboard] Data loaded successfully, rendering content');
       clearTimeout(timeoutId);
