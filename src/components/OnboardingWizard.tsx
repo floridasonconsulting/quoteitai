@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { CheckCircle2, Building, Upload, FileText, Palette } from "lucide-react";
-import { storage } from "@/lib/storage";
+import { getSettings, saveSettings } from "@/lib/storage";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface CompanyData {
@@ -327,15 +327,14 @@ export function OnboardingWizard() {
 
     try {
       // Save company settings
-      const existingSettings = await storage.get("company-settings");
-      const settings = existingSettings || {};
+      const existingSettings = getSettings();
       
-      await storage.set("company-settings", {
-        ...settings,
-        company_name: companyData.name,
-        company_email: companyData.email,
-        company_phone: companyData.phone,
-        company_address: companyData.address,
+      saveSettings({
+        ...existingSettings,
+        name: companyData.name,
+        email: companyData.email,
+        phone: companyData.phone,
+        address: companyData.address,
         primary_color: brandingData.primaryColor,
         accent_color: brandingData.accentColor,
       });
