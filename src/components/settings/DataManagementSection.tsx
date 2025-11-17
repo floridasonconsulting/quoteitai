@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, Upload, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { clearDatabaseData } from "@/lib/db-service";
@@ -118,28 +117,6 @@ export function DataManagementSection() {
             </label>
           </div>
         </div>
-
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            <div className="space-y-2">
-              <p className="font-semibold">Danger Zone</p>
-              <p className="text-sm">
-                Clearing all data will permanently delete all quotes, customers, items, and settings.
-                This action cannot be undone.
-              </p>
-              <Button
-                variant="destructive"
-                onClick={handleClearAllData}
-                disabled={isClearing || !user}
-                size="sm"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {isClearing ? "Clearing..." : "Clear All Data"}
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
       </CardContent>
     </Card>
   );
