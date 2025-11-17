@@ -8,7 +8,7 @@ interface AIUpgradeDialogProps {
   isOpen: boolean;
   onClose: () => void;
   featureName: AIFeatureType;
-  requiredTier: 'pro' | 'max';
+  requiredTier: 'pro' | 'business' | 'max';
 }
 
 const FEATURE_BENEFITS: Record<AIFeatureType, {
@@ -100,6 +100,11 @@ const TIER_INFO = {
     name: 'Pro',
     price: '$9.99/month',
     features: ['50 AI requests per month', 'All basic AI features', 'Priority support', 'Advanced analytics']
+  },
+  business: {
+    name: 'Business',
+    price: '$29.99/month',
+    features: ['Unlimited AI requests', 'Advanced analytics & insights', 'Customer lifetime value analysis', 'Win rate tracking', 'Revenue forecasting', 'Priority support']
   },
   max: {
     name: 'Max AI',
