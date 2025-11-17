@@ -39,6 +39,16 @@ export default function Dashboard() {
   });
   const [customers, setCustomers] = useState<Customer[]>([]);
 
+  // Add render logging
+  console.log('[Dashboard] RENDER:', { 
+    loading, 
+    error, 
+    quotesCount: quotes.length, 
+    authLoading, 
+    user: !!user,
+    hasLoadedData: hasLoadedData.current 
+  });
+
   // Consolidated data loading effect
   useEffect(() => {
     console.log('[Dashboard] Effect triggered:', { 
@@ -235,8 +245,12 @@ export default function Dashboard() {
     }
   };
 
+  // CRITICAL: Log before every render path
+  console.log('[Dashboard] Render path check:', { loading, error, quotesCount: quotes.length });
+
   // Show skeleton UI immediately instead of full-screen spinner
   if (loading) {
+    console.log('[Dashboard] Rendering SKELETON UI');
     return (
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:flex sm:items-center sm:justify-between">
@@ -280,6 +294,7 @@ export default function Dashboard() {
   }
 
   if (error) {
+    console.log('[Dashboard] Rendering ERROR STATE:', error);
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <p className="text-destructive font-medium">{error}</p>
@@ -306,6 +321,13 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  // CRITICAL: If we reach here, we must have data to show
+  console.log('[Dashboard] Rendering MAIN CONTENT:', { 
+    quotesCount: quotes.length, 
+    statsTotal: stats.totalQuotes,
+    customersCount: customers.length 
+  });
 
   return (
     <div className="space-y-6 overflow-x-hidden max-w-full">
