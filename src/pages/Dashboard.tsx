@@ -137,21 +137,23 @@ export default function Dashboard() {
       });
 
       // SIMPLIFIED: Just update state and turn off loading
-      setQuotes(quotesData);
-      setCustomers(customersData);
-      setStats({
-        totalQuotes: quotesData.length,
-        totalCustomers: customersData.length,
-        totalItems: itemsData.length,
-        pendingValue,
-        acceptanceRate,
-        avgQuoteValue,
-        totalRevenue,
-        declinedValue,
+      flushSync(() => {
+        setQuotes(quotesData);
+        setCustomers(customersData);
+        setStats({
+          totalQuotes: quotesData.length,
+          totalCustomers: customersData.length,
+          totalItems: itemsData.length,
+          pendingValue,
+          acceptanceRate,
+          avgQuoteValue,
+          totalRevenue,
+          declinedValue,
+        });
+        setRetryCount(0);
+        setError(null);
+        setLoading(false);
       });
-      setRetryCount(0);
-      setError(null);
-      setLoading(false);
       
       console.log('[Dashboard] Data loaded successfully, rendering content');
       clearTimeout(timeoutId);
