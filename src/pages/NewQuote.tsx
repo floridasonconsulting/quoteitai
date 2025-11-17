@@ -1,30 +1,24 @@
+
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Plus, X, FileText, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { getCustomers, getItems, addQuote, updateQuote, getSettings, getQuotes } from '@/lib/db-service';
 import { generateQuoteNumber, calculateItemTotal, calculateQuoteTotal } from '@/lib/quote-utils';
 import { Customer, Item, Quote, QuoteItem } from '@/types';
 import { toast } from 'sonner';
-import { formatCurrency } from '@/lib/utils';
 import jsPDF from 'jspdf';
-import { AIButton } from '@/components/AIButton';
 import { useAI } from '@/hooks/useAI';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
-import { sanitizeForAI, sanitizeNumber } from '@/lib/input-sanitization';
 import { QuoteSummaryAI } from '@/components/QuoteSummaryAI';
 import { SendQuoteDialog, EmailContent } from '@/components/SendQuoteDialog';
 import { FullQuoteGenerationAI } from '@/components/FullQuoteGenerationAI';
-import { PricingOptimizationAI } from '@/components/PricingOptimizationAI';
-import { ItemRecommendationsAI } from '@/components/ItemRecommendationsAI';
+import { formatCurrency } from '@/lib/utils';
+import { QuoteBasicInfo } from '@/components/quote-form/QuoteBasicInfo';
+import { QuoteItemsSection } from '@/components/quote-form/QuoteItemsSection';
+import { ItemCatalogSidebar } from '@/components/quote-form/ItemCatalogSidebar';
+import { QuoteSummarySidebar } from '@/components/quote-form/QuoteSummarySidebar';
+import { CustomItemDialog } from '@/components/quote-form/CustomItemDialog';
 
 interface LocationState {
   editQuote?: Quote;
@@ -38,6 +32,7 @@ export default function NewQuote() {
   const { queueChange } = useSyncManager();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
@@ -47,14 +42,6 @@ export default function NewQuote() {
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [itemSearchTerm, setItemSearchTerm] = useState('');
-  const [customItem, setCustomItem] = useState({
-    name: '',
-    description: '',
-    quantity: 1,
-    price: '',
-  });
 
   // Helper to strip markdown code blocks from AI responses
   const stripMarkdownCodeBlocks = (text: string): string => {
@@ -103,13 +90,15 @@ export default function NewQuote() {
 
   const loadData = async () => {
     setLoading(true);
-    const [customersData, itemsData] = await Promise.all([
+    const [customersData, itemsData, settingsData] = await Promise.all([
       getCustomers(user?.id),
       getItems(user?.id),
+      getSettings(user?.id),
     ]);
     
     setCustomers(customersData);
     setItems(itemsData);
+    setSettings(settingsData);
     
     // Check if we're editing via navigation state (from QuoteDetail)
     const state = location.state as LocationState | null;
@@ -144,16 +133,6 @@ export default function NewQuote() {
     setLoading(false);
   };
 
-  const categories = ['all', ...new Set(items.map(item => item.category))];
-  const filteredItems = items.filter(item => {
-    const matchesCategory = selectedCategory === 'all' || 
-      item.category.toLowerCase().trim() === selectedCategory.toLowerCase().trim();
-    const matchesSearch = itemSearchTerm === '' ||
-      item.name.toLowerCase().includes(itemSearchTerm.toLowerCase()) ||
-      item.description.toLowerCase().includes(itemSearchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
-
   const addItemToQuote = (item: Item) => {
     const existingItem = quoteItems.find(qi => qi.itemId === item.id);
     
@@ -176,28 +155,6 @@ export default function NewQuote() {
       setQuoteItems([...quoteItems, newQuoteItem]);
     }
     toast.success(`${item.name} added to quote`);
-  };
-
-  const addCustomItemToQuote = () => {
-    if (!customItem.name || !customItem.price) {
-      toast.error('Name and price are required');
-      return;
-    }
-
-    const price = parseFloat(customItem.price);
-    const newQuoteItem: QuoteItem = {
-      itemId: `custom-${Date.now()}`,
-      name: customItem.name,
-      description: customItem.description,
-      quantity: customItem.quantity,
-      price,
-      total: calculateItemTotal(customItem.quantity, price),
-    };
-
-    setQuoteItems([...quoteItems, newQuoteItem]);
-    setCustomItem({ name: '', description: '', quantity: 1, price: '' });
-    setIsItemDialogOpen(false);
-    toast.success('Custom item added to quote');
   };
 
   const updateItemQuantity = (itemId: string, quantity: number) => {
@@ -351,25 +308,24 @@ export default function NewQuote() {
   };
 
   const generatePDF = async (quote: Quote) => {
-    const settings = await getSettings(user?.id);
     const doc = new jsPDF();
     let yPos = 20;
 
     // Company Info
     doc.setFontSize(20);
-    doc.text(settings.name || 'Your Company', 20, yPos);
+    doc.text(settings?.name || 'Your Company', 20, yPos);
     yPos += 10;
     
     doc.setFontSize(10);
-    if (settings.address) {
+    if (settings?.address) {
       doc.text(settings.address, 20, yPos);
       yPos += 5;
     }
-    if (settings.phone) {
+    if (settings?.phone) {
       doc.text(`Phone: ${settings.phone}`, 20, yPos);
       yPos += 5;
     }
-    if (settings.email) {
+    if (settings?.email) {
       doc.text(`Email: ${settings.email}`, 20, yPos);
       yPos += 5;
     }
@@ -435,6 +391,16 @@ export default function NewQuote() {
     doc.save(`quote-${quote.quoteNumber}.pdf`);
   };
 
+  if (loading) {
+    return (
+      <div className="w-full max-w-[1800px] mx-auto space-y-4 pb-20 md:pb-6 px-4 md:px-6">
+        <div className="flex items-center justify-center h-96">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-[1800px] mx-auto space-y-4 pb-20 md:pb-6 px-4 md:px-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -468,133 +434,23 @@ export default function NewQuote() {
             />
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Quote Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="customer">Select Customer *</Label>
-                <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId} data-demo="customer-select">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a customer..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map(customer => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        <div>
-                          <div>{customer.name}</div>
-                          {(customer.contactFirstName || customer.contactLastName) && (
-                            <div className="text-xs text-muted-foreground">
-                              Contact: {customer.contactFirstName} {customer.contactLastName}
-                            </div>
-                          )}
-                          <div className="text-xs text-muted-foreground">{customer.email}</div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="title">Quote Title *</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="title"
-                    value={quoteTitle}
-                    onChange={(e) => setQuoteTitle(e.target.value)}
-                    placeholder="Website Development Project"
-                    className="flex-1"
-                    data-demo="title-input"
-                  />
-                  <AIButton
-                    onClick={() => {
-                      const customer = customers.find(c => c.id === selectedCustomerId);
-                      const sanitizedCustomerName = sanitizeForAI(customer?.name, 100);
-                      const sanitizedItems = quoteItems.map(item => sanitizeForAI(item.name, 100));
-                      const itemsList = sanitizedItems.join(', ');
-                      titleAI.generate(
-                        `Generate 3 professional quote titles based on: Customer: ${sanitizedCustomerName}, Items: ${itemsList}`,
-                        { customerName: sanitizedCustomerName, items: itemsList }
-                      );
-                    }}
-                    isLoading={titleAI.isLoading}
-                    disabled={!selectedCustomerId || quoteItems.length === 0}
-                    data-demo="title-ai-button"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="notes">Notes</Label>
-                  <AIButton
-                    onClick={async () => {
-                      if (!selectedCustomerId) {
-                        toast.error('Please select a customer first');
-                        return;
-                      }
-                      
-                      const customer = customers.find(c => c.id === selectedCustomerId);
-                      const settings = await getSettings(user?.id);
-                      
-                      // Sanitize all user inputs before passing to AI
-                      const sanitizedCompanyName = sanitizeForAI(settings.name, 100) || 'Your Company';
-                      const sanitizedCustomerName = sanitizeForAI(customer?.name, 100);
-                      const sanitizedEmail = sanitizeForAI(customer?.email, 100);
-                      const sanitizedPhone = sanitizeForAI(customer?.phone, 50) || 'N/A';
-                      
-                      const contextPrompt = `Generate professional terms and conditions for the following quote:
-
-Company: ${sanitizedCompanyName}
-Customer: ${sanitizedCustomerName}
-Email: ${sanitizedEmail}
-Phone: ${sanitizedPhone}
-
-Quote Details:
-- Subtotal: $${sanitizeNumber(subtotal)}
-- Tax: $${sanitizeNumber(total - subtotal)}
-- Total: $${sanitizeNumber(total)}
-
-Items:
-${quoteItems.map((item, idx) => {
-  const sanitizedItemName = sanitizeForAI(item.name, 100);
-  return `${idx + 1}. ${sanitizedItemName} - Qty: ${item.quantity} @ $${sanitizeNumber(item.price)} each = $${sanitizeNumber(item.quantity * item.price)}`;
-}).join('\n')}
-
-Please include:
-1. Payment terms (30 days net)
-2. Warranty information
-3. Liability limitations
-4. Quote validity period
-5. Any relevant legal disclaimers
-
-Format as clear, professional terms and conditions.`;
-                      
-                      await notesAI.generate(contextPrompt);
-                    }}
-                    isLoading={notesAI.isLoading}
-                    disabled={!selectedCustomerId || quoteItems.length === 0}
-                    data-demo="notes-ai-button"
-                  >
-                    Generate Terms
-                  </AIButton>
-                </div>
-                <Textarea
-                  id="notes"
-                  value={quoteNotes}
-                  onChange={(e) => setQuoteNotes(e.target.value)}
-                  placeholder="Additional information..."
-                  rows={3}
-                  data-demo="notes-textarea"
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <QuoteBasicInfo
+            customers={customers}
+            selectedCustomerId={selectedCustomerId}
+            onCustomerChange={setSelectedCustomerId}
+            quoteTitle={quoteTitle}
+            onTitleChange={setQuoteTitle}
+            quoteNotes={quoteNotes}
+            onNotesChange={setQuoteNotes}
+            quoteItems={quoteItems}
+            subtotal={subtotal}
+            total={total}
+            settings={settings}
+            onTitleGenerate={titleAI.generate}
+            onNotesGenerate={notesAI.generate}
+            titleAILoading={titleAI.isLoading}
+            notesAILoading={notesAI.isLoading}
+          />
 
           {/* Executive Summary Section */}
           {quoteItems.length > 0 && selectedCustomerId && (
@@ -620,279 +476,35 @@ Format as clear, professional terms and conditions.`;
             />
           )}
 
-          {/* Quote Items */}
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col gap-3">
-                <CardTitle>Quote Items</CardTitle>
-                <div className="flex flex-col gap-2">
-                  <ItemRecommendationsAI
-                    currentItems={quoteItems}
-                    availableItems={items}
-                    onAddItem={(item) => {
-                      setQuoteItems([...quoteItems, item]);
-                    }}
-                  />
-                  <Button onClick={() => setIsItemDialogOpen(true)} className="w-full" data-demo="custom-item-button">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Custom Item
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent data-demo="quote-items-list">
-              {quoteItems.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  No items added yet. Select items from your catalog or add a custom item.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {quoteItems.map(item => (
-                    <div key={item.itemId} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 border rounded-lg">
-                      <div className="flex-1 w-full min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm sm:text-base truncate">{item.name}</p>
-                            {item.description && (
-                              <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{item.description}</p>
-                            )}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="sm:hidden shrink-0 h-8 w-8"
-                            onClick={() => removeItem(item.itemId)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between w-full sm:w-auto gap-3">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => updateItemQuantity(item.itemId, item.quantity - 1)}
-                          >
-                            -
-                          </Button>
-                          <Input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            value={item.quantity}
-                            onChange={(e) => updateItemQuantity(item.itemId, parseFloat(e.target.value) || 1)}
-                            onFocus={(e) => e.target.select()}
-                            onClick={(e) => e.currentTarget.select()}
-                            className="w-16 sm:w-20 text-center h-8"
-                          />
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => updateItemQuantity(item.itemId, item.quantity + 1)}
-                          >
-                            +
-                          </Button>
-                          {item.units && (
-                            <span className="text-xs sm:text-sm text-muted-foreground">{item.units}</span>
-                          )}
-                        </div>
-                        <div className="text-right min-w-[80px]">
-                          <p className="font-semibold text-sm sm:text-base">{formatCurrency(item.total)}</p>
-                          <p className="text-xs text-muted-foreground">{formatCurrency(item.price)} each</p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="hidden sm:flex shrink-0"
-                          onClick={() => removeItem(item.itemId)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <QuoteItemsSection
+            quoteItems={quoteItems}
+            availableItems={items}
+            onUpdateQuantity={updateItemQuantity}
+            onRemoveItem={removeItem}
+            onAddItem={(item) => setQuoteItems([...quoteItems, item])}
+            onOpenCustomItemDialog={() => setIsItemDialogOpen(true)}
+          />
         </div>
 
-        {/* Sidebar - Item Catalog */}
+        {/* Sidebar - Item Catalog & Summary */}
         <div className="space-y-6 min-w-0">
-          <Card className="sticky top-6">
-            <CardHeader className="space-y-3">
-              <CardTitle>Item Catalog</CardTitle>
-              <div className="relative">
-                <Input
-                  type="text"
-                  placeholder="Search items..."
-                  value={itemSearchTerm}
-                  onChange={(e) => setItemSearchTerm(e.target.value)}
-                  className="pr-8"
-                />
-                {itemSearchTerm && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                    onClick={() => setItemSearchTerm('')}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(cat => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat === 'all' ? 'All Categories' : cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardHeader>
-            <CardContent data-demo="item-catalog">
-              {filteredItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  {itemSearchTerm ? 'No items match your search' : 'No items in this category'}
-                </p>
-              ) : (
-                <div className="space-y-2 max-h-[400px] lg:max-h-[600px] overflow-y-auto">
-                  {filteredItems.map(item => (
-                    <div
-                      key={item.id}
-                      className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => addItemToQuote(item)}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{item.name}</p>
-                          {item.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              {item.description}
-                            </p>
-                          )}
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {item.units}
-                          </p>
-                        </div>
-                        <Badge variant="secondary" className="shrink-0">
-                          {formatCurrency(item.finalPrice)}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="lg:sticky lg:top-[calc(100vh-200px)]">
-            <CardHeader>
-              <CardTitle>Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2" data-demo="quote-summary">
-              <div className="flex justify-between text-sm">
-                <span>Subtotal:</span>
-                <span className="font-medium">{formatCurrency(subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Tax:</span>
-                <span className="font-medium">{formatCurrency(tax)}</span>
-              </div>
-              <div className="flex justify-between font-bold text-base sm:text-lg pt-2 border-t">
-                <span>Total:</span>
-                <span className="text-primary">{formatCurrency(total)}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Pricing Optimization */}
-          {quoteItems.length > 0 && (
-            <PricingOptimizationAI
-              quote={{
-                items: quoteItems,
-                total
-              }}
-              customer={selectedCustomer}
-            />
-          )}
+          <ItemCatalogSidebar items={items} onAddItem={addItemToQuote} />
+          <QuoteSummarySidebar
+            subtotal={subtotal}
+            tax={tax}
+            total={total}
+            quoteItems={quoteItems}
+            customer={selectedCustomer}
+          />
         </div>
       </div>
 
       {/* Custom Item Dialog */}
-      <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
-        <DialogContent data-demo="custom-item-dialog">
-          <DialogHeader>
-            <DialogTitle>Add Custom Item</DialogTitle>
-            <DialogDescription>
-              Create a one-time item for this quote
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="customName">Item Name *</Label>
-              <Input
-                id="customName"
-                value={customItem.name}
-                onChange={(e) => setCustomItem({ ...customItem, name: e.target.value })}
-                placeholder="Custom Service"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="customDescription">Description</Label>
-              <Textarea
-                id="customDescription"
-                value={customItem.description}
-                onChange={(e) => setCustomItem({ ...customItem, description: e.target.value })}
-                placeholder="Details about this item..."
-                rows={3}
-              />
-            </div>
-            <div className="grid gap-4 grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="customQuantity">Quantity</Label>
-                <Input
-                  id="customQuantity"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={customItem.quantity}
-                  onChange={(e) => setCustomItem({ ...customItem, quantity: parseFloat(e.target.value) || 1 })}
-                  onFocus={(e) => e.target.select()}
-                  onClick={(e) => e.currentTarget.select()}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="customPrice">Price *</Label>
-                <Input
-                  id="customPrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={customItem.price}
-                  onChange={(e) => setCustomItem({ ...customItem, price: e.target.value })}
-                  placeholder="0.00"
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsItemDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={addCustomItemToQuote}>
-              Add Item
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CustomItemDialog
+        isOpen={isItemDialogOpen}
+        onOpenChange={setIsItemDialogOpen}
+        onAddItem={(item) => setQuoteItems([...quoteItems, item])}
+      />
 
       {/* Send Quote Dialog */}
       <SendQuoteDialog
