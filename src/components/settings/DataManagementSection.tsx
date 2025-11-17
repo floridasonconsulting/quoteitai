@@ -4,10 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, Upload, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { dbService } from "@/lib/db-service";
+import { clearDatabaseData } from "@/lib/db-service";
+import { clearAllData } from "@/lib/storage";
 import { exportAllData, importAllData } from "@/lib/import-export-utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function DataManagementSection() {
+  const { user } = useAuth();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -43,13 +46,24 @@ export function DataManagementSection() {
   };
 
   const handleClearAllData = async () => {
+    if (!user?.id) {
+      toast.error("You must be signed in to clear data");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to clear all data? This action cannot be undone.")) {
       return;
     }
 
     try {
       setIsClearing(true);
-      await dbService.clearAllData();
+      
+      // Clear database data (Supabase)
+      await clearDatabaseData(user.id);
+      
+      // Clear local storage
+      await clearAllData();
+      
       toast.success("All data cleared successfully");
       window.location.reload();
     } catch (error) {
@@ -117,7 +131,7 @@ export function DataManagementSection() {
               <Button
                 variant="destructive"
                 onClick={handleClearAllData}
-                disabled={isClearing}
+                disabled={isClearing || !user}
                 size="sm"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
