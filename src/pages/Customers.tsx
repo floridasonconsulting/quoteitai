@@ -1,7 +1,8 @@
+
 import { useEffect, useState, useRef } from 'react';
-import { Plus, Search, Edit, Trash2, Mail, Phone, Download, Upload, RefreshCw, AlertCircle, MapPin, FileText } from 'lucide-react';
+import { Plus, Search, Download, Upload, RefreshCw, AlertCircle, FileText, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,13 +11,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from '@/lib/db-service';
 import { Customer } from '@/types';
 import { toast } from 'sonner';
-import { parseCSVLine, formatCSVLine } from '@/lib/csv-utils';
+import { formatCSVLine } from '@/lib/csv-utils';
 import { importCustomersFromCSV } from '@/lib/import-export-utils';
 import { generateCustomerTemplate, downloadTemplate } from '@/lib/csv-template-utils';
 import { ImportOptionsDialog, DuplicateStrategy } from '@/components/ImportOptionsDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { useLoadingState } from '@/hooks/useLoadingState';
+import { CustomersTable } from '@/components/customers/CustomersTable';
 
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -41,7 +43,7 @@ export default function Customers() {
   });
   const { user } = useAuth();
   const { queueChange, pauseSync, resumeSync } = useSyncManager();
-  const { startLoading, stopLoading, isLoading } = useLoadingState();
+  const { startLoading, stopLoading } = useLoadingState();
   const loadingRef = useRef(false);
 
   const loadCustomers = async (forceRefresh = false) => {
@@ -57,7 +59,6 @@ export default function Customers() {
     startLoading('load-customers', 'Loading customers');
 
     try {
-      // Add 15-second timeout with exponential backoff for retries
       const backoffDelay = retryCount > 0 ? Math.pow(2, retryCount - 1) * 5000 : 0;
       const timeoutMs = 15000 + backoffDelay;
 
@@ -96,7 +97,6 @@ export default function Customers() {
     loadCustomers();
   }, [user]);
 
-  // Refresh data when navigating back to the page (with delay to prevent excessive reloads)
   useEffect(() => {
     let lastFocusTime = Date.now();
     
@@ -141,7 +141,6 @@ export default function Customers() {
     
     if (confirm(`Are you sure you want to delete ${selectedCustomers.length} customer${selectedCustomers.length > 1 ? 's' : ''}?`)) {
       try {
-        // Optimistic update
         const deletedIds = [...selectedCustomers];
         setCustomers(prev => prev.filter(c => !deletedIds.includes(c.id)));
         setSelectedCustomers([]);
@@ -154,7 +153,6 @@ export default function Customers() {
       } catch (error) {
         console.error('Error deleting customers:', error);
         toast.error('Failed to delete customers. Please try again.');
-        // Reload on error to ensure consistency
         await loadCustomers();
       }
     }
@@ -171,7 +169,6 @@ export default function Customers() {
     try {
       if (editingCustomer) {
         const updated = await updateCustomer(user?.id, editingCustomer.id, formData, queueChange);
-        // Optimistic update - immediately update local state
         setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c));
         toast.success('Customer updated successfully');
       } else {
@@ -189,7 +186,6 @@ export default function Customers() {
           createdAt: new Date().toISOString(),
         };
         const added = await addCustomer(user?.id, newCustomer, queueChange);
-        // Optimistic update - immediately add to local state
         setCustomers(prev => [...prev, added]);
         toast.success('Customer added successfully');
       }
@@ -198,7 +194,6 @@ export default function Customers() {
     } catch (error) {
       console.error('Error saving customer:', error);
       toast.error('Failed to save customer. Please try again.');
-      // Reload on error to ensure consistency
       await loadCustomers();
     }
   };
@@ -224,13 +219,11 @@ export default function Customers() {
     
     try {
       await deleteCustomer(user?.id, id, queueChange);
-      // Optimistic update - immediately remove from local state
       setCustomers(prev => prev.filter(c => c.id !== id));
       toast.success('Customer deleted successfully');
     } catch (error) {
       console.error('Error deleting customer:', error);
       toast.error('Failed to delete customer. Please try again.');
-      // Reload on error to restore correct state
       await loadCustomers();
     }
   };
@@ -328,7 +321,7 @@ export default function Customers() {
         toast.success(messages.join(' | '));
       }
       
-      await loadCustomers(true); // Force refresh to bypass cache
+      await loadCustomers(true);
     };
     reader.readAsText(importFile);
     setShowImportDialog(false);
@@ -588,105 +581,13 @@ export default function Customers() {
               )}
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredCustomers.map((customer) => {
-                const isSelected = selectedCustomers.includes(customer.id);
-                return (
-                  <Card key={customer.id} className="hover:shadow-lg transition-shadow relative">
-                    <div className="absolute top-3 left-3 z-10">
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={(checked) => handleSelectCustomer(customer.id, checked as boolean)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                    <CardHeader className="pb-3 pl-10">
-                      <CardTitle className="text-lg break-words">{customer.name}</CardTitle>
-                      {(customer.contactFirstName || customer.contactLastName) && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Contact: {customer.contactFirstName} {customer.contactLastName}
-                        </p>
-                      )}
-                      <CardDescription className="space-y-1">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Mail className="h-3 w-3 flex-shrink-0" />
-                          <a href={`mailto:${customer.email}`} className="hover:underline truncate">
-                            {customer.email}
-                          </a>
-                        </div>
-                        {customer.phone && (
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Phone className="h-3 w-3 flex-shrink-0" />
-                            <a href={`tel:${customer.phone}`} className="hover:underline truncate">
-                              {customer.phone}
-                            </a>
-                          </div>
-                        )}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      {(customer.address || customer.city) && (
-                        <div className="flex items-center gap-2 min-w-0 mb-3">
-                          <MapPin className="h-3 w-3 flex-shrink-0" />
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                              [customer.address, customer.city, customer.state, customer.zip]
-                                .filter(Boolean)
-                                .join(', ')
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-muted-foreground hover:text-primary hover:underline break-words"
-                          >
-                            {[customer.address, customer.city, customer.state, customer.zip]
-                              .filter(Boolean)
-                              .join(', ')}
-                          </a>
-                        </div>
-                      )}
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(customer)}
-                          className="flex-1"
-                        >
-                          <Edit className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const fullAddress = [customer.address, customer.city, customer.state, customer.zip]
-                              .filter(Boolean)
-                              .join(', ');
-                            window.open(
-                              `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`,
-                              '_blank'
-                            );
-                          }}
-                          className="flex-1"
-                          disabled={!customer.address && !customer.city}
-                        >
-                          <MapPin className="h-4 w-4 mr-1" />
-                          Directions
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(customer.id)}
-                          className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+            <CustomersTable
+              customers={filteredCustomers}
+              selectedCustomers={selectedCustomers}
+              onSelectCustomer={handleSelectCustomer}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
           )}
         </CardContent>
       </Card>
