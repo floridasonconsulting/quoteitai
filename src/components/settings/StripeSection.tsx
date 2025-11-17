@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,9 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, XCircle, CreditCard } from "lucide-react";
+import { CheckCircle2, XCircle, CreditCard, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { StripeService } from "@/lib/stripe-service";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function StripeSection() {
@@ -17,40 +15,44 @@ export function StripeSection() {
   const [accountId, setAccountId] = useState<string>("");
   const [newAccountId, setNewAccountId] = useState<string>("");
   const [isTestMode, setIsTestMode] = useState(false);
-
-  const stripeService = new StripeService();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     checkConnection();
-  }, []);
+  }, [user]);
 
   const checkConnection = async () => {
-    if (!user) return;
-    
-    // Check if Stripe account is configured
-    const storedAccountId = localStorage.getItem(`stripe_account_${user.id}`);
-    const storedTestMode = localStorage.getItem(`stripe_test_mode_${user.id}`) === "true";
-    
-    if (storedAccountId) {
-      setIsConnected(true);
-      setAccountId(storedAccountId);
-      setIsTestMode(storedTestMode);
+    try {
+      if (!user) return;
+      
+      // Check if Stripe account is configured
+      const storedAccountId = localStorage.getItem(`stripe_account_${user.id}`);
+      const storedTestMode = localStorage.getItem(`stripe_test_mode_${user.id}`) === "true";
+      
+      if (storedAccountId) {
+        setIsConnected(true);
+        setAccountId(storedAccountId);
+        setIsTestMode(storedTestMode);
+      }
+    } catch (error) {
+      console.error("Failed to check Stripe connection:", error);
+      setError("Failed to load Stripe connection status");
     }
   };
 
   const handleConnect = () => {
-    if (!user || !newAccountId.trim()) {
-      toast.error("Please enter your Stripe account ID");
-      return;
-    }
-
-    // Validate Stripe account ID format (starts with acct_)
-    if (!newAccountId.startsWith("acct_")) {
-      toast.error("Invalid Stripe account ID format. It should start with 'acct_'");
-      return;
-    }
-
     try {
+      if (!user || !newAccountId.trim()) {
+        toast.error("Please enter your Stripe account ID");
+        return;
+      }
+
+      // Validate Stripe account ID format (starts with acct_)
+      if (!newAccountId.startsWith("acct_")) {
+        toast.error("Invalid Stripe account ID format. It should start with 'acct_'");
+        return;
+      }
+
       // Store Stripe account configuration
       localStorage.setItem(`stripe_account_${user.id}`, newAccountId);
       localStorage.setItem(`stripe_test_mode_${user.id}`, String(isTestMode));
@@ -67,9 +69,9 @@ export function StripeSection() {
   };
 
   const handleDisconnect = () => {
-    if (!user) return;
-    
     try {
+      if (!user) return;
+      
       localStorage.removeItem(`stripe_account_${user.id}`);
       localStorage.removeItem(`stripe_test_mode_${user.id}`);
       
@@ -83,6 +85,23 @@ export function StripeSection() {
       toast.error("Failed to disconnect Stripe");
     }
   };
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Stripe Payment Integration</CardTitle>
+          <CardDescription>Connection error</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

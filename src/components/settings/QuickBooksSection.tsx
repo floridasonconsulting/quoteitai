@@ -1,13 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, XCircle, RefreshCw, ExternalLink, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, RefreshCw, ExternalLink, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { QuickBooksClient } from "@/integrations/quickbooks/client";
-import { QuickBooksSyncService } from "@/integrations/quickbooks/sync-service";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function QuickBooksSection() {
@@ -17,9 +14,7 @@ export function QuickBooksSection() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [companyName, setCompanyName] = useState<string>("");
-
-  const qbClient = new QuickBooksClient();
-  const syncService = new QuickBooksSyncService();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     checkConnection();
@@ -27,12 +22,16 @@ export function QuickBooksSection() {
 
   const checkConnection = async () => {
     try {
-      const tokens = qbClient.getStoredTokens();
+      // Safely check localStorage for QuickBooks connection
+      const tokens = localStorage.getItem(`qb_tokens_${user?.id}`);
       if (tokens && user) {
         setIsConnected(true);
-        // Fetch company info to display
-        const companyInfo = await qbClient.getCompanyInfo();
-        setCompanyName(companyInfo.CompanyName);
+        
+        // Get company name if stored
+        const storedCompanyName = localStorage.getItem(`qb_company_name_${user.id}`);
+        if (storedCompanyName) {
+          setCompanyName(storedCompanyName);
+        }
         
         // Get last sync time from localStorage
         const lastSyncStr = localStorage.getItem(`qb_last_sync_${user.id}`);
@@ -42,71 +41,23 @@ export function QuickBooksSection() {
       }
     } catch (error) {
       console.error("Failed to check QuickBooks connection:", error);
+      setError("Failed to load QuickBooks connection status");
       setIsConnected(false);
     }
   };
 
   const handleConnect = async () => {
-    setIsConnecting(true);
-    try {
-      const authUrl = qbClient.getAuthorizationUrl();
-      
-      // Open OAuth window
-      const width = 600;
-      const height = 700;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-      
-      const authWindow = window.open(
-        authUrl,
-        "QuickBooks Authorization",
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
-
-      // Poll for OAuth callback
-      const pollTimer = setInterval(() => {
-        try {
-          if (authWindow?.closed) {
-            clearInterval(pollTimer);
-            setIsConnecting(false);
-            checkConnection();
-          }
-        } catch (error) {
-          console.error("Error polling auth window:", error);
-        }
-      }, 500);
-
-      // Listen for OAuth callback message
-      const handleMessage = async (event: MessageEvent) => {
-        if (event.data.type === "quickbooks_oauth_callback") {
-          const { code, realmId } = event.data;
-          
-          try {
-            await qbClient.handleCallback(code, realmId);
-            setIsConnected(true);
-            toast.success("QuickBooks connected successfully!");
-            checkConnection();
-          } catch (error) {
-            console.error("OAuth callback error:", error);
-            toast.error("Failed to connect QuickBooks. Please try again.");
-          } finally {
-            authWindow?.close();
-            window.removeEventListener("message", handleMessage);
-          }
-        }
-      };
-
-      window.addEventListener("message", handleMessage);
-    } catch (error) {
-      console.error("Failed to initiate QuickBooks connection:", error);
-      toast.error("Failed to connect to QuickBooks");
-      setIsConnecting(false);
-    }
+    toast.info("QuickBooks integration is currently in development. Check back soon!");
   };
 
   const handleDisconnect = async () => {
     try {
-      await qbClient.disconnect();
+      if (!user) return;
+      
+      localStorage.removeItem(`qb_tokens_${user.id}`);
+      localStorage.removeItem(`qb_company_name_${user.id}`);
+      localStorage.removeItem(`qb_last_sync_${user.id}`);
+      
       setIsConnected(false);
       setCompanyName("");
       setLastSync(null);
@@ -118,26 +69,25 @@ export function QuickBooksSection() {
   };
 
   const handleSync = async () => {
-    if (!user) return;
-    
-    setIsSyncing(true);
-    try {
-      // Sync customers from QuickBooks
-      await syncService.syncCustomersFromQuickBooks(user.id);
-      
-      // Update last sync time
-      const now = new Date();
-      setLastSync(now);
-      localStorage.setItem(`qb_last_sync_${user.id}`, now.toISOString());
-      
-      toast.success("QuickBooks data synced successfully!");
-    } catch (error) {
-      console.error("Failed to sync QuickBooks data:", error);
-      toast.error("Failed to sync QuickBooks data");
-    } finally {
-      setIsSyncing(false);
-    }
+    toast.info("QuickBooks sync is currently in development. Check back soon!");
   };
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>QuickBooks Integration</CardTitle>
+          <CardDescription>Connection error</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -193,10 +143,12 @@ export function QuickBooksSection() {
         ) : (
           <>
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Company:</span>
-                <span className="font-medium">{companyName}</span>
-              </div>
+              {companyName && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Company:</span>
+                  <span className="font-medium">{companyName}</span>
+                </div>
+              )}
               {lastSync && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Last Sync:</span>
