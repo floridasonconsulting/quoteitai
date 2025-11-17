@@ -23,14 +23,10 @@ export default function Dashboard() {
   const { startLoading, stopLoading } = useLoadingState();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingProgress, setLoadingProgress] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [showStuckHelper, setShowStuckHelper] = useState(false);
-  const [autoRefreshAttempted, setAutoRefreshAttempted] = useState(false);
   const hasLoadedData = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const loadStartTime = useRef<number>(0);
   const [stats, setStats] = useState({
     totalQuotes: 0,
     totalCustomers: 0,
@@ -41,61 +37,31 @@ export default function Dashboard() {
     totalRevenue: 0,
     declinedValue: 0,
   });
-
   const [customers, setCustomers] = useState<Customer[]>([]);
 
+  // Consolidated data loading effect
   useEffect(() => {
+    console.log('[Dashboard] Effect triggered:', { 
+      authLoading, 
+      user: !!user, 
+      hasLoadedData: hasLoadedData.current 
+    });
+
+    // Only load data once when auth is ready and user exists
     if (!authLoading && user && !hasLoadedData.current) {
-      console.log('[Dashboard] Loading data for user:', user.id);
+      console.log('[Dashboard] Starting data load for user:', user.id);
       hasLoadedData.current = true;
       loadData();
     }
 
+    // Cleanup on unmount
     return () => {
-      // Only abort if we're unmounting during active load
-      // Don't abort if data already loaded successfully
-      if (abortControllerRef.current && loading) {
-        console.log('[Dashboard] Aborting incomplete data load on unmount');
+      if (abortControllerRef.current) {
+        console.log('[Dashboard] Cleanup: Aborting pending requests');
         abortControllerRef.current.abort();
       }
     };
   }, [user, authLoading]);
-
-  // Auto-refresh after 5 seconds if still loading
-  useEffect(() => {
-    if (loading && hasLoadedData.current && !autoRefreshAttempted) {
-      const autoRefreshTimer = setTimeout(() => {
-        console.log('[Dashboard] Auto-refresh triggered after 5s hang');
-        setAutoRefreshAttempted(true);
-        clearInFlightRequests();
-        hasLoadedData.current = false;
-        loadData();
-      }, 5000);
-      return () => clearTimeout(autoRefreshTimer);
-    }
-  }, [loading, autoRefreshAttempted]);
-
-  // Show "stuck" helper after 10 seconds (backup manual refresh)
-  useEffect(() => {
-    if (loading) {
-      const timer = setTimeout(() => {
-        setShowStuckHelper(true);
-      }, 10000);
-      return () => clearTimeout(timer);
-    } else {
-      setShowStuckHelper(false);
-    }
-  }, [loading]);
-
-  // Secondary effect to catch missed loads
-  useEffect(() => {
-    // If auth is done, user exists, but we have no data and aren't loading, force a load
-    if (!authLoading && user && quotes.length === 0 && !loading && !hasLoadedData.current) {
-      console.log('[Dashboard] Secondary check: No data loaded, forcing load');
-      hasLoadedData.current = true;
-      loadData();
-    }
-  }, [authLoading, user, quotes.length, loading]);
 
   const loadData = async () => {
     if (abortControllerRef.current) {
@@ -106,11 +72,10 @@ export default function Dashboard() {
     console.log('[Dashboard] Clearing in-flight requests before load');
     clearInFlightRequests();
 
-    loadStartTime.current = Date.now();
+    const loadStartTime = Date.now();
     abortControllerRef.current = new AbortController();
     setLoading(true);
     setError(null);
-    setLoadingProgress([]);
 
     const operationId = `dashboard-load-${Date.now()}`;
     startLoading(operationId, 'Loading dashboard data');
@@ -120,16 +85,13 @@ export default function Dashboard() {
     const timeoutId = setTimeout(() => {
       setLoading(false);
       setError('Loading timeout - data took too long to fetch.');
-      setLoadingProgress([]);
       stopLoading(operationId);
-      console.error('[Dashboard] Timeout after', Date.now() - loadStartTime.current, 'ms');
+      console.error('[Dashboard] Timeout after', Date.now() - loadStartTime, 'ms');
     }, timeoutDuration);
 
     try {
       console.log('[Dashboard] Starting parallel data load');
       const startTime = Date.now();
-      
-      setLoadingProgress(['Loading all data...']);
       
       const [quotesData, customersData, itemsData] = await Promise.all([
         getQuotes(user?.id),
@@ -189,9 +151,7 @@ export default function Dashboard() {
           declinedValue,
         });
         setLoading(false);
-        setLoadingProgress([]);
         setRetryCount(0);
-        setAutoRefreshAttempted(false); // Reset for next load cycle
       });
       
       console.log('[Dashboard] Re-render triggered, data should be visible');
@@ -200,10 +160,9 @@ export default function Dashboard() {
     } catch (error) {
       clearTimeout(timeoutId);
       stopLoading(operationId);
-      console.error('[Dashboard] Error:', error, 'Duration:', Date.now() - loadStartTime.current, 'ms');
+      console.error('[Dashboard] Error:', error, 'Duration:', Date.now() - loadStartTime, 'ms');
       setError('Failed to load dashboard data. Please try again.');
       setLoading(false);
-      setLoadingProgress([]);
       toast({
         title: 'Error loading data',
         description: 'Could not load dashboard. Check console for details.',
@@ -214,7 +173,6 @@ export default function Dashboard() {
 
   const handleRetry = () => {
     setRetryCount(prev => prev + 1);
-    setAutoRefreshAttempted(false);
     hasLoadedData.current = false;
     loadData();
   };
@@ -244,7 +202,6 @@ export default function Dashboard() {
       hasLoadedData.current = false;
       setRetryCount(0);
       setError(null);
-      setAutoRefreshAttempted(false);
       
       // Reload
       setTimeout(() => {
@@ -289,19 +246,14 @@ export default function Dashboard() {
           </div>
           <div className="flex gap-2">
             <Skeleton className="h-10 w-32" />
-            {showStuckHelper && (
+            {retryCount > 0 && (
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => {
-                  setAutoRefreshAttempted(false);
-                  clearInFlightRequests();
-                  hasLoadedData.current = false;
-                  loadData();
-                }}
+                onClick={handleRetry}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
+                Retry
               </Button>
             )}
           </div>
