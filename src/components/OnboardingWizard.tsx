@@ -245,6 +245,7 @@ export function OnboardingWizard() {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
+  const [isChecking, setIsChecking] = useState(true); // Add checking state
   
   // Form data
   const [companyData, setCompanyData] = useState<CompanyData>({
@@ -262,13 +263,72 @@ export function OnboardingWizard() {
   const [importOption, setImportOption] = useState("fresh");
 
   useEffect(() => {
-    // Only check onboarding status when user is loaded
-    if (!user?.id) return;
-    
-    const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user.id}`);
-    if (!hasCompletedOnboarding) {
+    // Check onboarding status when user is loaded
+    const checkOnboardingStatus = async () => {
+      if (!user?.id) {
+        setIsChecking(false);
+        return;
+      }
+      
+      console.log("[OnboardingWizard] Checking onboarding status for user:", user.id);
+      
+      // Check 1: localStorage completion flags
+      const localFlag = localStorage.getItem(`onboarding_completed_${user.id}`);
+      const statusFlag = localStorage.getItem(`onboarding_status_${user.id}`);
+      const sessionFlag = sessionStorage.getItem(`onboarding_completed_${user.id}`);
+      
+      console.log("[OnboardingWizard] Completion flags:", {
+        localFlag,
+        statusFlag,
+        sessionFlag
+      });
+      
+      // If ANY flag is set, consider onboarding complete
+      if (localFlag === "true" || statusFlag === "completed" || sessionFlag === "true") {
+        console.log("[OnboardingWizard] ✓ Onboarding already completed (flags found)");
+        setIsOpen(false);
+        setIsChecking(false);
+        return;
+      }
+      
+      // Check 2: Verify database settings (fallback if localStorage was cleared)
+      try {
+        console.log("[OnboardingWizard] No completion flags found, checking database...");
+        const dbSettings = await getSettings(user.id);
+        
+        // If company name and email are set in database, consider onboarding complete
+        if (dbSettings.name && dbSettings.name.trim() !== "" && 
+            dbSettings.email && dbSettings.email.trim() !== "") {
+          console.log("[OnboardingWizard] ✓ Onboarding already completed (database has settings)");
+          console.log("[OnboardingWizard] Company name:", dbSettings.name);
+          console.log("[OnboardingWizard] Company email:", dbSettings.email);
+          
+          // Restore completion flags since database confirms completion
+          localStorage.setItem(`onboarding_completed_${user.id}`, "true");
+          localStorage.setItem(`onboarding_status_${user.id}`, "completed");
+          sessionStorage.setItem(`onboarding_completed_${user.id}`, "true");
+          
+          console.log("[OnboardingWizard] ✓ Restored completion flags from database verification");
+          
+          setIsOpen(false);
+          setIsChecking(false);
+          return;
+        }
+        
+        console.log("[OnboardingWizard] Database settings not complete, showing onboarding");
+        console.log("[OnboardingWizard] Company name:", dbSettings.name || "(empty)");
+        console.log("[OnboardingWizard] Company email:", dbSettings.email || "(empty)");
+      } catch (error) {
+        console.error("[OnboardingWizard] Error checking database settings:", error);
+      }
+      
+      // If we get here, onboarding is not complete - show wizard
+      console.log("[OnboardingWizard] Opening onboarding wizard");
       setIsOpen(true);
-    }
+      setIsChecking(false);
+    };
+    
+    checkOnboardingStatus();
   }, [user?.id]);
 
   const steps = [
