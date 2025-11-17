@@ -28,7 +28,7 @@ import { Quote, Customer } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { getLocalQuotes, getLocalCustomers } from '@/lib/local-db';
+import { getQuotes, getCustomers } from '@/lib/storage';
 
 interface AdvancedAnalyticsProps {
   quotes?: Quote[];
@@ -69,9 +69,14 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
   const loadLiveData = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      // Use props if provided, otherwise fetch from localStorage
-      const liveQuotes = propQuotes || getLocalQuotes();
-      const liveCustomers = propCustomers || getLocalCustomers();
+      // Use props if provided, otherwise fetch from localStorage using the correct storage system
+      const liveQuotes = propQuotes || getQuotes();
+      const liveCustomers = propCustomers || getCustomers();
+      
+      console.log('AdvancedAnalytics: Loaded data', { 
+        quotesCount: liveQuotes.length, 
+        customersCount: liveCustomers.length 
+      });
       
       setQuotes(liveQuotes);
       setCustomers(liveCustomers);
@@ -85,6 +90,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
       toast.error('Failed to refresh analytics data');
     } finally {
       setIsRefreshing(false);
+      setIsLoading(false);
     }
   }, [propQuotes, propCustomers]);
 
