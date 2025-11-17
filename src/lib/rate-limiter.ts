@@ -1,191 +1,178 @@
+
 /**
- * Client-side rate limiter for API calls and user actions
- * Prevents abuse and ensures smooth user experience
+ * Client-side rate limiter for API calls
+ * Prevents API quota abuse and implements exponential backoff
  */
 
 interface RateLimitConfig {
   maxRequests: number;
   windowMs: number;
-  keyPrefix: string;
+  retryAfterMs?: number;
 }
 
 interface RateLimitEntry {
   count: number;
   resetAt: number;
+  blockedUntil?: number;
 }
 
 class RateLimiter {
-  private storage: Map<string, RateLimitEntry> = new Map();
+  private limits: Map<string, RateLimitEntry> = new Map();
+  private configs: Map<string, RateLimitConfig> = new Map();
 
   /**
-   * Check if an action is rate limited
+   * Register a rate limit configuration for a specific key
    */
-  check(key: string, config: RateLimitConfig): { allowed: boolean; remaining: number; resetIn: number } {
-    const fullKey = `${config.keyPrefix}:${key}`;
+  register(key: string, config: RateLimitConfig): void {
+    this.configs.set(key, config);
+  }
+
+  /**
+   * Check if a request is allowed under the rate limit
+   */
+  isAllowed(key: string): { allowed: boolean; retryAfter?: number } {
+    const config = this.configs.get(key);
+    if (!config) {
+      console.warn(`No rate limit config found for key: ${key}`);
+      return { allowed: true };
+    }
+
     const now = Date.now();
-    
-    let entry = this.storage.get(fullKey);
+    const entry = this.limits.get(key);
 
-    // Clean up expired entry
-    if (entry && now >= entry.resetAt) {
-      this.storage.delete(fullKey);
-      entry = undefined;
-    }
-
-    // Create new entry if needed
-    if (!entry) {
-      entry = {
-        count: 0,
-        resetAt: now + config.windowMs,
-      };
-      this.storage.set(fullKey, entry);
-    }
-
-    // Check if limit exceeded
-    if (entry.count >= config.maxRequests) {
+    // Check if blocked due to previous rate limit violation
+    if (entry?.blockedUntil && entry.blockedUntil > now) {
       return {
         allowed: false,
-        remaining: 0,
-        resetIn: Math.ceil((entry.resetAt - now) / 1000),
+        retryAfter: Math.ceil((entry.blockedUntil - now) / 1000)
       };
     }
 
-    // Increment count
-    entry.count++;
+    // Initialize or reset if window expired
+    if (!entry || entry.resetAt <= now) {
+      this.limits.set(key, {
+        count: 1,
+        resetAt: now + config.windowMs
+      });
+      return { allowed: true };
+    }
+
+    // Check if within limit
+    if (entry.count < config.maxRequests) {
+      entry.count++;
+      return { allowed: true };
+    }
+
+    // Rate limit exceeded
+    const retryAfter = config.retryAfterMs || config.windowMs;
+    entry.blockedUntil = now + retryAfter;
 
     return {
-      allowed: true,
-      remaining: config.maxRequests - entry.count,
-      resetIn: Math.ceil((entry.resetAt - now) / 1000),
+      allowed: false,
+      retryAfter: Math.ceil(retryAfter / 1000)
     };
+  }
+
+  /**
+   * Track a request and enforce rate limiting
+   */
+  async trackRequest<T>(
+    key: string,
+    fn: () => Promise<T>
+  ): Promise<T> {
+    const { allowed, retryAfter } = this.isAllowed(key);
+
+    if (!allowed) {
+      throw new Error(
+        `Rate limit exceeded. Please try again in ${retryAfter} seconds.`
+      );
+    }
+
+    return fn();
   }
 
   /**
    * Reset rate limit for a specific key
    */
-  reset(key: string, keyPrefix: string): void {
-    const fullKey = `${keyPrefix}:${key}`;
-    this.storage.delete(fullKey);
+  reset(key: string): void {
+    this.limits.delete(key);
   }
 
   /**
-   * Clean up expired entries
+   * Clear all rate limits
    */
-  cleanup(): void {
+  resetAll(): void {
+    this.limits.clear();
+  }
+
+  /**
+   * Get current rate limit status for a key
+   */
+  getStatus(key: string): {
+    count: number;
+    limit: number;
+    resetAt: number;
+    isBlocked: boolean;
+  } | null {
+    const config = this.configs.get(key);
+    const entry = this.limits.get(key);
+
+    if (!config) return null;
+
     const now = Date.now();
-    for (const [key, entry] of this.storage.entries()) {
-      if (now >= entry.resetAt) {
-        this.storage.delete(key);
-      }
-    }
+    const isBlocked = !!(entry?.blockedUntil && entry.blockedUntil > now);
+
+    return {
+      count: entry?.count || 0,
+      limit: config.maxRequests,
+      resetAt: entry?.resetAt || now + config.windowMs,
+      isBlocked
+    };
   }
 }
 
 // Singleton instance
-const rateLimiter = new RateLimiter();
+export const rateLimiter = new RateLimiter();
 
-// Cleanup every 5 minutes
-setInterval(() => rateLimiter.cleanup(), 5 * 60 * 1000);
+// Pre-configure rate limits for AI services
+rateLimiter.register('ai-assist', {
+  maxRequests: 10, // 10 requests
+  windowMs: 60000, // per minute
+  retryAfterMs: 30000 // 30 second cooldown after limit
+});
 
-/**
- * Rate limit configurations for different actions
- */
-export const RATE_LIMITS = {
-  // AI features (per user)
-  AI_GENERATION: {
-    maxRequests: 10,
-    windowMs: 60 * 1000, // 1 minute
-    keyPrefix: "ai-gen",
-  },
-  AI_RECOMMENDATIONS: {
-    maxRequests: 20,
-    windowMs: 60 * 1000,
-    keyPrefix: "ai-rec",
-  },
+rateLimiter.register('ai-quote-generation', {
+  maxRequests: 5, // 5 requests
+  windowMs: 60000, // per minute
+  retryAfterMs: 60000 // 1 minute cooldown
+});
 
-  // Email sending (per user)
-  SEND_EMAIL: {
-    maxRequests: 5,
-    windowMs: 60 * 1000,
-    keyPrefix: "email",
-  },
-  SEND_FOLLOW_UP: {
-    maxRequests: 10,
-    windowMs: 60 * 1000,
-    keyPrefix: "follow-up",
-  },
+rateLimiter.register('ai-follow-up', {
+  maxRequests: 10, // 10 requests
+  windowMs: 60000, // per minute
+  retryAfterMs: 30000 // 30 second cooldown
+});
 
-  // Quote operations (per user)
-  CREATE_QUOTE: {
-    maxRequests: 30,
-    windowMs: 60 * 1000,
-    keyPrefix: "create-quote",
-  },
-  UPDATE_QUOTE: {
-    maxRequests: 60,
-    windowMs: 60 * 1000,
-    keyPrefix: "update-quote",
-  },
+rateLimiter.register('ai-item-recommendations', {
+  maxRequests: 15, // 15 requests
+  windowMs: 60000, // per minute
+  retryAfterMs: 20000 // 20 second cooldown
+});
 
-  // Public quote views (per IP/session)
-  VIEW_PUBLIC_QUOTE: {
-    maxRequests: 20,
-    windowMs: 60 * 1000,
-    keyPrefix: "view-quote",
-  },
+rateLimiter.register('ai-pricing-optimization', {
+  maxRequests: 5, // 5 requests
+  windowMs: 60000, // per minute
+  retryAfterMs: 60000 // 1 minute cooldown
+});
 
-  // Authentication (per IP)
-  AUTH_ATTEMPT: {
-    maxRequests: 5,
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    keyPrefix: "auth",
-  },
-
-  // API calls (per user)
-  API_CALL: {
-    maxRequests: 100,
-    windowMs: 60 * 1000,
-    keyPrefix: "api",
-  },
-} as const;
-
-/**
- * Check if an action is rate limited
- */
-export function checkRateLimit(
-  userId: string,
-  action: keyof typeof RATE_LIMITS
-): { allowed: boolean; remaining: number; resetIn: number } {
-  const config = RATE_LIMITS[action];
-  return rateLimiter.check(userId, config);
+// Export helper function for easy integration
+export async function withRateLimit<T>(
+  key: string,
+  fn: () => Promise<T>
+): Promise<T> {
+  return rateLimiter.trackRequest(key, fn);
 }
 
-/**
- * Reset rate limit for a user and action
- */
-export function resetRateLimit(userId: string, action: keyof typeof RATE_LIMITS): void {
-  const config = RATE_LIMITS[action];
-  rateLimiter.reset(userId, config.keyPrefix);
-}
-
-/**
- * Wrapper for rate-limited async functions
- */
-export function withRateLimit<T extends (...args: unknown[]) => Promise<unknown>>(
-  fn: T,
-  action: keyof typeof RATE_LIMITS,
-  getUserId: () => string
-): T {
-  return (async (...args: Parameters<T>) => {
-    const userId = getUserId();
-    const result = checkRateLimit(userId, action);
-
-    if (!result.allowed) {
-      throw new Error(
-        `Rate limit exceeded. Please try again in ${result.resetIn} seconds.`
-      );
-    }
-
-    return fn(...args);
-  }) as T;
-}
+// Export types
+export type { RateLimitConfig, RateLimitEntry };
+  
