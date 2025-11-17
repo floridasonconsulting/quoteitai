@@ -263,10 +263,9 @@ export default function Dashboard() {
   };
 
   // CRITICAL: Log before every render path
-  console.log('[Dashboard] Render path check:', { loading, error, quotesCount: quotes.length, authLoading, user: !!user });
+  console.log('[Dashboard] Render path check:', { loading, error, quotesCount: quotes.length, authLoading, user: !!user, hasLoadedData: hasLoadedData.current });
 
   // Show skeleton UI while auth is loading OR while data is loading
-  // This prevents the blank page issue by keeping skeleton visible until data is ready
   if (loading || authLoading) {
     console.log('[Dashboard] Rendering SKELETON UI', { loading, authLoading });
     return (
@@ -340,50 +339,12 @@ export default function Dashboard() {
     );
   }
 
-  // CRITICAL SAFETY CHECK: If we have no data yet but loading is false,
-  // keep showing skeleton to prevent blank page
-  const hasAnyData = quotes.length > 0 || customers.length > 0 || stats.totalQuotes > 0;
-  
-  // CRITICAL FIX: Only show skeleton if data load hasn't been attempted yet
-  // If hasLoadedData.current is true, we've already tried loading, so show main content even if empty
-  if (!hasAnyData && !hasLoadedData.current && !loading) {
-    console.log('[Dashboard] No data yet and load not attempted - showing skeleton');
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:flex sm:items-center sm:justify-between">
-          <div>
-            <Skeleton className="h-8 w-64 mb-2" />
-            <Skeleton className="h-4 w-96" />
-          </div>
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map(i => (
-            <Card key={i}>
-              <CardHeader className="pb-3">
-                <Skeleton className="h-4 w-32" />
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {[1, 2, 3].map(j => (
-                  <div key={j} className="flex items-center justify-between">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-6 w-16" />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // CRITICAL: If we reach here, either we have data OR we've attempted loading and can show empty state
+  // CRITICAL: If we reach here, we should ALWAYS render the main content
+  // Even if there's no data yet, we'll show empty states with helpful messages
   console.log('[Dashboard] Rendering MAIN CONTENT:', { 
     quotesCount: quotes.length, 
     statsTotal: stats.totalQuotes,
     customersCount: customers.length,
-    hasAnyData,
     hasLoadedData: hasLoadedData.current
   });
 
