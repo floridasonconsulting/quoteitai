@@ -311,12 +311,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     
     if (!error && data.session) {
-      // Set session and user immediately
-      setSession(data.session);
-      setUser(data.session.user);
+      // Use flushSync to ensure state updates are applied immediately
+      const { flushSync } = await import('react-dom');
+      
+      flushSync(() => {
+        setSession(data.session);
+        setUser(data.session.user);
+      });
       
       // Wait for role check to complete
       await checkUserRole(data.session);
+      
+      // Small delay to ensure React has propagated state changes
+      await new Promise(resolve => setTimeout(resolve, 50));
       
       // Load subscription in background
       loadSubscription(data.session.user.id).catch(console.error);
