@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { AIUpgradeDialog } from './AIUpgradeDialog';
 import { 
   TrendingUp, 
@@ -20,7 +21,8 @@ import {
   AlertCircle,
   Lightbulb,
   Plus,
-  RefreshCw
+  RefreshCw,
+  CheckCircle2
 } from 'lucide-react';
 import { Quote, Customer } from '@/types';
 import { toast } from 'sonner';
@@ -39,6 +41,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [timeRange, setTimeRange] = useState<'30' | '90' | '365' | 'all'>('90');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -54,7 +57,12 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
     },
     averageTimeToClose: 0,
     customerLifetimeValue: 0,
-    monthOverMonthGrowth: 0
+    monthOverMonthGrowth: 0,
+    periodComparison: {
+      revenue: { current: 0, previous: 0, change: 0 },
+      quotes: { current: 0, previous: 0, change: 0 },
+      customers: { current: 0, previous: 0, change: 0 }
+    }
   });
 
   // Load live data from localStorage
