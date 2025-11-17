@@ -336,19 +336,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Wait for role check to complete - this is critical
       await checkUserRole(data.session);
       
-      // Ensure role state has propagated by waiting for next event loop
-      await new Promise(resolve => setTimeout(resolve, 150));
-      
-      // Load subscription in background (non-blocking)
-      loadSubscription(data.session.user.id).catch(console.error);
-      
-      // Set signingIn to false BEFORE navigation to ensure loading state is correct
+      // Set loading to false explicitly
       flushSync(() => {
+        setLoading(false);
         setSigningIn(false);
       });
       
-      // One more brief wait to ensure React has processed all state updates
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // Wait for React to process all state updates and re-renders
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Load subscription in background (non-blocking)
+      loadSubscription(data.session.user.id).catch(console.error);
       
       toast.success('Signed in successfully!');
       
