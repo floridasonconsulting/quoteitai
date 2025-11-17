@@ -454,3 +454,128 @@ export async function loadSampleDataFile(filename: string): Promise<string> {
   }
   return response.text();
 }
+
+/**
+ * Export All Data
+ * Exports all customers, items, quotes, and settings to a JSON file
+ */
+export async function exportAllData(): Promise<void> {
+  try {
+    // Import necessary functions
+    const { getCustomers, getItems, getQuotes, getSettings } = await import('./db-service');
+    
+    // Get user ID from auth context
+    const userId = localStorage.getItem('user_id');
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    // Fetch all data
+    const [customers, items, quotes, settings] = await Promise.all([
+      getCustomers(userId),
+      getItems(userId),
+      getQuotes(userId),
+      getSettings(userId),
+    ]);
+
+    // Create export object
+    const exportData = {
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      data: {
+        customers,
+        items,
+        quotes,
+        settings,
+      },
+    };
+
+    // Convert to JSON and download
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `quote-it-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('[Export] Failed to export data:', error);
+    throw error;
+  }
+}
+
+/**
+ * Import All Data
+ * Imports customers, items, quotes, and settings from a JSON backup file
+ */
+export async function importAllData(file: File): Promise<void> {
+  try {
+    // Read file
+    const text = await file.text();
+    const importData = JSON.parse(text);
+
+    // Validate import data structure
+    if (!importData.version || !importData.data) {
+      throw new Error('Invalid backup file format');
+    }
+
+    const { customers, items, quotes, settings } = importData.data;
+
+    // Get user ID
+    const userId = localStorage.getItem('user_id');
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    // Import settings first
+    if (settings) {
+      const { saveSettings } = await import('./db-service');
+      await saveSettings(userId, settings);
+    }
+
+    // Import customers
+    if (customers && Array.isArray(customers)) {
+      const { addCustomer } = await import('./db-service');
+      for (const customer of customers) {
+        try {
+          await addCustomer(userId, customer);
+        } catch (error) {
+          console.warn('[Import] Failed to import customer:', customer.name, error);
+        }
+      }
+    }
+
+    // Import items
+    if (items && Array.isArray(items)) {
+      const { addItem } = await import('./db-service');
+      for (const item of items) {
+        try {
+          await addItem(userId, item);
+        } catch (error) {
+          console.warn('[Import] Failed to import item:', item.name, error);
+        }
+      }
+    }
+
+    // Import quotes
+    if (quotes && Array.isArray(quotes)) {
+      const { addQuote } = await import('./db-service');
+      for (const quote of quotes) {
+        try {
+          await addQuote(userId, quote);
+        } catch (error) {
+          console.warn('[Import] Failed to import quote:', quote.quoteNumber, error);
+        }
+      }
+    }
+
+    // Clear caches to force fresh data load
+    const { clearAllCaches } = await import('./db-service');
+    clearAllCaches();
+  } catch (error) {
+    console.error('[Import] Failed to import data:', error);
+    throw error;
+  }
+}
