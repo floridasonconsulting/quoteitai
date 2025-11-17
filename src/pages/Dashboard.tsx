@@ -160,8 +160,17 @@ export default function Dashboard() {
           totalRevenue,
           declinedValue,
         });
-        setLoading(false);
         setRetryCount(0);
+        setError(null);
+      });
+      
+      // CRITICAL: Wait for React to process the state update before turning off loading
+      // This ensures the component re-renders with data before we allow main content render
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Now it's safe to turn off loading
+      flushSync(() => {
+        setLoading(false);
       });
       
       console.log('[Dashboard] Re-render triggered, data should be visible');
@@ -317,6 +326,40 @@ export default function Dashboard() {
           >
             Force Reload Page
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // CRITICAL SAFETY CHECK: If we reach here without data, something is wrong
+  // Force back to loading state to prevent blank page
+  if (!loading && !error && quotes.length === 0 && !hasLoadedData.current) {
+    console.warn('[Dashboard] No data available yet, showing skeleton');
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex sm:items-center sm:justify-between">
+          <div>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {[1, 2, 3].map(j => (
+                  <div key={j} className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-6 w-16" />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
     );
