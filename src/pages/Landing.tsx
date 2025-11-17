@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,10 @@ import {
   Play,
   Mail,
   ChevronUp,
-  Crown
+  Crown,
+  DollarSign,
+  CreditCard,
+  Building2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Autoplay from "embla-carousel-autoplay";
@@ -37,11 +41,11 @@ export default function Landing() {
   // Intersection observers for scroll animations
   const featuresSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
   const benefitsSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
+  const integrationsSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
   const comparisonSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
   const screenshotsSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
   const workflowSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
   const pricingSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
-  const testimonialsSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
   const ctaSection = useIntersectionObserver<HTMLElement>({ threshold: 0.1 });
 
   useEffect(() => {
@@ -49,19 +53,42 @@ export default function Landing() {
       setShowScrollTop(window.scrollY > 400);
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const features = [
     {
+      icon: Building2,
+      title: "QuickBooks Integration",
+      description: "Automatic customer sync and invoice creation - included in Pro tier",
+      badge: "NEW"
+    },
+    {
+      icon: CreditCard,
+      title: "Stripe Payments",
+      description: "Generate payment links and track invoices - included in Pro tier",
+      badge: "NEW"
+    },
+    {
       icon: Sparkles,
+      title: "AI Scope of Work Drafting",
+      description: "Generate comprehensive SOWs with work breakdown, timelines, and deliverables",
+      badge: "NEW"
+    },
+    {
+      icon: FileText,
       title: "AI-Powered Quoting",
       description: "Auto-generate professional quote titles, descriptions, and terms with advanced AI"
+    },
+    {
+      icon: Mail,
+      title: "Professional Email Automation",
+      description: "Send branded HTML emails with editable templates and automated follow-ups"
     },
     {
       icon: Smartphone,
@@ -84,59 +111,77 @@ export default function Landing() {
       description: "Pre-configure products and services for lightning-fast quote creation"
     },
     {
-      icon: FileText,
-      title: "Professional PDFs",
-      description: "Generate branded, polished quote documents with custom company information"
-    },
-    {
       icon: Crown,
       title: "White-Label Branding",
-      description: "Custom logo and favicon for professional, branded quotes and public views"
+      description: "Custom logo and favicon for professional, branded quotes (Max AI tier)"
+    }
+  ];
+
+  const integrationBenefits = [
+    {
+      icon: Building2,
+      title: "QuickBooks Online",
+      features: [
+        "Two-way customer synchronization",
+        "Automatic invoice creation from accepted quotes",
+        "Real-time payment tracking",
+        "Chart of accounts sync"
+      ],
+      badge: "Included in Pro"
     },
     {
-      icon: Mail,
-      title: "Professional Email Communication",
-      description: "Send branded HTML emails with editable templates, download buttons, and automated follow-ups"
+      icon: CreditCard,
+      title: "Stripe Payments",
+      features: [
+        "Professional invoice generation",
+        "Secure payment link creation",
+        "Real-time payment status tracking",
+        "Automatic payment reminders"
+      ],
+      badge: "Included in Pro"
     },
     {
-      icon: Clock,
-      title: "Quote Aging Tracking",
-      description: "Visual indicators show quote freshness - never miss a follow-up opportunity"
-    },
-    {
-      icon: Globe,
-      title: "Mobile Ready",
-      description: "Native Android & iOS app capabilities powered by Capacitor"
+      icon: Sparkles,
+      title: "AI-Powered SOW",
+      features: [
+        "Comprehensive scope of work documents",
+        "Automatic work breakdown structure",
+        "Timeline and milestone generation",
+        "Deliverables with acceptance criteria"
+      ],
+      badge: "Business tier"
     }
   ];
 
   const benefits = [
     {
+      icon: DollarSign,
+      title: "Save 40-80%",
+      stat: "vs competitors",
+      description: "Professional features at $29/mo instead of $49-$200/mo"
+    },
+    {
       icon: Zap,
-      title: "Save Time",
-      stat: "10x faster",
-      description: "Create professional quotes in minutes, not hours, with AI automation"
+      title: "10x Faster Quotes",
+      stat: "Minutes not hours",
+      description: "AI automation eliminates repetitive work and speeds up quote creation"
+    },
+    {
+      icon: Building2,
+      title: "Seamless Accounting",
+      stat: "QuickBooks sync",
+      description: "Automatic customer and invoice sync - no double entry"
     },
     {
       icon: Mail,
       title: "Professional Communication",
       stat: "100% branded",
-      description: "Send beautiful, customized emails that reinforce your brand and close more deals"
+      description: "Send beautiful, customized emails that reinforce your brand"
     },
     {
       icon: TrendingUp,
       title: "Increase Win Rates",
       description: "Professional, consistent quotes impress clients and close more deals"
-    },
-    {
-      icon: CheckCircle2,
-      title: "Never Miss Follow-Ups",
-      description: "Smart aging alerts tell you exactly when to reach out to prospects"
-    },
-    {
-      icon: Shield,
-      title: "Work Anywhere",
-      description: "Office, job site, or home - your quotes sync across all devices"
     }
   ];
 
@@ -147,10 +192,10 @@ export default function Landing() {
       period: "forever",
       description: "Perfect for getting started",
       features: [
-        "Basic features",
-        "Limited quotes per month",
+        "5 quotes per month",
         "Basic email notifications",
         "Standard PDF export",
+        "Customer & item management",
         "Email support"
       ],
       cta: "Get Started Free",
@@ -158,105 +203,111 @@ export default function Landing() {
     },
     {
       name: "Pro",
-      price: "$9.99",
+      price: "$29",
       period: "per month",
-      annualPrice: "$99/year (save $20)",
-      description: "For growing businesses with professional communication",
+      oldPrice: "$49-99/mo competitors",
+      annualPrice: "$290/year (save $58)",
+      description: "For growing businesses - 40% cheaper than PandaDoc",
       features: [
         "50 quotes per month",
-        "Professional HTML emails",
+        "✨ QuickBooks Integration",
+        "✨ Stripe Payment Integration",
+        "Professional HTML email automation",
         "Editable email templates",
-        "Basic AI features",
-        "Customer management",
-        "Item catalog",
-        "Cloud sync",
+        "AI quote generation",
+        "AI terms & conditions",
+        "Cloud sync across devices",
         "Priority support"
       ],
       cta: "Start Pro Trial",
-      highlighted: true
+      highlighted: true,
+      savings: "Save $240/year vs PandaDoc"
+    },
+    {
+      name: "Business",
+      price: "$79",
+      period: "per month",
+      oldPrice: "$200+/mo competitors",
+      annualPrice: "$790/year (save $158)",
+      description: "For established businesses - 60% cheaper than ServiceTitan",
+      features: [
+        "Everything in Pro, plus:",
+        "Unlimited quotes",
+        "Unlimited team members (no per-seat fees)",
+        "✨ AI Scope of Work drafting",
+        "✨ AI item recommendations",
+        "✨ AI pricing optimization",
+        "Advanced analytics",
+        "White-label branding options",
+        "API access",
+        "Dedicated account manager"
+      ],
+      cta: "Start Business Trial",
+      highlighted: false,
+      savings: "Save $1,452/year vs ServiceTitan"
     },
     {
       name: "Max AI",
-      price: "$19.99",
+      price: "$149",
       period: "per month",
-      annualPrice: "$199/year (save $40)",
-      description: "Unlimited quotes + white-label branding + full AI automation",
+      oldPrice: "$300+/mo competitors",
+      annualPrice: "$1,490/year (save $298)",
+      description: "Enterprise AI automation - 50% cheaper than competitors with AI",
       features: [
-        "Unlimited quotes",
-        "Unlimited professional emails",
-        "White-label branding (custom logo & favicon)",
-        "Advanced email automation",
-        "Advanced AI features",
-        "AI quote generation",
-        "AI terms & conditions",
-        "Priority AI processing",
-        "Dedicated support"
+        "Everything in Business, plus:",
+        "Unlimited AI generation",
+        "AI full quote generation",
+        "AI competitive analysis",
+        "AI customer insights",
+        "Custom AI training",
+        "RFP response matching",
+        "Smart content library",
+        "White-label + custom domain",
+        "24/7 priority support",
+        "Custom integrations"
       ],
       cta: "Start Max AI Trial",
-      highlighted: false
+      highlighted: false,
+      savings: "Save $1,812/year vs competitors"
     }
   ];
 
-  const testimonials = [
+  const workflows = [
     {
-      quote: "Quote-it AI has transformed how we create proposals. What used to take hours now takes minutes.",
-      author: "Sarah Johnson",
-      role: "Contractor, BuildRight Co."
+      id: "create-quote",
+      title: "Create a Quote",
+      icon: FileText,
+      description: "From customer selection to PDF generation in under 60 seconds",
+      steps: ["Select customer", "Add items", "AI generates details", "Export PDF"]
     },
     {
-      quote: "The professional HTML emails have transformed how we communicate with clients. Our quotes look amazing and the download button makes it so easy for customers.",
-      author: "Jennifer Rodriguez",
-      role: "Business Owner, JR Services"
+      id: "email-quote",
+      title: "Email a Quote",
+      icon: Mail,
+      description: "Send professional branded emails with one click",
+      steps: ["Create quote & generate AI summary", "Customize email subject & body", "Preview branded HTML email", "Send with download button"]
     },
     {
-      quote: "The aging alerts are a game-changer. We're following up at the perfect time and closing more deals.",
-      author: "Michael Chen",
-      role: "Sales Consultant"
+      id: "track-quotes",
+      title: "Track Performance",
+      icon: TrendingUp,
+      description: "Monitor quote status and aging with visual indicators",
+      steps: ["View dashboard", "Check aging alerts", "Follow up on time", "Close deals"]
     },
     {
-      quote: "Being able to create quotes on my phone while at job sites has been incredible for my business.",
-      author: "David Martinez",
-      role: "Freelance Electrician"
+      id: "manage-customers",
+      title: "Manage Customers",
+      icon: Users,
+      description: "Add contacts, import data, and keep everything organized",
+      steps: ["Add customer", "Import from CSV", "View history", "Send quotes"]
     }
   ];
 
   const heroFeatures = [
-    { icon: Sparkles, text: "AI-powered quote generation" },
-    { icon: BarChart3, text: "Real-time analytics dashboard" },
+    { icon: Building2, text: "QuickBooks & Stripe integrated" },
+    { icon: Sparkles, text: "AI-powered SOW drafting" },
     { icon: Mail, text: "Professional email automation" },
-    { icon: Smartphone, text: "Works on any device" }
-  ];
-
-
-  const workflows = [
-    {
-      id: 'create-quote',
-      title: 'Create a Quote',
-      icon: FileText,
-      description: 'From customer selection to PDF generation in under 60 seconds',
-      steps: ['Select customer', 'Add items', 'AI generates details', 'Export PDF']
-    },
-    {
-      id: 'email-quote',
-      title: 'Email a Quote',
-      icon: Mail,
-      description: 'Send professional branded emails with one click',
-      steps: ['Create quote & generate AI summary', 'Customize email subject & body', 'Preview branded HTML email', 'Send with download button']
-    },
-    {
-      id: 'track-quotes',
-      title: 'Track Performance',
-      icon: TrendingUp,
-      description: 'Monitor quote status and aging with visual indicators',
-      steps: ['View dashboard', 'Check aging alerts', 'Follow up on time', 'Close deals']
-    },
-    {
-      id: 'manage-customers',
-      title: 'Manage Customers',
-      icon: Users,
-      description: 'Add contacts, import data, and keep everything organized',
-      steps: ['Add customer', 'Import from CSV', 'View history', 'Send quotes']
-    }
+    { icon: DollarSign, text: "40-80% cheaper than competitors" }
   ];
 
   const plugin = useRef(
@@ -273,31 +324,37 @@ export default function Landing() {
             <span className="text-xl font-bold">Quote-it AI</span>
           </div>
           <nav className="hidden md:flex gap-6">
-            <button onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Features</button>
-            <button onClick={() => document.getElementById('benefits')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Benefits</button>
-            <button onClick={() => document.getElementById('comparison')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Comparison</button>
-            <button onClick={() => document.getElementById('screenshots')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Demo</button>
-            <button onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })} className="text-sm hover:text-primary transition-colors">Pricing</button>
-            
-            <button onClick={() => navigate('/help')} className="text-sm hover:text-primary transition-colors">Help</button>
+            <button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} className="text-sm hover:text-primary transition-colors">Features</button>
+            <button onClick={() => document.getElementById("integrations")?.scrollIntoView({ behavior: "smooth" })} className="text-sm hover:text-primary transition-colors">Integrations</button>
+            <button onClick={() => document.getElementById("comparison")?.scrollIntoView({ behavior: "smooth" })} className="text-sm hover:text-primary transition-colors">Pricing</button>
+            <button onClick={() => navigate("/help")} className="text-sm hover:text-primary transition-colors">Help</button>
           </nav>
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => navigate('/auth')}>Sign In</Button>
-            <Button onClick={() => navigate('/auth')}>Get Started</Button>
+            <Button variant="ghost" onClick={() => navigate("/auth")}>Sign In</Button>
+            <Button onClick={() => navigate("/auth")}>Get Started</Button>
           </div>
         </div>
       </header>
 
-      {/* Hero Banner with Screenshots */}
+      {/* Hero Banner */}
       <section className="py-16 bg-gradient-to-br from-primary/5 via-background to-accent/5">
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left: Feature highlights */}
             <div className="space-y-8">
-              <Badge variant="secondary">
-                <Star className="h-3 w-3 mr-1 fill-primary" />
-                See It In Action
-              </Badge>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary" className="bg-green-600 text-white">
+                  <Building2 className="h-3 w-3 mr-1" />
+                  QuickBooks Integrated
+                </Badge>
+                <Badge variant="secondary" className="bg-blue-600 text-white">
+                  <CreditCard className="h-3 w-3 mr-1" />
+                  Stripe Payments
+                </Badge>
+                <Badge variant="secondary" className="bg-purple-600 text-white">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  AI SOW Drafting
+                </Badge>
+              </div>
               <h1 className="text-4xl md:text-6xl font-bold leading-tight">
                 Create Professional Quotes in{" "}
                 <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -305,7 +362,7 @@ export default function Landing() {
                 </span>
               </h1>
               <p className="text-xl text-muted-foreground">
-                Smart quote management powered by AI. Create quotes, send professional branded emails, and close more deals with automated follow-ups.
+                The only AI-native quoting platform with <strong>built-in QuickBooks & Stripe integration</strong>. Enterprise intelligence at <strong>40-80% less cost</strong> than PandaDoc, Proposify, or ServiceTitan.
               </p>
               <div className="grid grid-cols-2 gap-4">
                 {heroFeatures.map((feature, idx) => (
@@ -318,21 +375,20 @@ export default function Landing() {
                 ))}
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" onClick={() => navigate('/auth')}>
+                <Button size="lg" onClick={() => navigate("/auth")}>
                   Start Free Trial
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-                <Button size="lg" variant="outline" onClick={() => document.getElementById('screenshots')?.scrollIntoView({ behavior: 'smooth' })}>
+                <Button size="lg" variant="outline" onClick={() => document.getElementById("screenshots")?.scrollIntoView({ behavior: "smooth" })}>
                   <Play className="mr-2 h-4 w-4" />
                   View Demo
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground">
-                No credit card required • Free forever plan available
+                No credit card required • 14-day free trial • QuickBooks & Stripe included
               </p>
             </div>
             
-            {/* Right: Screenshot carousel */}
             <div className="relative">
               <Carousel 
                 plugins={[plugin.current]}
@@ -350,8 +406,8 @@ export default function Landing() {
                             src={screenshot.image} 
                             alt={screenshot.title}
                             className="w-full h-auto"
-                            loading={screenshot.id === 'dashboard' ? 'eager' : 'lazy'}
-                            fetchPriority={screenshot.id === 'dashboard' ? 'high' : 'auto'}
+                            loading={screenshot.id === "dashboard" ? "eager" : "lazy"}
+                            fetchPriority={screenshot.id === "dashboard" ? "high" : "auto"}
                           />
                           {screenshot.isGif && (
                             <div className="absolute top-2 right-2 bg-black/60 rounded-full p-2">
@@ -375,32 +431,92 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* Integrations Highlight Section */}
       <section 
-        id="features" 
-        ref={featuresSection.ref}
+        id="integrations" 
+        ref={integrationsSection.ref}
         className={`py-16 bg-muted/30 transition-all duration-700 ${
-          featuresSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+          integrationsSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
         }`}
       >
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything You Need</h2>
+            <Badge variant="secondary" className="mb-4">
+              <Star className="h-3 w-3 mr-1 fill-primary" />
+              New Integrations
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Built-In Integrations That Save You Time & Money</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              QuickBooks and Stripe integration included at no extra cost - competitors charge $99-200/month for these features
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {integrationBenefits.map((integration, idx) => (
+              <Card 
+                key={idx} 
+                className={`hover-scale transition-all duration-500 ${
+                  integrationsSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+                }`}
+                style={{ 
+                  transitionDelay: integrationsSection.isVisible ? `${idx * 100}ms` : "0ms" 
+                }}
+              >
+                <CardHeader>
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                    <integration.icon className="h-6 w-6 text-primary" />
+                  </div>
+                  <CardTitle className="flex items-center justify-between">
+                    {integration.title}
+                    <Badge variant="secondary" className="text-xs">{integration.badge}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {integration.features.map((feature, fidx) => (
+                      <li key={fidx} className="flex items-start gap-2 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section 
+        id="features" 
+        ref={featuresSection.ref}
+        className={`py-16 transition-all duration-700 ${
+          featuresSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}
+      >
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Everything You Need to Win More Deals</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Powerful features designed to streamline your quoting process and grow your business
             </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-5 xl:grid-cols-5 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6">
             {features.map((feature, idx) => (
               <Card 
                 key={idx} 
-                className={`hover-scale transition-all duration-500 ${
-                  featuresSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+                className={`hover-scale transition-all duration-500 relative ${
+                  featuresSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
                 }`}
                 style={{ 
-                  transitionDelay: featuresSection.isVisible ? `${idx * 50}ms` : '0ms' 
+                  transitionDelay: featuresSection.isVisible ? `${idx * 50}ms` : "0ms" 
                 }}
               >
+                {feature.badge && (
+                  <Badge variant="secondary" className="absolute -top-2 -right-2 bg-green-600 text-white">
+                    {feature.badge}
+                  </Badge>
+                )}
                 <CardHeader>
                   <feature.icon className="h-10 w-10 text-primary mb-2" />
                   <CardTitle className="text-lg">{feature.title}</CardTitle>
@@ -416,15 +532,15 @@ export default function Landing() {
       <section 
         id="benefits" 
         ref={benefitsSection.ref}
-        className={`py-16 transition-all duration-700 ${
-          benefitsSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        className={`py-16 bg-muted/30 transition-all duration-700 ${
+          benefitsSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
         }`}
       >
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Quote-it AI?</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Transform how you create and manage quotes
+              Professional tools without the enterprise price tag
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
@@ -432,10 +548,10 @@ export default function Landing() {
               <div 
                 key={idx} 
                 className={`text-center transition-all duration-500 ${
-                  benefitsSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+                  benefitsSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
                 }`}
                 style={{ 
-                  transitionDelay: benefitsSection.isVisible ? `${idx * 100}ms` : '0ms' 
+                  transitionDelay: benefitsSection.isVisible ? `${idx * 100}ms` : "0ms" 
                 }}
               >
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4 hover-scale">
@@ -456,21 +572,21 @@ export default function Landing() {
       <section 
         id="comparison" 
         ref={comparisonSection.ref}
-        className={`py-16 bg-muted/30 transition-all duration-700 ${
-          comparisonSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        className={`py-16 transition-all duration-700 ${
+          comparisonSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
         }`}
       >
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Professional Tools at an Unbeatable Price
+              Professional Tools at 40-80% Less Cost
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Get enterprise-level features without enterprise pricing
+              Get enterprise-level features without enterprise pricing or per-user fees
             </p>
           </div>
           
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             <Card>
               <CardContent className="p-6 md:p-8">
                 <div className="overflow-x-auto">
@@ -480,73 +596,92 @@ export default function Landing() {
                         <th className="text-left py-4 px-4 font-semibold">Feature</th>
                         <th className="text-center py-4 px-4 font-semibold">Quote-it AI</th>
                         <th className="text-center py-4 px-4 font-semibold text-muted-foreground">PandaDoc</th>
-                        <th className="text-center py-4 px-4 font-semibold text-muted-foreground">Proposify</th>
+                        <th className="text-center py-4 px-4 font-semibold text-muted-foreground">ServiceTitan</th>
                       </tr>
                     </thead>
                     <tbody>
+                      <tr className="border-b">
+                        <td className="py-4 px-4">QuickBooks Integration</td>
+                        <td className="text-center py-4 px-4">
+                          <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
+                        </td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">$79/mo tier</td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">$200+/mo</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-4 px-4">Stripe Payment Integration</td>
+                        <td className="text-center py-4 px-4">
+                          <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
+                        </td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">$49/mo tier</td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">Add-on</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-4 px-4">AI Scope of Work Drafting</td>
+                        <td className="text-center py-4 px-4">
+                          <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
+                        </td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">Not available</td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">Limited</td>
+                      </tr>
                       <tr className="border-b">
                         <td className="py-4 px-4">Professional HTML Emails</td>
                         <td className="text-center py-4 px-4">
                           <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
                         </td>
                         <td className="text-center py-4 px-4 text-muted-foreground">$49/mo</td>
-                        <td className="text-center py-4 px-4 text-muted-foreground">$49/mo</td>
-                      </tr>
-                      <tr className="border-b">
-                        <td className="py-4 px-4">Editable Email Templates</td>
-                        <td className="text-center py-4 px-4">
-                          <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
-                        </td>
-                        <td className="text-center py-4 px-4 text-muted-foreground">Limited</td>
-                        <td className="text-center py-4 px-4 text-muted-foreground">Add-on</td>
-                      </tr>
-                      <tr className="border-b">
-                        <td className="py-4 px-4">AI-Powered Features</td>
-                        <td className="text-center py-4 px-4">
-                          <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
-                        </td>
-                        <td className="text-center py-4 px-4 text-muted-foreground">Extra cost</td>
-                        <td className="text-center py-4 px-4 text-muted-foreground">Not available</td>
-                      </tr>
-                      <tr className="border-b">
-                        <td className="py-4 px-4">Mobile App</td>
-                        <td className="text-center py-4 px-4">
-                          <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
-                        </td>
-                        <td className="text-center py-4 px-4">
-                          <CheckCircle2 className="h-5 w-5 text-muted-foreground mx-auto" />
-                        </td>
-                        <td className="text-center py-4 px-4">
-                          <CheckCircle2 className="h-5 w-5 text-muted-foreground mx-auto" />
-                        </td>
-                      </tr>
-                      <tr className="border-b">
-                        <td className="py-4 px-4">Quote Aging Tracking</td>
-                        <td className="text-center py-4 px-4">
-                          <CheckCircle2 className="h-5 w-5 text-success mx-auto" />
-                        </td>
-                        <td className="text-center py-4 px-4 text-muted-foreground">Limited</td>
                         <td className="text-center py-4 px-4 text-muted-foreground">Basic</td>
                       </tr>
-                      <tr className="bg-primary/5">
-                        <td className="py-4 px-4 font-semibold">Starting Price</td>
+                      <tr className="border-b">
+                        <td className="py-4 px-4">Per-User Fees</td>
                         <td className="text-center py-4 px-4">
-                          <div className="text-2xl font-bold text-primary">$9.99/mo</div>
-                          <div className="text-xs text-muted-foreground">or $99/year</div>
+                          <span className="text-success font-semibold">None</span>
+                        </td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">$19-39/user</td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">$50-200/user</td>
+                      </tr>
+                      <tr className="border-b">
+                        <td className="py-4 px-4">Setup/Onboarding Fees</td>
+                        <td className="text-center py-4 px-4">
+                          <span className="text-success font-semibold">$0</span>
+                        </td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">$0</td>
+                        <td className="text-center py-4 px-4 text-muted-foreground">$500-1,500</td>
+                      </tr>
+                      <tr className="bg-primary/5">
+                        <td className="py-4 px-4 font-semibold">Starting Price (5-person team)</td>
+                        <td className="text-center py-4 px-4">
+                          <div className="text-2xl font-bold text-primary">$29/mo</div>
+                          <div className="text-xs text-muted-foreground">Flat rate</div>
                         </td>
                         <td className="text-center py-4 px-4 text-muted-foreground">
-                          <div className="text-xl font-semibold">$49+/mo</div>
+                          <div className="text-xl font-semibold">$144/mo</div>
+                          <div className="text-xs">($49 + 5 users)</div>
                         </td>
                         <td className="text-center py-4 px-4 text-muted-foreground">
-                          <div className="text-xl font-semibold">$49+/mo</div>
+                          <div className="text-xl font-semibold">$1,000+/mo</div>
+                          <div className="text-xs">(+ setup fees)</div>
+                        </td>
+                      </tr>
+                      <tr className="bg-success/5">
+                        <td className="py-4 px-4 font-semibold">Your Annual Savings</td>
+                        <td className="text-center py-4 px-4">
+                          <div className="text-sm font-medium text-success">Base</div>
+                        </td>
+                        <td className="text-center py-4 px-4">
+                          <div className="text-xl font-bold text-success">Save $1,380</div>
+                        </td>
+                        <td className="text-center py-4 px-4">
+                          <div className="text-xl font-bold text-success">Save $11,652</div>
                         </td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
-                <div className="mt-8 text-center">
-                  <p className="text-lg font-semibold mb-4">Save up to $468/year vs competitors</p>
-                  <Button size="lg" onClick={() => navigate('/auth')}>
+                <div className="mt-8 text-center space-y-4">
+                  <p className="text-2xl font-bold text-primary">Save $1,380-$11,652/year compared to competitors</p>
+                  <p className="text-sm text-muted-foreground">No per-user fees • No setup costs • QuickBooks & Stripe included • Full AI features</p>
+                  <Button size="lg" onClick={() => navigate("/auth")}>
                     Start Free Trial
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -561,8 +696,8 @@ export default function Landing() {
       <section 
         id="screenshots" 
         ref={screenshotsSection.ref}
-        className={`py-16 transition-all duration-700 ${
-          screenshotsSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        className={`py-16 bg-muted/30 transition-all duration-700 ${
+          screenshotsSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
         }`}
       >
         <div className="container mx-auto px-4">
@@ -588,10 +723,10 @@ export default function Landing() {
               <TabsTrigger value="mobile" className="text-xs sm:text-sm">Mobile</TabsTrigger>
             </TabsList>
             
-{interactiveScreenshots.map((screenshot) => (
+            {interactiveScreenshots.map((screenshot) => (
               <TabsContent key={screenshot.id} value={screenshot.id} className="space-y-4">
-                <div className={`relative ${screenshot.id === 'mobile' ? 'max-w-sm' : 'max-w-6xl'} mx-auto`}>
-                  <div className={screenshot.id === 'mobile' ? 'phone-mockup' : 'browser-mockup'}>
+                <div className={`relative ${screenshot.id === "mobile" ? "max-w-sm" : "max-w-6xl"} mx-auto`}>
+                  <div className={screenshot.id === "mobile" ? "phone-mockup" : "browser-mockup"}>
                     <div className="relative">
                       <img 
                         src={screenshot.image} 
@@ -620,8 +755,8 @@ export default function Landing() {
       {/* Workflow Demonstrations */}
       <section 
         ref={workflowSection.ref}
-        className={`py-16 bg-muted/30 transition-all duration-700 ${
-          workflowSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        className={`py-16 transition-all duration-700 ${
+          workflowSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
         }`}
       >
         <div className="container mx-auto px-4">
@@ -655,7 +790,7 @@ export default function Landing() {
                       </div>
                     ))}
                   </div>
-                  <Button variant="ghost" className="w-full mt-4" onClick={() => navigate('/auth')}>
+                  <Button variant="ghost" className="w-full mt-4" onClick={() => navigate("/auth")}>
                     Try It Now
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -670,26 +805,26 @@ export default function Landing() {
       <section 
         id="pricing" 
         ref={pricingSection.ref}
-        className={`py-16 transition-all duration-700 ${
-          pricingSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        className={`py-16 bg-muted/30 transition-all duration-700 ${
+          pricingSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
         }`}
       >
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Choose the plan that fits your needs. Upgrade or downgrade anytime.
+              Choose the plan that fits your needs. No per-user fees. No setup costs.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
             {pricingPlans.map((plan, idx) => (
               <Card 
                 key={idx} 
-                className={`hover-scale transition-all duration-500 ${plan.highlighted ? "border-primary shadow-lg scale-105" : ""} ${
-                  pricingSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+                className={`hover-scale transition-all duration-500 flex flex-col ${plan.highlighted ? "border-primary shadow-lg md:scale-105" : ""} ${
+                  pricingSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
                 }`}
                 style={{ 
-                  transitionDelay: pricingSection.isVisible ? `${idx * 100}ms` : '0ms' 
+                  transitionDelay: pricingSection.isVisible ? `${idx * 100}ms` : "0ms" 
                 }}
               >
                 <CardHeader>
@@ -697,24 +832,32 @@ export default function Landing() {
                     <Badge className="mb-2 w-fit">Most Popular</Badge>
                   )}
                   <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="text-muted-foreground">/{plan.period}</span>
+                  <div className="mt-4 space-y-1">
+                    <div>
+                      <span className="text-4xl font-bold">{plan.price}</span>
+                      <span className="text-muted-foreground">/{plan.period}</span>
+                    </div>
+                    {plan.oldPrice && (
+                      <p className="text-xs text-muted-foreground line-through">{plan.oldPrice}</p>
+                    )}
+                    {plan.annualPrice && (
+                      <p className="text-sm text-muted-foreground">{plan.annualPrice}</p>
+                    )}
+                    {plan.savings && (
+                      <p className="text-sm font-semibold text-green-600">{plan.savings}</p>
+                    )}
                   </div>
-                  {plan.annualPrice && (
-                    <p className="text-sm text-muted-foreground mt-1">{plan.annualPrice}</p>
-                  )}
                   <CardDescription className="mt-2">{plan.description}</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1 flex flex-col">
                   <Button 
                     className="w-full mb-4" 
                     variant={plan.highlighted ? "default" : "outline"}
-                    onClick={() => navigate('/auth')}
+                    onClick={() => navigate("/auth")}
                   >
                     {plan.cta}
                   </Button>
-                  <ul className="space-y-2">
+                  <ul className="space-y-2 flex-1">
                     {plan.features.map((feature, fidx) => (
                       <li key={fidx} className="flex items-start gap-2">
                         <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
@@ -726,63 +869,38 @@ export default function Landing() {
               </Card>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section - Hidden until we have real reviews */}
-      {/* <section 
-        id="testimonials" 
-        ref={testimonialsSection.ref}
-        className={`py-16 bg-muted/30 transition-all duration-700 ${
-          testimonialsSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-        }`}
-      >
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Loved by Professionals</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              See what our users have to say about Quote-it AI
+          <div className="mt-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              All plans include 14-day free trial • No credit card required • Cancel anytime
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {testimonials.map((testimonial, idx) => (
-              <Card 
-                key={idx} 
-                className={`hover-scale transition-all duration-500 ${
-                  testimonialsSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-                }`}
-                style={{ 
-                  transitionDelay: testimonialsSection.isVisible ? `${idx * 100}ms` : '0ms' 
-                }}
-              >
-                <CardContent className="pt-6">
-                  <p className="text-muted-foreground mb-4">"{testimonial.quote}"</p>
-                  <div>
-                    <p className="font-semibold">{testimonial.author}</p>
-                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
         </div>
-      </section> */}
+      </section>
 
       {/* CTA Section */}
       <section 
         ref={ctaSection.ref}
         className={`py-16 bg-primary text-primary-foreground transition-all duration-700 ${
-          ctaSection.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+          ctaSection.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
         }`}
       >
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Transform Your Quoting Process?</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Save $1,000s and Win More Deals?</h2>
           <p className="text-lg mb-8 max-w-2xl mx-auto opacity-90">
-            Join thousands of professionals who are creating better quotes faster with Quote-it AI
+            Join smart businesses who switched to Quote-it AI for QuickBooks integration, Stripe payments, and AI automation at 40-80% less cost
           </p>
-          <Button size="lg" variant="secondary" onClick={() => navigate('/auth')}>
-            Start Your Free Trial
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" variant="secondary" onClick={() => navigate("/auth")}>
+              Start Free 14-Day Trial
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+            <Button size="lg" variant="outline" className="bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary" onClick={() => navigate("/help")}>
+              View Demo & Tutorials
+            </Button>
+          </div>
+          <p className="text-sm mt-4 opacity-80">
+            No credit card required • QuickBooks & Stripe included • Cancel anytime
+          </p>
         </div>
       </section>
 
@@ -796,13 +914,14 @@ export default function Landing() {
                 <span className="font-bold">Quote-it AI</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Smart quote management powered by AI
+                Smart quote management powered by AI with QuickBooks & Stripe integration
               </p>
             </div>
             <div>
               <h3 className="font-semibold mb-4">Product</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><a href="#features" className="hover:text-primary transition-colors">Features</a></li>
+                <li><a href="#integrations" className="hover:text-primary transition-colors">Integrations</a></li>
                 <li><a href="#pricing" className="hover:text-primary transition-colors">Pricing</a></li>
                 <li><a href="/help" className="hover:text-primary transition-colors">Help Center</a></li>
               </ul>
@@ -810,7 +929,7 @@ export default function Landing() {
             <div>
               <h3 className="font-semibold mb-4">Resources</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="https://github.com/yourusername/quote-it-ai" className="hover:text-primary transition-colors">Documentation</a></li>
+                <li><a href="/help" className="hover:text-primary transition-colors">Documentation</a></li>
                 <li><a href="/help" className="hover:text-primary transition-colors">Guides</a></li>
                 <li><a href="/help" className="hover:text-primary transition-colors">Mobile Apps</a></li>
               </ul>
@@ -818,8 +937,8 @@ export default function Landing() {
             <div>
               <h3 className="font-semibold mb-4">Legal</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><button onClick={() => navigate('/privacy')} className="hover:text-primary transition-colors">Privacy Policy</button></li>
-                <li><button onClick={() => navigate('/terms')} className="hover:text-primary transition-colors">Terms of Service</button></li>
+                <li><button onClick={() => navigate("/privacy")} className="hover:text-primary transition-colors">Privacy Policy</button></li>
+                <li><button onClick={() => navigate("/terms")} className="hover:text-primary transition-colors">Terms of Service</button></li>
               </ul>
             </div>
           </div>
@@ -834,7 +953,7 @@ export default function Landing() {
         onClick={scrollToTop}
         size="icon"
         className={`fixed bottom-6 right-6 rounded-full shadow-lg transition-all duration-300 z-40 ${
-          showScrollTop ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-16 pointer-events-none'
+          showScrollTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-16 pointer-events-none"
         }`}
         aria-label="Scroll to top"
       >
@@ -843,3 +962,4 @@ export default function Landing() {
     </div>
   );
 }
+  
