@@ -28,7 +28,7 @@ import { Quote, Customer } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { getQuotes, getCustomers } from '@/lib/storage';
+import { getQuotes, getCustomers } from '@/lib/db-service';
 
 interface AdvancedAnalyticsProps {
   quotes?: Quote[];
@@ -37,7 +37,7 @@ interface AdvancedAnalyticsProps {
 
 export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers }: AdvancedAnalyticsProps) {
   const navigate = useNavigate();
-  const { userRole } = useAuth();
+  const { user, userRole } = useAuth();
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [timeRange, setTimeRange] = useState<'30' | '90' | '365' | 'all'>('90');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -65,15 +65,25 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
     }
   });
 
-  // Load live data from localStorage
+  // Load live data from the database service
   const loadLiveData = useCallback(async (showToast = false) => {
+    if (!user?.id) {
+      // Don't show an error on initial load if user is not ready
+      if (showToast) {
+        toast.error("Cannot refresh data: User not signed in.");
+      }
+      console.warn("loadLiveData called without user ID.");
+      setIsLoading(false);
+      return;
+    }
+
     setIsRefreshing(true);
     try {
-      // Use props if provided, otherwise fetch from localStorage using the correct storage system
-      const liveQuotes = propQuotes || getQuotes();
-      const liveCustomers = propCustomers || getCustomers();
+      // Use props if provided, otherwise fetch from the database service
+      const liveQuotes = propQuotes || await getQuotes(user.id);
+      const liveCustomers = propCustomers || await getCustomers(user.id);
       
-      console.log('AdvancedAnalytics: Loaded data', { 
+      console.log('AdvancedAnalytics: Loaded data from db-service', { 
         quotesCount: liveQuotes.length, 
         customersCount: liveCustomers.length 
       });
@@ -89,7 +99,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
         });
       }
     } catch (error) {
-      console.error('Error loading live data:', error);
+      console.error('Error loading live data from db-service:', error);
       if (showToast) {
         toast.error('Failed to refresh analytics data');
       }
@@ -97,7 +107,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
       setIsRefreshing(false);
       setIsLoading(false);
     }
-  }, [propQuotes, propCustomers]);
+  }, [user, propQuotes, propCustomers]);
 
   // Initial load and auto-refresh setup
   useEffect(() => {

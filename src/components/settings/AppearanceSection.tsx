@@ -5,7 +5,7 @@ import { Moon, Sun, Monitor } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 
 export function AppearanceSection() {
-  const { theme, setTheme } = useTheme();
+  const { themeMode, setThemeMode } = useTheme();
 
   return (
     <Card>
@@ -18,7 +18,7 @@ export function AppearanceSection() {
       <CardContent>
         <div className="space-y-4">
           <Label>Theme</Label>
-          <RadioGroup value={theme} onValueChange={setTheme}>
+          <RadioGroup value={themeMode} onValueChange={setThemeMode}>
             <div className="flex items-center space-x-3 rounded-lg border p-4 hover:bg-accent transition-colors">
               <RadioGroupItem value="light" id="light" />
               <Label htmlFor="light" className="flex items-center gap-2 cursor-pointer flex-1">
@@ -42,11 +42,11 @@ export function AppearanceSection() {
             </div>
 
             <div className="flex items-center space-x-3 rounded-lg border p-4 hover:bg-accent transition-colors">
-              <RadioGroupItem value="system" id="system" />
-              <Label htmlFor="system" className="flex items-center gap-2 cursor-pointer flex-1">
+              <RadioGroupItem value="auto" id="auto" />
+              <Label htmlFor="auto" className="flex items-center gap-2 cursor-pointer flex-1">
                 <Monitor className="h-4 w-4" />
                 <div>
-                  <div className="font-medium">System</div>
+                  <div className="font-medium">Auto</div>
                   <div className="text-sm text-muted-foreground">Match your device settings</div>
                 </div>
               </Label>
