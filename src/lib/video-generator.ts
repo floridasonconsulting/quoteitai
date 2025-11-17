@@ -1,17 +1,26 @@
-
 import type { RecordingFrame } from './demo-recorder';
 
-// Type imports only - no runtime FFmpeg import
-type FFmpeg = any;
+// Define a proper type for the FFmpeg instance to satisfy the linter and avoid `any`
+interface FFmpegInstance {
+  on(event: 'log', callback: (log: { message: string }) => void): void;
+  on(event: 'progress', callback: (progress: { progress: number }) => void): void;
+  // Fallback for other potential events
+  on(event: string, callback: (...args: any[]) => void): void;
+  load(config: { coreURL: string; wasmURL: string }): Promise<boolean>;
+  writeFile(path: string, data: Uint8Array): Promise<void>;
+  exec(args: string[]): Promise<void>;
+  readFile(path: string): Promise<Uint8Array>;
+  deleteFile(path: string): Promise<void>;
+}
 
-let ffmpeg: FFmpeg | null = null;
+let ffmpeg: FFmpegInstance | null = null;
 let isLoaded = false;
 
 /**
  * Initialize FFmpeg instance with dynamic import
  * This ensures FFmpeg (~31MB) is only loaded when actually needed
  */
-export async function initFFmpeg(onProgress?: (progress: number) => void): Promise<FFmpeg> {
+export async function initFFmpeg(onProgress?: (progress: number) => void): Promise<FFmpegInstance> {
   if (ffmpeg && isLoaded) {
     return ffmpeg;
   }
