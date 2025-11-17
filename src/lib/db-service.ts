@@ -1,4 +1,3 @@
-
 /**
  * Database Service (Main Entry Point)
  * 
@@ -183,8 +182,12 @@ export const saveSettings = async (
 
     if (error) throw error;
     
-    localStorage.removeItem('quote-it-settings');
-    console.log('[DB Service] Settings saved successfully to database');
+    // Store settings in localStorage for immediate access
+    // Note: We keep the cache to prevent race conditions during verification
+    // The cache will be refreshed on next getSettings() call
+    setStorageItem('quote-it-settings', settings);
+    
+    console.log('[DB Service] Settings saved successfully to database and cached');
   } catch (error) {
     console.error('Error saving settings:', error);
     if (queueChange) {
@@ -260,4 +263,3 @@ export async function clearSampleData(userId: string | undefined): Promise<void>
   dispatchDataRefresh('items-changed');
   dispatchDataRefresh('quotes-changed');
 }
-  
