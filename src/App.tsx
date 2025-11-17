@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +10,9 @@ import { useNotifications } from "./hooks/useNotifications";
 import { Layout } from "@/components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoadingFallback } from "./components/LoadingFallback";
+import { useGlobalKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { OnboardingWizard } from "@/components/OnboardingWizard";
 
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -33,6 +36,14 @@ const AdminDemoRecorder = lazy(() => import("./pages/AdminDemoRecorder"));
 const queryClient = new QueryClient();
 
 function AppRoutes() {
+  // Initialize global keyboard shortcuts
+  useGlobalKeyboardShortcuts();
+
+  useEffect(() => {
+    // Log app initialization
+    console.log('Quote.it AI initialized');
+  }, []);
+
   const location = useLocation();
   const { user, loading } = useAuth();
   useNotifications();
@@ -41,44 +52,50 @@ function AppRoutes() {
   const isPublicPage = publicPages.includes(location.pathname) || location.pathname.startsWith('/quotes/public');
 
   return (
-    <Routes>
-      {/* Root route - show Landing if not authenticated, redirect to Dashboard if authenticated */}
-      <Route 
-        path="/" 
-        element={
-          loading ? (
-            <LoadingFallback />
-          ) : user ? (
-            <Navigate to="/dashboard" replace />
-          ) : (
-            <Landing />
-          )
-        } 
-      />
-      <Route path="/auth" element={<AuthPage />} />
-      <Route path="/terms" element={<TermsOfService />} />
-      <Route path="/privacy" element={<PrivacyPolicy />} />
-      <Route path="/quotes/public/:id" element={<PublicQuoteView />} />
+    <>
+      <Routes>
+        {/* Root route - show Landing if not authenticated, redirect to Dashboard if authenticated */}
+        <Route 
+          path="/" 
+          element={
+            loading ? (
+              <LoadingFallback />
+            ) : user ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Landing />
+            )
+          } 
+        />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/quotes/public/:id" element={<PublicQuoteView />} />
+        
+        {/* Redirect /AdminDemoRecorder to /admin/demo-recorder */}
+        <Route path="/AdminDemoRecorder" element={<Navigate to="/admin/demo-recorder" replace />} />
+        
+        <Route element={<Layout />}>
+          <Route path="/dashboard" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Dashboard /></Suspense></ProtectedRoute>} />
+          <Route path="/quotes" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Quotes /></Suspense></ProtectedRoute>} />
+          <Route path="/quotes/new" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><NewQuote /></Suspense></ProtectedRoute>} />
+          <Route path="/quotes/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><QuoteDetail /></Suspense></ProtectedRoute>} />
+          <Route path="/customers" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Customers /></Suspense></ProtectedRoute>} />
+          <Route path="/items" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Items /></Suspense></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Settings /></Suspense></ProtectedRoute>} />
+          <Route path="/help" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Help /></Suspense></ProtectedRoute>} />
+          <Route path="/diagnostics" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Diagnostics /></Suspense></ProtectedRoute>} />
+          <Route path="/subscription" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Subscription /></Suspense></ProtectedRoute>} />
+          <Route path="/admin/demo-recorder" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><AdminDemoRecorder /></Suspense></ProtectedRoute>} />
+        </Route>
+        
+        <Route path="*" element={<NotFound />} />
+      </Routes>
       
-      {/* Redirect /AdminDemoRecorder to /admin/demo-recorder */}
-      <Route path="/AdminDemoRecorder" element={<Navigate to="/admin/demo-recorder" replace />} />
-      
-      <Route element={<Layout />}>
-        <Route path="/dashboard" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Dashboard /></Suspense></ProtectedRoute>} />
-        <Route path="/quotes" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Quotes /></Suspense></ProtectedRoute>} />
-        <Route path="/quotes/new" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><NewQuote /></Suspense></ProtectedRoute>} />
-        <Route path="/quotes/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><QuoteDetail /></Suspense></ProtectedRoute>} />
-        <Route path="/customers" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Customers /></Suspense></ProtectedRoute>} />
-        <Route path="/items" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Items /></Suspense></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Settings /></Suspense></ProtectedRoute>} />
-        <Route path="/help" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Help /></Suspense></ProtectedRoute>} />
-        <Route path="/diagnostics" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Diagnostics /></Suspense></ProtectedRoute>} />
-        <Route path="/subscription" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Subscription /></Suspense></ProtectedRoute>} />
-        <Route path="/admin/demo-recorder" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><AdminDemoRecorder /></Suspense></ProtectedRoute>} />
-      </Route>
-      
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+      {/* Global Components */}
+      <OnboardingWizard />
+      <MobileBottomNav />
+    </>
   );
 }
 
