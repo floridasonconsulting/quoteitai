@@ -42,14 +42,14 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Root route - show Landing if not authenticated, Dashboard if authenticated */}
+      {/* Root route - show Landing if not authenticated, redirect to Dashboard if authenticated */}
       <Route 
         path="/" 
         element={
           loading ? (
             <LoadingFallback />
           ) : user ? (
-            <Layout><Dashboard /></Layout>
+            <Navigate to="/dashboard" replace />
           ) : (
             <Landing />
           )
