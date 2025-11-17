@@ -305,14 +305,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     
-    if (!error) {
+    if (!error && data.session) {
+      // Wait for the auth state to be fully updated
+      setSession(data.session);
+      setUser(data.session.user);
+      
+      // Check role and load subscription before navigating
+      await checkUserRole(data.session);
+      loadSubscription(data.session.user.id).catch(console.error);
+      
       toast.success('Signed in successfully!');
-      navigate('/dashboard');
+      
+      // Small delay to ensure state is propagated
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 100);
     }
     
     return { error };
