@@ -180,7 +180,10 @@ export const saveSettings = async (
       .from('company_settings')
       .upsert(settingsData, { onConflict: 'user_id' });
 
-    if (error) throw error;
+    if (error) {
+      console.error('[DB Service] Error saving settings:', error);
+      throw error;
+    }
     
     // Store settings in localStorage for immediate access
     // Note: We keep the cache to prevent race conditions during verification
