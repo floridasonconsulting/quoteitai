@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,23 +19,29 @@ import {
   BarChart3,
   AlertCircle,
   Lightbulb,
-  Plus
+  Plus,
+  RefreshCw
 } from 'lucide-react';
 import { Quote, Customer } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { getLocalQuotes, getLocalCustomers } from '@/lib/local-db';
 
 interface AdvancedAnalyticsProps {
-  quotes: Quote[];
-  customers: Customer[];
+  quotes?: Quote[];
+  customers?: Customer[];
 }
 
-export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps) {
+export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers }: AdvancedAnalyticsProps) {
   const navigate = useNavigate();
   const { userRole } = useAuth();
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [timeRange, setTimeRange] = useState<'30' | '90' | '365' | 'all'>('90');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [analytics, setAnalytics] = useState({
     revenueByMonth: [] as { month: string; revenue: number; quotes: number }[],
     winRateBySegment: [] as { segment: string; winRate: number; totalValue: number }[],
@@ -52,6 +57,44 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
     monthOverMonthGrowth: 0
   });
 
+  // Load live data from localStorage
+  const loadLiveData = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      // Use props if provided, otherwise fetch from localStorage
+      const liveQuotes = propQuotes || getLocalQuotes();
+      const liveCustomers = propCustomers || getLocalCustomers();
+      
+      setQuotes(liveQuotes);
+      setCustomers(liveCustomers);
+      setLastRefresh(new Date());
+      
+      toast.success('Analytics data refreshed', {
+        description: `Updated with ${liveQuotes.length} quotes and ${liveCustomers.length} customers`
+      });
+    } catch (error) {
+      console.error('Error loading live data:', error);
+      toast.error('Failed to refresh analytics data');
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [propQuotes, propCustomers]);
+
+  // Initial load and auto-refresh setup
+  useEffect(() => {
+    if (userRole === 'business' || userRole === 'max' || userRole === 'admin') {
+      loadLiveData();
+      
+      // Auto-refresh every 5 minutes
+      const refreshInterval = setInterval(() => {
+        loadLiveData();
+      }, 5 * 60 * 1000);
+
+      return () => clearInterval(refreshInterval);
+    }
+  }, [userRole, loadLiveData]);
+
+  // Recalculate analytics when data or time range changes
   useEffect(() => {
     if (userRole === 'business' || userRole === 'max' || userRole === 'admin') {
       calculateAnalytics();
@@ -65,12 +108,13 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
 
     const filteredQuotes = timeRange === 'all' 
       ? quotes 
-      : quotes.filter(q => new Date(q.date) >= cutoffDate);
+      : quotes.filter(q => new Date(q.createdAt || q.date) >= cutoffDate);
 
+    // Revenue by month calculation
     const monthlyData: Record<string, { revenue: number; quotes: number }> = {};
     filteredQuotes.forEach(quote => {
       if (quote.status === 'accepted') {
-        const month = new Date(quote.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+        const month = new Date(quote.createdAt || quote.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
         if (!monthlyData[month]) {
           monthlyData[month] = { revenue: 0, quotes: 0 };
         }
@@ -84,6 +128,7 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
       .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime())
       .slice(-12);
 
+    // Win rate by segment
     const segments = {
       'Small (<$1k)': { total: 0, accepted: 0, value: 0 },
       'Medium ($1k-$5k)': { total: 0, accepted: 0, value: 0 },
@@ -115,6 +160,7 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
       }))
       .filter(s => s.totalValue > 0);
 
+    // Top customers
     const customerRevenue: Record<string, { revenue: number; quotes: number }> = {};
     filteredQuotes.forEach(quote => {
       if (quote.status === 'accepted') {
@@ -138,6 +184,7 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
       .sort((a, b) => b.totalRevenue - a.totalRevenue)
       .slice(0, 10);
 
+    // Conversion funnel
     const conversionFunnel = {
       draft: filteredQuotes.filter(q => q.status === 'draft').length,
       sent: filteredQuotes.filter(q => q.status === 'sent').length,
@@ -145,20 +192,23 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
       declined: filteredQuotes.filter(q => q.status === 'declined').length
     };
 
+    // Average time to close
     const acceptedQuotes = filteredQuotes.filter(q => q.status === 'accepted');
     const averageTimeToClose = acceptedQuotes.length > 0
       ? acceptedQuotes.reduce((sum, q) => {
-          const sent = new Date(q.date);
+          const sent = new Date(q.createdAt || q.date);
           const accepted = new Date(q.updatedAt || q.date);
           const days = Math.abs((accepted.getTime() - sent.getTime()) / (1000 * 60 * 60 * 24));
           return sum + days;
         }, 0) / acceptedQuotes.length
       : 0;
 
+    // Customer lifetime value
     const customerLifetimeValue = customers.length > 0
       ? filteredQuotes.filter(q => q.status === 'accepted').reduce((sum, q) => sum + q.total, 0) / customers.length
       : 0;
 
+    // Month over month growth
     const lastTwoMonths = revenueByMonth.slice(-2);
     const monthOverMonthGrowth = lastTwoMonths.length === 2
       ? ((lastTwoMonths[1].revenue - lastTwoMonths[0].revenue) / lastTwoMonths[0].revenue) * 100
@@ -175,6 +225,10 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
     });
   };
 
+  const handleRefresh = () => {
+    loadLiveData();
+  };
+
   const handleExport = () => {
     if (userRole !== 'business' && userRole !== 'max' && userRole !== 'admin') {
       setShowUpgradeDialog(true);
@@ -185,6 +239,7 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
       ['Advanced Analytics Report'],
       [`Time Range: ${timeRange === 'all' ? 'All Time' : `Last ${timeRange} days`}`],
       [`Generated: ${new Date().toLocaleDateString()}`],
+      [`Last Refresh: ${lastRefresh.toLocaleString()}`],
       [],
       ['Revenue by Month'],
       ['Month', 'Revenue', 'Quote Count'],
@@ -242,6 +297,13 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
     ? (analytics.conversionFunnel.accepted / analytics.conversionFunnel.sent) * 100
     : 0;
 
+  const timeSinceRefresh = Math.floor((new Date().getTime() - lastRefresh.getTime()) / 1000 / 60);
+  const refreshText = timeSinceRefresh < 1 
+    ? 'Just now' 
+    : timeSinceRefresh < 60 
+      ? `${timeSinceRefresh}m ago` 
+      : `${Math.floor(timeSinceRefresh / 60)}h ago`;
+
   if (userRole !== 'business' && userRole !== 'max' && userRole !== 'admin') {
     return (
       <>
@@ -262,12 +324,13 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
               <div className="text-sm space-y-1">
                 <p className="font-medium">Available in Business and Max AI tiers:</p>
                 <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                  <li>Revenue trends over time</li>
+                  <li>Real-time revenue trends</li>
                   <li>Customer lifetime value analysis</li>
                   <li>Win rate by customer segment</li>
                   <li>Conversion funnel visualization</li>
                   <li>Top customer reports</li>
                   <li>Export analytics data</li>
+                  <li>Auto-refresh every 5 minutes</li>
                 </ul>
               </div>
             </div>
@@ -323,16 +386,26 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1">
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-primary" />
                 Advanced Analytics
+                <Badge variant="outline" className="ml-2">Live Data</Badge>
               </CardTitle>
-              <CardDescription>
-                Comprehensive business intelligence and performance metrics
+              <CardDescription className="flex items-center gap-2 mt-1">
+                Comprehensive business intelligence • Last updated: {refreshText}
               </CardDescription>
             </div>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={cn("h-4 w-4 mr-2", isRefreshing && "animate-spin")} />
+                Refresh
+              </Button>
               <Select value={timeRange} onValueChange={(v) => setTimeRange(v as typeof timeRange)}>
                 <SelectTrigger className="w-32">
                   <SelectValue />
@@ -514,7 +587,7 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {Object.entries(analytics.conversionFunnel).map(([stage, count], idx) => {
+                    {Object.entries(analytics.conversionFunnel).map(([stage, count]) => {
                       const colors = {
                         draft: { bg: 'bg-muted-foreground', text: 'text-muted-foreground', dot: 'bg-muted-foreground' },
                         sent: { bg: 'bg-primary', text: 'text-primary', dot: 'bg-primary' },
@@ -541,7 +614,7 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
                           <div className="h-3 bg-muted rounded-full overflow-hidden">
                             <div 
                               className={cn("h-full transition-all duration-500 animate-fill", stageColors.bg)}
-                              style={{ '--target-width': `${percentage}%` } as React.CSSProperties}
+                              style={{ width: `${percentage}%` }}
                             />
                           </div>
                         </div>
@@ -748,4 +821,3 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
     </>
   );
 }
-  
