@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signingIn, setSigningIn] = useState(false); // New state to track sign-in process
   const navigate = useNavigate();
   
   const isInitializing = useRef(false);
@@ -305,36 +306,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    setSigningIn(true); // Start sign-in process
     
-    if (!error && data.session) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        setSigningIn(false);
+        return { error };
+      }
+      
+      if (!data.session) {
+        setSigningIn(false);
+        return { error: new Error('No session returned') as AuthError };
+      }
+      
       // Use flushSync to ensure state updates are applied immediately
       const { flushSync } = await import('react-dom');
       
+      // Set session and user synchronously
       flushSync(() => {
         setSession(data.session);
         setUser(data.session.user);
       });
       
-      // Wait for role check to complete
+      // Wait for role check to complete - this is critical
       await checkUserRole(data.session);
       
-      // Small delay to ensure React has propagated state changes
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // Ensure React has time to propagate all state changes
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Load subscription in background
+      // Load subscription in background (non-blocking)
       loadSubscription(data.session.user.id).catch(console.error);
       
       toast.success('Signed in successfully!');
       
+      // Sign-in process complete
+      setSigningIn(false);
+      
       // Navigate to dashboard
       navigate('/dashboard');
+      
+      return { error: null };
+    } catch (err) {
+      setSigningIn(false);
+      console.error('[AuthContext] Sign in error:', err);
+      return { error: err as AuthError };
     }
-    
-    return { error };
   };
 
   const signOut = async () => {
@@ -351,6 +372,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Update effective loading state to include signingIn
+  const effectiveLoading = loading || signingIn;
+
   return (
     <AuthContext.Provider
       value={{
@@ -361,7 +385,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         subscriptionTier: userRole, // Alias for backward compatibility
         isAdmin,
         isMaxAITier,
-        loading,
+        loading: effectiveLoading, // Use combined loading state
         signUp,
         signIn,
         signOut,
