@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "./hooks/useNotifications";
 import { Layout } from "@/components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -34,14 +34,27 @@ const queryClient = new QueryClient();
 
 function AppRoutes() {
   const location = useLocation();
+  const { user, loading } = useAuth();
   useNotifications();
 
-  const publicPages = ['/', '/auth', '/terms', '/privacy'];
+  const publicPages = ['/auth', '/terms', '/privacy'];
   const isPublicPage = publicPages.includes(location.pathname) || location.pathname.startsWith('/quotes/public');
 
   return (
     <Routes>
-      <Route path="/" element={isPublicPage ? <Landing /> : <Layout><Dashboard /></Layout>} />
+      {/* Root route - show Landing if not authenticated, Dashboard if authenticated */}
+      <Route 
+        path="/" 
+        element={
+          loading ? (
+            <LoadingFallback />
+          ) : user ? (
+            <Layout><Dashboard /></Layout>
+          ) : (
+            <Landing />
+          )
+        } 
+      />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/terms" element={<TermsOfService />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
