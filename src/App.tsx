@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from "react";
-import { Toaster } from "@/components/ui/toaster";
+// Toaster is unused, Sonner is used for toasts
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "./hooks/useNotifications";
 import { Layout } from "@/components/Layout";
+// ErrorBoundary import is removed as it's not used here, but wrapped around AppRoutes in App component.
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoadingFallback } from "./components/LoadingFallback";
 import { useGlobalKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -47,9 +48,6 @@ function AppRoutes() {
   const location = useLocation();
   const { user, loading } = useAuth();
   useNotifications();
-
-  const publicPages = ['/auth', '/terms', '/privacy'];
-  const isPublicPage = publicPages.includes(location.pathname) || location.pathname.startsWith('/quotes/public');
 
   return (
     <>
@@ -104,9 +102,10 @@ const App = () => (
     <ThemeProvider>
       <TooltipProvider>
         <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <AppRoutes />
+          <ErrorBoundary>
+            <Sonner />
+            <AppRoutes />
+          </ErrorBoundary>
         </AuthProvider>
       </TooltipProvider>
     </ThemeProvider>
