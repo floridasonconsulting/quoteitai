@@ -4,8 +4,6 @@ import type { RecordingFrame } from './demo-recorder';
 interface FFmpegInstance {
   on(event: 'log', callback: (log: { message: string }) => void): void;
   on(event: 'progress', callback: (progress: { progress: number }) => void): void;
-  // Fallback for other potential events
-  on(event: string, callback: (...args: any[]) => void): void;
   load(config: { coreURL: string; wasmURL: string }): Promise<boolean>;
   writeFile(path: string, data: Uint8Array): Promise<void>;
   exec(args: string[]): Promise<void>;
