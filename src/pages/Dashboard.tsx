@@ -39,7 +39,7 @@ export default function Dashboard() {
   });
   const [customers, setCustomers] = useState<Customer[]>([]);
 
-  // Determine if user has advanced tier
+  // Determine if user has advanced tier (Business/Max/Admin)
   const hasAdvancedTier = userRole === 'business' || userRole === 'max' || userRole === 'admin';
 
   console.log('[Dashboard] RENDER:', { 
@@ -290,6 +290,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 overflow-x-hidden max-w-full">
+      {/* Header - All Users */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
@@ -303,160 +304,157 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      {/* Conditional Rendering Based on Tier */}
+      {/* Core Stats - All Users */}
+      <BasicStatCards stats={stats} />
+
+      {/* Quote Aging Overview - All Users */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quote Aging Overview</CardTitle>
+          <CardDescription>Track the status of your sent quotes</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <div 
+              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+              onClick={() => navigate('/quotes?status=sent&age=fresh')}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Fresh (≤7 days)</span>
+                <Badge variant="outline" className={getAgeColor('fresh')}>
+                  {agingSummary.fresh}
+                </Badge>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-success transition-all"
+                  style={{ width: `${(agingSummary.fresh / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            <div 
+              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+              onClick={() => navigate('/quotes?status=sent&age=warm')}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Warm (8-14 days)</span>
+                <Badge variant="outline" className={getAgeColor('warm')}>
+                  {agingSummary.warm}
+                </Badge>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-warning transition-all"
+                  style={{ width: `${(agingSummary.warm / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            <div 
+              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+              onClick={() => navigate('/quotes?status=sent&age=aging')}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Aging (15-30 days)</span>
+                <Badge variant="outline" className={getAgeColor('aging')}>
+                  {agingSummary.aging}
+                </Badge>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-destructive transition-all"
+                  style={{ width: `${(agingSummary.aging / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            <div 
+              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+              onClick={() => navigate('/quotes?status=sent&age=stale')}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Stale (&gt;30 days)</span>
+                <Badge variant="outline" className={getAgeColor('stale')}>
+                  {agingSummary.stale}
+                </Badge>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-destructive transition-all"
+                  style={{ width: `${(agingSummary.stale / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tiered Content - Business/Max users see Advanced Analytics, Free/Pro users see Recent Quotes */}
       {hasAdvancedTier ? (
-        /* Business/MaxAI: Show only Advanced Analytics (it includes all they need) */
+        /* Business/Max/Admin: Show Advanced Analytics */
         <AdvancedAnalytics quotes={quotes} customers={customers} />
       ) : (
-        /* Free/Pro: Show Basic Stats + Quote Management */
-        <>
-          {/* Basic Stats Cards - Free/Pro Only */}
-          <BasicStatCards stats={stats} />
-
-          {/* Quote Aging Overview */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quote Aging Overview</CardTitle>
-              <CardDescription>Track the status of your sent quotes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                <div 
-                  className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => navigate('/quotes?status=sent&age=fresh')}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Fresh (≤7 days)</span>
-                    <Badge variant="outline" className={getAgeColor('fresh')}>
-                      {agingSummary.fresh}
-                    </Badge>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-success transition-all"
-                      style={{ width: `${(agingSummary.fresh / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div 
-                  className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => navigate('/quotes?status=sent&age=warm')}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Warm (8-14 days)</span>
-                    <Badge variant="outline" className={getAgeColor('warm')}>
-                      {agingSummary.warm}
-                    </Badge>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-warning transition-all"
-                      style={{ width: `${(agingSummary.warm / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div 
-                  className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => navigate('/quotes?status=sent&age=aging')}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Aging (15-30 days)</span>
-                    <Badge variant="outline" className={getAgeColor('aging')}>
-                      {agingSummary.aging}
-                    </Badge>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-destructive transition-all"
-                      style={{ width: `${(agingSummary.aging / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div 
-                  className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => navigate('/quotes?status=sent&age=stale')}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Stale (&gt;30 days)</span>
-                    <Badge variant="outline" className={getAgeColor('stale')}>
-                      {agingSummary.stale}
-                    </Badge>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-destructive transition-all"
-                      style={{ width: `${(agingSummary.stale / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
-                    />
-                  </div>
-                </div>
+        /* Free/Pro: Show Recent Quotes */
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Recent Quotes</CardTitle>
+                <CardDescription>Your latest quote activity</CardDescription>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Quotes */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Recent Quotes</CardTitle>
-                  <CardDescription>Your latest quote activity</CardDescription>
-                </div>
-                <Button variant="outline" onClick={() => navigate('/quotes')}>
-                  View All
+              <Button variant="outline" onClick={() => navigate('/quotes')}>
+                View All
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {recentQuotes.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                <p>No quotes yet. Create your first quote to get started!</p>
+                <Button className="mt-4" onClick={() => navigate('/quotes/new')}>
+                  Create Quote
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              {recentQuotes.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                  <p>No quotes yet. Create your first quote to get started!</p>
-                  <Button className="mt-4" onClick={() => navigate('/quotes/new')}>
-                    Create Quote
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {recentQuotes.map((quote) => {
-                    const age = getQuoteAge(quote);
-                    return (
-                      <div
-                        key={quote.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                        onClick={() => navigate(`/quotes/${quote.id}`)}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="font-medium truncate">{quote.title}</p>
-                            <Badge variant="outline" className={getStatusColor(quote.status)}>
-                              {quote.status}
+            ) : (
+              <div className="space-y-4">
+                {recentQuotes.map((quote) => {
+                  const age = getQuoteAge(quote);
+                  return (
+                    <div
+                      key={quote.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => navigate(`/quotes/${quote.id}`)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium truncate">{quote.title}</p>
+                          <Badge variant="outline" className={getStatusColor(quote.status)}>
+                            {quote.status}
+                          </Badge>
+                          {quote.status === 'sent' && (
+                            <Badge variant="outline" className={getAgeColor(age)}>
+                              {age}
                             </Badge>
-                            {quote.status === 'sent' && (
-                              <Badge variant="outline" className={getAgeColor(age)}>
-                                {age}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>{quote.customerName}</span>
-                            <span>•</span>
-                            <span>{quote.quoteNumber}</span>
-                          </div>
+                          )}
                         </div>
-                        <div className="text-right ml-4">
-                          <p className="font-bold">{formatCurrency(quote.total)}</p>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <span>{quote.customerName}</span>
+                          <span>•</span>
+                          <span>{quote.quoteNumber}</span>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </>
+                      <div className="text-right ml-4">
+                        <p className="font-bold">{formatCurrency(quote.total)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
     </div>
   );
