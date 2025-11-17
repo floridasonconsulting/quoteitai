@@ -1,4 +1,5 @@
 import { Customer, Item, Quote } from '@/types';
+import { storageCache } from './storage-cache';
 
 // Local database keys with versioning
 const STORAGE_KEYS = {
@@ -15,22 +16,32 @@ export interface SyncStatus {
   error?: string;
 }
 
-// Generic local storage operations
+// Generic local storage operations with cache integration
 function getLocalData<T>(key: string): T[] {
   try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : [];
+    // Use storage cache for reads (memoized)
+    const data = storageCache.get<T[]>(key);
+    return data || [];
   } catch (error) {
-    console.error(`Error reading ${key} from localStorage:`, error);
+    console.error(`Error reading ${key} from storage cache:`, error);
     return [];
   }
 }
 
 function setLocalData<T>(key: string, data: T[]): void {
   try {
-    localStorage.setItem(key, JSON.stringify(data));
+    // Use storage cache for writes (with debouncing and error handling)
+    storageCache.set(key, data);
   } catch (error) {
-    console.error(`Error writing ${key} to localStorage:`, error);
+    console.error(`Error writing ${key} to storage cache:`, error);
+    
+    // If cache fails, try direct write as fallback
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (fallbackError) {
+      console.error(`Fallback write failed for ${key}:`, fallbackError);
+      throw new Error('Storage quota exceeded or unavailable');
+    }
   }
 }
 
@@ -226,4 +237,43 @@ export function mergeWithRemote<T extends { id: string }>(
   setLocalData(storageKey, result);
   
   return result;
+}
+
+// Clear all local data (for testing/debugging)
+export function clearAllLocalData(): void {
+  try {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      storageCache.delete(key);
+    });
+    console.log('[LocalDB] All local data cleared');
+  } catch (error) {
+    console.error('[LocalDB] Error clearing local data:', error);
+  }
+}
+
+// Get storage usage statistics
+export function getStorageStats(): { used: number; available: number; percentage: number } {
+  try {
+    let totalSize = 0;
+    Object.values(STORAGE_KEYS).forEach(key => {
+      const data = localStorage.getItem(key);
+      if (data) {
+        totalSize += new Blob([data]).size;
+      }
+    });
+
+    // Estimate available space (most browsers: 5-10MB)
+    const estimatedTotal = 5 * 1024 * 1024; // 5MB conservative estimate
+    const available = estimatedTotal - totalSize;
+    const percentage = (totalSize / estimatedTotal) * 100;
+
+    return {
+      used: totalSize,
+      available: Math.max(0, available),
+      percentage: Math.min(100, percentage),
+    };
+  } catch (error) {
+    console.error('[LocalDB] Error calculating storage stats:', error);
+    return { used: 0, available: 0, percentage: 0 };
+  }
 }
