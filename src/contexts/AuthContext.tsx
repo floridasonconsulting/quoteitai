@@ -333,25 +333,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(data.session.user);
       });
       
-      // Wait for role check to complete - this is critical
+      // Wait for role check to complete
       await checkUserRole(data.session);
       
-      // CRITICAL: Set loading states to false AND wait for React to process
+      // Set loading states to false
       flushSync(() => {
         setLoading(false);
         setSigningIn(false);
       });
       
-      // Load subscription in background (non-blocking)
+      // Load subscription in background
       loadSubscription(data.session.user.id).catch(console.error);
       
       toast.success('Signed in successfully!');
       
-      // Wait longer to ensure all components have re-rendered with auth state
-      // This ensures ProtectedRoute sees the user and doesn't redirect
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Navigate to dashboard - auth state should be fully stable now
+      // Navigate to dashboard immediately - React will handle the rest
       navigate('/dashboard');
       
       return { error: null };
@@ -389,7 +385,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         subscriptionTier: userRole, // Alias for backward compatibility
         isAdmin,
         isMaxAITier,
-        loading: effectiveLoading, // Use combined loading state
+        loading, // Use original loading, not effectiveLoading
         signUp,
         signIn,
         signOut,

@@ -49,7 +49,7 @@ export default function Dashboard() {
     hasLoadedData: hasLoadedData.current 
   });
 
-  // Consolidated data loading effect
+  // IMPROVED: Load data as soon as we have a user, even if auth is still loading
   useEffect(() => {
     console.log('[Dashboard] Effect triggered:', { 
       authLoading, 
@@ -57,8 +57,9 @@ export default function Dashboard() {
       hasLoadedData: hasLoadedData.current 
     });
 
-    // Only load data once when auth is ready and user exists
-    if (!authLoading && user && !hasLoadedData.current) {
+    // Load data when we have a user and haven't loaded yet
+    // Don't wait for authLoading to be false - start loading immediately
+    if (user && !hasLoadedData.current) {
       console.log('[Dashboard] Starting data load for user:', user.id);
       hasLoadedData.current = true;
       loadData();
@@ -71,7 +72,7 @@ export default function Dashboard() {
         abortControllerRef.current.abort();
       }
     };
-  }, [user, authLoading]);
+  }, [user]); // Only depend on user, not authLoading
 
   const loadData = async () => {
     if (abortControllerRef.current) {
@@ -146,7 +147,7 @@ export default function Dashboard() {
         loadTime: Date.now() - startTime
       });
 
-      // Use flushSync to ensure state updates trigger re-renders immediately
+      // Update state with loaded data
       flushSync(() => {
         setQuotes(quotesData);
         setCustomers(customersData);
@@ -162,26 +163,10 @@ export default function Dashboard() {
         });
         setRetryCount(0);
         setError(null);
+        setLoading(false); // Turn off loading immediately after state update
       });
       
-      // CRITICAL: Wait for React to process the state update before turning off loading
-      // This ensures the component re-renders with data before we allow main content render
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      // ADDITIONAL SAFETY: Only turn off loading if we actually have data
-      // This prevents the blank page issue where loading=false but data isn't rendered yet
-      if (quotesData.length > 0 || customersData.length > 0 || itemsData.length > 0) {
-        flushSync(() => {
-          setLoading(false);
-        });
-        console.log('[Dashboard] Loading complete, data is ready for render');
-      } else {
-        // If no data at all, still turn off loading but component will show empty state
-        setLoading(false);
-        console.log('[Dashboard] Loading complete, no data available (new user)');
-      }
-      
-      console.log('[Dashboard] Re-render triggered, data should be visible');
+      console.log('[Dashboard] Loading complete, data ready for render');
       clearTimeout(timeoutId);
       stopLoading(operationId);
     } catch (error) {
