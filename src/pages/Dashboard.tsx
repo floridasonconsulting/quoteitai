@@ -9,7 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getQuotes, getCustomers, getItems, clearInFlightRequests } from '@/lib/db-service';
 import { getAgingSummary, getQuoteAge } from '@/lib/quote-utils';
-import { Quote } from '@/types';
+import { Quote, Customer } from '@/types';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
