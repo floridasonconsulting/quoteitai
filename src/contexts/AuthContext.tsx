@@ -311,20 +311,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     
     if (!error && data.session) {
-      // Wait for the auth state to be fully updated
+      // Set session and user immediately
       setSession(data.session);
       setUser(data.session.user);
       
-      // Check role and load subscription before navigating
+      // Wait for role check to complete
       await checkUserRole(data.session);
+      
+      // Load subscription in background
       loadSubscription(data.session.user.id).catch(console.error);
       
       toast.success('Signed in successfully!');
       
-      // Small delay to ensure state is propagated
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 100);
+      // Navigate to dashboard
+      navigate('/dashboard');
     }
     
     return { error };
