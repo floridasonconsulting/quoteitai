@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AIUpgradeDialog } from './AIUpgradeDialog';
 import { 
   TrendingUp, 
@@ -17,12 +18,14 @@ import {
   Calendar,
   Download,
   BarChart3,
-  PieChart,
-  LineChart,
-  AlertCircle
+  AlertCircle,
+  Lightbulb,
+  Plus
 } from 'lucide-react';
 import { Quote, Customer } from '@/types';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 interface AdvancedAnalyticsProps {
   quotes: Quote[];
@@ -30,6 +33,7 @@ interface AdvancedAnalyticsProps {
 }
 
 export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps) {
+  const navigate = useNavigate();
   const { userRole } = useAuth();
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [timeRange, setTimeRange] = useState<'30' | '90' | '365' | 'all'>('90');
@@ -63,7 +67,6 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
       ? quotes 
       : quotes.filter(q => new Date(q.date) >= cutoffDate);
 
-    // Revenue by Month
     const monthlyData: Record<string, { revenue: number; quotes: number }> = {};
     filteredQuotes.forEach(quote => {
       if (quote.status === 'accepted') {
@@ -79,9 +82,8 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
     const revenueByMonth = Object.entries(monthlyData)
       .map(([month, data]) => ({ month, ...data }))
       .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime())
-      .slice(-12); // Last 12 months
+      .slice(-12);
 
-    // Win Rate by Customer Segment (by quote value)
     const segments = {
       'Small (<$1k)': { total: 0, accepted: 0, value: 0 },
       'Medium ($1k-$5k)': { total: 0, accepted: 0, value: 0 },
@@ -113,7 +115,6 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
       }))
       .filter(s => s.totalValue > 0);
 
-    // Top Customers by Revenue
     const customerRevenue: Record<string, { revenue: number; quotes: number }> = {};
     filteredQuotes.forEach(quote => {
       if (quote.status === 'accepted') {
@@ -137,7 +138,6 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
       .sort((a, b) => b.totalRevenue - a.totalRevenue)
       .slice(0, 10);
 
-    // Conversion Funnel
     const conversionFunnel = {
       draft: filteredQuotes.filter(q => q.status === 'draft').length,
       sent: filteredQuotes.filter(q => q.status === 'sent').length,
@@ -145,7 +145,6 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
       declined: filteredQuotes.filter(q => q.status === 'declined').length
     };
 
-    // Average Time to Close (days)
     const acceptedQuotes = filteredQuotes.filter(q => q.status === 'accepted');
     const averageTimeToClose = acceptedQuotes.length > 0
       ? acceptedQuotes.reduce((sum, q) => {
@@ -156,12 +155,10 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
         }, 0) / acceptedQuotes.length
       : 0;
 
-    // Customer Lifetime Value
     const customerLifetimeValue = customers.length > 0
       ? filteredQuotes.filter(q => q.status === 'accepted').reduce((sum, q) => sum + q.total, 0) / customers.length
       : 0;
 
-    // Month over Month Growth
     const lastTwoMonths = revenueByMonth.slice(-2);
     const monthOverMonthGrowth = lastTwoMonths.length === 2
       ? ((lastTwoMonths[1].revenue - lastTwoMonths[0].revenue) / lastTwoMonths[0].revenue) * 100
@@ -213,6 +210,38 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
     toast.success('Analytics exported successfully');
   };
 
+  // Helper functions for dynamic styling
+  const getTimeToCloseColor = (days: number) => {
+    if (days < 7) return { bg: 'bg-success/10', text: 'text-success', border: 'border-success/20' };
+    if (days <= 14) return { bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20' };
+    return { bg: 'bg-warning/10', text: 'text-warning', border: 'border-warning/20' };
+  };
+
+  const getLTVColor = (value: number) => {
+    if (value > 5000) return { bg: 'bg-success/10', text: 'text-success', border: 'border-success/20' };
+    if (value > 1000) return { bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20' };
+    return { bg: 'bg-muted', text: 'text-muted-foreground', border: 'border-border' };
+  };
+
+  const getConversionColor = (rate: number) => {
+    if (rate > 50) return { bg: 'bg-success/10', text: 'text-success', border: 'border-success/20' };
+    if (rate >= 30) return { bg: 'bg-primary/10', text: 'text-primary', border: 'border-primary/20' };
+    return { bg: 'bg-warning/10', text: 'text-warning', border: 'border-warning/20' };
+  };
+
+  const getWinRateColor = (rate: number) => {
+    if (rate > 60) return 'bg-success';
+    if (rate >= 40) return 'bg-primary';
+    return 'bg-warning';
+  };
+
+  const hasData = quotes.length >= 5;
+  const totalRevenue = analytics.topCustomers.reduce((sum, c) => sum + c.totalRevenue, 0);
+  const topThreeRevenue = analytics.topCustomers.slice(0, 3).reduce((sum, c) => sum + c.totalRevenue, 0);
+  const conversionRate = analytics.conversionFunnel.sent > 0
+    ? (analytics.conversionFunnel.accepted / analytics.conversionFunnel.sent) * 100
+    : 0;
+
   if (userRole !== 'business' && userRole !== 'max' && userRole !== 'admin') {
     return (
       <>
@@ -255,6 +284,37 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
           requiredTier="business"
         />
       </>
+    );
+  }
+
+  if (!hasData) {
+    return (
+      <Card className="border-dashed">
+        <CardHeader>
+          <CardTitle>Advanced Analytics</CardTitle>
+          <CardDescription>
+            Insights will appear once you have more quote data
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="py-12">
+          <div className="text-center space-y-4">
+            <BarChart3 className="h-16 w-16 mx-auto text-muted-foreground/50" />
+            <div>
+              <h3 className="text-lg font-semibold mb-2">
+                Create More Quotes to Unlock Insights
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                You need at least 5 quotes to see meaningful analytics.
+                Currently you have {quotes.length}.
+              </p>
+              <Button onClick={() => navigate('/quotes/new')}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Quote
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -301,94 +361,187 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6 mt-6">
-              {/* Key Metrics Grid */}
+              {/* Enhanced Key Metrics Grid with Dynamic Colors */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
+                {/* MoM Growth Card */}
+                <Card className={cn(
+                  "transition-all hover:shadow-lg card-hover-lift cursor-pointer",
+                  analytics.monthOverMonthGrowth >= 0 
+                    ? "bg-success/5 border-success/20" 
+                    : "bg-destructive/5 border-destructive/20"
+                )}>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm font-medium">MoM Growth</CardTitle>
                       {analytics.monthOverMonthGrowth >= 0 ? (
-                        <TrendingUp className="h-4 w-4 text-success" />
+                        <TrendingUp className="h-5 w-5 text-success" />
                       ) : (
-                        <TrendingDown className="h-4 w-4 text-destructive" />
+                        <TrendingDown className="h-5 w-5 text-destructive" />
                       )}
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className={`text-2xl font-bold ${analytics.monthOverMonthGrowth >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {analytics.monthOverMonthGrowth >= 0 ? '+' : ''}{analytics.monthOverMonthGrowth.toFixed(1)}%
+                    <div className={cn(
+                      "text-3xl font-bold animate-count-up metric-pulse",
+                      analytics.monthOverMonthGrowth >= 0 ? "text-success" : "text-destructive"
+                    )}>
+                      {analytics.monthOverMonthGrowth >= 0 ? '+' : ''}
+                      {analytics.monthOverMonthGrowth.toFixed(1)}%
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">vs last month</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      vs previous month
+                    </p>
                   </CardContent>
                 </Card>
 
-                <Card>
+                {/* Avg Time to Close Card */}
+                <Card className={cn(
+                  "transition-all hover:shadow-lg card-hover-lift cursor-pointer",
+                  getTimeToCloseColor(analytics.averageTimeToClose).bg,
+                  getTimeToCloseColor(analytics.averageTimeToClose).border
+                )}>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm font-medium">Avg Time to Close</CardTitle>
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <Calendar className={cn(
+                        "h-5 w-5",
+                        getTimeToCloseColor(analytics.averageTimeToClose).text
+                      )} />
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{analytics.averageTimeToClose.toFixed(0)} days</div>
-                    <p className="text-xs text-muted-foreground mt-1">average</p>
+                    <div className={cn(
+                      "text-3xl font-bold animate-count-up metric-pulse",
+                      getTimeToCloseColor(analytics.averageTimeToClose).text
+                    )}>
+                      {analytics.averageTimeToClose.toFixed(0)} days
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      average deal cycle
+                    </p>
                   </CardContent>
                 </Card>
 
-                <Card>
+                {/* Customer LTV Card */}
+                <Card className={cn(
+                  "transition-all hover:shadow-lg card-hover-lift cursor-pointer",
+                  getLTVColor(analytics.customerLifetimeValue).bg,
+                  getLTVColor(analytics.customerLifetimeValue).border
+                )}>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm font-medium">Customer LTV</CardTitle>
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      <DollarSign className={cn(
+                        "h-5 w-5",
+                        getLTVColor(analytics.customerLifetimeValue).text
+                      )} />
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">${analytics.customerLifetimeValue.toFixed(0)}</div>
-                    <p className="text-xs text-muted-foreground mt-1">per customer</p>
+                    <div className={cn(
+                      "text-3xl font-bold animate-count-up metric-pulse",
+                      getLTVColor(analytics.customerLifetimeValue).text
+                    )}>
+                      ${analytics.customerLifetimeValue.toFixed(0)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      per customer
+                    </p>
                   </CardContent>
                 </Card>
 
-                <Card>
+                {/* Conversion Rate Card */}
+                <Card className={cn(
+                  "transition-all hover:shadow-lg card-hover-lift cursor-pointer",
+                  getConversionColor(conversionRate).bg,
+                  getConversionColor(conversionRate).border
+                )}>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
-                      <Target className="h-4 w-4 text-muted-foreground" />
+                      <Target className={cn(
+                        "h-5 w-5",
+                        getConversionColor(conversionRate).text
+                      )} />
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">
-                      {((analytics.conversionFunnel.accepted / Math.max(1, analytics.conversionFunnel.sent)) * 100).toFixed(1)}%
+                    <div className={cn(
+                      "text-3xl font-bold animate-count-up metric-pulse",
+                      getConversionColor(conversionRate).text
+                    )}>
+                      {conversionRate.toFixed(1)}%
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">sent to accepted</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      sent to accepted
+                    </p>
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Conversion Funnel */}
+              {/* Smart Insight Callouts */}
+              {analytics.topCustomers.length >= 3 && totalRevenue > 0 && (
+                <Alert className="border-primary/20 bg-primary/5">
+                  <Lightbulb className="h-4 w-4 text-primary" />
+                  <AlertTitle>Revenue Concentration Insight</AlertTitle>
+                  <AlertDescription>
+                    Your top 3 customers generate{' '}
+                    <span className="font-bold">
+                      {((topThreeRevenue / totalRevenue) * 100).toFixed(0)}%
+                    </span>
+                    {' '}of total revenue. Consider diversifying your customer base to reduce risk.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {analytics.averageTimeToClose > 21 && (
+                <Alert className="border-warning/20 bg-warning/5">
+                  <AlertCircle className="h-4 w-4 text-warning" />
+                  <AlertTitle>Long Sales Cycle Alert</AlertTitle>
+                  <AlertDescription>
+                    Average time to close is{' '}
+                    <span className="font-bold">{analytics.averageTimeToClose.toFixed(0)} days</span>.
+                    Consider implementing follow-up automation to accelerate deals.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Enhanced Conversion Funnel with Colors */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Conversion Funnel</CardTitle>
+                  <CardDescription>Visual breakdown of quote journey stages</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {Object.entries(analytics.conversionFunnel).map(([stage, count], idx) => {
+                      const colors = {
+                        draft: { bg: 'bg-muted-foreground', text: 'text-muted-foreground', dot: 'bg-muted-foreground' },
+                        sent: { bg: 'bg-primary', text: 'text-primary', dot: 'bg-primary' },
+                        accepted: { bg: 'bg-success', text: 'text-success', dot: 'bg-success' },
+                        declined: { bg: 'bg-destructive', text: 'text-destructive', dot: 'bg-destructive' }
+                      };
                       const total = Object.values(analytics.conversionFunnel).reduce((sum, v) => sum + v, 0);
                       const percentage = total > 0 ? (count / total) * 100 : 0;
+                      const stageColors = colors[stage as keyof typeof colors];
+                      
                       return (
-                        <div key={stage} className="space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="font-medium capitalize">{stage}</span>
-                            <span>{count} ({percentage.toFixed(1)}%)</span>
+                        <div key={stage} className="space-y-2 group hover:bg-muted/30 p-3 rounded-lg transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className={cn("w-3 h-3 rounded-full", stageColors.dot)} />
+                              <span className={cn("font-medium capitalize", stageColors.text)}>
+                                {stage}
+                              </span>
+                            </div>
+                            <Badge variant="outline" className={cn("font-bold", stageColors.text)}>
+                              {count}
+                            </Badge>
                           </div>
                           <div className="h-3 bg-muted rounded-full overflow-hidden">
                             <div 
-                              className={`h-full transition-all ${
-                                idx === 0 ? 'bg-muted-foreground' :
-                                idx === 1 ? 'bg-primary' :
-                                idx === 2 ? 'bg-success' :
-                                'bg-destructive'
-                              }`}
-                              style={{ width: `${percentage}%` }}
+                              className={cn("h-full transition-all duration-500 animate-fill", stageColors.bg)}
+                              style={{ '--target-width': `${percentage}%` } as React.CSSProperties}
                             />
                           </div>
                         </div>
@@ -403,21 +556,37 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Revenue Trend</CardTitle>
+                  <CardDescription>Monthly revenue and quote volume</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="h-64 pr-4">
                     <div className="space-y-3">
-                      {analytics.revenueByMonth.map((month, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div>
-                            <p className="font-medium">{month.month}</p>
-                            <p className="text-sm text-muted-foreground">{month.quotes} quotes</p>
+                      {analytics.revenueByMonth.map((month, idx) => {
+                        const avgRevenue = analytics.revenueByMonth.reduce((s, m) => s + m.revenue, 0) / analytics.revenueByMonth.length;
+                        const isAboveAvg = month.revenue >= avgRevenue;
+                        return (
+                          <div 
+                            key={idx} 
+                            className={cn(
+                              "flex items-center justify-between p-3 border rounded-lg transition-all hover:shadow-md card-hover-lift",
+                              isAboveAvg ? "bg-success/5 border-success/20" : "bg-muted/20"
+                            )}
+                          >
+                            <div>
+                              <p className="font-medium">{month.month}</p>
+                              <p className="text-sm text-muted-foreground">{month.quotes} quotes</p>
+                            </div>
+                            <div className="text-right">
+                              <p className={cn(
+                                "font-bold text-lg",
+                                isAboveAvg ? "text-success" : "text-foreground"
+                              )}>
+                                ${month.revenue.toFixed(0)}
+                              </p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-bold text-lg">${month.revenue.toFixed(0)}</p>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </ScrollArea>
                 </CardContent>
@@ -426,6 +595,7 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Win Rate by Segment</CardTitle>
+                  <CardDescription>Conversion rates across deal sizes</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -433,12 +603,12 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
                       <div key={idx} className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
                           <span className="font-medium">{segment.segment}</span>
-                          <span>{segment.winRate.toFixed(1)}%</span>
+                          <span className="font-bold">{segment.winRate.toFixed(1)}%</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
                             <div 
-                              className="h-full bg-primary transition-all"
+                              className={cn("h-full transition-all duration-500", getWinRateColor(segment.winRate))}
                               style={{ width: `${segment.winRate}%` }}
                             />
                           </div>
@@ -457,14 +627,27 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Top Customers by Revenue</CardTitle>
+                  <CardDescription>Your most valuable customer relationships</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="h-96 pr-4">
                     <div className="space-y-3">
                       {analytics.topCustomers.map((customer, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <div 
+                          key={idx} 
+                          className={cn(
+                            "flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-all card-hover-lift",
+                            idx < 3 && "bg-gradient-to-r from-primary/5 to-transparent border-primary/20"
+                          )}
+                        >
                           <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
+                            <div className={cn(
+                              "flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm",
+                              idx === 0 && "bg-yellow-500/20 text-yellow-600",
+                              idx === 1 && "bg-gray-400/20 text-gray-600",
+                              idx === 2 && "bg-orange-600/20 text-orange-600",
+                              idx > 2 && "bg-primary/10 text-primary"
+                            )}>
                               {idx + 1}
                             </div>
                             <div>
@@ -488,26 +671,27 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">Performance Metrics</CardTitle>
+                    <CardDescription>Key business indicators</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <span className="text-sm">Average Quote Value</span>
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                      <span className="text-sm font-medium">Average Quote Value</span>
                       <span className="font-bold">
                         ${(analytics.revenueByMonth.reduce((sum, m) => sum + m.revenue, 0) / 
                            Math.max(1, analytics.revenueByMonth.reduce((sum, m) => sum + m.quotes, 0))).toFixed(0)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <span className="text-sm">Total Accepted Quotes</span>
-                      <span className="font-bold">{analytics.conversionFunnel.accepted}</span>
+                    <div className="flex items-center justify-between p-3 bg-success/10 rounded-lg border border-success/20">
+                      <span className="text-sm font-medium text-success">Total Accepted Quotes</span>
+                      <span className="font-bold text-success">{analytics.conversionFunnel.accepted}</span>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <span className="text-sm">Total Declined Quotes</span>
-                      <span className="font-bold">{analytics.conversionFunnel.declined}</span>
+                    <div className="flex items-center justify-between p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+                      <span className="text-sm font-medium text-destructive">Total Declined Quotes</span>
+                      <span className="font-bold text-destructive">{analytics.conversionFunnel.declined}</span>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <span className="text-sm">Pending Quotes</span>
-                      <span className="font-bold">{analytics.conversionFunnel.sent}</span>
+                    <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg border border-primary/20">
+                      <span className="text-sm font-medium text-primary">Pending Quotes</span>
+                      <span className="font-bold text-primary">{analytics.conversionFunnel.sent}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -515,23 +699,37 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">Business Health</CardTitle>
+                    <CardDescription>Overall performance snapshot</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="p-3 bg-success/10 border border-success/20 rounded-lg">
-                      <p className="text-sm font-medium text-success">Win Rate Trend</p>
-                      <p className="text-2xl font-bold text-success">
+                    <div className="p-4 bg-success/10 border border-success/20 rounded-lg card-hover-lift">
+                      <p className="text-sm font-medium text-success mb-1">Win Rate Trend</p>
+                      <p className="text-3xl font-bold text-success">
                         {((analytics.conversionFunnel.accepted / Math.max(1, analytics.conversionFunnel.sent + analytics.conversionFunnel.accepted)) * 100).toFixed(1)}%
                       </p>
                     </div>
-                    <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
-                      <p className="text-sm font-medium text-primary">Revenue Growth</p>
-                      <p className="text-2xl font-bold text-primary">
+                    <div className={cn(
+                      "p-4 border rounded-lg card-hover-lift",
+                      analytics.monthOverMonthGrowth >= 0 
+                        ? "bg-success/10 border-success/20" 
+                        : "bg-destructive/10 border-destructive/20"
+                    )}>
+                      <p className={cn(
+                        "text-sm font-medium mb-1",
+                        analytics.monthOverMonthGrowth >= 0 ? "text-success" : "text-destructive"
+                      )}>
+                        Revenue Growth
+                      </p>
+                      <p className={cn(
+                        "text-3xl font-bold",
+                        analytics.monthOverMonthGrowth >= 0 ? "text-success" : "text-destructive"
+                      )}>
                         {analytics.monthOverMonthGrowth >= 0 ? '+' : ''}{analytics.monthOverMonthGrowth.toFixed(1)}%
                       </p>
                     </div>
-                    <div className="p-3 bg-muted rounded-lg">
-                      <p className="text-sm font-medium">Active Customers</p>
-                      <p className="text-2xl font-bold">{analytics.topCustomers.length}</p>
+                    <div className="p-4 bg-muted rounded-lg card-hover-lift">
+                      <p className="text-sm font-medium mb-1">Active Customers</p>
+                      <p className="text-3xl font-bold">{analytics.topCustomers.length}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -550,3 +748,4 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
     </>
   );
 }
+  
