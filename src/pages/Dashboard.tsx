@@ -15,10 +15,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useLoadingState } from '@/hooks/useLoadingState';
 import { useSyncManager } from '@/hooks/useSyncManager';
+import { AdvancedAnalytics } from '@/components/AdvancedAnalytics';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, userRole } = useAuth();
   const { startLoading, stopLoading } = useLoadingState();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +41,8 @@ export default function Dashboard() {
     totalRevenue: 0,
     declinedValue: 0,
   });
+
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
   useEffect(() => {
     if (!authLoading && user && !hasLoadedData.current) {
@@ -174,6 +177,7 @@ export default function Dashboard() {
       // Use flushSync to ensure state updates trigger re-renders immediately
       flushSync(() => {
         setQuotes(quotesData);
+        setCustomers(customersData);
         setStats({
           totalQuotes: quotesData.length,
           totalCustomers: customersData.length,
@@ -599,6 +603,11 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Advanced Analytics - Business/Max/Admin Only */}
+      {(userRole === 'business' || userRole === 'max' || userRole === 'admin') && (
+        <AdvancedAnalytics quotes={quotes} customers={customers} />
+      )}
     </div>
   );
 }
