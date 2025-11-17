@@ -17,7 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { QuoteSummaryAI } from '@/components/QuoteSummaryAI';
 import { FollowUpMessageAI } from '@/components/FollowUpMessageAI';
 import { SendQuoteDialog, EmailContent } from '@/components/SendQuoteDialog';
-import { rateLimiter, RATE_LIMITS } from '@/lib/rate-limiter';
+import { rateLimiter } from '@/lib/rate-limiter';
 
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -276,13 +276,12 @@ export default function QuoteDetail() {
   const handleConfirmSend = async (emailContent: EmailContent) => {
     if (!quote || !customer || !user) return;
 
-    // Rate limiting check
-    const rateLimitKey = `send-email-${user.id}`;
-    if (!rateLimiter.check(rateLimitKey, RATE_LIMITS.EMAIL_SEND)) {
-      const remainingTime = Math.ceil(rateLimiter.getRemainingTime(rateLimitKey) / 1000);
+    // Rate limiting check - use the pre-configured 'ai-follow-up' limit
+    const { allowed, retryAfter } = rateLimiter.isAllowed('ai-follow-up');
+    if (!allowed) {
       toast({
         title: 'Rate Limit Reached',
-        description: `Please wait ${remainingTime} seconds before sending another email.`,
+        description: `Please wait ${retryAfter} seconds before sending another email.`,
         variant: 'destructive',
       });
       return;
