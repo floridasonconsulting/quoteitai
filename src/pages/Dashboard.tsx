@@ -168,10 +168,18 @@ export default function Dashboard() {
       // This ensures the component re-renders with data before we allow main content render
       await new Promise(resolve => setTimeout(resolve, 50));
       
-      // Now it's safe to turn off loading
-      flushSync(() => {
+      // ADDITIONAL SAFETY: Only turn off loading if we actually have data
+      // This prevents the blank page issue where loading=false but data isn't rendered yet
+      if (quotesData.length > 0 || customersData.length > 0 || itemsData.length > 0) {
+        flushSync(() => {
+          setLoading(false);
+        });
+        console.log('[Dashboard] Loading complete, data is ready for render');
+      } else {
+        // If no data at all, still turn off loading but component will show empty state
         setLoading(false);
-      });
+        console.log('[Dashboard] Loading complete, no data available (new user)');
+      }
       
       console.log('[Dashboard] Re-render triggered, data should be visible');
       clearTimeout(timeoutId);
@@ -335,6 +343,44 @@ export default function Dashboard() {
   // Force back to loading state to prevent blank page
   if (!loading && !error && quotes.length === 0 && !hasLoadedData.current) {
     console.warn('[Dashboard] No data available yet, showing skeleton');
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex sm:items-center sm:justify-between">
+          <div>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {[1, 2, 3].map(j => (
+                  <div key={j} className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-6 w-16" />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ADDITIONAL SAFETY: Check if we have the minimum data needed to render
+  // This ensures we never render main content with incomplete data
+  if (!loading && !error && (
+    !hasLoadedData.current || 
+    stats.totalQuotes === undefined || 
+    stats.totalCustomers === undefined
+  )) {
+    console.warn('[Dashboard] Data not ready yet, forcing loading state');
     return (
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:flex sm:items-center sm:justify-between">
