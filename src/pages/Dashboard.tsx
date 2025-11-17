@@ -339,83 +339,16 @@ export default function Dashboard() {
     );
   }
 
-  // CRITICAL SAFETY CHECK: If we reach here without data, something is wrong
-  // Force back to loading state to prevent blank page
-  if (!loading && !error && quotes.length === 0 && !hasLoadedData.current) {
-    console.warn('[Dashboard] No data available yet, showing skeleton');
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:flex sm:items-center sm:justify-between">
-          <div>
-            <Skeleton className="h-8 w-64 mb-2" />
-            <Skeleton className="h-4 w-96" />
-          </div>
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map(i => (
-            <Card key={i}>
-              <CardHeader className="pb-3">
-                <Skeleton className="h-4 w-32" />
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {[1, 2, 3].map(j => (
-                  <div key={j} className="flex items-center justify-between">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-6 w-16" />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  // Show empty state if no data exists (new user) - but still render main layout
+  // This prevents blank page by always rendering something
+  const hasData = quotes.length > 0 || customers.length > 0 || stats.totalQuotes > 0;
 
-  // ADDITIONAL SAFETY: Check if we have the minimum data needed to render
-  // This ensures we never render main content with incomplete data
-  if (!loading && !error && (
-    !hasLoadedData.current || 
-    stats.totalQuotes === undefined || 
-    stats.totalCustomers === undefined
-  )) {
-    console.warn('[Dashboard] Data not ready yet, forcing loading state');
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:flex sm:items-center sm:justify-between">
-          <div>
-            <Skeleton className="h-8 w-64 mb-2" />
-            <Skeleton className="h-4 w-96" />
-          </div>
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map(i => (
-            <Card key={i}>
-              <CardHeader className="pb-3">
-                <Skeleton className="h-4 w-32" />
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {[1, 2, 3].map(j => (
-                  <div key={j} className="flex items-center justify-between">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-6 w-16" />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // CRITICAL: If we reach here, we must have data to show
+  // CRITICAL: If we reach here, we must have data to show or be a new user with no data
   console.log('[Dashboard] Rendering MAIN CONTENT:', { 
     quotesCount: quotes.length, 
     statsTotal: stats.totalQuotes,
-    customersCount: customers.length 
+    customersCount: customers.length,
+    hasData
   });
 
   return (
