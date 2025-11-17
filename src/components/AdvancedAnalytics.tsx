@@ -66,7 +66,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
   });
 
   // Load live data from localStorage
-  const loadLiveData = useCallback(async () => {
+  const loadLiveData = useCallback(async (showToast = false) => {
     setIsRefreshing(true);
     try {
       // Use props if provided, otherwise fetch from localStorage using the correct storage system
@@ -82,12 +82,17 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
       setCustomers(liveCustomers);
       setLastRefresh(new Date());
       
-      toast.success('Analytics data refreshed', {
-        description: `Updated with ${liveQuotes.length} quotes and ${liveCustomers.length} customers`
-      });
+      // Only show toast if explicitly requested (manual refresh)
+      if (showToast) {
+        toast.success('Analytics data refreshed', {
+          description: `Updated with ${liveQuotes.length} quotes and ${liveCustomers.length} customers`
+        });
+      }
     } catch (error) {
       console.error('Error loading live data:', error);
-      toast.error('Failed to refresh analytics data');
+      if (showToast) {
+        toast.error('Failed to refresh analytics data');
+      }
     } finally {
       setIsRefreshing(false);
       setIsLoading(false);
@@ -97,11 +102,12 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
   // Initial load and auto-refresh setup
   useEffect(() => {
     if (userRole === 'business' || userRole === 'max' || userRole === 'admin') {
-      loadLiveData();
+      // Silent load on mount (no toast)
+      loadLiveData(false);
       
-      // Auto-refresh every 5 minutes
+      // Auto-refresh every 5 minutes (silent, no toast)
       const refreshInterval = setInterval(() => {
-        loadLiveData();
+        loadLiveData(false);
       }, 5 * 60 * 1000);
 
       return () => clearInterval(refreshInterval);
@@ -240,7 +246,8 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
   };
 
   const handleRefresh = () => {
-    loadLiveData();
+    // Manual refresh shows toast
+    loadLiveData(true);
   };
 
   const handleExport = () => {
