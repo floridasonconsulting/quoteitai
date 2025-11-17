@@ -1,21 +1,21 @@
+
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import { flushSync } from 'react-dom';
-import { Plus, Users, Package, FileText, Clock, TrendingUp, Target, DollarSign, TrendingDown, RefreshCw } from 'lucide-react';
+import { Plus, FileText, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getQuotes, getCustomers, getItems, clearInFlightRequests } from '@/lib/db-service';
 import { getAgingSummary, getQuoteAge } from '@/lib/quote-utils';
 import { Quote, Customer } from '@/types';
-import { cn, formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useLoadingState } from '@/hooks/useLoadingState';
-import { useSyncManager } from '@/hooks/useSyncManager';
 import { AdvancedAnalytics } from '@/components/AdvancedAnalytics';
+import { BasicStatCards } from '@/components/dashboard/BasicStatCards';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -39,48 +39,46 @@ export default function Dashboard() {
   });
   const [customers, setCustomers] = useState<Customer[]>([]);
 
-  // Add render logging
+  // Determine if user has advanced tier
+  const hasAdvancedTier = userRole === 'business' || userRole === 'max' || userRole === 'admin';
+
   console.log('[Dashboard] RENDER:', { 
     loading, 
     error, 
     quotesCount: quotes.length, 
     authLoading, 
     user: !!user,
-    hasLoadedData: hasLoadedData.current 
+    hasLoadedData: hasLoadedData.current,
+    userRole,
+    hasAdvancedTier
   });
 
-  // SIMPLIFIED: Load data as soon as we have a user - only run ONCE
   useEffect(() => {
-    // Only load if we have a user AND haven't loaded yet (removed loading check)
     if (user && !hasLoadedData.current) {
       console.log('[Dashboard] Initiating first data load');
       hasLoadedData.current = true;
       loadData();
     }
 
-    // Only abort on unmount
     return () => {
       if (abortControllerRef.current) {
         console.log('[Dashboard] Component unmounting, aborting load');
         abortControllerRef.current.abort();
       }
     };
-  }, [user]); // Remove loadData from dependencies to prevent re-runs
+  }, [user]);
 
   const loadData = async () => {
-    // GUARD: Don't run if we've already successfully loaded data
     if (hasLoadedData.current && !loading && quotes.length > 0) {
       console.log('[Dashboard] Data already loaded, skipping');
       return;
     }
 
-    // Don't abort existing load - just skip if one is already running
     if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
       console.log('[Dashboard] Load already in progress, skipping');
       return;
     }
 
-    // Clear any stale in-flight requests before starting
     console.log('[Dashboard] Clearing in-flight requests before load');
     clearInFlightRequests();
 
@@ -92,7 +90,7 @@ export default function Dashboard() {
     const operationId = `dashboard-load-${Date.now()}`;
     startLoading(operationId, 'Loading dashboard data');
 
-    const timeoutDuration = 15000; // 15 seconds total
+    const timeoutDuration = 15000;
 
     const timeoutId = setTimeout(() => {
       setLoading(false);
@@ -114,9 +112,6 @@ export default function Dashboard() {
       console.log('[Dashboard] All data loaded in parallel:', Date.now() - startTime, 'ms');
       console.log('[Dashboard] Quotes:', quotesData.length, 'Customers:', customersData.length, 'Items:', itemsData.length);
 
-      // REMOVED: Don't check for abort here - state updates should always happen unless unmounting
-      // The abort is only meant for cleanup on unmount, not to block state updates
-
       const pendingValue = quotesData
         .filter(q => q.status === 'sent')
         .reduce((sum, q) => sum + q.total, 0);
@@ -137,14 +132,6 @@ export default function Dashboard() {
         .filter(q => q.status === 'declined')
         .reduce((sum, q) => sum + q.total, 0);
 
-      console.log('[Dashboard] State update starting:', {
-        quotesCount: quotesData.length,
-        customersCount: customersData.length,
-        itemsCount: itemsData.length,
-        loadTime: Date.now() - startTime
-      });
-
-      // ATOMIC STATE UPDATE: Set everything at once to prevent race conditions
       const newStats = {
         totalQuotes: quotesData.length,
         totalCustomers: customersData.length,
@@ -156,14 +143,13 @@ export default function Dashboard() {
         declinedValue,
       };
 
-      // FORCE SYNCHRONOUS STATE UPDATE using flushSync
       flushSync(() => {
         setQuotes(quotesData);
         setCustomers(customersData);
         setStats(newStats);
         setRetryCount(0);
         setError(null);
-        setLoading(false); // Must be last to ensure other state is set first
+        setLoading(false);
       });
       
       console.log('[Dashboard] State updated successfully with flushSync');
@@ -191,14 +177,12 @@ export default function Dashboard() {
 
   const handleFullReset = async () => {
     try {
-      // Clear all caches
       localStorage.removeItem('customers-cache');
       localStorage.removeItem('items-cache');
       localStorage.removeItem('quotes-cache');
       localStorage.removeItem('sync-queue');
       localStorage.removeItem('failed-sync-queue');
       
-      // Clear service worker caches
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         const messageChannel = new MessageChannel();
         messageChannel.port1.onmessage = () => {
@@ -210,12 +194,10 @@ export default function Dashboard() {
         );
       }
       
-      // Reset state
       hasLoadedData.current = false;
       setRetryCount(0);
       setError(null);
       
-      // Reload
       setTimeout(() => {
         loadData();
       }, 500);
@@ -247,10 +229,6 @@ export default function Dashboard() {
     }
   };
 
-  // CRITICAL: Log before every render path
-  console.log('[Dashboard] Render path check:', { loading, error, quotesCount: quotes.length, authLoading, user: !!user, hasLoadedData: hasLoadedData.current });
-
-  // SIMPLIFIED: Show skeleton only while loading OR while auth is loading
   if (loading || authLoading) {
     return (
       <div className="space-y-6">
@@ -283,7 +261,6 @@ export default function Dashboard() {
   }
 
   if (error) {
-    console.log('[Dashboard] Rendering ERROR STATE:', error);
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <p className="text-destructive font-medium">{error}</p>
@@ -311,19 +288,8 @@ export default function Dashboard() {
     );
   }
 
-  // SIMPLIFIED: Just render content - no complex checks
   return (
     <div className="space-y-6 overflow-x-hidden max-w-full">
-      {/* Debug Banner - Remove after testing */}
-      {userRole && (
-        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-          <p className="text-sm font-medium">Debug Info: User Role = <span className="font-bold">{userRole}</span></p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Advanced Analytics should be {(userRole === 'business' || userRole === 'max' || userRole === 'admin') ? 'VISIBLE ✓' : 'HIDDEN ✗'}
-          </p>
-        </div>
-      )}
-
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
@@ -337,243 +303,160 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      {/* Stats Grid - Grouped Layout */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Business Overview Group */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Business Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Quotes</span>
-              </div>
-              <span className="text-lg font-bold">{stats.totalQuotes}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Customers</span>
-              </div>
-              <span className="text-lg font-bold">{stats.totalCustomers}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Catalog Items</span>
-              </div>
-              <span className="text-lg font-bold">{stats.totalItems}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Sales Performance Group */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Sales Performance</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Win Rate</span>
-              </div>
-              <span className="text-lg font-bold">{stats.acceptanceRate.toFixed(1)}%</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Avg Value</span>
-              </div>
-              <span className="text-lg font-bold">{formatCurrency(stats.avgQuoteValue)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">Pending</span>
-              </div>
-              <span className="text-lg font-bold">{formatCurrency(stats.pendingValue)}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Revenue Group */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Revenue</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-success" />
-                <span className="text-sm">Total Revenue</span>
-              </div>
-              <span className="text-lg font-bold text-success">{formatCurrency(stats.totalRevenue)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-destructive" />
-                <span className="text-sm">Declined</span>
-              </div>
-              <span className="text-lg font-bold text-muted-foreground">{formatCurrency(stats.declinedValue)}</span>
-            </div>
-            <div className="flex items-center justify-between pt-1 border-t">
-              <span className="text-sm font-medium">Potential</span>
-              <span className="text-lg font-bold">{formatCurrency(stats.totalRevenue + stats.pendingValue)}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Aging Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quote Aging Overview</CardTitle>
-          <CardDescription>Track the status of your sent quotes</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-            <div 
-              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-              onClick={() => navigate('/quotes?status=sent&age=fresh')}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Fresh (≤7 days)</span>
-                <Badge variant="outline" className={getAgeColor('fresh')}>
-                  {agingSummary.fresh}
-                </Badge>
-              </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-success transition-all"
-                  style={{ width: `${(agingSummary.fresh / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
-                />
-              </div>
-            </div>
-
-            <div 
-              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-              onClick={() => navigate('/quotes?status=sent&age=warm')}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Warm (8-14 days)</span>
-                <Badge variant="outline" className={getAgeColor('warm')}>
-                  {agingSummary.warm}
-                </Badge>
-              </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-warning transition-all"
-                  style={{ width: `${(agingSummary.warm / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
-                />
-              </div>
-            </div>
-
-            <div 
-              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-              onClick={() => navigate('/quotes?status=sent&age=aging')}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Aging (15-30 days)</span>
-                <Badge variant="outline" className={getAgeColor('aging')}>
-                  {agingSummary.aging}
-                </Badge>
-              </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-destructive transition-all"
-                  style={{ width: `${(agingSummary.aging / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
-                />
-              </div>
-            </div>
-
-            <div 
-              className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-              onClick={() => navigate('/quotes?status=sent&age=stale')}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Stale (&gt;30 days)</span>
-                <Badge variant="outline" className={getAgeColor('stale')}>
-                  {agingSummary.stale}
-                </Badge>
-              </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-destructive transition-all"
-                  style={{ width: `${(agingSummary.stale / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Quotes */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Recent Quotes</CardTitle>
-              <CardDescription>Your latest quote activity</CardDescription>
-            </div>
-            <Button variant="outline" onClick={() => navigate('/quotes')}>
-              View All
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {recentQuotes.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <FileText className="mx-auto h-12 w-12 mb-4 opacity-50" />
-              <p>No quotes yet. Create your first quote to get started!</p>
-              <Button className="mt-4" onClick={() => navigate('/quotes/new')}>
-                Create Quote
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {recentQuotes.map((quote) => {
-                const age = getQuoteAge(quote);
-                return (
-                  <div
-                    key={quote.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/quotes/${quote.id}`)}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium truncate">{quote.title}</p>
-                        <Badge variant="outline" className={getStatusColor(quote.status)}>
-                          {quote.status}
-                        </Badge>
-                        {quote.status === 'sent' && (
-                          <Badge variant="outline" className={getAgeColor(age)}>
-                            {age}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{quote.customerName}</span>
-                        <span>•</span>
-                        <span>{quote.quoteNumber}</span>
-                      </div>
-                    </div>
-                    <div className="text-right ml-4">
-                      <p className="font-bold">{formatCurrency(quote.total)}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Advanced Analytics - Business/Max/Admin Only */}
-      {(userRole === 'business' || userRole === 'max' || userRole === 'admin') && (
+      {/* Conditional Rendering Based on Tier */}
+      {hasAdvancedTier ? (
+        /* Business/MaxAI: Show only Advanced Analytics (it includes all they need) */
         <AdvancedAnalytics quotes={quotes} customers={customers} />
+      ) : (
+        /* Free/Pro: Show Basic Stats + Quote Management */
+        <>
+          {/* Basic Stats Cards - Free/Pro Only */}
+          <BasicStatCards stats={stats} />
+
+          {/* Quote Aging Overview */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quote Aging Overview</CardTitle>
+              <CardDescription>Track the status of your sent quotes</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                <div 
+                  className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => navigate('/quotes?status=sent&age=fresh')}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Fresh (≤7 days)</span>
+                    <Badge variant="outline" className={getAgeColor('fresh')}>
+                      {agingSummary.fresh}
+                    </Badge>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-success transition-all"
+                      style={{ width: `${(agingSummary.fresh / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div 
+                  className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => navigate('/quotes?status=sent&age=warm')}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Warm (8-14 days)</span>
+                    <Badge variant="outline" className={getAgeColor('warm')}>
+                      {agingSummary.warm}
+                    </Badge>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-warning transition-all"
+                      style={{ width: `${(agingSummary.warm / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div 
+                  className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => navigate('/quotes?status=sent&age=aging')}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Aging (15-30 days)</span>
+                    <Badge variant="outline" className={getAgeColor('aging')}>
+                      {agingSummary.aging}
+                    </Badge>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-destructive transition-all"
+                      style={{ width: `${(agingSummary.aging / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div 
+                  className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => navigate('/quotes?status=sent&age=stale')}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Stale (&gt;30 days)</span>
+                    <Badge variant="outline" className={getAgeColor('stale')}>
+                      {agingSummary.stale}
+                    </Badge>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-destructive transition-all"
+                      style={{ width: `${(agingSummary.stale / Math.max(1, agingSummary.fresh + agingSummary.warm + agingSummary.aging + agingSummary.stale)) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Quotes */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Recent Quotes</CardTitle>
+                  <CardDescription>Your latest quote activity</CardDescription>
+                </div>
+                <Button variant="outline" onClick={() => navigate('/quotes')}>
+                  View All
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {recentQuotes.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                  <p>No quotes yet. Create your first quote to get started!</p>
+                  <Button className="mt-4" onClick={() => navigate('/quotes/new')}>
+                    Create Quote
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {recentQuotes.map((quote) => {
+                    const age = getQuoteAge(quote);
+                    return (
+                      <div
+                        key={quote.id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => navigate(`/quotes/${quote.id}`)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium truncate">{quote.title}</p>
+                            <Badge variant="outline" className={getStatusColor(quote.status)}>
+                              {quote.status}
+                            </Badge>
+                            {quote.status === 'sent' && (
+                              <Badge variant="outline" className={getAgeColor(age)}>
+                                {age}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span>{quote.customerName}</span>
+                            <span>•</span>
+                            <span>{quote.quoteNumber}</span>
+                          </div>
+                        </div>
+                        <div className="text-right ml-4">
+                          <p className="font-bold">{formatCurrency(quote.total)}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );
