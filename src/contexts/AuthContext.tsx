@@ -306,7 +306,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    setSigningIn(true); // Start sign-in process
+    setSigningIn(true);
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -336,18 +336,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Wait for role check to complete - this is critical
       await checkUserRole(data.session);
       
-      // Ensure React has time to propagate all state changes
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Ensure role state has propagated by waiting for next event loop
+      await new Promise(resolve => setTimeout(resolve, 150));
       
       // Load subscription in background (non-blocking)
       loadSubscription(data.session.user.id).catch(console.error);
       
+      // Set signingIn to false BEFORE navigation to ensure loading state is correct
+      flushSync(() => {
+        setSigningIn(false);
+      });
+      
+      // One more brief wait to ensure React has processed all state updates
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
       toast.success('Signed in successfully!');
       
-      // Sign-in process complete
-      setSigningIn(false);
-      
-      // Navigate to dashboard
+      // Navigate to dashboard - auth state should be fully ready now
       navigate('/dashboard');
       
       return { error: null };
