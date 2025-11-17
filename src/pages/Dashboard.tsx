@@ -263,11 +263,12 @@ export default function Dashboard() {
   };
 
   // CRITICAL: Log before every render path
-  console.log('[Dashboard] Render path check:', { loading, error, quotesCount: quotes.length });
+  console.log('[Dashboard] Render path check:', { loading, error, quotesCount: quotes.length, authLoading, user: !!user });
 
-  // Show skeleton UI immediately instead of full-screen spinner
-  if (loading) {
-    console.log('[Dashboard] Rendering SKELETON UI');
+  // Show skeleton UI while auth is loading OR while data is loading
+  // This prevents the blank page issue by keeping skeleton visible until data is ready
+  if (loading || authLoading) {
+    console.log('[Dashboard] Rendering SKELETON UI', { loading, authLoading });
     return (
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:flex sm:items-center sm:justify-between">
@@ -339,16 +340,48 @@ export default function Dashboard() {
     );
   }
 
-  // Show empty state if no data exists (new user) - but still render main layout
-  // This prevents blank page by always rendering something
-  const hasData = quotes.length > 0 || customers.length > 0 || stats.totalQuotes > 0;
+  // CRITICAL SAFETY CHECK: If we have no data yet but loading is false,
+  // keep showing skeleton to prevent blank page
+  const hasAnyData = quotes.length > 0 || customers.length > 0 || stats.totalQuotes > 0;
+  
+  if (!hasAnyData && !hasLoadedData.current) {
+    console.log('[Dashboard] No data yet and load not attempted - showing skeleton');
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex sm:items-center sm:justify-between">
+          <div>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {[1, 2, 3].map(j => (
+                  <div key={j} className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-6 w-16" />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   // CRITICAL: If we reach here, we must have data to show or be a new user with no data
   console.log('[Dashboard] Rendering MAIN CONTENT:', { 
     quotesCount: quotes.length, 
     statsTotal: stats.totalQuotes,
     customersCount: customers.length,
-    hasData
+    hasAnyData
   });
 
   return (
