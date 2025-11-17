@@ -81,6 +81,18 @@ const FEATURE_BENEFITS: Record<AIFeatureType, {
     description: 'Analyze market positioning and competitive advantages',
     benefits: ['Stay ahead of competition', 'Identify market opportunities', 'Strategic decision making']
   },
+  advanced_analytics: {
+    name: 'Advanced Analytics',
+    description: 'Unlock powerful business intelligence and performance insights',
+    benefits: [
+      'Revenue trends and forecasting',
+      'Customer lifetime value analysis',
+      'Win rate by customer segment',
+      'Conversion funnel visualization',
+      'Top customer reports',
+      'Export analytics data'
+    ]
+  }
 };
 
 const TIER_INFO = {
