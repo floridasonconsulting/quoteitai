@@ -55,16 +55,20 @@ export default function Dashboard() {
       loadData();
     }
 
+    // Only abort on unmount, not on re-renders
     return () => {
       if (abortControllerRef.current) {
+        console.log('[Dashboard] Component unmounting, aborting load');
         abortControllerRef.current.abort();
       }
     };
-  }, [user]);
+  }, [user]); // Remove loadData from dependencies to prevent re-runs
 
   const loadData = async () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+    // Don't abort existing load - just skip if one is already running
+    if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
+      console.log('[Dashboard] Load already in progress, skipping');
+      return;
     }
 
     // Clear any stale in-flight requests before starting
@@ -101,12 +105,8 @@ export default function Dashboard() {
       console.log('[Dashboard] All data loaded in parallel:', Date.now() - startTime, 'ms');
       console.log('[Dashboard] Quotes:', quotesData.length, 'Customers:', customersData.length, 'Items:', itemsData.length);
 
-      if (abortControllerRef.current?.signal.aborted) {
-        console.log('[Dashboard] Load aborted');
-        clearTimeout(timeoutId);
-        stopLoading(operationId);
-        return;
-      }
+      // REMOVED: Don't check for abort here - we want to update state even if aborted
+      // The abort is only for cleanup on unmount
 
       const pendingValue = quotesData
         .filter(q => q.status === 'sent')
@@ -150,7 +150,7 @@ export default function Dashboard() {
       });
       setRetryCount(0);
       setError(null);
-      setLoading(false); // Set loading false directly, no setTimeout
+      setLoading(false);
       
       console.log('[Dashboard] Data loaded successfully, rendering content');
       clearTimeout(timeoutId);
