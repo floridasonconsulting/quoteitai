@@ -147,7 +147,7 @@ export function AdvancedAnalytics({ quotes, customers }: AdvancedAnalyticsProps)
 
     // Average Time to Close (days)
     const acceptedQuotes = filteredQuotes.filter(q => q.status === 'accepted');
-    const avgTimeToClose = acceptedQuotes.length > 0
+    const averageTimeToClose = acceptedQuotes.length > 0
       ? acceptedQuotes.reduce((sum, q) => {
           const sent = new Date(q.date);
           const accepted = new Date(q.updatedAt || q.date);
