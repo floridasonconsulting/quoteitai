@@ -326,8 +326,11 @@ export function OnboardingWizard() {
     }
 
     try {
+      console.log("[OnboardingWizard] Starting onboarding completion for user:", user.id);
+      
       // Get existing settings from database
       const existingSettings = await getSettings(user.id);
+      console.log("[OnboardingWizard] Retrieved existing settings:", existingSettings);
       
       // Merge with new onboarding data
       const updatedSettings = {
@@ -340,17 +343,25 @@ export function OnboardingWizard() {
         accent_color: brandingData.accentColor,
       };
 
+      console.log("[OnboardingWizard] Saving updated settings:", updatedSettings);
+
       // Save to database (this will also update localStorage cache)
       await saveSettings(user.id, updatedSettings);
 
-      console.log("[OnboardingWizard] Settings saved successfully:", {
-        name: updatedSettings.name,
-        email: updatedSettings.email,
-        userId: user.id
-      });
+      // Verify the settings were saved by reading them back
+      const verifySettings = await getSettings(user.id);
+      console.log("[OnboardingWizard] Verification - settings after save:", verifySettings);
+
+      // Check if settings were actually saved
+      if (!verifySettings.name || verifySettings.name !== companyData.name) {
+        throw new Error("Settings verification failed - data was not saved correctly");
+      }
+
+      console.log("[OnboardingWizard] Settings verified successfully");
 
       // Handle import option
       if (importOption === "sample") {
+        console.log("[OnboardingWizard] Loading sample data...");
         const { generateSampleData } = await import("@/lib/sample-data");
         await generateSampleData(user.id, true);
         toast.success("Sample data loaded successfully!");
@@ -360,12 +371,22 @@ export function OnboardingWizard() {
       localStorage.setItem(`onboarding_completed_${user.id}`, "true");
       
       console.log("[OnboardingWizard] Onboarding marked as complete for user:", user.id);
+      console.log("[OnboardingWizard] Completion flag set:", localStorage.getItem(`onboarding_completed_${user.id}`));
       
       setIsOpen(false);
-      toast.success("Setup complete! You're ready to start quoting.");
+      toast.success("Setup complete! Your company information has been saved.");
     } catch (error) {
       console.error("[OnboardingWizard] Error completing onboarding:", error);
-      toast.error("There was an error saving your settings. Please try again.");
+      
+      // Provide specific error message
+      if (error instanceof Error) {
+        toast.error(`Failed to save settings: ${error.message}`);
+      } else {
+        toast.error("There was an error saving your settings. Please try again.");
+      }
+      
+      // Don't close the wizard if there was an error
+      return;
     }
   };
 
