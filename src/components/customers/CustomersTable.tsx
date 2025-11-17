@@ -1,4 +1,3 @@
-
 import { Mail, Phone, Edit, Trash2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,7 +64,7 @@ export function CustomersTable({
                 )}
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-0">
+            <CardContent className="pt-0 px-4 pb-4">
               {(customer.address || customer.city) && (
                 <div className="flex items-center gap-2 min-w-0 mb-3">
                   <MapPin className="h-3 w-3 flex-shrink-0" />
@@ -85,12 +84,12 @@ export function CustomersTable({
                   </a>
                 </div>
               )}
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 w-full">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => onEdit(customer)}
-                  className="flex-1"
+                  className="flex-1 min-w-[80px]"
                 >
                   <Edit className="h-4 w-4 mr-1" />
                   Edit
@@ -108,7 +107,7 @@ export function CustomersTable({
                       '_blank'
                     );
                   }}
-                  className="flex-1"
+                  className="flex-1 min-w-[100px]"
                   disabled={!customer.address && !customer.city}
                 >
                   <MapPin className="h-4 w-4 mr-1" />
@@ -118,7 +117,8 @@ export function CustomersTable({
                   variant="outline"
                   size="sm"
                   onClick={() => onDelete(customer.id)}
-                  className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  className="text-destructive hover:bg-destructive hover:text-destructive-foreground shrink-0"
+                  aria-label="Delete customer"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
