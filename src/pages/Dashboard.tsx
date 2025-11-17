@@ -15,6 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import { useLoadingState } from "@/hooks/useLoadingState";
 import { AdvancedAnalytics } from "@/components/AdvancedAnalytics";
 import { BasicStatCards } from "@/components/dashboard/BasicStatCards";
+import { storageCache } from "@/lib/storage-cache";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -152,9 +153,10 @@ export default function Dashboard() {
 
   const handleFullReset = async () => {
     try {
-      localStorage.removeItem("customers-cache");
-      localStorage.removeItem("items-cache");
-      localStorage.removeItem("quotes-cache");
+      // Clear all storage cache entries
+      storageCache.clear();
+      
+      // Also clear any legacy direct localStorage entries
       localStorage.removeItem("sync-queue");
       localStorage.removeItem("failed-sync-queue");
       
@@ -170,11 +172,21 @@ export default function Dashboard() {
       setRetryCount(0);
       setError(null);
       
+      toast({
+        title: "Cache cleared",
+        description: "All cached data has been cleared. Reloading...",
+      });
+      
       setTimeout(() => {
         loadData();
       }, 500);
     } catch (error) {
       console.error("Error during reset:", error);
+      toast({
+        title: "Reset failed",
+        description: "Could not clear cache. Please try refreshing the page.",
+        variant: "destructive",
+      });
     }
   };
 
