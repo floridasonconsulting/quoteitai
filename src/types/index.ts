@@ -83,6 +83,7 @@ export interface CompanySettings {
   proposalTemplate?: 'classic' | 'modern' | 'detailed';
   notifyEmailAccepted?: boolean;
   notifyEmailDeclined?: boolean;
+  onboardingCompleted?: boolean;
 }
 
 // For offline sync queue
