@@ -397,14 +397,16 @@ export function OnboardingWizard() {
       console.log("[OnboardingWizard] Retrieved existing settings:", existingSettings);
       
       // Step 2: Merge with new onboarding data
-      const updatedSettings = {
+      const updatedSettings: CompanySettings = {
         ...existingSettings,
         name: companyData.name,
         email: companyData.email,
         phone: companyData.phone,
         address: companyData.address,
-        primary_color: brandingData.primaryColor,
-        accent_color: brandingData.accentColor,
+        // TODO: Persist branding colors. They are not part of CompanySettings.
+        // primary_color: brandingData.primaryColor,
+        // accent_color: brandingData.accentColor,
+        onboardingCompleted: true, // Mark onboarding as completed in the settings object
       };
 
       console.log("[OnboardingWizard] Step 2: Merged settings:", updatedSettings);
