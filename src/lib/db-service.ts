@@ -88,6 +88,7 @@ export const getSettings = async (userId: string | undefined): Promise<CompanySe
     proposalTemplate: 'classic',
     notifyEmailAccepted: true,
     notifyEmailDeclined: true,
+    onboardingCompleted: false,
   };
 
   if (!userId) {
@@ -121,6 +122,7 @@ export const getSettings = async (userId: string | undefined): Promise<CompanySe
         proposalTemplate: data.proposal_template || 'classic',
         notifyEmailAccepted: data.notify_email_accepted !== false,
         notifyEmailDeclined: data.notify_email_declined !== false,
+        onboardingCompleted: data.onboarding_completed || false,
       };
       
       console.log('[DB Service] Retrieved settings from DB:', { 
@@ -168,14 +170,15 @@ export const saveSettings = async (
       notify_email_accepted: settings.notifyEmailAccepted !== false,
       notify_email_declined: settings.notifyEmailDeclined !== false,
       // Add onboarding_completed field if it exists in settings
-      onboarding_completed: (settings as any).onboardingCompleted || false,
+      onboarding_completed: settings.onboardingCompleted || false,
     };
 
     console.log('[DB Service] Saving settings to DB:', {
       proposalTemplate: settingsData.proposal_template,
       logoDisplayOption: settingsData.logo_display_option,
       notifyEmailAccepted: settingsData.notify_email_accepted,
-      notifyEmailDeclined: settingsData.notify_email_declined
+      notifyEmailDeclined: settingsData.notify_email_declined,
+      onboardingCompleted: settingsData.onboarding_completed,
     });
 
     const { error } = await supabase
