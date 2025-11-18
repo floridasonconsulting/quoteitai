@@ -167,6 +167,8 @@ export const saveSettings = async (
       proposal_template: settings.proposalTemplate || 'classic',
       notify_email_accepted: settings.notifyEmailAccepted !== false,
       notify_email_declined: settings.notifyEmailDeclined !== false,
+      // Add onboarding_completed field if it exists in settings
+      onboarding_completed: (settings as any).onboardingCompleted || false,
     };
 
     console.log('[DB Service] Saving settings to DB:', {
