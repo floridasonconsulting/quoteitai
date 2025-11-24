@@ -1,6 +1,7 @@
-const CACHE_VERSION = 'quote-it-v3';  // Force complete cache bust for analytics fix
+const CACHE_VERSION = 'quote-it-v4';  // Bump version for advanced caching
 const STATIC_CACHE = CACHE_VERSION + '-static';
 const DYNAMIC_CACHE = CACHE_VERSION + '-dynamic';
+const PRELOAD_CACHE = CACHE_VERSION + '-preload';
 const CACHE_EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 hours
 
 // Trusted domains for cache validation (prevent cache poisoning)
@@ -62,6 +63,27 @@ function isValidCacheResponse(response, request) {
   return true;
 }
 
+// Request deduplication map (prevent duplicate in-flight requests)
+const pendingRequests = new Map();
+
+// Cache warming configuration
+const PRELOAD_RESOURCES = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/logo.png',
+];
+
+// High-priority routes for preloading
+const HIGH_PRIORITY_ROUTES = [
+  '/dashboard',
+  '/quotes',
+  '/customers',
+  '/items',
+];
+
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -71,12 +93,29 @@ const STATIC_ASSETS = [
   '/logo.png',
 ];
 
-// Install service worker
+// Install service worker with cache warming
 self.addEventListener('install', (event) => {
+  console.log('[SW] Installing service worker v4 with advanced caching');
+  
   event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting())
+    Promise.all([
+      // Cache static assets
+      caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS)),
+      
+      // Warm cache with high-priority routes
+      caches.open(PRELOAD_CACHE).then(async (cache) => {
+        console.log('[SW] Warming cache with high-priority routes');
+        try {
+          await cache.addAll(HIGH_PRIORITY_ROUTES);
+          console.log('[SW] Cache warmed successfully');
+        } catch (error) {
+          console.warn('[SW] Cache warming failed:', error);
+        }
+      })
+    ]).then(() => {
+      console.log('[SW] Installation complete, skipping waiting');
+      return self.skipWaiting();
+    })
   );
 });
 
@@ -95,6 +134,34 @@ self.addEventListener('activate', (event) => {
     }).then(() => self.clients.claim())
   );
 });
+
+// Request coalescing helper
+async function coalesceRequest(request, cache) {
+  const requestKey = request.url + request.method;
+  
+  // Check if request is already in flight
+  if (pendingRequests.has(requestKey)) {
+    console.log('[SW] Coalescing duplicate request:', request.url);
+    return pendingRequests.get(requestKey);
+  }
+  
+  // Execute request and cache promise
+  const promise = fetch(request)
+    .then(async (response) => {
+      if (response && isValidCacheResponse(response, request)) {
+        const clone = response.clone();
+        await cache.put(request, clone);
+      }
+      return response;
+    })
+    .finally(() => {
+      // Clean up after request completes
+      pendingRequests.delete(requestKey);
+    });
+  
+  pendingRequests.set(requestKey, promise);
+  return promise;
+}
 
 // Stale-while-revalidate helper for API
 async function staleWhileRevalidate(request, cache) {
@@ -151,10 +218,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // API calls - stale-while-revalidate strategy
+  // API calls - stale-while-revalidate with request coalescing
   if (url.pathname.includes('/api/') || url.pathname.includes('/rest/v1/')) {
     event.respondWith(
-      caches.open(DYNAMIC_CACHE).then(cache => staleWhileRevalidate(request, cache))
+      caches.open(DYNAMIC_CACHE).then(async (cache) => {
+        const cachedResponse = await cache.match(request);
+        
+        // Coalese duplicate requests
+        const networkPromise = coalesceRequest(request, cache);
+        
+        // Return cached immediately if available, otherwise wait for network
+        return cachedResponse || await networkPromise || new Response(null, { status: 504 });
+      })
     );
     return;
   }
