@@ -229,13 +229,20 @@ export async function getById<T>(
 /**
  * Add a new record
  */
-export async function add<T extends { id: string }>(
+export async function add<T extends { id: string; userId?: string }>(
   storeName: string,
   record: T
 ): Promise<T> {
   return executeTransaction(storeName, "readwrite", async (tx) => {
     const store = tx.objectStore(storeName);
-    const request = store.add(record);
+    
+    // Transform userId (camelCase) to user_id (snake_case) for IndexedDB index
+    const dbRecord = {
+      ...record,
+      user_id: record.userId,
+    };
+    
+    const request = store.add(dbRecord);
 
     return new Promise((resolve, reject) => {
       request.onsuccess = () => {
@@ -253,13 +260,20 @@ export async function add<T extends { id: string }>(
 /**
  * Update an existing record
  */
-export async function update<T extends { id: string }>(
+export async function update<T extends { id: string; userId?: string }>(
   storeName: string,
   record: T
 ): Promise<T> {
   return executeTransaction(storeName, "readwrite", async (tx) => {
     const store = tx.objectStore(storeName);
-    const request = store.put(record);
+    
+    // Transform userId (camelCase) to user_id (snake_case) for IndexedDB index
+    const dbRecord = {
+      ...record,
+      user_id: record.userId,
+    };
+    
+    const request = store.put(dbRecord);
 
     return new Promise((resolve, reject) => {
       request.onsuccess = () => {
