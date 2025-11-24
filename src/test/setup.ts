@@ -22,6 +22,105 @@ import { beforeAll, afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
+// ============================================================================
+// Cache Storage API Mock
+// ============================================================================
+class MockCache {
+  private storage: Map<string, Response>;
+
+  constructor() {
+    this.storage = new Map();
+  }
+
+  async match(request: RequestInfo | URL): Promise<Response | undefined> {
+    const key = typeof request === 'string' ? request : request.toString();
+    return this.storage.get(key);
+  }
+
+  async matchAll(request?: RequestInfo | URL): Promise<Response[]> {
+    if (!request) {
+      return Array.from(this.storage.values());
+    }
+    const key = typeof request === 'string' ? request : request.toString();
+    const response = this.storage.get(key);
+    return response ? [response] : [];
+  }
+
+  async put(request: RequestInfo | URL, response: Response): Promise<void> {
+    const key = typeof request === 'string' ? request : request.toString();
+    this.storage.set(key, response);
+  }
+
+  async delete(request: RequestInfo | URL): Promise<boolean> {
+    const key = typeof request === 'string' ? request : request.toString();
+    return this.storage.delete(key);
+  }
+
+  async keys(): Promise<Request[]> {
+    return Array.from(this.storage.keys()).map(key => new Request(key));
+  }
+}
+
+class MockCacheStorage {
+  private caches: Map<string, MockCache>;
+
+  constructor() {
+    this.caches = new Map();
+  }
+
+  async open(cacheName: string): Promise<Cache> {
+    if (!this.caches.has(cacheName)) {
+      this.caches.set(cacheName, new MockCache() as any);
+    }
+    return this.caches.get(cacheName) as any;
+  }
+
+  async has(cacheName: string): Promise<boolean> {
+    return this.caches.has(cacheName);
+  }
+
+  async delete(cacheName: string): Promise<boolean> {
+    return this.caches.delete(cacheName);
+  }
+
+  async keys(): Promise<string[]> {
+    return Array.from(this.caches.keys());
+  }
+
+  async match(request: RequestInfo | URL): Promise<Response | undefined> {
+    for (const cache of this.caches.values()) {
+      const response = await cache.match(request);
+      if (response) return response;
+    }
+    return undefined;
+  }
+}
+
+// Set up global caches mock
+if (typeof globalThis.caches === 'undefined') {
+  globalThis.caches = new MockCacheStorage() as any;
+}
+
+// Mock StorageEstimate API for quota management
+if (typeof navigator !== 'undefined' && !navigator.storage) {
+  Object.defineProperty(navigator, 'storage', {
+    value: {
+      estimate: vi.fn().mockResolvedValue({
+        usage: 1024 * 1024 * 10, // 10MB
+        quota: 1024 * 1024 * 1024, // 1GB
+      }),
+    },
+    writable: true,
+    configurable: true,
+  });
+}
+
+// Verify Cache Storage API is available
+console.log('[Test Setup] Cache Storage API polyfill status:', {
+  caches: typeof globalThis.caches,
+  navigator_storage: typeof navigator?.storage,
+});
+
 // Type-safe declaration for our global test helper
 declare global {
   var triggerAuthStateChange: (event: AuthChangeEvent, session: Session | null) => void;
