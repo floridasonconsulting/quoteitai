@@ -5,7 +5,7 @@
 
 import { Customer, QueueChange } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
-import { CACHE_KEYS, getCachedData, setCachedData } from './cache-service';
+import { cacheManager } from '../cache-manager';
 import { dedupedRequest, withTimeout } from './request-pool-service';
 import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
@@ -13,25 +13,33 @@ import { CustomerDB, isIndexedDBSupported } from '../indexed-db';
 
 /**
  * Fetch all customers for a user
- * Priority: IndexedDB > Supabase > Cache > Empty
+ * Priority: Cache > IndexedDB > Supabase > Empty
  */
 export async function getCustomers(userId: string | undefined): Promise<Customer[]> {
   if (!userId) {
     console.warn('⚠️ No user ID - using cache for customers.');
-    return getCachedData<Customer>(CACHE_KEYS.CUSTOMERS) || [];
+    const cached = await cacheManager.get<Customer[]>('customers');
+    return cached || [];
   }
 
   const dedupKey = `fetch-customers-${userId}`;
 
   return dedupedRequest(dedupKey, async () => {
-    // Try IndexedDB first if supported
+    // Check cache first (CacheManager handles memory cache)
+    const cached = await cacheManager.get<Customer[]>('customers');
+    if (cached && cached.length > 0) {
+      console.log(`[CustomerService] Retrieved ${cached.length} customers from cache`);
+      return cached;
+    }
+
+    // Try IndexedDB if cache miss
     if (isIndexedDBSupported()) {
       try {
         const indexedDBData = await CustomerDB.getAll(userId);
         if (indexedDBData && indexedDBData.length > 0) {
           console.log(`[CustomerService] Retrieved ${indexedDBData.length} customers from IndexedDB`);
-          // Update memory cache
-          setCachedData<Customer>(CACHE_KEYS.CUSTOMERS, indexedDBData);
+          // Update cache
+          await cacheManager.set('customers', indexedDBData);
           return indexedDBData;
         }
       } catch (error) {
@@ -39,60 +47,59 @@ export async function getCustomers(userId: string | undefined): Promise<Customer
       }
     }
 
-    // Check memory cache
-    const cached = getCachedData<Customer>(CACHE_KEYS.CUSTOMERS);
-    
     if (!navigator.onLine) {
       return cached || [];
     }
 
-    try {
-      const dbQueryPromise = Promise.resolve(
-        supabase
-          .from('customers')
-          .select('*')
-          .eq('user_id', userId)
-      );
-      
-      const { data, error } = await withTimeout(dbQueryPromise, 15000);
-      
-      if (error) {
+    // Use cache manager's request coalescing for network requests
+    return cacheManager.coalesce(`customers-${userId}`, async () => {
+      try {
+        const dbQueryPromise = Promise.resolve(
+          supabase
+            .from('customers')
+            .select('*')
+            .eq('user_id', userId)
+        );
+        
+        const { data, error } = await withTimeout(dbQueryPromise, 15000);
+        
+        if (error) {
+          console.error('Error fetching customers:', error);
+          if (cached) {
+            console.log('[Cache] Using cached customers after error');
+            return cached;
+          }
+          throw error;
+        }
+        
+        const result = data ? data.map(item => toCamelCase(item)) as Customer[] : [];
+        
+        // Save to IndexedDB if supported
+        if (isIndexedDBSupported()) {
+          try {
+            await CustomerDB.clear(userId);
+            for (const customer of result) {
+              await CustomerDB.add({ ...customer, user_id: userId } as never);
+            }
+            console.log(`[CustomerService] Saved ${result.length} customers to IndexedDB`);
+          } catch (error) {
+            console.warn('[CustomerService] Failed to save to IndexedDB:', error);
+          }
+        }
+        
+        // Update cache
+        await cacheManager.set('customers', result);
+        
+        return result;
+      } catch (error) {
         console.error('Error fetching customers:', error);
         if (cached) {
-          console.log('[Cache] Using cached customers after error');
+          console.log('[Cache] Returning cached customers after timeout');
           return cached;
         }
-        throw error;
+        return [];
       }
-      
-      const result = data ? data.map(item => toCamelCase(item)) as Customer[] : [];
-      
-      // Save to IndexedDB if supported
-      if (isIndexedDBSupported()) {
-        try {
-          // Clear old data and save new
-          await CustomerDB.clear(userId);
-          for (const customer of result) {
-            await CustomerDB.add({ ...customer, user_id: userId } as never);
-          }
-          console.log(`[CustomerService] Saved ${result.length} customers to IndexedDB`);
-        } catch (error) {
-          console.warn('[CustomerService] Failed to save to IndexedDB:', error);
-        }
-      }
-      
-      // Update memory cache
-      setCachedData<Customer>(CACHE_KEYS.CUSTOMERS, result);
-      
-      return result;
-    } catch (error) {
-      console.error('Error fetching customers:', error);
-      if (cached) {
-        console.log('[Cache] Returning cached customers after timeout');
-        return cached;
-      }
-      return [];
-    }
+    });
   });
 }
 
@@ -117,13 +124,12 @@ export async function addCustomer(
     }
   }
 
-  // Update memory cache
-  const cached = getCachedData<Customer>(CACHE_KEYS.CUSTOMERS) || [];
-  setCachedData<Customer>(CACHE_KEYS.CUSTOMERS, [...cached, customerWithUser]);
+  // Invalidate cache to force refresh
+  await cacheManager.invalidate('customers');
 
   if (!navigator.onLine || !userId) {
     if (!userId) {
-      console.warn('⚠️ No user ID - customer saved to IndexedDB/localStorage only.');
+      console.warn('⚠️ No user ID - customer saved to IndexedDB only.');
     }
     queueChange?.({ type: 'create', table: 'customers', data: customerWithUser });
     return customerWithUser;
@@ -174,8 +180,8 @@ export async function updateCustomer(
   }
   
   if (!currentCustomer) {
-    const cached = getCachedData<Customer>(CACHE_KEYS.CUSTOMERS) || [];
-    currentCustomer = cached.find(c => c.id === id);
+    const cached = await cacheManager.get<Customer[]>('customers');
+    currentCustomer = cached?.find(c => c.id === id);
   }
 
   const updatedCustomer = { ...currentCustomer, ...updates } as Customer;
@@ -190,12 +196,8 @@ export async function updateCustomer(
     }
   }
 
-  // Update memory cache
-  const cached = getCachedData<Customer>(CACHE_KEYS.CUSTOMERS) || [];
-  const updatedCache = cached.map(item => 
-    item.id === id ? updatedCustomer : item
-  );
-  setCachedData<Customer>(CACHE_KEYS.CUSTOMERS, updatedCache);
+  // Invalidate cache
+  await cacheManager.invalidate('customers');
 
   if (!navigator.onLine || !userId) {
     queueChange?.({ type: 'update', table: 'customers', data: { id, ...updates } });
@@ -241,9 +243,8 @@ export async function deleteCustomer(
     }
   }
 
-  // Update memory cache
-  const cached = getCachedData<Customer>(CACHE_KEYS.CUSTOMERS) || [];
-  setCachedData<Customer>(CACHE_KEYS.CUSTOMERS, cached.filter(item => item.id !== id));
+  // Invalidate cache
+  await cacheManager.invalidate('customers');
 
   if (!navigator.onLine || !userId) {
     queueChange?.({ type: 'delete', table: 'customers', data: { id } });

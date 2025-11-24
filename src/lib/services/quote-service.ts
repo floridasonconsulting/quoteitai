@@ -5,7 +5,7 @@
 
 import { Quote, QueueChange } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
-import { CACHE_KEYS, getCachedData, setCachedData } from './cache-service';
+import { cacheManager } from '../cache-manager';
 import { dedupedRequest, withTimeout } from './request-pool-service';
 import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
@@ -13,25 +13,33 @@ import { QuoteDB, isIndexedDBSupported } from '../indexed-db';
 
 /**
  * Fetch all quotes for a user
- * Priority: IndexedDB > Supabase > Cache > Empty
+ * Priority: Cache > IndexedDB > Supabase > Empty
  */
 export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
   if (!userId) {
     console.warn('⚠️ No user ID - using cache for quotes.');
-    return getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
+    const cached = await cacheManager.get<Quote[]>('quotes');
+    return cached || [];
   }
 
   const dedupKey = `fetch-quotes-${userId}`;
 
   return dedupedRequest(dedupKey, async () => {
-    // Try IndexedDB first if supported
+    // Check cache first (CacheManager handles memory cache)
+    const cached = await cacheManager.get<Quote[]>('quotes');
+    if (cached && cached.length > 0) {
+      console.log(`[QuoteService] Retrieved ${cached.length} quotes from cache`);
+      return cached;
+    }
+
+    // Try IndexedDB if cache miss
     if (isIndexedDBSupported()) {
       try {
         const indexedDBData = await QuoteDB.getAll(userId);
         if (indexedDBData && indexedDBData.length > 0) {
           console.log(`[QuoteService] Retrieved ${indexedDBData.length} quotes from IndexedDB`);
-          // Update memory cache
-          setCachedData<Quote>(CACHE_KEYS.QUOTES, indexedDBData);
+          // Update cache
+          await cacheManager.set('quotes', indexedDBData);
           return indexedDBData;
         }
       } catch (error) {
@@ -39,60 +47,59 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
       }
     }
 
-    // Check memory cache
-    const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES);
-    
     if (!navigator.onLine) {
       return cached || [];
     }
 
-    try {
-      const dbQueryPromise = Promise.resolve(
-        supabase
-          .from('quotes')
-          .select('*')
-          .eq('user_id', userId)
-      );
-      
-      const { data, error } = await withTimeout(dbQueryPromise, 15000);
-      
-      if (error) {
+    // Use cache manager's request coalescing for network requests
+    return cacheManager.coalesce(`quotes-${userId}`, async () => {
+      try {
+        const dbQueryPromise = Promise.resolve(
+          supabase
+            .from('quotes')
+            .select('*')
+            .eq('user_id', userId)
+        );
+        
+        const { data, error } = await withTimeout(dbQueryPromise, 15000);
+        
+        if (error) {
+          console.error('Error fetching quotes:', error);
+          if (cached) {
+            console.log('[Cache] Using cached quotes after error');
+            return cached;
+          }
+          throw error;
+        }
+        
+        const result = data ? data.map(item => toCamelCase(item)) as Quote[] : [];
+        
+        // Save to IndexedDB if supported
+        if (isIndexedDBSupported()) {
+          try {
+            await QuoteDB.clear(userId);
+            for (const quote of result) {
+              await QuoteDB.add({ ...quote, user_id: userId } as never);
+            }
+            console.log(`[QuoteService] Saved ${result.length} quotes to IndexedDB`);
+          } catch (error) {
+            console.warn('[QuoteService] Failed to save to IndexedDB:', error);
+          }
+        }
+        
+        // Update cache
+        await cacheManager.set('quotes', result);
+        
+        return result;
+      } catch (error) {
         console.error('Error fetching quotes:', error);
         if (cached) {
-          console.log('[Cache] Using cached quotes after error');
+          console.log('[Cache] Returning cached quotes after timeout');
           return cached;
         }
-        throw error;
+        return [];
       }
-      
-      const result = data ? data.map(item => toCamelCase(item)) as Quote[] : [];
-      
-      // Save to IndexedDB if supported
-      if (isIndexedDBSupported()) {
-        try {
-          // Clear old data and save new
-          await QuoteDB.clear(userId);
-          for (const quote of result) {
-            await QuoteDB.add({ ...quote, user_id: userId } as never);
-          }
-          console.log(`[QuoteService] Saved ${result.length} quotes to IndexedDB`);
-        } catch (error) {
-          console.warn('[QuoteService] Failed to save to IndexedDB:', error);
-        }
-      }
-      
-      // Update memory cache
-      setCachedData<Quote>(CACHE_KEYS.QUOTES, result);
-      
-      return result;
-    } catch (error) {
-      console.error('Error fetching quotes:', error);
-      if (cached) {
-        console.log('[Cache] Returning cached quotes after timeout');
-        return cached;
-      }
-      return [];
-    }
+    });
   });
 }
 
@@ -117,13 +124,12 @@ export async function addQuote(
     }
   }
 
-  // Update memory cache
-  const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
-  setCachedData<Quote>(CACHE_KEYS.QUOTES, [...cached, quoteWithUser]);
+  // Invalidate cache to force refresh
+  await cacheManager.invalidate('quotes');
 
   if (!navigator.onLine || !userId) {
     if (!userId) {
-      console.warn('⚠️ No user ID - quote saved to IndexedDB/localStorage only.');
+      console.warn('⚠️ No user ID - quote saved to IndexedDB only.');
     }
     queueChange?.({ type: 'create', table: 'quotes', data: quoteWithUser });
     return quoteWithUser;
@@ -175,8 +181,8 @@ export async function updateQuote(
   }
   
   if (!currentQuote) {
-    const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
-    currentQuote = cached.find(q => q.id === id);
+    const cached = await cacheManager.get<Quote[]>('quotes');
+    currentQuote = cached?.find(q => q.id === id);
   }
 
   const updatedQuote = { ...currentQuote, ...updates } as Quote;
@@ -191,12 +197,8 @@ export async function updateQuote(
     }
   }
 
-  // Update memory cache
-  const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
-  const updatedCache = cached.map(item => 
-    item.id === id ? updatedQuote : item
-  );
-  setCachedData<Quote>(CACHE_KEYS.QUOTES, updatedCache);
+  // Invalidate cache
+  await cacheManager.invalidate('quotes');
 
   if (!navigator.onLine || !userId) {
     queueChange?.({ type: 'update', table: 'quotes', data: { id, ...updates } });
@@ -242,9 +244,8 @@ export async function deleteQuote(
     }
   }
 
-  // Update memory cache
-  const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
-  setCachedData<Quote>(CACHE_KEYS.QUOTES, cached.filter(item => item.id !== id));
+  // Invalidate cache
+  await cacheManager.invalidate('quotes');
 
   if (!navigator.onLine || !userId) {
     queueChange?.({ type: 'delete', table: 'quotes', data: { id } });
