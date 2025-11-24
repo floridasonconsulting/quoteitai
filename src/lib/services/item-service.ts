@@ -74,12 +74,13 @@ export async function getItems(userId: string | undefined): Promise<Item[]> {
         
         const result = data ? data.map(item => toCamelCase(item)) as Item[] : [];
         
-        // Save to IndexedDB if supported
-        if (isIndexedDBSupported()) {
+        // Save to IndexedDB if supported and we received data
+        if (isIndexedDBSupported() && result.length > 0) {
           try {
-            await ItemDB.clear(userId);
+            // Only save the records we received from Supabase
+            // This preserves any offline-created records that haven't synced yet
             for (const item of result) {
-              await ItemDB.add({ ...item, user_id: userId } as never);
+              await ItemDB.update({ ...item, user_id: userId } as never);
             }
             console.log(`[ItemService] Saved ${result.length} items to IndexedDB`);
           } catch (error) {
