@@ -121,11 +121,12 @@ export class IndexedDBMigrationService {
         message: "Migration successful.",
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[Migration] ========== MIGRATION FAILED ==========");
       console.error("[Migration] Error:", error);
       this.restoreFromBackup();
-      return this.createFailureResult(`Migration failed: ${error.message}`, true);
+      const message = error instanceof Error ? error.message : String(error);
+      return this.createFailureResult(`Migration failed: ${message}`, true);
     }
   }
 
@@ -206,10 +207,11 @@ export class IndexedDBMigrationService {
     const errors: string[] = [];
     for (const customer of customers) {
       try {
-        await CustomerDB.add({ ...customer, user_id: this.userId } as never);
+        await CustomerDB.add({ ...customer, user_id: this.userId });
         count++;
-      } catch (error: any) {
-        errors.push(`Failed to migrate customer ${customer.id}: ${error.message}`);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        errors.push(`Failed to migrate customer ${customer.id}: ${message}`);
       }
     }
     return { count, errors };
@@ -221,10 +223,11 @@ export class IndexedDBMigrationService {
     const errors: string[] = [];
     for (const item of items) {
       try {
-        await ItemDB.add({ ...item, user_id: this.userId } as never);
+        await ItemDB.add({ ...item, user_id: this.userId });
         count++;
-      } catch (error: any) {
-        errors.push(`Failed to migrate item ${item.id}: ${error.message}`);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        errors.push(`Failed to migrate item ${item.id}: ${message}`);
       }
     }
     return { count, errors };
@@ -236,10 +239,11 @@ export class IndexedDBMigrationService {
     const errors: string[] = [];
     for (const quote of quotes) {
       try {
-        await QuoteDB.add({ ...quote, user_id: this.userId } as never);
+        await QuoteDB.add({ ...quote, user_id: this.userId });
         count++;
-      } catch (error: any) {
-        errors.push(`Failed to migrate quote ${quote.id}: ${error.message}`);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        errors.push(`Failed to migrate quote ${quote.id}: ${message}`);
       }
     }
     return { count, errors };
@@ -252,8 +256,9 @@ export class IndexedDBMigrationService {
     try {
       await SettingsDB.set(this.userId, settings);
       return { success: true, errors: [] };
-    } catch (error: any) {
-      return { success: false, errors: [`Failed to migrate settings: ${error.message}`] };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, errors: [`Failed to migrate settings: ${message}`] };
     }
   }
 
