@@ -81,15 +81,15 @@ export function useSyncManager() {
       const dbData = toSnakeCase(dataWithUserId);
 
       switch (change.type) {
-        case 'create':
+        case 'create': {
           const { error: createError } = await supabase
             .from(change.table)
             .insert(dbData as never);
           
           if (createError) throw createError;
           break;
-
-        case 'update':
+        }
+        case 'update': {
           if (!change.data.id) {
             console.error('[SyncManager] Update missing ID:', change);
             return false;
@@ -103,8 +103,8 @@ export function useSyncManager() {
           
           if (updateError) throw updateError;
           break;
-
-        case 'delete':
+        }
+        case 'delete': {
           if (!change.data.id) {
             console.error('[SyncManager] Delete missing ID:', change);
             return false;
@@ -118,7 +118,7 @@ export function useSyncManager() {
           
           if (deleteError) throw deleteError;
           break;
-
+        }
         default:
           console.error('[SyncManager] Unknown change type:', change.type);
           return false;
