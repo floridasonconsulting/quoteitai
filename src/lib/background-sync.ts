@@ -82,18 +82,26 @@ export class BackgroundSyncManager {
    * Retry failed task
    */
   async retryTask(taskId: string): Promise<void> {
-    const task = this.syncTasks.find(t => t.id === taskId);
-    if (!task) return;
+    const taskIndex = this.syncTasks.findIndex(t => t.id === taskId);
+    if (taskIndex === -1) return;
 
+    const task = this.syncTasks[taskIndex];
+
+    // Check max retries BEFORE incrementing
     if (task.retryCount >= MAX_RETRIES) {
       console.error('[BackgroundSync] Max retries reached for task:', taskId);
+      // Keep task in queue but don't retry
       return;
     }
 
+    // Increment retry count BEFORE execution
     task.retryCount++;
     this.saveTasks();
 
+    // Try to execute the task
     const success = await this.executeTask(task);
+    
+    // If failed and still under max retries, schedule another retry
     if (!success && task.retryCount < MAX_RETRIES) {
       setTimeout(() => this.retryTask(task.id), RETRY_DELAY * task.retryCount);
     }
@@ -110,10 +118,12 @@ export class BackgroundSyncManager {
       // For now, we'll simulate success
       await new Promise(resolve => setTimeout(resolve, 100));
       
+      // Only clear task on success
       this.clearTask(task.id);
       return true;
     } catch (error) {
       console.error('[BackgroundSync] Task execution failed:', error);
+      // Don't clear task on failure - keep it in queue
       return false;
     }
   }
