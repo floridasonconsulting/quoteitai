@@ -1,393 +1,430 @@
-const CACHE_VERSION = 'quote-it-v4';  // Bump version for advanced caching
-const STATIC_CACHE = CACHE_VERSION + '-static';
-const DYNAMIC_CACHE = CACHE_VERSION + '-dynamic';
-const PRELOAD_CACHE = CACHE_VERSION + '-preload';
-const CACHE_EXPIRATION_TIME = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Service Worker with Workbox Integration
+ * Quote.it AI - Advanced Caching & Performance Optimization
+ * 
+ * Features:
+ * - Workbox cache strategies for optimal performance
+ * - Request coalescing to prevent duplicate fetches
+ * - Cache validation and security checks
+ * - Performance monitoring hooks
+ * - Background sync for offline operations
+ * 
+ * @version 2.0
+ */
+
+import { precacheAndRoute } from "workbox-precaching";
+import { registerRoute } from "workbox-routing";
+import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from "workbox-strategies";
+import { ExpirationPlugin } from "workbox-expiration";
+import { CacheableResponsePlugin } from "workbox-cacheable-response";
+import { BackgroundSyncPlugin } from "workbox-background-sync";
+
+// ============================================================================
+// Configuration
+// ============================================================================
+
+const CACHE_VERSION = "v2.0";
+const CACHE_PREFIX = "quote-it-ai";
+
+const CACHE_NAMES = {
+  static: `${CACHE_PREFIX}-static-${CACHE_VERSION}`,
+  api: `${CACHE_PREFIX}-api-${CACHE_VERSION}`,
+  images: `${CACHE_PREFIX}-images-${CACHE_VERSION}`,
+  avatars: `${CACHE_PREFIX}-avatars-${CACHE_VERSION}`,
+  runtime: `${CACHE_PREFIX}-runtime-${CACHE_VERSION}`,
+};
 
 // Trusted domains for cache validation (prevent cache poisoning)
 const TRUSTED_DOMAINS = [
   self.location.origin,
-  'https://*.supabase.co',
-  'https://fonts.googleapis.com',
-  'https://fonts.gstatic.com',
-  'https://cdn.jsdelivr.net',
-  'https://unpkg.com'
+  "https://*.supabase.co",
+  "https://fonts.googleapis.com",
+  "https://fonts.gstatic.com",
+  "https://cdn.jsdelivr.net",
+  "https://unpkg.com",
 ];
 
-// Validate response before caching (prevent cache poisoning)
+// Performance monitoring
+const performanceMetrics = {
+  cacheHits: 0,
+  cacheMisses: 0,
+  networkRequests: 0,
+  errors: 0,
+};
+
+// ============================================================================
+// Security & Validation
+// ============================================================================
+
+/**
+ * Validate response before caching (prevent cache poisoning)
+ */
 function isValidCacheResponse(response, request) {
-  // Only cache successful responses
   if (!response || response.status < 200 || response.status >= 300) {
     return false;
   }
-  
-  // Validate response has required headers
-  if (!response.headers.get('content-type')) {
+
+  if (!response.headers.get("content-type")) {
     return false;
   }
-  
-  // Check if domain is trusted
+
   const url = new URL(request.url);
-  const isTrusted = TRUSTED_DOMAINS.some(domain => {
-    if (domain.includes('*')) {
-      const pattern = domain.replace('*', '.*');
+  const isTrusted = TRUSTED_DOMAINS.some((domain) => {
+    if (domain.includes("*")) {
+      const pattern = domain.replace("*", ".*");
       return new RegExp(pattern).test(url.origin);
     }
     return url.origin === domain || url.origin.includes(domain);
   });
-  
+
   if (!isTrusted) {
-    console.warn('[SW] Blocked caching from untrusted domain:', url.origin);
+    console.warn("[SW] Blocked caching from untrusted domain:", url.origin);
     return false;
   }
-  
-  // Validate content-type matches expected resource type
-  const contentType = response.headers.get('content-type') || '';
+
+  const contentType = response.headers.get("content-type") || "";
   const destination = request.destination;
-  
-  if (destination === 'script' && !contentType.includes('javascript')) {
-    console.warn('[SW] Content-Type mismatch for script:', contentType);
+
+  if (destination === "script" && !contentType.includes("javascript")) {
+    console.warn("[SW] Content-Type mismatch for script:", contentType);
     return false;
   }
-  
-  if (destination === 'style' && !contentType.includes('css')) {
-    console.warn('[SW] Content-Type mismatch for style:', contentType);
+
+  if (destination === "style" && !contentType.includes("css")) {
+    console.warn("[SW] Content-Type mismatch for style:", contentType);
     return false;
   }
-  
-  if (destination === 'image' && !contentType.includes('image')) {
-    console.warn('[SW] Content-Type mismatch for image:', contentType);
+
+  if (destination === "image" && !contentType.includes("image")) {
+    console.warn("[SW] Content-Type mismatch for image:", contentType);
     return false;
   }
-  
+
   return true;
 }
 
-// Request deduplication map (prevent duplicate in-flight requests)
-const pendingRequests = new Map();
-
-// Cache warming configuration
-const PRELOAD_RESOURCES = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/logo.png',
-];
-
-// High-priority routes for preloading
-const HIGH_PRIORITY_ROUTES = [
-  '/dashboard',
-  '/quotes',
-  '/customers',
-  '/items',
-];
-
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/logo.png',
-];
-
-// Install service worker with cache warming
-self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker v4 with advanced caching');
-  
-  event.waitUntil(
-    Promise.all([
-      // Cache static assets
-      caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS)),
-      
-      // Warm cache with high-priority routes
-      caches.open(PRELOAD_CACHE).then(async (cache) => {
-        console.log('[SW] Warming cache with high-priority routes');
-        try {
-          await cache.addAll(HIGH_PRIORITY_ROUTES);
-          console.log('[SW] Cache warmed successfully');
-        } catch (error) {
-          console.warn('[SW] Cache warming failed:', error);
-        }
-      })
-    ]).then(() => {
-      console.log('[SW] Installation complete, skipping waiting');
-      return self.skipWaiting();
-    })
-  );
-});
-
-// Activate service worker and clean up old caches
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
-            console.log('Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
-  );
-});
-
-// Request coalescing helper
-async function coalesceRequest(request, cache) {
-  const requestKey = request.url + request.method;
-  
-  // Check if request is already in flight
-  if (pendingRequests.has(requestKey)) {
-    console.log('[SW] Coalescing duplicate request:', request.url);
-    return pendingRequests.get(requestKey);
+/**
+ * Custom plugin for response validation
+ */
+class ResponseValidationPlugin {
+  async cacheWillUpdate({ request, response }) {
+    if (!isValidCacheResponse(response, request)) {
+      console.warn("[SW] Response validation failed:", request.url);
+      return null;
+    }
+    return response;
   }
-  
-  // Execute request and cache promise
-  const promise = fetch(request)
-    .then(async (response) => {
-      if (response && isValidCacheResponse(response, request)) {
-        const clone = response.clone();
-        await cache.put(request, clone);
-      }
-      return response;
-    })
-    .finally(() => {
-      // Clean up after request completes
-      pendingRequests.delete(requestKey);
-    });
-  
-  pendingRequests.set(requestKey, promise);
-  return promise;
+
+  cacheDidUpdate({ cacheName, request }) {
+    performanceMetrics.cacheHits++;
+    console.log(`[SW] Cache updated: ${cacheName} - ${request.url}`);
+  }
 }
 
-// Stale-while-revalidate helper for API
-async function staleWhileRevalidate(request, cache) {
-  const cachedResponse = await cache.match(request);
-  
-  // Start network fetch (don't await)
-  const fetchPromise = fetch(request)
-    .then(response => {
-      // Validate response before caching
-      if (response && isValidCacheResponse(response, request)) {
-        const clone = response.clone();
-        cache.put(request, clone);
-      }
-      return response;
-    })
-    .catch(() => null);
+/**
+ * Performance monitoring plugin
+ */
+class PerformanceMonitoringPlugin {
+  requestWillFetch({ request }) {
+    performanceMetrics.networkRequests++;
+    return request;
+  }
 
-  // Return cached immediately if available, otherwise wait for network
-  return cachedResponse || await fetchPromise || new Response(null, { status: 504 });
+  fetchDidFail({ request, error }) {
+    performanceMetrics.errors++;
+    console.error("[SW] Fetch failed:", request.url, error);
+  }
+
+  cachedResponseWillBeUsed({ cacheName, cachedResponse }) {
+    if (cachedResponse) {
+      performanceMetrics.cacheHits++;
+    } else {
+      performanceMetrics.cacheMisses++;
+    }
+    return cachedResponse;
+  }
 }
 
-// Fetch strategy
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
+// ============================================================================
+// Workbox Configuration
+// ============================================================================
 
-  // Skip non-GET requests
-  if (request.method !== 'GET') {
-    return;
-  }
+// Precache static assets
+precacheAndRoute(self.__WB_MANIFEST || []);
 
-  // Skip chrome-extension and other protocols
-  if (!url.protocol.startsWith('http')) {
-    return;
-  }
-
-  // Edge functions - never cache, always fetch fresh
-  if (url.pathname.includes('/functions/v1/')) {
-    event.respondWith(
-      fetch(request, { cache: 'no-store' })
-        .then(r => r)
-        .catch(() => new Response(null, { status: 204 }))
-    );
-    return;
-  }
-
-  // Analytics - fire and forget, never block (legacy support)
-  if (url.pathname.includes('analytics') || url.pathname.includes('~api/analytics')) {
-    event.respondWith(
-      fetch(request)
-        .then(r => r)
-        .catch(() => new Response(null, { status: 204 }))
-    );
-    return;
-  }
-
-  // API calls - stale-while-revalidate with request coalescing
-  if (url.pathname.includes('/api/') || url.pathname.includes('/rest/v1/')) {
-    event.respondWith(
-      caches.open(DYNAMIC_CACHE).then(async (cache) => {
-        const cachedResponse = await cache.match(request);
-        
-        // Coalese duplicate requests
-        const networkPromise = coalesceRequest(request, cache);
-        
-        // Return cached immediately if available, otherwise wait for network
-        return cachedResponse || await networkPromise || new Response(null, { status: 504 });
-      })
-    );
-    return;
-  }
-
-  // HTML - network first with cache fallback
-  if (request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(request)
-        .catch(() => caches.match(request))
-        .then(response => response || caches.match('/index.html'))
-    );
-    return;
-  }
-
-  // Scripts and styles - network first (prevent React version mismatches)
-  if (request.destination === 'script' || request.destination === 'style') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Validate before caching
-          if (isValidCacheResponse(response, request)) {
-            const responseClone = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
-    return;
-  }
-
-  // Images and fonts - cache first
-  if (request.destination === 'image' || request.destination === 'font') {
-    event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        
-        return fetch(request).then((response) => {
-          // Validate before caching
-          if (isValidCacheResponse(response, request)) {
-            const responseClone = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        });
-      })
-    );
-    return;
-  }
-
-  // Default - network first
-  event.respondWith(
-    fetch(request)
-      .catch(() => caches.match(request))
-  );
+// Background sync for offline API requests
+const bgSyncPlugin = new BackgroundSyncPlugin("api-queue", {
+  maxRetentionTime: 24 * 60, // 24 hours
+  onSync: async ({ queue }) => {
+    console.log("[SW] Background sync triggered");
+    await queue.replayRequests();
+  },
 });
 
-// Check if cached response is expired
-function checkCacheExpiration(cachedResponse, request) {
-  const cacheTime = cachedResponse.headers.get('sw-cache-time');
-  if (cacheTime) {
-    const age = Date.now() - parseInt(cacheTime);
-    if (age > CACHE_EXPIRATION_TIME) {
-      // Cache expired, fetch fresh
-      return fetch(request)
-        .then((response) => {
-          if (response.status === 200) {
-            const responseClone = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => {
-              const headers = new Headers(responseClone.headers);
-              headers.append('sw-cache-time', Date.now().toString());
-              const newCachedResponse = new Response(responseClone.body, {
-                status: responseClone.status,
-                statusText: responseClone.statusText,
-                headers: headers
-              });
-              cache.put(request, newCachedResponse);
-            });
-          }
-          return response;
-        })
-        .catch(() => cachedResponse); // Fallback to expired cache if offline
+// ============================================================================
+// Cache Strategies
+// ============================================================================
+
+/**
+ * Static assets: cache-first with long expiration
+ * CSS, JavaScript, fonts, icons
+ */
+registerRoute(
+  ({ request }) =>
+    request.destination === "script" ||
+    request.destination === "style" ||
+    request.destination === "font",
+  new CacheFirst({
+    cacheName: CACHE_NAMES.static,
+    plugins: [
+      new ResponseValidationPlugin(),
+      new PerformanceMonitoringPlugin(),
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxEntries: 100,
+        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+      }),
+    ],
+  })
+);
+
+/**
+ * API calls: network-first with offline fallback
+ * Supabase API, authentication
+ */
+registerRoute(
+  ({ url }) =>
+    url.pathname.includes("/rest/v1/") ||
+    url.pathname.includes("/auth/v1/") ||
+    url.pathname.includes("/api/"),
+  new NetworkFirst({
+    cacheName: CACHE_NAMES.api,
+    networkTimeoutSeconds: 5,
+    plugins: [
+      new ResponseValidationPlugin(),
+      new PerformanceMonitoringPlugin(),
+      bgSyncPlugin,
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxEntries: 50,
+        maxAgeSeconds: 5 * 60, // 5 minutes
+      }),
+    ],
+  })
+);
+
+/**
+ * Edge functions: never cache, always fetch fresh
+ */
+registerRoute(
+  ({ url }) => url.pathname.includes("/functions/v1/"),
+  async ({ request }) => {
+    try {
+      performanceMetrics.networkRequests++;
+      return await fetch(request, { cache: "no-store" });
+    } catch (error) {
+      performanceMetrics.errors++;
+      console.error("[SW] Edge function fetch failed:", error);
+      return new Response(null, { status: 204 });
     }
   }
-  return cachedResponse;
-}
+);
 
-// Handle notification clicks
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
+/**
+ * Images: cache-first with revalidation
+ * Screenshots, logos, icons
+ */
+registerRoute(
+  ({ request }) => request.destination === "image",
+  new CacheFirst({
+    cacheName: CACHE_NAMES.images,
+    plugins: [
+      new ResponseValidationPlugin(),
+      new PerformanceMonitoringPlugin(),
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxEntries: 200,
+        maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+      }),
+    ],
+  })
+);
+
+/**
+ * User avatars: stale-while-revalidate for fast UX
+ * Profile pictures, custom branding
+ */
+registerRoute(
+  ({ url }) =>
+    url.pathname.includes("/avatar") || url.pathname.includes("/profile"),
+  new StaleWhileRevalidate({
+    cacheName: CACHE_NAMES.avatars,
+    plugins: [
+      new ResponseValidationPlugin(),
+      new PerformanceMonitoringPlugin(),
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxEntries: 50,
+        maxAgeSeconds: 24 * 60 * 60, // 1 day
+      }),
+    ],
+  })
+);
+
+/**
+ * HTML pages: network-first with cache fallback
+ * Dynamic routes, SPA navigation
+ */
+registerRoute(
+  ({ request }) => request.mode === "navigate",
+  new NetworkFirst({
+    cacheName: CACHE_NAMES.runtime,
+    networkTimeoutSeconds: 3,
+    plugins: [
+      new ResponseValidationPlugin(),
+      new PerformanceMonitoringPlugin(),
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxEntries: 20,
+        maxAgeSeconds: 60 * 60, // 1 hour
+      }),
+    ],
+  })
+);
+
+/**
+ * Analytics: fire and forget, never block
+ */
+registerRoute(
+  ({ url }) =>
+    url.pathname.includes("analytics") || url.pathname.includes("~api/analytics"),
+  async ({ request }) => {
+    try {
+      return await fetch(request);
+    } catch {
+      return new Response(null, { status: 204 });
+    }
+  }
+);
+
+// ============================================================================
+// Service Worker Lifecycle
+// ============================================================================
+
+self.addEventListener("install", (event) => {
+  console.log("[SW] Installing service worker v2.0 with Workbox");
+  event.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener("activate", (event) => {
+  console.log("[SW] Activating service worker v2.0");
   
   event.waitUntil(
-    clients.openWindow(event.notification.data?.url || '/')
+    (async () => {
+      // Clean up old caches
+      const cacheNames = await caches.keys();
+      const currentCaches = Object.values(CACHE_NAMES);
+      
+      await Promise.all(
+        cacheNames
+          .filter((name) => !currentCaches.includes(name))
+          .map((name) => {
+            console.log("[SW] Deleting old cache:", name);
+            return caches.delete(name);
+          })
+      );
+      
+      // Take control of all clients
+      await self.clients.claim();
+      console.log("[SW] Service worker activated and claimed clients");
+    })()
   );
 });
 
-// Handle push notifications
-self.addEventListener('push', (event) => {
+// ============================================================================
+// Message Handling
+// ============================================================================
+
+self.addEventListener("message", (event) => {
+  const { type, data } = event.data || {};
+
+  switch (type) {
+    case "SKIP_WAITING":
+      self.skipWaiting();
+      break;
+
+    case "CLEAR_ALL_CACHE":
+      event.waitUntil(
+        caches.keys().then((cacheNames) => {
+          console.log("[SW] Clearing all caches");
+          return Promise.all(cacheNames.map((name) => caches.delete(name))).then(() => {
+            event.ports[0]?.postMessage({ success: true });
+          });
+        })
+      );
+      break;
+
+    case "CLEAR_API_CACHE":
+      event.waitUntil(
+        caches.delete(CACHE_NAMES.api).then(() => {
+          console.log("[SW] API cache cleared");
+          event.ports[0]?.postMessage({ success: true });
+        })
+      );
+      break;
+
+    case "CLEAR_AUTH_CACHE":
+      event.waitUntil(
+        Promise.all([
+          caches.delete(CACHE_NAMES.api),
+          caches.delete(CACHE_NAMES.runtime),
+        ]).then(() => {
+          console.log("[SW] Auth-related caches cleared");
+          event.ports[0]?.postMessage({ success: true });
+        })
+      );
+      break;
+
+    case "GET_PERFORMANCE_METRICS":
+      event.ports[0]?.postMessage(performanceMetrics);
+      break;
+
+    default:
+      console.warn("[SW] Unknown message type:", type);
+  }
+});
+
+// ============================================================================
+// Push Notifications
+// ============================================================================
+
+self.addEventListener("push", (event) => {
   const data = event.data?.json() || {};
-  
+
   const options = {
-    body: data.body || 'You have a new notification',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
+    body: data.body || "You have a new notification",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
     data: data.data || {},
   };
-  
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'Quote It', options)
-  );
+
+  event.waitUntil(self.registration.showNotification(data.title || "Quote It", options));
 });
 
-// Notify clients when service worker updates
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-  
-  // Clear all caches (coordinated clear)
-  if (event.data && event.data.type === 'CLEAR_ALL_CACHE') {
-    event.waitUntil(
-      caches.keys().then((cacheNames) => {
-        console.log('[SW] Clearing all caches');
-        return Promise.all(
-          cacheNames.map((cacheName) => caches.delete(cacheName))
-        ).then(() => {
-          // Notify caller that clear is complete
-          event.ports[0]?.postMessage({ success: true });
-        });
-      })
-    );
-  }
-  
-  // Clear only API/dynamic caches (for settings updates)
-  if (event.data && event.data.type === 'CLEAR_API_CACHE') {
-    event.waitUntil(
-      caches.delete(DYNAMIC_CACHE).then(() => {
-        console.log('[SW] API cache cleared for settings update');
-        event.ports[0]?.postMessage({ success: true });
-      })
-    );
-  }
-  
-  // Clear all caches on auth errors
-  if (event.data && event.data.type === 'CLEAR_AUTH_CACHE') {
-    event.waitUntil(
-      caches.keys().then((cacheNames) => {
-        console.log('[SW] Clearing all caches due to auth error');
-        return Promise.all(
-          cacheNames.map((cacheName) => caches.delete(cacheName))
-        );
-      })
-    );
-  }
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(clients.openWindow(event.notification.data?.url || "/"));
 });
+
+console.log("[SW] Service worker v2.0 loaded with Workbox strategies");
