@@ -3,6 +3,15 @@ import { cacheManager } from '@/lib/cache-manager';
 import { performanceMonitor } from '@/lib/performance-monitor';
 import { rateLimiter } from '@/lib/rate-limiter';
 
+// Mock web-vitals
+vi.mock('web-vitals', () => ({
+  onCLS: vi.fn(),
+  onFID: vi.fn(),
+  onLCP: vi.fn(),
+  onTTFB: vi.fn(),
+  onINP: vi.fn(),
+}));
+
 describe('Cache System Integration', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
