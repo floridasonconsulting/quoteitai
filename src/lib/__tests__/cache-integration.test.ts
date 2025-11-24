@@ -35,7 +35,7 @@ describe('Cache System Integration', () => {
         quota: 1024 * 1024 * 1024, // 1GB
       };
       
-      if (navigator.storage &amp;&amp; navigator.storage.estimate) {
+      if (navigator.storage && navigator.storage.estimate) {
         vi.spyOn(navigator.storage, 'estimate').mockResolvedValue(mockEstimate);
       }
 
