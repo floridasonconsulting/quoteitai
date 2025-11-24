@@ -70,9 +70,9 @@ class MockCacheStorage {
 
   async open(cacheName: string): Promise<Cache> {
     if (!this.caches.has(cacheName)) {
-      this.caches.set(cacheName, new MockCache() as any);
+      this.caches.set(cacheName, new MockCache() as unknown as Cache);
     }
-    return this.caches.get(cacheName) as any;
+    return this.caches.get(cacheName) as unknown as Cache;
   }
 
   async has(cacheName: string): Promise<boolean> {
@@ -98,7 +98,7 @@ class MockCacheStorage {
 
 // Set up global caches mock
 if (typeof globalThis.caches === 'undefined') {
-  globalThis.caches = new MockCacheStorage() as any;
+  globalThis.caches = new MockCacheStorage() as unknown as CacheStorage;
 }
 
 // Mock StorageEstimate API for quota management
