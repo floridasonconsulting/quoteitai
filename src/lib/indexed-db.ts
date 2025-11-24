@@ -237,9 +237,10 @@ export async function add<T extends { id: string; userId?: string }>(
     const store = tx.objectStore(storeName);
     
     // Transform userId (camelCase) to user_id (snake_case) for IndexedDB index
+    // Fallback to existing user_id if userId is missing (for SettingsDB)
     const dbRecord = {
       ...record,
-      user_id: record.userId,
+      user_id: record.userId || (record as any).user_id,
     };
     
     const request = store.add(dbRecord);
@@ -268,9 +269,10 @@ export async function update<T extends { id: string; userId?: string }>(
     const store = tx.objectStore(storeName);
     
     // Transform userId (camelCase) to user_id (snake_case) for IndexedDB index
+    // Fallback to existing user_id if userId is missing (for SettingsDB)
     const dbRecord = {
       ...record,
-      user_id: record.userId,
+      user_id: record.userId || (record as any).user_id,
     };
     
     const request = store.put(dbRecord);

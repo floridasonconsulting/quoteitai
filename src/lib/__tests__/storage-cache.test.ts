@@ -1,11 +1,17 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { storageCache } from '../storage-cache';
 
 describe('StorageCache', () => {
   beforeEach(() => {
     localStorage.clear();
     storageCache.clearCache();
+    // Ensure mocks are clean
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    // CRITICAL: Restore mocks to prevent leakage
+    vi.restoreAllMocks();
   });
 
   describe('Basic Operations', () => {
@@ -65,14 +71,12 @@ describe('StorageCache', () => {
 
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       
-      storageCache.set('quota-test', 'value');
+      // Use immediate: true to bypass debounce and trigger error immediately
+      storageCache.set('quota-test', 'value', true);
       
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('localStorage quota exceeded')
+        expect.stringContaining('Storage limit reached') // Updated to match actual warning message in code
       );
-      
-      setItemSpy.mockRestore();
-      consoleSpy.mockRestore();
     });
 
     it('should handle corrupted JSON gracefully', () => {

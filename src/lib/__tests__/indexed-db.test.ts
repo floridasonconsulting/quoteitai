@@ -46,6 +46,7 @@ describe('IndexedDB Wrapper', () => {
   describe('Customer Operations', () => {
     const mockCustomer: Customer = {
       id: 'test-customer-1',
+      userId: 'test-user', // Changed from passed in args to property
       name: 'Test Customer',
       email: 'test@example.com',
       phone: '555-0123',
@@ -57,20 +58,20 @@ describe('IndexedDB Wrapper', () => {
     };
 
     it('should add a customer', async () => {
-      const result = await CustomerDB.add({ ...mockCustomer, user_id: 'test-user' } as never);
+      const result = await CustomerDB.add(mockCustomer as never);
       expect(result.id).toBe(mockCustomer.id);
     });
 
     it('should retrieve a customer by ID', async () => {
-      await CustomerDB.add({ ...mockCustomer, user_id: 'test-user' } as never);
+      await CustomerDB.add(mockCustomer as never);
       const result = await CustomerDB.getById(mockCustomer.id);
       expect(result).toBeTruthy();
       expect(result?.id).toBe(mockCustomer.id);
     });
 
     it('should retrieve all customers for a user', async () => {
-      const customer2 = { ...mockCustomer, id: 'test-customer-2', user_id: 'test-user' };
-      await CustomerDB.add({ ...mockCustomer, user_id: 'test-user' } as never);
+      const customer2 = { ...mockCustomer, id: 'test-customer-2' };
+      await CustomerDB.add(mockCustomer as never);
       await CustomerDB.add(customer2 as never);
       
       const results = await CustomerDB.getAll('test-user');
@@ -78,8 +79,8 @@ describe('IndexedDB Wrapper', () => {
     });
 
     it('should update a customer', async () => {
-      await CustomerDB.add({ ...mockCustomer, user_id: 'test-user' } as never);
-      const updated = { ...mockCustomer, name: 'Updated Name', user_id: 'test-user' };
+      await CustomerDB.add(mockCustomer as never);
+      const updated = { ...mockCustomer, name: 'Updated Name' };
       await CustomerDB.update(updated as never);
       
       const result = await CustomerDB.getById(mockCustomer.id);
@@ -87,7 +88,7 @@ describe('IndexedDB Wrapper', () => {
     });
 
     it('should delete a customer', async () => {
-      await CustomerDB.add({ ...mockCustomer, user_id: 'test-user' } as never);
+      await CustomerDB.add(mockCustomer as never);
       await CustomerDB.delete(mockCustomer.id);
       
       const result = await CustomerDB.getById(mockCustomer.id);
@@ -95,8 +96,8 @@ describe('IndexedDB Wrapper', () => {
     });
 
     it('should clear all customers for a user', async () => {
-      await CustomerDB.add({ ...mockCustomer, user_id: 'test-user' } as never);
-      await CustomerDB.add({ ...mockCustomer, id: 'test-customer-2', user_id: 'test-user' } as never);
+      await CustomerDB.add(mockCustomer as never);
+      await CustomerDB.add({ ...mockCustomer, id: 'test-customer-2' } as never);
       
       await CustomerDB.clear('test-user');
       
@@ -124,7 +125,8 @@ describe('IndexedDB Wrapper', () => {
       expect(result).toEqual(customer);
 
       const stored = await CustomerDB.getById(customer.id);
-      expect(stored).toEqual(customer);
+      // Stored record has user_id added, so we use objectContaining or expect specific fields
+      expect(stored).toEqual(expect.objectContaining(customer));
     });
 
     it('should fail when adding record with same ID', async () => {
