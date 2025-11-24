@@ -1,3 +1,6 @@
+// Import fake-indexeddb to polyfill IndexedDB in Node.js test environment
+import 'fake-indexeddb/auto';
+
 import '@testing-library/jest-dom';
 import { beforeAll, afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
