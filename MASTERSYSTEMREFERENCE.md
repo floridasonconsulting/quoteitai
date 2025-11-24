@@ -950,9 +950,9 @@ View debug logs in console prefixed with service name:
 - 🔒 User isolation: Proper data separation by userId
 - ✅ Migration: localStorage → IndexedDB → Supabase (two-phase)
 
-### 🚀 In Progress: Phase 2 - Advanced Caching (Week 2, Day 3-4 - November 25-26, 2025)
+### 🎯 In Progress: Phase 2 - Advanced Caching (Week 2, Day 3-4 - November 25-26, 2025)
 
-#### Day 3: Service Worker Foundation (November 25, 2025) - 📝 PLANNED
+#### Day 3: Service Worker Foundation (November 25, 2025) - 📝 READY TO START
 **Primary Objectives:**
 - ⬜ **Service Worker Architecture Refactoring**
   - Implement workbox-based service worker with proper lifecycle
@@ -973,14 +973,16 @@ View debug logs in console prefixed with service name:
   - Add cache expiration policies (max-age, stale-while-revalidate)
   - Create cache cleanup routine (remove old versions)
   - Add cache size monitoring and alerting
-  - Implement cache debug tools
+  - Implement cache debug tools in Settings
 
 **Success Criteria:**
 - Service worker installs and activates correctly
 - Critical assets cached on first load
 - Cache versioning works without breaking changes
 - Background sync queues failed requests
-- All existing tests still passing
+- All existing 38 tests still passing
+
+**Estimated Duration:** 4-6 hours
 
 #### Day 4: Performance & UX Polish (November 26, 2025) - 📝 PLANNED
 **Primary Objectives:**
@@ -1028,7 +1030,9 @@ View debug logs in console prefixed with service name:
 | Cache Hit Rate | 85% | >95% | 12% better |
 | Offline Functionality | 70% | 100% | Full coverage |
 
-### Remaining Week 2 Tasks (Day 5-7)
+**Estimated Duration:** 4-6 hours
+
+### Remaining Week 2 Tasks (Day 5-7 - November 27-29, 2025)
 - ⬜ **Advanced Features**
   - Batch operations for bulk data changes
   - Data export/import with IndexedDB
