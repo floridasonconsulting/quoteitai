@@ -341,7 +341,7 @@ export class CacheManager {
    */
   private updateAvgResponseTime(responseTime: number): void {
     const totalTime = this.metrics.avgResponseTime * (this.metrics.totalRequests - 1);
-    this.metrics.avgResponseTime = (totalTime + responseTime) / this.metrics.totalRequests;
+    this.metrics.avgResponseTime = (totalTime + Math.max(responseTime, 0.01)) / this.metrics.totalRequests;
   }
 
   /**

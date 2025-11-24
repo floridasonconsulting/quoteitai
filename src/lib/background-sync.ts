@@ -93,7 +93,10 @@ export class BackgroundSyncManager {
     task.retryCount++;
     this.saveTasks();
 
-    await this.executeTask(task);
+    const success = await this.executeTask(task);
+    if (!success && task.retryCount < MAX_RETRIES) {
+      setTimeout(() => this.retryTask(task.id), RETRY_DELAY * task.retryCount);
+    }
   }
 
   /**
@@ -111,11 +114,6 @@ export class BackgroundSyncManager {
       return true;
     } catch (error) {
       console.error('[BackgroundSync] Task execution failed:', error);
-      
-      if (task.retryCount < MAX_RETRIES) {
-        setTimeout(() => this.retryTask(task.id), RETRY_DELAY * (task.retryCount + 1));
-      }
-      
       return false;
     }
   }
