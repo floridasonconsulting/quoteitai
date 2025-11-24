@@ -38,6 +38,7 @@ import { DataManagementSection } from "@/components/settings/DataManagementSecti
 import { AccountSection } from "@/components/settings/AccountSection";
 import { AppearanceSection } from "@/components/settings/AppearanceSection";
 import { IntegrationsSection } from "@/components/settings/IntegrationsSection";
+import { CacheDebugPanel } from "@/components/settings/CacheDebugPanel";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -363,6 +364,9 @@ export default function Settings() {
 
         {/* Data Management */}
         <DataManagementSection />
+
+        {/* Cache Management */}
+        <CacheDebugPanel />
 
         {/* Manual Sync */}
         <Card>

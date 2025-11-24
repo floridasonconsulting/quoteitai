@@ -14,6 +14,7 @@ import { getSettings } from "@/lib/db-service";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { storageCache } from "@/lib/storage-cache";
+import { PerformanceDashboard } from "@/components/PerformanceDashboard";
 
 interface DiagnosticEvent {
   id: string;
@@ -270,6 +271,9 @@ export default function Diagnostics() {
           </Button>
         </div>
       </div>
+
+      {/* Performance Monitoring */}
+      <PerformanceDashboard />
 
       {/* System Status Overview */}
       <div className="grid gap-4 md:grid-cols-4">
