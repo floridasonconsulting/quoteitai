@@ -5,12 +5,12 @@ import { performanceMonitor } from "@/lib/performance-monitor";
 export function PerformanceDashboard() {
   const [metrics, setMetrics] = useState(performanceMonitor.getMetrics());
   
-  useEffect(() =&gt; {
+  useEffect(() => {
     const unsubscribe = performanceMonitor.subscribe(setMetrics);
     return unsubscribe;
   }, []);
   
-  const getScoreClass = (value: number | null, thresholds: [number, number]) =&gt; {
+  const getScoreClass = (value: number | null, thresholds: [number, number]) => {
     if (value === null) return "text-gray-400";
     if (value &lt;= thresholds[0]) return "text-green-600";
     if (value &lt;= thresholds[1]) return "text-yellow-600";
@@ -29,7 +29,7 @@ export function PerformanceDashboard() {
             &lt;p className={`text-2xl font-bold ${getScoreClass(metrics.lcp, [2500, 4000])}`}&gt;
               {metrics.lcp ? `${(metrics.lcp / 1000).toFixed(2)}s` : 'Measuring...'}
             &lt;/p&gt;
-            &lt;p className="text-xs text-muted-foreground mt-1"&gt;Good: &amp;lt;2.5s | Needs Improvement: 2.5-4s&lt;/p&gt;
+            &lt;p className="text-xs text-muted-foreground mt-1"&gt;Good: &lt;2.5s | Needs Improvement: 2.5-4s&lt;/p&gt;
           &lt;/div&gt;
           
           &lt;div className="p-4 border rounded-lg"&gt;
@@ -37,7 +37,7 @@ export function PerformanceDashboard() {
             &lt;p className={`text-2xl font-bold ${getScoreClass(metrics.fid, [100, 300])}`}&gt;
               {metrics.fid ? `${metrics.fid.toFixed(0)}ms` : 'Measuring...'}
             &lt;/p&gt;
-            &lt;p className="text-xs text-muted-foreground mt-1"&gt;Good: &amp;lt;100ms | Needs Improvement: 100-300ms&lt;/p&gt;
+            &lt;p className="text-xs text-muted-foreground mt-1"&gt;Good: &lt;100ms | Needs Improvement: 100-300ms&lt;/p&gt;
           &lt;/div&gt;
           
           &lt;div className="p-4 border rounded-lg"&gt;
@@ -45,7 +45,7 @@ export function PerformanceDashboard() {
             &lt;p className={`text-2xl font-bold ${getScoreClass(metrics.cls, [0.1, 0.25])}`}&gt;
               {metrics.cls !== null ? metrics.cls.toFixed(3) : 'Measuring...'}
             &lt;/p&gt;
-            &lt;p className="text-xs text-muted-foreground mt-1"&gt;Good: &amp;lt;0.1 | Needs Improvement: 0.1-0.25&lt;/p&gt;
+            &lt;p className="text-xs text-muted-foreground mt-1"&gt;Good: &lt;0.1 | Needs Improvement: 0.1-0.25&lt;/p&gt;
           &lt;/div&gt;
           
           &lt;div className="p-4 border rounded-lg"&gt;
@@ -53,7 +53,7 @@ export function PerformanceDashboard() {
             &lt;p className={`text-2xl font-bold ${getScoreClass(metrics.ttfb, [800, 1800])}`}&gt;
               {metrics.ttfb ? `${metrics.ttfb.toFixed(0)}ms` : 'Measuring...'}
             &lt;/p&gt;
-            &lt;p className="text-xs text-muted-foreground mt-1"&gt;Good: &amp;lt;800ms | Needs Improvement: 800-1800ms&lt;/p&gt;
+            &lt;p className="text-xs text-muted-foreground mt-1"&gt;Good: &lt;800ms | Needs Improvement: 800-1800ms&lt;/p&gt;
           &lt;/div&gt;
           
           &lt;div className="p-4 border rounded-lg"&gt;
@@ -61,7 +61,7 @@ export function PerformanceDashboard() {
             &lt;p className={`text-2xl font-bold ${getScoreClass(metrics.inp, [200, 500])}`}&gt;
               {metrics.inp ? `${metrics.inp.toFixed(0)}ms` : 'Measuring...'}
             &lt;/p&gt;
-            &lt;p className="text-xs text-muted-foreground mt-1"&gt;Good: &amp;lt;200ms | Needs Improvement: 200-500ms&lt;/p&gt;
+            &lt;p className="text-xs text-muted-foreground mt-1"&gt;Good: &lt;200ms | Needs Improvement: 200-500ms&lt;/p&gt;
           &lt;/div&gt;
         &lt;/div&gt;
       &lt;/CardContent&gt;
