@@ -1,4 +1,3 @@
-
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   getCacheQuota,
@@ -14,6 +13,8 @@ import {
 import { CACHE_NAMES } from "../cache-strategies";
 
 describe("Cache Utilities", () => {
+  const MOCK_ORIGIN = "https://test.example.com";
+
   beforeEach(async () => {
     // Clear all caches before each test
     const cacheNames = await caches.keys();
@@ -50,7 +51,7 @@ describe("Cache Utilities", () => {
       // Create test cache
       const testCache = await caches.open("test-cache");
       await testCache.put(
-        new Request("/test"),
+        new Request(`${MOCK_ORIGIN}/test`),
         new Response("test data", { status: 200 })
       );
 
@@ -67,7 +68,7 @@ describe("Cache Utilities", () => {
       const testCache = await caches.open("test-cache");
       const testData = "x".repeat(1024); // 1KB of data
       await testCache.put(
-        new Request("/test"),
+        new Request(`${MOCK_ORIGIN}/test`),
         new Response(testData, { status: 200 })
       );
 
@@ -154,11 +155,11 @@ describe("Cache Utilities", () => {
     it("should return comprehensive cache statistics", async () => {
       const testCache = await caches.open("test-cache");
       await testCache.put(
-        new Request("/test1"),
+        new Request(`${MOCK_ORIGIN}/test1`),
         new Response("data1", { status: 200 })
       );
       await testCache.put(
-        new Request("/test2"),
+        new Request(`${MOCK_ORIGIN}/test2`),
         new Response("data2", { status: 200 })
       );
 
@@ -194,7 +195,7 @@ describe("Cache Utilities", () => {
         new Response("test data", { status: 200 })
       );
 
-      const urls = ["/test1", "/test2", "/test3"];
+      const urls = [`${MOCK_ORIGIN}/test1`, `${MOCK_ORIGIN}/test2`, `${MOCK_ORIGIN}/test3`];
       const successCount = await warmUpCache("test-cache", urls);
 
       expect(successCount).toBe(3);
@@ -208,7 +209,7 @@ describe("Cache Utilities", () => {
       // Mock fetch to fail
       global.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
 
-      const urls = ["/test1", "/test2"];
+      const urls = [`${MOCK_ORIGIN}/test1`, `${MOCK_ORIGIN}/test2`];
       const successCount = await warmUpCache("test-cache", urls);
 
       expect(successCount).toBe(0);
@@ -219,7 +220,7 @@ describe("Cache Utilities", () => {
     it("should export complete cache data", async () => {
       const testCache = await caches.open("test-cache");
       await testCache.put(
-        new Request("/test"),
+        new Request(`${MOCK_ORIGIN}/test`),
         new Response("data", { status: 200 })
       );
 
