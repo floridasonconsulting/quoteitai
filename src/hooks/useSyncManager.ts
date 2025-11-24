@@ -1,266 +1,242 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { Customer, Item, Quote } from "@/types";
-import { storageCache } from "@/lib/storage-cache";
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { backgroundSync } from '@/lib/background-sync';
+import { toCamelCase, toSnakeCase } from '@/lib/services/transformation-utils';
 
-type ChangeData = (Partial<Customer> | Partial<Item> | Partial<Quote>) & { id: string };
-
-interface PendingChange {
-  id: string;
-  type: "create" | "update" | "delete";
-  table: "customers" | "items" | "quotes";
-  data: ChangeData;
-  timestamp: string;
+export interface QueueChange {
+  type: 'create' | 'update' | 'delete';
+  table: 'customers' | 'items' | 'quotes';
+  data: Record<string, unknown>;
 }
 
-const SYNC_QUEUE_KEY = "sync-queue";
-const FAILED_SYNC_QUEUE_KEY = "failed-sync-queue";
-const LAST_SYNC_TIME_KEY = "last-sync-time";
+const QUEUE_KEY = 'offline-changes-queue';
 const SYNC_INTERVAL = 30000; // 30 seconds
-const MAX_RETRY_ATTEMPTS = 3;
+const MAX_RETRIES = 3;
 
-export const useSyncManager = () => {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
-  const [failedChanges, setFailedChanges] = useState<PendingChange[]>([]);
+export function useSyncManager() {
   const { user } = useAuth();
-  const failureCountsRef = useRef<Map<string, number>>(new Map());
-  const syncTimeoutRef = useRef<NodeJS.Timeout>();
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [queueLength, setQueueLength] = useState(0);
+  const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const syncInProgressRef = useRef(false);
 
-  // Load pending and failed changes from storage cache
-  useEffect(() => {
-    const loadQueues = () => {
-      try {
-        const stored = storageCache.get<PendingChange[]>(SYNC_QUEUE_KEY);
-        const failed = storageCache.get<PendingChange[]>(FAILED_SYNC_QUEUE_KEY);
-        
-        if (stored) {
-          setPendingChanges(stored);
-        }
-        if (failed) {
-          setFailedChanges(failed);
-        }
-      } catch (error) {
-        console.error("[SyncManager] Error loading sync queues:", error);
-      }
-    };
-
-    loadQueues();
+  /**
+   * Get current queue from localStorage
+   */
+  const getQueue = useCallback((): QueueChange[] => {
+    try {
+      const stored = localStorage.getItem(QUEUE_KEY);
+      if (!stored) return [];
+      
+      const queue = JSON.parse(stored);
+      return Array.isArray(queue) ? queue : [];
+    } catch (error) {
+      console.error('[SyncManager] Error reading queue:', error);
+      return [];
+    }
   }, []);
 
-  // Save pending changes to storage cache (debounced)
-  useEffect(() => {
-    if (syncTimeoutRef.current) {
-      clearTimeout(syncTimeoutRef.current);
+  /**
+   * Save queue to localStorage
+   */
+  const saveQueue = useCallback((queue: QueueChange[]) => {
+    try {
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+      setQueueLength(queue.length);
+    } catch (error) {
+      console.error('[SyncManager] Error saving queue:', error);
+    }
+  }, []);
+
+  /**
+   * Add change to queue
+   */
+  const queueChange = useCallback((change: QueueChange) => {
+    const queue = getQueue();
+    queue.push(change);
+    saveQueue(queue);
+    
+    // Also register with BackgroundSyncManager for better offline support
+    backgroundSync.registerSync({
+      type: change.type,
+      entityType: change.table,
+      data: change.data,
+    });
+    
+    console.log('[SyncManager] Queued change:', change.type, change.table);
+  }, [getQueue, saveQueue]);
+
+  /**
+   * Process a single change
+   */
+  const processChange = useCallback(async (change: QueueChange, retryCount = 0): Promise<boolean> => {
+    if (!user?.id) {
+      console.warn('[SyncManager] No user ID, cannot process change');
+      return false;
     }
 
-    syncTimeoutRef.current = setTimeout(() => {
-      try {
-        storageCache.set(SYNC_QUEUE_KEY, pendingChanges);
-      } catch (error) {
-        console.error("[SyncManager] Error saving pending changes:", error);
-      }
-    }, 500); // Debounce writes by 500ms
+    try {
+      const dataWithUserId = { ...change.data, user_id: user.id };
+      const dbData = toSnakeCase(dataWithUserId);
 
-    return () => {
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
-      }
-    };
-  }, [pendingChanges]);
+      switch (change.type) {
+        case 'create':
+          const { error: createError } = await supabase
+            .from(change.table)
+            .insert(dbData as never);
+          
+          if (createError) throw createError;
+          break;
 
-  // Save failed changes to storage cache (debounced)
-  useEffect(() => {
-    if (syncTimeoutRef.current) {
-      clearTimeout(syncTimeoutRef.current);
+        case 'update':
+          if (!change.data.id) {
+            console.error('[SyncManager] Update missing ID:', change);
+            return false;
+          }
+          
+          const { error: updateError } = await supabase
+            .from(change.table)
+            .update(dbData as never)
+            .eq('id', change.data.id)
+            .eq('user_id', user.id);
+          
+          if (updateError) throw updateError;
+          break;
+
+        case 'delete':
+          if (!change.data.id) {
+            console.error('[SyncManager] Delete missing ID:', change);
+            return false;
+          }
+          
+          const { error: deleteError } = await supabase
+            .from(change.table)
+            .delete()
+            .eq('id', change.data.id)
+            .eq('user_id', user.id);
+          
+          if (deleteError) throw deleteError;
+          break;
+
+        default:
+          console.error('[SyncManager] Unknown change type:', change.type);
+          return false;
+      }
+
+      console.log(`[SyncManager] ✅ Processed ${change.type} for ${change.table}`);
+      return true;
+    } catch (error) {
+      console.error(`[SyncManager] ❌ Error processing ${change.type} for ${change.table}:`, error);
+      
+      if (retryCount < MAX_RETRIES) {
+        console.log(`[SyncManager] Retrying (${retryCount + 1}/${MAX_RETRIES})...`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        return processChange(change, retryCount + 1);
+      }
+      
+      return false;
     }
+  }, [user?.id]);
 
-    syncTimeoutRef.current = setTimeout(() => {
-      try {
-        storageCache.set(FAILED_SYNC_QUEUE_KEY, failedChanges);
-      } catch (error) {
-        console.error("[SyncManager] Error saving failed changes:", error);
-      }
-    }, 500);
-
-    return () => {
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
-      }
-    };
-  }, [failedChanges]);
-
-  // Monitor online/offline status
-  useEffect(() => {
-    const handleOnline = () => {
-      console.log("[SyncManager] Online - resuming sync");
-      setIsOnline(true);
-    };
-    
-    const handleOffline = () => {
-      console.log("[SyncManager] Offline - pausing sync");
-      setIsOnline(false);
-    };
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
-
-  // Add change to pending queue
-  const queueChange = useCallback((change: Omit<PendingChange, "id" | "timestamp">) => {
-    const newChange: PendingChange = {
-      ...change,
-      id: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
-    };
-    
-    setPendingChanges(prev => [...prev, newChange]);
-    console.log(`[SyncManager] Queued ${change.type} for ${change.table}:${change.data.id}`);
-  }, []);
-
-  // Sync pending changes to database
-  const syncToDatabase = useCallback(async () => {
-    if (!isOnline || !user || pendingChanges.length === 0 || isSyncing || isPaused) {
+  /**
+   * Sync all queued changes
+   */
+  const syncQueue = useCallback(async () => {
+    if (!navigator.onLine) {
+      console.log('[SyncManager] Offline, skipping sync');
       return;
     }
 
-    console.log(`[SyncManager] Starting sync of ${pendingChanges.length} changes`);
+    if (syncInProgressRef.current) {
+      console.log('[SyncManager] Sync already in progress');
+      return;
+    }
+
+    const queue = getQueue();
+    if (queue.length === 0) {
+      return;
+    }
+
+    syncInProgressRef.current = true;
     setIsSyncing(true);
-    
-    const successfulIds: string[] = [];
-    const failedIds: string[] = [];
 
-    for (const change of pendingChanges) {
-      try {
-        // Check if data already exists in DB to avoid duplicate syncs
-        if (change.type === "create") {
-          const { data: existing } = await supabase
-            .from(change.table)
-            .select("id")
-            .eq("id", change.data.id)
-            .maybeSingle();
-          
-          if (existing) {
-            console.log(`[SyncManager] Skipping duplicate create for ${change.table}:${change.data.id}`);
-            successfulIds.push(change.id);
-            continue;
-          }
-        }
+    console.log(`[SyncManager] 🔄 Syncing ${queue.length} changes...`);
 
-        const table = supabase.from(change.table);
-        
-        switch (change.type) {
-          case "create":
-            await table.insert({ ...change.data, user_id: user.id });
-            console.log(`[SyncManager] Created ${change.table}:${change.data.id}`);
-            break;
-          case "update":
-            await table.update(change.data).eq("id", change.data.id).eq("user_id", user.id);
-            console.log(`[SyncManager] Updated ${change.table}:${change.data.id}`);
-            break;
-          case "delete":
-            await table.delete().eq("id", change.data.id).eq("user_id", user.id);
-            console.log(`[SyncManager] Deleted ${change.table}:${change.data.id}`);
-            break;
-        }
-        
-        successfulIds.push(change.id);
-        failureCountsRef.current.delete(change.id);
-      } catch (error) {
-        console.error(`[SyncManager] Failed to sync change ${change.id}:`, error);
-        
-        // Track failure count
-        const currentCount = failureCountsRef.current.get(change.id) || 0;
-        const newCount = currentCount + 1;
-        failureCountsRef.current.set(change.id, newCount);
-        
-        // After max retry attempts, move to failed queue
-        if (newCount >= MAX_RETRY_ATTEMPTS) {
-          console.warn(`[SyncManager] Moving change ${change.id} to failed queue after ${MAX_RETRY_ATTEMPTS} attempts`);
-          failedIds.push(change.id);
-          failureCountsRef.current.delete(change.id);
-        }
+    const failedChanges: QueueChange[] = [];
+
+    for (const change of queue) {
+      const success = await processChange(change);
+      if (!success) {
+        failedChanges.push(change);
       }
     }
 
-    // Update queues
-    setPendingChanges(prev => {
-      const remaining = prev.filter(c => !successfulIds.includes(c.id) && !failedIds.includes(c.id));
-      console.log(`[SyncManager] ${successfulIds.length} synced, ${failedIds.length} failed, ${remaining.length} remaining`);
-      return remaining;
-    });
-    
-    if (failedIds.length > 0) {
-      const failed = pendingChanges.filter(c => failedIds.includes(c.id));
-      setFailedChanges(prev => [...prev, ...failed]);
-    }
-    
-    if (successfulIds.length > 0) {
-      try {
-        storageCache.set(LAST_SYNC_TIME_KEY, new Date().toISOString());
-      } catch (error) {
-        console.error("[SyncManager] Error saving last sync time:", error);
-      }
+    // Save only failed changes back to queue
+    saveQueue(failedChanges);
+
+    if (failedChanges.length === 0) {
+      console.log('[SyncManager] ✅ All changes synced successfully');
+    } else {
+      console.warn(`[SyncManager] ⚠️ ${failedChanges.length} changes failed to sync`);
     }
 
+    syncInProgressRef.current = false;
     setIsSyncing(false);
-  }, [isOnline, user, pendingChanges, isSyncing, isPaused]);
+  }, [getQueue, saveQueue, processChange]);
 
-  // Auto-sync when online (not paused)
+  /**
+   * Clear the queue
+   */
+  const clearQueue = useCallback(() => {
+    saveQueue([]);
+    backgroundSync.clearAll();
+    console.log('[SyncManager] Queue cleared');
+  }, [saveQueue]);
+
+  /**
+   * Setup auto-sync interval
+   */
   useEffect(() => {
-    if (isOnline && user && !isPaused) {
-      // Initial sync
-      syncToDatabase();
-      
-      // Setup interval for periodic sync
-      const interval = setInterval(syncToDatabase, SYNC_INTERVAL);
-      
-      return () => clearInterval(interval);
-    }
-  }, [isOnline, user, isPaused, syncToDatabase]);
+    if (!user?.id) return;
 
-  const pauseSync = useCallback(() => {
-    console.log("[SyncManager] Pausing sync");
-    setIsPaused(true);
-  }, []);
+    // Initial sync on mount
+    syncQueue();
 
-  const resumeSync = useCallback(() => {
-    console.log("[SyncManager] Resuming sync");
-    setIsPaused(false);
-  }, []);
+    // Setup periodic sync
+    syncIntervalRef.current = setInterval(() => {
+      syncQueue();
+    }, SYNC_INTERVAL);
 
-  const retryFailed = useCallback(() => {
-    console.log(`[SyncManager] Retrying ${failedChanges.length} failed changes`);
-    setPendingChanges(prev => [...prev, ...failedChanges]);
-    setFailedChanges([]);
-    failureCountsRef.current.clear();
-  }, [failedChanges]);
+    // Sync when coming back online
+    const handleOnline = () => {
+      console.log('[SyncManager] Connection restored, syncing...');
+      syncQueue();
+    };
 
-  const clearFailed = useCallback(() => {
-    console.log("[SyncManager] Clearing failed changes");
-    setFailedChanges([]);
-    failureCountsRef.current.clear();
-  }, []);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+      }
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [user?.id, syncQueue]);
+
+  /**
+   * Update queue length on mount
+   */
+  useEffect(() => {
+    const queue = getQueue();
+    setQueueLength(queue.length);
+  }, [getQueue]);
 
   return {
-    isOnline,
     isSyncing,
-    isPaused,
-    pendingCount: pendingChanges.length,
-    failedCount: failedChanges.length,
+    queueLength,
     queueChange,
-    syncToDatabase,
-    pauseSync,
-    resumeSync,
-    retryFailed,
-    clearFailed,
+    syncQueue,
+    clearQueue,
   };
-};
+}
