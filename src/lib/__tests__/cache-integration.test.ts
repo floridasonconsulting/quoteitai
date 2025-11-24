@@ -1,4 +1,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+
+// Unmock rate-limiter to test actual implementation logic
+vi.unmock('@/lib/rate-limiter');
+
 import { cacheManager } from '@/lib/cache-manager';
 import { performanceMonitor } from '@/lib/performance-monitor';
 import { rateLimiter } from '@/lib/rate-limiter';
