@@ -105,6 +105,48 @@ describe('IndexedDB Wrapper', () => {
     });
   });
 
+  describe('add', () => {
+    it('should add a new record', async () => {
+      const customer = {
+        id: `test-customer-${Date.now()}`,
+        userId: 'user-123',
+        name: 'Test Customer',
+        email: 'test@example.com',
+        phone: '123-456-7890',
+        address: '123 Test St',
+        city: 'Test City',
+        state: 'TS',
+        zip: '12345',
+        createdAt: new Date().toISOString(),
+      };
+
+      const result = await CustomerDB.add(customer);
+      expect(result).toEqual(customer);
+
+      const stored = await CustomerDB.getById(customer.id);
+      expect(stored).toEqual(customer);
+    });
+
+    it('should fail when adding record with same ID', async () => {
+      const customer = {
+        id: 'duplicate-id',
+        userId: 'user-123',
+        name: 'Test Customer',
+        email: 'test@example.com',
+        phone: '123-456-7890',
+        address: '123 Test St',
+        city: 'Test City',
+        state: 'TS',
+        zip: '12345',
+        createdAt: new Date().toISOString(),
+      };
+
+      await CustomerDB.add(customer);
+      
+      await expect(CustomerDB.add(customer)).rejects.toThrow();
+    });
+  });
+
   describe('Item Operations', () => {
     const mockItem: Item = {
       id: 'test-item-1',

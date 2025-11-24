@@ -271,11 +271,13 @@ const { createSelectChain, createUpdateChain, createDeleteChain, createFromHandl
   };
 
   const createFromHandler = (tableName: string) => {
+    const mockData = getMockDataForTable(tableName);
+    
     // Helper to return a promise that also has chainable methods
     const createChainable = (mockResult: any) => {
       const promise = Promise.resolve(mockResult);
       const chainable = {
-        select: vi.fn(() => createChainable({ data: [], error: null })),
+        select: vi.fn(() => createChainable({ data: Array.isArray(mockResult?.data) ? mockResult.data : [mockResult?.data], error: null })),
         insert: vi.fn(() => createChainable({ data: null, error: null })),
         upsert: vi.fn(() => createChainable({ data: null, error: null })),
         update: vi.fn(() => createChainable({ data: null, error: null })),
@@ -285,8 +287,22 @@ const { createSelectChain, createUpdateChain, createDeleteChain, createFromHandl
         maybeSingle: vi.fn().mockResolvedValue(mockResult),
         order: vi.fn(() => createChainable(mockResult)),
         limit: vi.fn(() => createChainable(mockResult)),
+        url: new URL('https://example.com'),
+        headers: {},
       };
-      return Object.assign(promise, chainable);
+      // Return a proxy to handle any method access
+      return new Proxy(promise, {
+        get: (target, prop) => {
+          if (prop in chainable) {
+            return chainable[prop as keyof typeof chainable];
+          }
+          if (prop === 'then') {
+            return target.then.bind(target);
+          }
+          // Default fallback for unknown methods to return chainable
+          return () => createChainable(mockResult);
+        }
+      });
     };
 
     return {
@@ -295,6 +311,8 @@ const { createSelectChain, createUpdateChain, createDeleteChain, createFromHandl
       upsert: vi.fn(() => createChainable({ data: null, error: null })),
       update: vi.fn(() => createChainable({ data: null, error: null })),
       delete: vi.fn(() => createChainable({ data: null, error: null })),
+      url: new URL('https://example.com'),
+      headers: {},
     };
   };
 
