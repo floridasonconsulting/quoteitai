@@ -3,13 +3,13 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { useSyncManager } from '../useSyncManager';
 import { backgroundSync } from '@/lib/background-sync';
 
-// Create a mock user object that can be updated
-const mockUser = { id: 'test-user-id' };
+// Create a mock user state that can be updated
+let mockUserState: { id: string | null } = { id: 'test-user-id' };
 
-// Mock the auth context with a function that returns the mock user
+// Mock the auth context with a function that returns the current mock user state
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
-    user: mockUser,
+    user: mockUserState.id ? { id: mockUserState.id } : null,
   }),
 }));
 
@@ -49,8 +49,8 @@ describe('useSyncManager', () => {
     localStorage.clear();
     vi.clearAllMocks();
     
-    // Reset mock user
-    mockUser.id = 'test-user-id';
+    // Reset mock user state
+    mockUserState = { id: 'test-user-id' };
     
     // Reset supabase mocks
     mockSupabaseInsert.mockResolvedValue({ error: null });
@@ -201,7 +201,7 @@ describe('useSyncManager', () => {
   });
 
   it('should handle sync errors gracefully', async () => {
-    // Mock a failed insert that keeps failing for all retry attempts
+    // Mock a consistently failing insert
     mockSupabaseInsert.mockResolvedValue({ error: new Error('Insert failed') });
 
     const { result } = renderHook(() => useSyncManager());
@@ -214,18 +214,21 @@ describe('useSyncManager', () => {
       });
     });
 
+    expect(result.current.queueLength).toBe(1);
+
+    // Trigger sync (will fail and retry up to MAX_RETRIES)
     await act(async () => {
       await result.current.syncQueue();
     });
 
-    // Wait for retry attempts to complete
+    // Wait for all retries to complete (3 retries with delays)
     await waitFor(() => {
       expect(result.current.isSyncing).toBe(false);
-    }, { timeout: 5000 });
+    }, { timeout: 10000 });
 
     // Failed change should remain in queue after max retries
     expect(result.current.queueLength).toBe(1);
-  });
+  }, 10000); // Increase test timeout to 10 seconds
 
   it('should retry failed changes', async () => {
     let callCount = 0;
@@ -249,6 +252,8 @@ describe('useSyncManager', () => {
       });
     });
 
+    expect(result.current.queueLength).toBe(1);
+
     await act(async () => {
       await result.current.syncQueue();
     });
@@ -256,8 +261,12 @@ describe('useSyncManager', () => {
     // Wait for retry to complete
     await waitFor(() => {
       expect(callCount).toBeGreaterThan(1);
-    }, { timeout: 5000 });
-  });
+      expect(result.current.queueLength).toBe(0);
+    }, { timeout: 8000 });
+
+    // Should have retried and succeeded
+    expect(callCount).toBeGreaterThanOrEqual(2);
+  }, 10000);
 
   it('should trigger sync when coming back online', async () => {
     const { result } = renderHook(() => useSyncManager());
@@ -283,6 +292,8 @@ describe('useSyncManager', () => {
     await waitFor(() => {
       expect(result.current.queueLength).toBe(0);
     }, { timeout: 3000 });
+
+    expect(mockSupabaseInsert).toHaveBeenCalled();
   });
 
   it('should integrate with BackgroundSyncManager', () => {
@@ -296,6 +307,7 @@ describe('useSyncManager', () => {
       });
     });
 
+    expect(result.current.queueLength).toBe(1);
     expect(backgroundSync.registerSync).toHaveBeenCalledWith({
       type: 'create',
       entityType: 'customers',
@@ -305,9 +317,7 @@ describe('useSyncManager', () => {
 
   it('should handle missing user ID', async () => {
     // Temporarily remove user ID
-    const originalId = mockUser.id;
-    // @ts-expect-error - Testing null user scenario
-    mockUser.id = null;
+    mockUserState.id = null;
 
     const { result } = renderHook(() => useSyncManager());
 
@@ -319,6 +329,8 @@ describe('useSyncManager', () => {
       });
     });
 
+    expect(result.current.queueLength).toBe(1);
+
     await act(async () => {
       await result.current.syncQueue();
     });
@@ -326,7 +338,7 @@ describe('useSyncManager', () => {
     // Queue should remain unchanged without user
     expect(result.current.queueLength).toBe(1);
 
-    // Restore user ID
-    mockUser.id = originalId;
+    // Restore user ID for other tests
+    mockUserState.id = 'test-user-id';
   });
 });
