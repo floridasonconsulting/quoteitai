@@ -308,6 +308,68 @@ export class CacheManager {
   }
 
   /**
+   * Get cache quota usage
+   */
+  async getCacheQuota(): Promise<{ usage: number; quota: number; percentage: number }> {
+    if (navigator.storage && navigator.storage.estimate) {
+      const estimate = await navigator.storage.estimate();
+      return {
+        usage: estimate.usage || 0,
+        quota: estimate.quota || 0,
+        percentage: estimate.quota 
+          ? Math.round(((estimate.usage || 0) / estimate.quota) * 100) 
+          : 0,
+      };
+    }
+    return { usage: 0, quota: 0, percentage: 0 };
+  }
+
+  /**
+   * Get detailed cache information
+   */
+  async getCacheDetails(): Promise<{ name: string; size: number; count: number }[]> {
+    if (!('caches' in window)) return [];
+
+    const cacheNames = await caches.keys();
+    const details = await Promise.all(
+      cacheNames.map(async (name) => {
+        const cache = await caches.open(name);
+        const keys = await cache.keys();
+        
+        // Calculate approximate size (this is expensive, so be careful)
+        let totalSize = 0;
+        // We limit size calculation to first 50 items to prevent blocking
+        const sampleKeys = keys.slice(0, 50);
+        
+        for (const request of sampleKeys) {
+          try {
+            const response = await cache.match(request);
+            if (response) {
+              const blob = await response.blob();
+              totalSize += blob.size;
+            }
+          } catch (e) {
+            // Ignore errors reading blob
+          }
+        }
+        
+        // Estimate total based on sample if needed
+        if (keys.length > 50) {
+          totalSize = (totalSize / 50) * keys.length;
+        }
+        
+        return {
+          name,
+          size: totalSize,
+          count: keys.length,
+        };
+      })
+    );
+    
+    return details;
+  }
+
+  /**
    * Record cache hit
    */
   private recordHit(responseTime: number): void {
@@ -387,3 +449,8 @@ export class CacheManager {
 
 // Export singleton instance
 export const cacheManager = new CacheManager();
+
+// Export standalone functions for easy usage in components
+export const getCacheQuota = () => cacheManager.getCacheQuota();
+export const getCacheDetails = () => cacheManager.getCacheDetails();
+export const clearAllCaches = () => cacheManager.clearAll();

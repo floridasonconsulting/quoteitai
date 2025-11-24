@@ -250,13 +250,30 @@ const { createSelectChain, createUpdateChain, createDeleteChain, createFromHandl
     eq: vi.fn().mockResolvedValue({ data: null, error: null }),
   });
 
-  const createFromHandler = (tableName: string) => ({
-    select: vi.fn(() => createSelectChain(tableName)),
-    insert: vi.fn(() => ({
+  const createInsertChain = () => {
+    const chain = {
       select: vi.fn(() => ({
         single: vi.fn().mockResolvedValue({ data: {}, error: null }),
       })),
-    })),
+    };
+    Object.assign(chain, Promise.resolve({ data: {}, error: null }));
+    return chain;
+  };
+
+  const createUpsertChain = () => {
+    const chain = {
+      select: vi.fn(() => ({
+        single: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      })),
+    };
+    Object.assign(chain, Promise.resolve({ data: {}, error: null }));
+    return chain;
+  };
+
+  const createFromHandler = (tableName: string) => ({
+    select: vi.fn(() => createSelectChain(tableName)),
+    insert: vi.fn(() => createInsertChain()),
+    upsert: vi.fn(() => createUpsertChain()),
     update: vi.fn(() => createUpdateChain()),
     delete: vi.fn(() => createDeleteChain()),
   });

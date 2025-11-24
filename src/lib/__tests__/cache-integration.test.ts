@@ -15,7 +15,7 @@ vi.mock('web-vitals', () => ({
 describe('Cache System Integration', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    await cacheManager.clear();
+    await cacheManager.clearAll();
     localStorage.clear();
     rateLimiter.resetAll();
   });
@@ -44,11 +44,12 @@ describe('Cache System Integration', () => {
         quota: 1024 * 1024 * 1024, // 1GB
       };
       
+      // Setup mock before calling method
       if (navigator.storage && navigator.storage.estimate) {
         vi.spyOn(navigator.storage, 'estimate').mockResolvedValue(mockEstimate);
       }
 
-      const quota = await cacheManager.getQuotaUsage();
+      const quota = await cacheManager.getCacheQuota();
       
       expect(quota.usage).toBe(mockEstimate.usage);
       expect(quota.quota).toBe(mockEstimate.quota);

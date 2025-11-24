@@ -292,3 +292,5 @@ export interface MigrationResult {
   status: MigrationStatus;
   message: string;
 }
+
+export const clearMigrationData = () => IndexedDBMigrationService.getInstance().clearMigrationData();
