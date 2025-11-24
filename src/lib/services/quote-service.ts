@@ -1,4 +1,3 @@
-
 /**
  * Quote Service
  * Handles all quote-related database operations
@@ -10,9 +9,11 @@ import { CACHE_KEYS, getCachedData, setCachedData } from './cache-service';
 import { dedupedRequest, withTimeout } from './request-pool-service';
 import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
+import { QuoteDB, isIndexedDBSupported } from '../indexed-db';
 
 /**
  * Fetch all quotes for a user
+ * Priority: IndexedDB > Supabase > Cache > Empty
  */
 export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
   if (!userId) {
@@ -23,6 +24,22 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
   const dedupKey = `fetch-quotes-${userId}`;
 
   return dedupedRequest(dedupKey, async () => {
+    // Try IndexedDB first if supported
+    if (isIndexedDBSupported()) {
+      try {
+        const indexedDBData = await QuoteDB.getAll(userId);
+        if (indexedDBData && indexedDBData.length > 0) {
+          console.log(`[QuoteService] Retrieved ${indexedDBData.length} quotes from IndexedDB`);
+          // Update memory cache
+          setCachedData<Quote>(CACHE_KEYS.QUOTES, indexedDBData);
+          return indexedDBData;
+        }
+      } catch (error) {
+        console.warn('[QuoteService] IndexedDB read failed, falling back to Supabase:', error);
+      }
+    }
+
+    // Check memory cache
     const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES);
     
     if (!navigator.onLine) {
@@ -49,6 +66,22 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
       }
       
       const result = data ? data.map(item => toCamelCase(item)) as Quote[] : [];
+      
+      // Save to IndexedDB if supported
+      if (isIndexedDBSupported()) {
+        try {
+          // Clear old data and save new
+          await QuoteDB.clear(userId);
+          for (const quote of result) {
+            await QuoteDB.add({ ...quote, user_id: userId } as never);
+          }
+          console.log(`[QuoteService] Saved ${result.length} quotes to IndexedDB`);
+        } catch (error) {
+          console.warn('[QuoteService] Failed to save to IndexedDB:', error);
+        }
+      }
+      
+      // Update memory cache
       setCachedData<Quote>(CACHE_KEYS.QUOTES, result);
       
       return result;
@@ -65,6 +98,7 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
 
 /**
  * Create a new quote
+ * Priority: Supabase + IndexedDB + Cache
  */
 export async function addQuote(
   userId: string | undefined,
@@ -73,12 +107,24 @@ export async function addQuote(
 ): Promise<Quote> {
   const quoteWithUser = { ...quote, user_id: userId } as Quote;
 
+  // Save to IndexedDB first if supported
+  if (isIndexedDBSupported()) {
+    try {
+      await QuoteDB.add(quoteWithUser as never);
+      console.log('[QuoteService] Saved quote to IndexedDB');
+    } catch (error) {
+      console.warn('[QuoteService] IndexedDB save failed:', error);
+    }
+  }
+
+  // Update memory cache
+  const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
+  setCachedData<Quote>(CACHE_KEYS.QUOTES, [...cached, quoteWithUser]);
+
   if (!navigator.onLine || !userId) {
     if (!userId) {
-      console.warn('⚠️ No user ID - saving quote to localStorage only.');
+      console.warn('⚠️ No user ID - quote saved to IndexedDB/localStorage only.');
     }
-    const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
-    setCachedData<Quote>(CACHE_KEYS.QUOTES, [...cached, quoteWithUser]);
     queueChange?.({ type: 'create', table: 'quotes', data: quoteWithUser });
     return quoteWithUser;
   }
@@ -93,16 +139,12 @@ export async function addQuote(
     }
     
     console.log('✅ Successfully inserted quote into database');
-    const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
-    setCachedData<Quote>(CACHE_KEYS.QUOTES, [...cached, quoteWithUser]);
     
     dispatchDataRefresh('quotes-changed');
     
     return quoteWithUser;
   } catch (error) {
-    console.error('⚠️ Error creating quote, falling back to localStorage:', error);
-    const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
-    setCachedData<Quote>(CACHE_KEYS.QUOTES, [...cached, quoteWithUser]);
+    console.error('⚠️ Error creating quote, queued for sync:', error);
     queueChange?.({ type: 'create', table: 'quotes', data: quoteWithUser });
     throw error;
   }
@@ -110,6 +152,7 @@ export async function addQuote(
 
 /**
  * Update an existing quote
+ * Priority: IndexedDB + Supabase + Cache
  */
 export async function updateQuote(
   userId: string | undefined,
@@ -117,14 +160,47 @@ export async function updateQuote(
   updates: Partial<Quote>,
   queueChange?: (change: QueueChange) => void
 ): Promise<Quote> {
-  if (!navigator.onLine || !userId) {
+  // Get current quote data
+  let currentQuote: Quote | undefined;
+  
+  if (isIndexedDBSupported()) {
+    try {
+      const indexedQuote = await QuoteDB.getById(id);
+      if (indexedQuote) {
+        currentQuote = indexedQuote;
+      }
+    } catch (error) {
+      console.warn('[QuoteService] IndexedDB read failed:', error);
+    }
+  }
+  
+  if (!currentQuote) {
     const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
-    const updated = cached.map(item => 
-      item.id === id ? { ...item, ...updates } as Quote : item
-    );
-    setCachedData<Quote>(CACHE_KEYS.QUOTES, updated);
+    currentQuote = cached.find(q => q.id === id);
+  }
+
+  const updatedQuote = { ...currentQuote, ...updates } as Quote;
+
+  // Update IndexedDB
+  if (isIndexedDBSupported()) {
+    try {
+      await QuoteDB.update({ ...updatedQuote, user_id: userId } as never);
+      console.log('[QuoteService] Updated quote in IndexedDB');
+    } catch (error) {
+      console.warn('[QuoteService] IndexedDB update failed:', error);
+    }
+  }
+
+  // Update memory cache
+  const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
+  const updatedCache = cached.map(item => 
+    item.id === id ? updatedQuote : item
+  );
+  setCachedData<Quote>(CACHE_KEYS.QUOTES, updatedCache);
+
+  if (!navigator.onLine || !userId) {
     queueChange?.({ type: 'update', table: 'quotes', data: { id, ...updates } });
-    return updated.find(item => item.id === id)!;
+    return updatedQuote;
   }
 
   try {
@@ -137,38 +213,40 @@ export async function updateQuote(
     
     if (error) throw error;
     
-    const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
-    const updated = cached.map(item => 
-      item.id === id ? { ...item, ...updates } as Quote : item
-    );
-    setCachedData<Quote>(CACHE_KEYS.QUOTES, updated);
-    
     dispatchDataRefresh('quotes-changed');
     
-    return updated.find(item => item.id === id)!;
+    return updatedQuote;
   } catch (error) {
     console.error('Error updating quote:', error);
-    const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
-    const updated = cached.map(item => 
-      item.id === id ? { ...item, ...updates } as Quote : item
-    );
-    setCachedData<Quote>(CACHE_KEYS.QUOTES, updated);
     queueChange?.({ type: 'update', table: 'quotes', data: { id, ...updates } });
-    return updated.find(item => item.id === id)!;
+    return updatedQuote;
   }
 }
 
 /**
  * Delete a quote
+ * Priority: IndexedDB + Supabase + Cache
  */
 export async function deleteQuote(
   userId: string | undefined,
   id: string,
   queueChange?: (change: QueueChange) => void
 ): Promise<void> {
+  // Delete from IndexedDB
+  if (isIndexedDBSupported()) {
+    try {
+      await QuoteDB.delete(id);
+      console.log('[QuoteService] Deleted quote from IndexedDB');
+    } catch (error) {
+      console.warn('[QuoteService] IndexedDB delete failed:', error);
+    }
+  }
+
+  // Update memory cache
+  const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
+  setCachedData<Quote>(CACHE_KEYS.QUOTES, cached.filter(item => item.id !== id));
+
   if (!navigator.onLine || !userId) {
-    const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
-    setCachedData<Quote>(CACHE_KEYS.QUOTES, cached.filter(item => item.id !== id));
     queueChange?.({ type: 'delete', table: 'quotes', data: { id } });
     return;
   }
@@ -182,14 +260,9 @@ export async function deleteQuote(
     
     if (error) throw error;
     
-    const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
-    setCachedData<Quote>(CACHE_KEYS.QUOTES, cached.filter(item => item.id !== id));
-    
     dispatchDataRefresh('quotes-changed');
   } catch (error) {
     console.error('Error deleting quote:', error);
-    const cached = getCachedData<Quote>(CACHE_KEYS.QUOTES) || [];
-    setCachedData<Quote>(CACHE_KEYS.QUOTES, cached.filter(item => item.id !== id));
     queueChange?.({ type: 'delete', table: 'quotes', data: { id } });
   }
 }

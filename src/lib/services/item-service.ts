@@ -1,4 +1,3 @@
-
 /**
  * Item Service
  * Handles all item/service catalog database operations
@@ -10,9 +9,11 @@ import { CACHE_KEYS, getCachedData, setCachedData } from './cache-service';
 import { dedupedRequest, withTimeout } from './request-pool-service';
 import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
+import { ItemDB, isIndexedDBSupported } from '../indexed-db';
 
 /**
  * Fetch all items for a user
+ * Priority: IndexedDB > Supabase > Cache > Empty
  */
 export async function getItems(userId: string | undefined): Promise<Item[]> {
   if (!userId) {
@@ -23,6 +24,22 @@ export async function getItems(userId: string | undefined): Promise<Item[]> {
   const dedupKey = `fetch-items-${userId}`;
 
   return dedupedRequest(dedupKey, async () => {
+    // Try IndexedDB first if supported
+    if (isIndexedDBSupported()) {
+      try {
+        const indexedDBData = await ItemDB.getAll(userId);
+        if (indexedDBData && indexedDBData.length > 0) {
+          console.log(`[ItemService] Retrieved ${indexedDBData.length} items from IndexedDB`);
+          // Update memory cache
+          setCachedData<Item>(CACHE_KEYS.ITEMS, indexedDBData);
+          return indexedDBData;
+        }
+      } catch (error) {
+        console.warn('[ItemService] IndexedDB read failed, falling back to Supabase:', error);
+      }
+    }
+
+    // Check memory cache
     const cached = getCachedData<Item>(CACHE_KEYS.ITEMS);
     
     if (!navigator.onLine) {
@@ -49,6 +66,22 @@ export async function getItems(userId: string | undefined): Promise<Item[]> {
       }
       
       const result = data ? data.map(item => toCamelCase(item)) as Item[] : [];
+      
+      // Save to IndexedDB if supported
+      if (isIndexedDBSupported()) {
+        try {
+          // Clear old data and save new
+          await ItemDB.clear(userId);
+          for (const item of result) {
+            await ItemDB.add({ ...item, user_id: userId } as never);
+          }
+          console.log(`[ItemService] Saved ${result.length} items to IndexedDB`);
+        } catch (error) {
+          console.warn('[ItemService] Failed to save to IndexedDB:', error);
+        }
+      }
+      
+      // Update memory cache
       setCachedData<Item>(CACHE_KEYS.ITEMS, result);
       
       return result;
@@ -65,6 +98,7 @@ export async function getItems(userId: string | undefined): Promise<Item[]> {
 
 /**
  * Create a new item
+ * Priority: Supabase + IndexedDB + Cache
  */
 export async function addItem(
   userId: string | undefined,
@@ -93,12 +127,24 @@ export async function addItem(
     finalPrice // Ensure calculated finalPrice is used
   } as Item;
 
+  // Save to IndexedDB first if supported
+  if (isIndexedDBSupported()) {
+    try {
+      await ItemDB.add(itemWithUser as never);
+      console.log('[ItemService] Saved item to IndexedDB');
+    } catch (error) {
+      console.warn('[ItemService] IndexedDB save failed:', error);
+    }
+  }
+
+  // Update memory cache
+  const cached = getCachedData<Item>(CACHE_KEYS.ITEMS) || [];
+  setCachedData<Item>(CACHE_KEYS.ITEMS, [...cached, itemWithUser]);
+
   if (!navigator.onLine || !userId) {
     if (!userId) {
-      console.warn('⚠️ No user ID - saving item to localStorage only.');
+      console.warn('⚠️ No user ID - item saved to IndexedDB/localStorage only.');
     }
-    const cached = getCachedData<Item>(CACHE_KEYS.ITEMS) || [];
-    setCachedData<Item>(CACHE_KEYS.ITEMS, [...cached, itemWithUser]);
     queueChange?.({ type: 'create', table: 'items', data: itemWithUser });
     return itemWithUser;
   }
@@ -113,16 +159,12 @@ export async function addItem(
     }
     
     console.log('✅ Successfully inserted item into database');
-    const cached = getCachedData<Item>(CACHE_KEYS.ITEMS) || [];
-    setCachedData<Item>(CACHE_KEYS.ITEMS, [...cached, itemWithUser]);
     
     dispatchDataRefresh('items-changed');
     
     return itemWithUser;
   } catch (error) {
-    console.error('⚠️ Error creating item, falling back to localStorage:', error);
-    const cached = getCachedData<Item>(CACHE_KEYS.ITEMS) || [];
-    setCachedData<Item>(CACHE_KEYS.ITEMS, [...cached, itemWithUser]);
+    console.error('⚠️ Error creating item, queued for sync:', error);
     queueChange?.({ type: 'create', table: 'items', data: itemWithUser });
     throw error;
   }
@@ -130,6 +172,7 @@ export async function addItem(
 
 /**
  * Update an existing item
+ * Priority: IndexedDB + Supabase + Cache
  */
 export async function updateItem(
   userId: string | undefined,
@@ -137,14 +180,47 @@ export async function updateItem(
   updates: Partial<Item>,
   queueChange?: (change: QueueChange) => void
 ): Promise<Item> {
-  if (!navigator.onLine || !userId) {
+  // Get current item data
+  let currentItem: Item | undefined;
+  
+  if (isIndexedDBSupported()) {
+    try {
+      const indexedItem = await ItemDB.getById(id);
+      if (indexedItem) {
+        currentItem = indexedItem;
+      }
+    } catch (error) {
+      console.warn('[ItemService] IndexedDB read failed:', error);
+    }
+  }
+  
+  if (!currentItem) {
     const cached = getCachedData<Item>(CACHE_KEYS.ITEMS) || [];
-    const updated = cached.map(item => 
-      item.id === id ? { ...item, ...updates } as Item : item
-    );
-    setCachedData<Item>(CACHE_KEYS.ITEMS, updated);
+    currentItem = cached.find(i => i.id === id);
+  }
+
+  const updatedItem = { ...currentItem, ...updates } as Item;
+
+  // Update IndexedDB
+  if (isIndexedDBSupported()) {
+    try {
+      await ItemDB.update({ ...updatedItem, user_id: userId } as never);
+      console.log('[ItemService] Updated item in IndexedDB');
+    } catch (error) {
+      console.warn('[ItemService] IndexedDB update failed:', error);
+    }
+  }
+
+  // Update memory cache
+  const cached = getCachedData<Item>(CACHE_KEYS.ITEMS) || [];
+  const updatedCache = cached.map(item => 
+    item.id === id ? updatedItem : item
+  );
+  setCachedData<Item>(CACHE_KEYS.ITEMS, updatedCache);
+
+  if (!navigator.onLine || !userId) {
     queueChange?.({ type: 'update', table: 'items', data: { id, ...updates } });
-    return updated.find(item => item.id === id)!;
+    return updatedItem;
   }
 
   try {
@@ -157,38 +233,40 @@ export async function updateItem(
     
     if (error) throw error;
     
-    const cached = getCachedData<Item>(CACHE_KEYS.ITEMS) || [];
-    const updated = cached.map(item => 
-      item.id === id ? { ...item, ...updates } as Item : item
-    );
-    setCachedData<Item>(CACHE_KEYS.ITEMS, updated);
-    
     dispatchDataRefresh('items-changed');
     
-    return updated.find(item => item.id === id)!;
+    return updatedItem;
   } catch (error) {
     console.error('Error updating item:', error);
-    const cached = getCachedData<Item>(CACHE_KEYS.ITEMS) || [];
-    const updated = cached.map(item => 
-      item.id === id ? { ...item, ...updates } as Item : item
-    );
-    setCachedData<Item>(CACHE_KEYS.ITEMS, updated);
     queueChange?.({ type: 'update', table: 'items', data: { id, ...updates } });
-    return updated.find(item => item.id === id)!;
+    return updatedItem;
   }
 }
 
 /**
  * Delete an item
+ * Priority: IndexedDB + Supabase + Cache
  */
 export async function deleteItem(
   userId: string | undefined,
   id: string,
   queueChange?: (change: QueueChange) => void
 ): Promise<void> {
+  // Delete from IndexedDB
+  if (isIndexedDBSupported()) {
+    try {
+      await ItemDB.delete(id);
+      console.log('[ItemService] Deleted item from IndexedDB');
+    } catch (error) {
+      console.warn('[ItemService] IndexedDB delete failed:', error);
+    }
+  }
+
+  // Update memory cache
+  const cached = getCachedData<Item>(CACHE_KEYS.ITEMS) || [];
+  setCachedData<Item>(CACHE_KEYS.ITEMS, cached.filter(item => item.id !== id));
+
   if (!navigator.onLine || !userId) {
-    const cached = getCachedData<Item>(CACHE_KEYS.ITEMS) || [];
-    setCachedData<Item>(CACHE_KEYS.ITEMS, cached.filter(item => item.id !== id));
     queueChange?.({ type: 'delete', table: 'items', data: { id } });
     return;
   }
@@ -202,14 +280,9 @@ export async function deleteItem(
     
     if (error) throw error;
     
-    const cached = getCachedData<Item>(CACHE_KEYS.ITEMS) || [];
-    setCachedData<Item>(CACHE_KEYS.ITEMS, cached.filter(item => item.id !== id));
-    
     dispatchDataRefresh('items-changed');
   } catch (error) {
     console.error('Error deleting item:', error);
-    const cached = getCachedData<Item>(CACHE_KEYS.ITEMS) || [];
-    setCachedData<Item>(CACHE_KEYS.ITEMS, cached.filter(item => item.id !== id));
     queueChange?.({ type: 'delete', table: 'items', data: { id } });
   }
 }
