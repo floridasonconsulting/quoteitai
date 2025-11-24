@@ -945,27 +945,125 @@ View debug logs in console prefixed with service name:
 
 ### 🚀 Next: Phase 2 - Advanced Caching (Week 2, Day 3-4 - November 25-26, 2025)
 
-#### Day 3-4: Service Worker Optimization & Caching
-- ⬜ **Service Worker Optimization**
-  - Intelligent cache versioning with migration
-  - Cache warmup on install for critical assets
-  - Stale-while-revalidate for API calls
-  - Background sync for failed requests
-  - Cache quota management (prevent overflow)
+#### Goals
+Transform the app into a high-performance, offline-first PWA with intelligent caching
 
-- ⬜ **Performance Monitoring**
-  - Core Web Vitals tracking (LCP, FID, CLS)
-  - API response time monitoring
+#### Day 3: Service Worker Foundation (November 25, 2025)
+**Primary Objectives:**
+- ⬜ **Service Worker Architecture Refactoring**
+  - Implement workbox-based service worker with proper lifecycle
+  - Add cache versioning system (v1, v2, etc.) with automatic migration
+  - Create cache strategy router (network-first, cache-first, stale-while-revalidate)
+  - Add background sync for failed API requests
+  - Implement proper error handling and fallbacks
+
+- ⬜ **Cache Warmup System**
+  - Pre-cache critical assets on install (CSS, JS, fonts, images)
+  - Pre-cache API responses for authenticated users
+  - Smart cache priming based on user behavior
+  - Progressive cache warming (prioritize critical → nice-to-have)
+  - Cache preloading for offline usage
+
+- ⬜ **Cache Management**
+  - Implement cache quota management (prevent overflow)
+  - Add cache expiration policies (max-age, stale-while-revalidate)
+  - Create cache cleanup routine (remove old versions)
+  - Add cache size monitoring and alerting
+  - Implement cache debug tools
+
+**Success Criteria:**
+- Service worker installs and activates correctly
+- Critical assets cached on first load
+- Cache versioning works without breaking changes
+- Background sync queues failed requests
+- All existing tests still passing
+
+#### Day 4: Performance & UX Polish (November 26, 2025)
+**Primary Objectives:**
+- ⬜ **Performance Monitoring Dashboard**
+  - Core Web Vitals tracking (LCP, FID, CLS, TTFB, INP)
+  - API response time monitoring with percentiles
   - IndexedDB operation performance metrics
-  - Error reporting and analytics
-  - User experience metrics dashboard
+  - Service worker cache hit/miss rates
+  - Real-time performance dashboard in Settings
 
-- ⬜ **UI/UX Enhancements**
-  - Loading states and skeleton screens
-  - Optimistic UI updates for all CRUD operations
-  - Mobile gesture support (swipe, pull-to-refresh)
-  - Smooth transitions and animations
-  - Progressive image loading
+- ⬜ **Optimistic UI Updates**
+  - Immediate UI feedback for all CRUD operations
+  - Rollback mechanism for failed operations
+  - Loading states with skeleton screens
+  - Success/error toasts with undo actions
+  - Progressive enhancement patterns
+
+- ⬜ **Mobile UX Enhancements**
+  - Pull-to-refresh for data lists
+  - Swipe gestures for delete/edit actions
+  - Touch-optimized controls (larger tap targets)
+  - Haptic feedback for key actions
+  - Mobile-specific loading indicators
+
+- ⬜ **Advanced Error Recovery**
+  - Retry failed network requests with exponential backoff
+  - Offline queue with persistence
+  - Conflict resolution UI for concurrent edits
+  - Graceful degradation when features unavailable
+  - Error boundary improvements
+
+**Success Criteria:**
+- Core Web Vitals all in "Good" range
+- Performance dashboard shows real-time metrics
+- All UI operations feel instant (optimistic updates)
+- Mobile gestures work smoothly
+- Error recovery handles edge cases
+
+#### Technical Specifications
+
+**Service Worker Strategy:**
+```typescript
+// Cache strategies by resource type
+const strategies = {
+  assets: 'cache-first',      // CSS, JS, fonts, images
+  api: 'network-first',        // Dynamic API calls
+  pages: 'stale-while-revalidate', // HTML pages
+  avatars: 'cache-first',      // User avatars
+  documents: 'network-only'    // Fresh documents always
+};
+```
+
+**Cache Versioning:**
+```typescript
+const CACHE_VERSION = 'v2';
+const CACHES_TO_KEEP = [CACHE_VERSION];
+
+// On activate, delete old caches
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames
+          .filter((name) => !CACHES_TO_KEEP.includes(name))
+          .map((name) => caches.delete(name))
+      );
+    })
+  );
+});
+```
+
+**Performance Targets:**
+| Metric | Current | Target | Improvement |
+|--------|---------|--------|-------------|
+| LCP | 2.1s | <1.5s | 29% faster |
+| FID | 50ms | <30ms | 40% faster |
+| CLS | 0.08 | <0.05 | 38% better |
+| Cache Hit Rate | 85% | >95% | 12% better |
+| Offline Functionality | 70% | 100% | Full coverage |
+
+**Implementation Files:**
+- `public/service-worker.js` - Main service worker (refactor)
+- `src/lib/performance-monitor.ts` - Performance tracking (new)
+- `src/lib/cache-strategies.ts` - Cache management (new)
+- `src/components/PerformanceDashboard.tsx` - Metrics UI (new)
+- `src/hooks/useOptimisticUpdate.ts` - Optimistic UI (new)
+- `src/hooks/useOfflineQueue.ts` - Offline queue (new)
 
 #### Remaining Week 2 Tasks (Day 5-7)
 - ⬜ **Advanced Features**
