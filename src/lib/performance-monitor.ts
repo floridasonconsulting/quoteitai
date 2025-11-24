@@ -17,7 +17,7 @@ class PerformanceMonitor {
     inp: null,
   };
   
-  private listeners: Array&lt;(metrics: PerformanceMetrics) =&gt; void&gt; = [];
+  private listeners: Array<(metrics: PerformanceMetrics) => void> = [];
   
   constructor() {
     // Check if we are in a browser environment
@@ -28,27 +28,27 @@ class PerformanceMonitor {
   
   private initializeTracking() {
     try {
-      onLCP((metric: Metric) =&gt; {
+      onLCP((metric: Metric) => {
         this.metrics.lcp = metric.value;
         this.notifyListeners();
       });
       
-      onFID((metric: Metric) =&gt; {
+      onFID((metric: Metric) => {
         this.metrics.fid = metric.value;
         this.notifyListeners();
       });
       
-      onCLS((metric: Metric) =&gt; {
+      onCLS((metric: Metric) => {
         this.metrics.cls = metric.value;
         this.notifyListeners();
       });
       
-      onTTFB((metric: Metric) =&gt; {
+      onTTFB((metric: Metric) => {
         this.metrics.ttfb = metric.value;
         this.notifyListeners();
       });
       
-      onINP((metric: Metric) =&gt; {
+      onINP((metric: Metric) => {
         this.metrics.inp = metric.value;
         this.notifyListeners();
       });
@@ -61,18 +61,18 @@ class PerformanceMonitor {
     return { ...this.metrics };
   }
   
-  public subscribe(callback: (metrics: PerformanceMetrics) =&gt; void): () =&gt; void {
+  public subscribe(callback: (metrics: PerformanceMetrics) => void): () => void {
     this.listeners.push(callback);
     // Notify immediately with current values
     callback(this.getMetrics());
     
-    return () =&gt; {
-      this.listeners = this.listeners.filter((l) =&gt; l !== callback);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== callback);
     };
   }
   
   private notifyListeners() {
-    this.listeners.forEach((listener) =&gt; listener(this.getMetrics()));
+    this.listeners.forEach((listener) => listener(this.getMetrics()));
   }
 }
 

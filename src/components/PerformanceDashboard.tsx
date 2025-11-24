@@ -12,59 +12,59 @@ export function PerformanceDashboard() {
   
   const getScoreClass = (value: number | null, thresholds: [number, number]) => {
     if (value === null) return "text-gray-400";
-    if (value &lt;= thresholds[0]) return "text-green-600";
-    if (value &lt;= thresholds[1]) return "text-yellow-600";
+    if (value <= thresholds[0]) return "text-green-600";
+    if (value <= thresholds[1]) return "text-yellow-600";
     return "text-red-600";
   };
   
   return (
-    &lt;Card&gt;
-      &lt;CardHeader&gt;
-        &lt;CardTitle&gt;Performance Metrics&lt;/CardTitle&gt;
-      &lt;/CardHeader&gt;
-      &lt;CardContent className="space-y-4"&gt;
-        &lt;div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"&gt;
-          &lt;div className="p-4 border rounded-lg"&gt;
-            &lt;p className="text-sm font-medium text-muted-foreground"&gt;Largest Contentful Paint (LCP)&lt;/p&gt;
-            &lt;p className={`text-2xl font-bold ${getScoreClass(metrics.lcp, [2500, 4000])}`}&gt;
+    <Card>
+      <CardHeader>
+        <CardTitle>Performance Metrics</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="p-4 border rounded-lg">
+            <p className="text-sm font-medium text-muted-foreground">Largest Contentful Paint (LCP)</p>
+            <p className={`text-2xl font-bold ${getScoreClass(metrics.lcp, [2500, 4000])}`}>
               {metrics.lcp ? `${(metrics.lcp / 1000).toFixed(2)}s` : 'Measuring...'}
-            &lt;/p&gt;
-            &lt;p className="text-xs text-muted-foreground mt-1"&gt;Good: &lt;2.5s | Needs Improvement: 2.5-4s&lt;/p&gt;
-          &lt;/div&gt;
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Good: &lt;2.5s | Needs Improvement: 2.5-4s</p>
+          </div>
           
-          &lt;div className="p-4 border rounded-lg"&gt;
-            &lt;p className="text-sm font-medium text-muted-foreground"&gt;First Input Delay (FID)&lt;/p&gt;
-            &lt;p className={`text-2xl font-bold ${getScoreClass(metrics.fid, [100, 300])}`}&gt;
+          <div className="p-4 border rounded-lg">
+            <p className="text-sm font-medium text-muted-foreground">First Input Delay (FID)</p>
+            <p className={`text-2xl font-bold ${getScoreClass(metrics.fid, [100, 300])}`}>
               {metrics.fid ? `${metrics.fid.toFixed(0)}ms` : 'Measuring...'}
-            &lt;/p&gt;
-            &lt;p className="text-xs text-muted-foreground mt-1"&gt;Good: &lt;100ms | Needs Improvement: 100-300ms&lt;/p&gt;
-          &lt;/div&gt;
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Good: &lt;100ms | Needs Improvement: 100-300ms</p>
+          </div>
           
-          &lt;div className="p-4 border rounded-lg"&gt;
-            &lt;p className="text-sm font-medium text-muted-foreground"&gt;Cumulative Layout Shift (CLS)&lt;/p&gt;
-            &lt;p className={`text-2xl font-bold ${getScoreClass(metrics.cls, [0.1, 0.25])}`}&gt;
+          <div className="p-4 border rounded-lg">
+            <p className="text-sm font-medium text-muted-foreground">Cumulative Layout Shift (CLS)</p>
+            <p className={`text-2xl font-bold ${getScoreClass(metrics.cls, [0.1, 0.25])}`}>
               {metrics.cls !== null ? metrics.cls.toFixed(3) : 'Measuring...'}
-            &lt;/p&gt;
-            &lt;p className="text-xs text-muted-foreground mt-1"&gt;Good: &lt;0.1 | Needs Improvement: 0.1-0.25&lt;/p&gt;
-          &lt;/div&gt;
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Good: &lt;0.1 | Needs Improvement: 0.1-0.25</p>
+          </div>
           
-          &lt;div className="p-4 border rounded-lg"&gt;
-            &lt;p className="text-sm font-medium text-muted-foreground"&gt;Time to First Byte (TTFB)&lt;/p&gt;
-            &lt;p className={`text-2xl font-bold ${getScoreClass(metrics.ttfb, [800, 1800])}`}&gt;
+          <div className="p-4 border rounded-lg">
+            <p className="text-sm font-medium text-muted-foreground">Time to First Byte (TTFB)</p>
+            <p className={`text-2xl font-bold ${getScoreClass(metrics.ttfb, [800, 1800])}`}>
               {metrics.ttfb ? `${metrics.ttfb.toFixed(0)}ms` : 'Measuring...'}
-            &lt;/p&gt;
-            &lt;p className="text-xs text-muted-foreground mt-1"&gt;Good: &lt;800ms | Needs Improvement: 800-1800ms&lt;/p&gt;
-          &lt;/div&gt;
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Good: &lt;800ms | Needs Improvement: 800-1800ms</p>
+          </div>
           
-          &lt;div className="p-4 border rounded-lg"&gt;
-            &lt;p className="text-sm font-medium text-muted-foreground"&gt;Interaction to Next Paint (INP)&lt;/p&gt;
-            &lt;p className={`text-2xl font-bold ${getScoreClass(metrics.inp, [200, 500])}`}&gt;
+          <div className="p-4 border rounded-lg">
+            <p className="text-sm font-medium text-muted-foreground">Interaction to Next Paint (INP)</p>
+            <p className={`text-2xl font-bold ${getScoreClass(metrics.inp, [200, 500])}`}>
               {metrics.inp ? `${metrics.inp.toFixed(0)}ms` : 'Measuring...'}
-            &lt;/p&gt;
-            &lt;p className="text-xs text-muted-foreground mt-1"&gt;Good: &lt;200ms | Needs Improvement: 200-500ms&lt;/p&gt;
-          &lt;/div&gt;
-        &lt;/div&gt;
-      &lt;/CardContent&gt;
-    &lt;/Card&gt;
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Good: &lt;200ms | Needs Improvement: 200-500ms</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
