@@ -1,5 +1,21 @@
 // Import fake-indexeddb to polyfill IndexedDB in Node.js test environment
 import 'fake-indexeddb/auto';
+import { IDBFactory, IDBKeyRange } from 'fake-indexeddb';
+
+// CRITICAL: Explicitly set global IndexedDB objects to ensure polyfill works
+// This is needed because fake-indexeddb/auto might not always work reliably
+if (typeof globalThis.indexedDB === 'undefined') {
+  globalThis.indexedDB = new IDBFactory();
+}
+if (typeof globalThis.IDBKeyRange === 'undefined') {
+  globalThis.IDBKeyRange = IDBKeyRange;
+}
+
+// Verify IndexedDB is available (this should never fail now)
+console.log('[Test Setup] IndexedDB polyfill status:', {
+  indexedDB: typeof globalThis.indexedDB,
+  IDBKeyRange: typeof globalThis.IDBKeyRange,
+});
 
 import '@testing-library/jest-dom';
 import { beforeAll, afterEach, vi } from 'vitest';
