@@ -1,5 +1,6 @@
 export interface Customer {
   id: string;
+  userId: string;  // Required for IndexedDB user_id index
   name: string;
   email: string;
   phone: string;
@@ -14,6 +15,7 @@ export interface Customer {
 
 export interface Item {
   id: string;
+  userId: string;  // Required for IndexedDB user_id index
   name: string;
   description: string;
   category: string;
@@ -37,6 +39,7 @@ export interface QuoteItem {
 
 export interface Quote {
   id: string;
+  userId: string;  // Required for IndexedDB user_id index
   quoteNumber: string;
   customerId: string;
   customerName: string;
