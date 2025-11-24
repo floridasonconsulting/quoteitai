@@ -201,8 +201,8 @@ describe('useSyncManager', () => {
   });
 
   it('should handle sync errors gracefully', async () => {
-    // Mock a failed insert
-    mockSupabaseInsert.mockResolvedValueOnce({ error: new Error('Insert failed') });
+    // Mock a failed insert that keeps failing for all retry attempts
+    mockSupabaseInsert.mockResolvedValue({ error: new Error('Insert failed') });
 
     const { result } = renderHook(() => useSyncManager());
 
