@@ -1,249 +1,236 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CacheManager, cacheManager } from '../cache-manager';
 
-describe('CacheManager', () => {
-  let manager: CacheManager;
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import {
+  getCacheQuota,
+  getCacheDetails,
+  clearAllCaches,
+  clearCache,
+  clearOldCaches,
+  getCacheStats,
+  cacheExists,
+  warmUpCache,
+  exportCacheData,
+} from "../cache-utils";
+import { CACHE_NAMES } from "../cache-strategies";
 
-  beforeEach(() => {
-    localStorage.clear();
-    manager = new CacheManager();
+describe("Cache Utilities", () => {
+  beforeEach(async () => {
+    // Clear all caches before each test
+    const cacheNames = await caches.keys();
+    await Promise.all(cacheNames.map((name) => caches.delete(name)));
   });
 
-  afterEach(() => {
-    localStorage.clear();
+  afterEach(async () => {
+    // Clean up after each test
+    const cacheNames = await caches.keys();
+    await Promise.all(cacheNames.map((name) => caches.delete(name)));
   });
 
-  describe('get/set operations', () => {
-    it('should cache and retrieve data', async () => {
-      const testData = { id: '1', name: 'Test Customer' };
-      
-      await manager.set('customers', testData, '1');
-      const cached = await manager.get('customers', '1');
-      
-      expect(cached).toEqual(testData);
-    });
+  describe("getCacheQuota", () => {
+    it("should return cache quota information", async () => {
+      const quota = await getCacheQuota();
 
-    it('should return null for cache miss', async () => {
-      const cached = await manager.get('customers', 'nonexistent');
-      expect(cached).toBeNull();
-    });
-
-    it('should respect TTL expiration', async () => {
-      const testData = { id: '1', name: 'Test' };
-      
-      // Mock Date.now() to control time
-      const originalNow = Date.now;
-      let currentTime = Date.now();
-      vi.spyOn(Date, 'now').mockImplementation(() => currentTime);
-      
-      await manager.set('quotes', testData, '1');
-      
-      // Advance time past TTL (5 minutes for quotes)
-      currentTime += 6 * 60 * 1000;
-      
-      const cached = await manager.get('quotes', '1');
-      expect(cached).toBeNull();
-      
-      // Restore
-      Date.now = originalNow;
-    });
-
-    it('should cache all entities without ID', async () => {
-      const testData = [
-        { id: '1', name: 'Customer 1' },
-        { id: '2', name: 'Customer 2' }
-      ];
-      
-      await manager.set('customers', testData);
-      const cached = await manager.get('customers');
-      
-      expect(cached).toEqual(testData);
+      expect(quota).toHaveProperty("usage");
+      expect(quota).toHaveProperty("quota");
+      expect(quota).toHaveProperty("percentage");
+      expect(quota).toHaveProperty("usageMB");
+      expect(quota).toHaveProperty("quotaMB");
+      expect(typeof quota.usage).toBe("number");
+      expect(typeof quota.quota).toBe("number");
     });
   });
 
-  describe('invalidation', () => {
-    it('should invalidate specific cache entry', async () => {
-      const testData = { id: '1', name: 'Test' };
-      
-      await manager.set('customers', testData, '1');
-      await manager.invalidate('customers', '1');
-      
-      const cached = await manager.get('customers', '1');
-      expect(cached).toBeNull();
+  describe("getCacheDetails", () => {
+    it("should return empty array when no caches exist", async () => {
+      const details = await getCacheDetails();
+      expect(details).toEqual([]);
     });
 
-    it('should invalidate related caches', async () => {
-      const customer = { id: '1', name: 'Test Customer' };
-      const quotes = [{ id: 'q1', customer_id: '1' }];
-      
-      await manager.set('customers', customer, '1');
-      await manager.set('quotes', quotes);
-      
-      // Invalidating customer should invalidate quotes
-      await manager.invalidate('customers', '1');
-      
-      const cachedQuotes = await manager.get('quotes');
-      expect(cachedQuotes).toBeNull();
-    });
-
-    it('should clear all caches', async () => {
-      await manager.set('customers', { id: '1' }, '1');
-      await manager.set('items', { id: '1' }, '1');
-      await manager.set('quotes', { id: '1' }, '1');
-      
-      await manager.clearAll();
-      
-      expect(await manager.get('customers', '1')).toBeNull();
-      expect(await manager.get('items', '1')).toBeNull();
-      expect(await manager.get('quotes', '1')).toBeNull();
-    });
-  });
-
-  describe('request coalescing', () => {
-    it('should coalesce duplicate requests', async () => {
-      const fetchFn = vi.fn().mockResolvedValue({ data: 'test' });
-      
-      // Fire multiple requests simultaneously
-      const promises = [
-        manager.coalesce('test-key', fetchFn),
-        manager.coalesce('test-key', fetchFn),
-        manager.coalesce('test-key', fetchFn),
-      ];
-      
-      await Promise.all(promises);
-      
-      // Fetch should only be called once
-      expect(fetchFn).toHaveBeenCalledTimes(1);
-    });
-
-    it('should not coalesce different keys', async () => {
-      const fetchFn1 = vi.fn().mockResolvedValue({ data: 'test1' });
-      const fetchFn2 = vi.fn().mockResolvedValue({ data: 'test2' });
-      
-      await Promise.all([
-        manager.coalesce('key1', fetchFn1),
-        manager.coalesce('key2', fetchFn2),
-      ]);
-      
-      expect(fetchFn1).toHaveBeenCalledTimes(1);
-      expect(fetchFn2).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('metrics', () => {
-    it('should track cache hits', async () => {
-      const testData = { id: '1', name: 'Test' };
-      
-      await manager.set('customers', testData, '1');
-      await manager.get('customers', '1');
-      
-      const stats = manager.getStats();
-      expect(stats.hits).toBe(1);
-      expect(stats.totalRequests).toBe(1);
-    });
-
-    it('should track cache misses', async () => {
-      await manager.get('customers', 'nonexistent');
-      
-      const stats = manager.getStats();
-      expect(stats.misses).toBe(1);
-      expect(stats.totalRequests).toBe(1);
-    });
-
-    it('should calculate average response time', async () => {
-      const testData = { id: '1', name: 'Test' };
-      
-      await manager.set('customers', testData, '1');
-      await manager.get('customers', '1');
-      await manager.get('customers', '1');
-      
-      const stats = manager.getStats();
-      expect(stats.avgResponseTime).toBeGreaterThan(0);
-    });
-
-    it('should reset metrics', () => {
-      manager.resetMetrics();
-      
-      const stats = manager.getStats();
-      expect(stats.hits).toBe(0);
-      expect(stats.misses).toBe(0);
-      expect(stats.errors).toBe(0);
-      expect(stats.totalRequests).toBe(0);
-    });
-  });
-
-  describe('cache warming', () => {
-    it('should preload high-priority resources', async () => {
-      const consoleSpy = vi.spyOn(console, 'log');
-      
-      await manager.preload(['customers', 'items', 'settings']);
-      
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Preloading')
+    it("should return details for existing caches", async () => {
+      // Create test cache
+      const testCache = await caches.open("test-cache");
+      await testCache.put(
+        new Request("/test"),
+        new Response("test data", { status: 200 })
       );
+
+      const details = await getCacheDetails();
+
+      expect(details.length).toBeGreaterThan(0);
+      expect(details[0]).toHaveProperty("name");
+      expect(details[0]).toHaveProperty("size");
+      expect(details[0]).toHaveProperty("count");
+      expect(details[0]).toHaveProperty("sizeMB");
     });
 
-    it('should warm cache with high-priority entity types', async () => {
-      const consoleSpy = vi.spyOn(console, 'log');
-      
-      await manager.warmCache();
-      
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Warming cache')
+    it("should calculate cache size correctly", async () => {
+      const testCache = await caches.open("test-cache");
+      const testData = "x".repeat(1024); // 1KB of data
+      await testCache.put(
+        new Request("/test"),
+        new Response(testData, { status: 200 })
       );
+
+      const details = await getCacheDetails();
+      const testCacheDetails = details.find((d) => d.name === "test-cache");
+
+      expect(testCacheDetails).toBeDefined();
+      expect(testCacheDetails!.count).toBe(1);
+      expect(testCacheDetails!.size).toBeGreaterThan(0);
     });
   });
 
-  describe('cache configurations', () => {
-    it('should use correct TTL for customers (10 min)', async () => {
-      const testData = { id: '1', name: 'Test' };
-      const originalNow = Date.now;
-      let currentTime = Date.now();
-      vi.spyOn(Date, 'now').mockImplementation(() => currentTime);
-      
-      await manager.set('customers', testData, '1');
-      
-      // 9 minutes - should still be valid
-      currentTime += 9 * 60 * 1000;
-      expect(await manager.get('customers', '1')).toEqual(testData);
-      
-      // 11 minutes - should be expired
-      currentTime += 2 * 60 * 1000;
-      expect(await manager.get('customers', '1')).toBeNull();
-      
-      Date.now = originalNow;
-    });
+  describe("clearAllCaches", () => {
+    it("should clear all existing caches", async () => {
+      // Create multiple test caches
+      await caches.open("test-cache-1");
+      await caches.open("test-cache-2");
+      await caches.open("test-cache-3");
 
-    it('should use correct TTL for items (15 min)', async () => {
-      const testData = { id: '1', name: 'Test' };
-      const originalNow = Date.now;
-      let currentTime = Date.now();
-      vi.spyOn(Date, 'now').mockImplementation(() => currentTime);
-      
-      await manager.set('items', testData, '1');
-      
-      // 14 minutes - should still be valid
-      currentTime += 14 * 60 * 1000;
-      expect(await manager.get('items', '1')).toEqual(testData);
-      
-      // 16 minutes - should be expired
-      currentTime += 2 * 60 * 1000;
-      expect(await manager.get('items', '1')).toBeNull();
-      
-      Date.now = originalNow;
+      let cacheNames = await caches.keys();
+      expect(cacheNames.length).toBe(3);
+
+      await clearAllCaches();
+
+      cacheNames = await caches.keys();
+      expect(cacheNames.length).toBe(0);
     });
   });
-});
 
-describe('Singleton cacheManager', () => {
-  it('should export singleton instance', () => {
-    expect(cacheManager).toBeInstanceOf(CacheManager);
+  describe("clearCache", () => {
+    it("should clear specific cache by name", async () => {
+      await caches.open("test-cache");
+      
+      let exists = await cacheExists("test-cache");
+      expect(exists).toBe(true);
+
+      const deleted = await clearCache("test-cache");
+      expect(deleted).toBe(true);
+
+      exists = await cacheExists("test-cache");
+      expect(exists).toBe(false);
+    });
+
+    it("should return false for non-existent cache", async () => {
+      const deleted = await clearCache("non-existent-cache");
+      expect(deleted).toBe(false);
+    });
   });
 
-  it('should maintain state across imports', async () => {
-    await cacheManager.set('customers', { id: '1' }, '1');
-    
-    const cached = await cacheManager.get('customers', '1');
-    expect(cached).toEqual({ id: '1' });
+  describe("clearOldCaches", () => {
+    it("should clear caches that don't match current version", async () => {
+      // Create old version caches
+      await caches.open("quote-it-ai-static-v1.0");
+      await caches.open("quote-it-ai-api-v1.0");
+      
+      // Create current version cache
+      await caches.open(CACHE_NAMES.static);
+
+      const cleared = await clearOldCaches();
+      
+      expect(cleared).toBe(2);
+      
+      const remainingCaches = await caches.keys();
+      expect(remainingCaches).toContain(CACHE_NAMES.static);
+      expect(remainingCaches).not.toContain("quote-it-ai-static-v1.0");
+      expect(remainingCaches).not.toContain("quote-it-ai-api-v1.0");
+    });
+
+    it("should not clear current version caches", async () => {
+      await caches.open(CACHE_NAMES.static);
+      await caches.open(CACHE_NAMES.api);
+
+      const cleared = await clearOldCaches();
+      
+      expect(cleared).toBe(0);
+      
+      const remainingCaches = await caches.keys();
+      expect(remainingCaches).toContain(CACHE_NAMES.static);
+      expect(remainingCaches).toContain(CACHE_NAMES.api);
+    });
+  });
+
+  describe("getCacheStats", () => {
+    it("should return comprehensive cache statistics", async () => {
+      const testCache = await caches.open("test-cache");
+      await testCache.put(
+        new Request("/test1"),
+        new Response("data1", { status: 200 })
+      );
+      await testCache.put(
+        new Request("/test2"),
+        new Response("data2", { status: 200 })
+      );
+
+      const stats = await getCacheStats();
+
+      expect(stats).toHaveProperty("totalCaches");
+      expect(stats).toHaveProperty("totalSize");
+      expect(stats).toHaveProperty("totalSizeMB");
+      expect(stats).toHaveProperty("totalEntries");
+      expect(stats).toHaveProperty("quota");
+      expect(stats.totalCaches).toBeGreaterThan(0);
+      expect(stats.totalEntries).toBe(2);
+    });
+  });
+
+  describe("cacheExists", () => {
+    it("should return true for existing cache", async () => {
+      await caches.open("test-cache");
+      const exists = await cacheExists("test-cache");
+      expect(exists).toBe(true);
+    });
+
+    it("should return false for non-existent cache", async () => {
+      const exists = await cacheExists("non-existent-cache");
+      expect(exists).toBe(false);
+    });
+  });
+
+  describe("warmUpCache", () => {
+    it("should cache specified URLs", async () => {
+      // Mock fetch to return successful responses
+      global.fetch = vi.fn().mockResolvedValue(
+        new Response("test data", { status: 200 })
+      );
+
+      const urls = ["/test1", "/test2", "/test3"];
+      const successCount = await warmUpCache("test-cache", urls);
+
+      expect(successCount).toBe(3);
+
+      const cache = await caches.open("test-cache");
+      const keys = await cache.keys();
+      expect(keys.length).toBe(3);
+    });
+
+    it("should handle failed fetches gracefully", async () => {
+      // Mock fetch to fail
+      global.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
+
+      const urls = ["/test1", "/test2"];
+      const successCount = await warmUpCache("test-cache", urls);
+
+      expect(successCount).toBe(0);
+    });
+  });
+
+  describe("exportCacheData", () => {
+    it("should export complete cache data", async () => {
+      const testCache = await caches.open("test-cache");
+      await testCache.put(
+        new Request("/test"),
+        new Response("data", { status: 200 })
+      );
+
+      const exportData = await exportCacheData();
+
+      expect(exportData).toHaveProperty("timestamp");
+      expect(exportData).toHaveProperty("quota");
+      expect(exportData).toHaveProperty("caches");
+      expect(exportData).toHaveProperty("stats");
+      expect(Array.isArray(exportData.caches)).toBe(true);
+      expect(new Date(exportData.timestamp).getTime()).toBeGreaterThan(0);
+    });
   });
 });
