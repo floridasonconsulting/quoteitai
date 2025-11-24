@@ -25,6 +25,8 @@ import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 // ============================================================================
 // Cache Storage API Mock
 // ============================================================================
+const MOCK_ORIGIN = 'https://test.example.com';
+
 class MockCache {
   private storage: Map<string, Response>;
 
@@ -32,8 +34,19 @@ class MockCache {
     this.storage = new Map();
   }
 
+  private normalizeKey(request: RequestInfo | URL): string {
+    if (typeof request === 'string') {
+      // If it's a relative path, prepend the mock origin
+      return request.startsWith('http') ? request : `${MOCK_ORIGIN}${request}`;
+    }
+    if (request instanceof Request) {
+      return request.url;
+    }
+    return request.toString();
+  }
+
   async match(request: RequestInfo | URL): Promise<Response | undefined> {
-    const key = typeof request === 'string' ? request : request.toString();
+    const key = this.normalizeKey(request);
     return this.storage.get(key);
   }
 
@@ -41,18 +54,18 @@ class MockCache {
     if (!request) {
       return Array.from(this.storage.values());
     }
-    const key = typeof request === 'string' ? request : request.toString();
+    const key = this.normalizeKey(request);
     const response = this.storage.get(key);
     return response ? [response] : [];
   }
 
   async put(request: RequestInfo | URL, response: Response): Promise<void> {
-    const key = typeof request === 'string' ? request : request.toString();
+    const key = this.normalizeKey(request);
     this.storage.set(key, response);
   }
 
   async delete(request: RequestInfo | URL): Promise<boolean> {
-    const key = typeof request === 'string' ? request : request.toString();
+    const key = this.normalizeKey(request);
     return this.storage.delete(key);
   }
 
