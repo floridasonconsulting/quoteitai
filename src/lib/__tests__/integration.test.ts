@@ -46,6 +46,11 @@ describe("Integration Tests - Real Application Data Flow", () => {
     // Clear localStorage
     localStorage.clear();
     
+    // Clear migration status and flags
+    localStorage.removeItem("data-migrated-to-indexeddb");
+    localStorage.removeItem("indexeddb_migration_status");
+    localStorage.removeItem("indexeddb_migration_backup");
+    
     // Set online mode
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
   });
