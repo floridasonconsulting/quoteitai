@@ -270,13 +270,33 @@ const { createSelectChain, createUpdateChain, createDeleteChain, createFromHandl
     return chain;
   };
 
-  const createFromHandler = (tableName: string) => ({
-    select: vi.fn(() => createSelectChain(tableName)),
-    insert: vi.fn(() => createInsertChain()),
-    upsert: vi.fn(() => createUpsertChain()),
-    update: vi.fn(() => createUpdateChain()),
-    delete: vi.fn(() => createDeleteChain()),
-  });
+  const createFromHandler = (tableName: string) => {
+    // Helper to return a promise that also has chainable methods
+    const createChainable = (mockResult: any) => {
+      const promise = Promise.resolve(mockResult);
+      const chainable = {
+        select: vi.fn(() => createChainable({ data: [], error: null })),
+        insert: vi.fn(() => createChainable({ data: null, error: null })),
+        upsert: vi.fn(() => createChainable({ data: null, error: null })),
+        update: vi.fn(() => createChainable({ data: null, error: null })),
+        delete: vi.fn(() => createChainable({ data: null, error: null })),
+        eq: vi.fn(() => createChainable(mockResult)),
+        single: vi.fn().mockResolvedValue(mockResult),
+        maybeSingle: vi.fn().mockResolvedValue(mockResult),
+        order: vi.fn(() => createChainable(mockResult)),
+        limit: vi.fn(() => createChainable(mockResult)),
+      };
+      return Object.assign(promise, chainable);
+    };
+
+    return {
+      select: vi.fn(() => createChainable({ data: [], error: null })),
+      insert: vi.fn(() => createChainable({ data: null, error: null })),
+      upsert: vi.fn(() => createChainable({ data: null, error: null })),
+      update: vi.fn(() => createChainable({ data: null, error: null })),
+      delete: vi.fn(() => createChainable({ data: null, error: null })),
+    };
+  };
 
   return { createSelectChain, createUpdateChain, createDeleteChain, createFromHandler };
 });

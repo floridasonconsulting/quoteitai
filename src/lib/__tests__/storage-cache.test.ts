@@ -4,7 +4,7 @@ import { storageCache } from '../storage-cache';
 describe('StorageCache', () => {
   beforeEach(() => {
     localStorage.clear();
-    storageCache.clear();
+    storageCache.clearCache();
     vi.clearAllMocks();
   });
 
