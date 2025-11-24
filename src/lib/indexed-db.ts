@@ -216,7 +216,11 @@ export async function getById<T>(
     const request = store.get(id);
 
     return new Promise((resolve, reject) => {
-      request.onsuccess = () => resolve(request.result as T | null);
+      request.onsuccess = () => {
+        // CRITICAL: Return null instead of undefined when not found
+        const result = request.result;
+        resolve(result !== undefined ? (result as T) : null);
+      };
       request.onerror = () => reject(request.error);
     });
   });
