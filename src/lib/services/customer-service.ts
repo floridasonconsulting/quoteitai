@@ -40,7 +40,13 @@ export async function getCustomers(userId: string | undefined): Promise<Customer
           console.log(`[CustomerService] Retrieved ${indexedDBData.length} customers from IndexedDB`);
           // Update cache
           await cacheManager.set('customers', indexedDBData);
-          return indexedDBData;
+          
+          // If offline, return IndexedDB data immediately
+          if (!navigator.onLine) {
+            return indexedDBData;
+          }
+          
+          // If online, we'll fetch from Supabase to sync, but keep IndexedDB data as fallback
         }
       } catch (error) {
         console.warn('[CustomerService] IndexedDB read failed, falling back to Supabase:', error);
@@ -65,6 +71,13 @@ export async function getCustomers(userId: string | undefined): Promise<Customer
         
         if (error) {
           console.error('Error fetching customers:', error);
+          // Try IndexedDB as fallback
+          if (isIndexedDBSupported()) {
+            const indexedDBData = await CustomerDB.getAll(userId);
+            if (indexedDBData && indexedDBData.length > 0) {
+              return indexedDBData;
+            }
+          }
           if (cached) {
             console.log('[Cache] Using cached customers after error');
             return cached;
@@ -74,15 +87,26 @@ export async function getCustomers(userId: string | undefined): Promise<Customer
         
         const result = data ? data.map(item => toCamelCase(item)) as Customer[] : [];
         
-        // Save to IndexedDB if supported and we received data
-        if (isIndexedDBSupported() && result.length > 0) {
+        // Only update IndexedDB if we received data from Supabase
+        // If Supabase returns empty but IndexedDB has data, keep IndexedDB data (offline-created records)
+        if (isIndexedDBSupported()) {
           try {
-            // Only save the records we received from Supabase
-            // This preserves any offline-created records that haven't synced yet
-            for (const customer of result) {
-              await CustomerDB.update({ ...customer, user_id: userId } as never);
+            if (result.length > 0) {
+              // Sync Supabase data to IndexedDB
+              for (const customer of result) {
+                await CustomerDB.update({ ...customer, user_id: userId } as never);
+              }
+              console.log(`[CustomerService] Saved ${result.length} customers to IndexedDB`);
+            } else {
+              // Supabase returned empty - check if IndexedDB has data
+              const indexedDBData = await CustomerDB.getAll(userId);
+              if (indexedDBData && indexedDBData.length > 0) {
+                console.log(`[CustomerService] Supabase empty, using ${indexedDBData.length} customers from IndexedDB`);
+                // Update cache with IndexedDB data
+                await cacheManager.set('customers', indexedDBData);
+                return indexedDBData;
+              }
             }
-            console.log(`[CustomerService] Saved ${result.length} customers to IndexedDB`);
           } catch (error) {
             console.warn('[CustomerService] Failed to save to IndexedDB:', error);
           }
@@ -94,6 +118,13 @@ export async function getCustomers(userId: string | undefined): Promise<Customer
         return result;
       } catch (error) {
         console.error('Error fetching customers:', error);
+        // Try IndexedDB as fallback
+        if (isIndexedDBSupported()) {
+          const indexedDBData = await CustomerDB.getAll(userId);
+          if (indexedDBData && indexedDBData.length > 0) {
+            return indexedDBData;
+          }
+        }
         if (cached) {
           console.log('[Cache] Returning cached customers after timeout');
           return cached;
