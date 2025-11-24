@@ -10,6 +10,17 @@
 
 import { Customer, Item, Quote, CompanySettings } from "@/types";
 
+/**
+ * Check if IndexedDB is supported in the current browser
+ */
+export function isIndexedDBSupported(): boolean {
+  try {
+    return "indexedDB" in window && window.indexedDB !== null;
+  } catch {
+    return false;
+  }
+}
+
 // Database configuration
 const DB_NAME = "quote-it-db";
 const DB_VERSION = 1;
@@ -54,7 +65,7 @@ function initDB(): Promise<IDBDatabase> {
 
   dbPromise = new Promise((resolve, reject) => {
     // Check for IndexedDB support
-    if (!("indexedDB" in window)) {
+    if (!isIndexedDBSupported()) {
       console.error("[IndexedDB] Not supported in this browser");
       reject(new Error("IndexedDB not supported"));
       return;

@@ -13,7 +13,7 @@
  */
 
 import { Customer, Item, Quote, CompanySettings } from "@/types";
-import { CustomerDB, ItemDB, QuoteDB, SettingsDB, STORES, getStorageStats } from "./indexed-db";
+import { CustomerDB, ItemDB, QuoteDB, SettingsDB, STORES, getStorageStats, isIndexedDBSupported } from "./indexed-db";
 
 // Migration status keys
 const MIGRATION_STATUS_KEY = "indexeddb_migration_status";
@@ -34,17 +34,6 @@ export interface MigrationResult {
   success: boolean;
   status: MigrationStatus;
   message: string;
-}
-
-/**
- * Check if IndexedDB is supported in the current browser
- */
-export function isIndexedDBSupported(): boolean {
-  try {
-    return "indexedDB" in window && indexedDB !== null;
-  } catch {
-    return false;
-  }
 }
 
 /**

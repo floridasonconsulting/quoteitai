@@ -4,9 +4,8 @@ import {
   isMigrationCompleted,
   getMigrationStatus,
   clearMigrationData,
-  isIndexedDBSupported,
 } from '../indexed-db-migration';
-import { deleteDatabase } from '../indexed-db';
+import { deleteDatabase, isIndexedDBSupported } from '../indexed-db';
 import { Customer, Item, Quote, CompanySettings } from '@/types';
 
 describe('IndexedDB Migration', () => {
