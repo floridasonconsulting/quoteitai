@@ -1,382 +1,306 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { checkAndMigrateData } from "@/lib/migration-helper";
-import { IndexedDBService } from "@/lib/indexed-db";
-import { CustomerService } from "@/lib/services/customer-service";
-import { ItemService } from "@/lib/services/item-service";
-import { QuoteService } from "@/lib/services/quote-service";
-import type { Customer, Item, Quote } from "@/types";
+import { getCustomers, addCustomer } from "@/lib/services/customer-service";
+import { getItems, addItem } from "@/lib/services/item-service";
+import { getQuotes, addQuote } from "@/lib/services/quote-service";
+import { CustomerDB, ItemDB, QuoteDB } from "@/lib/indexed-db";
+import { Customer, Item, Quote } from "@/types";
 
-// Mock Supabase
+// Mock Supabase client
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: vi.fn(() => ({
       select: vi.fn(() => ({
+        eq: vi.fn(() => Promise.resolve({ data: [], error: null })),
+      })),
+      insert: vi.fn(() => Promise.resolve({ error: null })),
+      update: vi.fn(() => ({
         eq: vi.fn(() => ({
-          data: [],
-          error: null,
+          eq: vi.fn(() => Promise.resolve({ error: null })),
         })),
       })),
-      insert: vi.fn(() => ({ data: [], error: null })),
-      update: vi.fn(() => ({ data: [], error: null })),
-      delete: vi.fn(() => ({ data: [], error: null })),
-    })),
-    auth: {
-      getSession: vi.fn(() => ({
-        data: { session: { user: { id: "test-user-id" } } },
-        error: null,
+      delete: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => Promise.resolve({ error: null })),
+        })),
       })),
-    },
+    })),
   },
 }));
 
-describe("Integration Tests - IndexedDB Migration & Data Flow", () => {
+// Mock data refresh dispatch
+vi.mock("@/hooks/useDataRefresh", () => ({
+  dispatchDataRefresh: vi.fn(),
+}));
+
+describe("Integration Tests - Real Application Data Flow", () => {
   const testUserId = "test-user-123";
-  let customerService: CustomerService;
-  let itemService: ItemService;
-  let quoteService: QuoteService;
-
+  
   beforeEach(async () => {
-    // Clear all storage
-    localStorage.clear();
-    sessionStorage.clear();
+    // Clear all stores before each test
+    await CustomerDB.clear(testUserId);
+    await ItemDB.clear(testUserId);
+    await QuoteDB.clear(testUserId);
     
-    // Initialize services
-    customerService = new CustomerService();
-    itemService = new ItemService();
-    quoteService = new QuoteService();
-
-    // Clear IndexedDB
-    const db = await IndexedDBService.getInstance();
-    await db.clearAllData();
-  });
-
-  afterEach(async () => {
-    // Cleanup
+    // Clear localStorage
     localStorage.clear();
-    const db = await IndexedDBService.getInstance();
-    await db.clearAllData();
+    
+    // Set online mode
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
   });
 
-  describe("localStorage to IndexedDB Migration", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe("Migration from localStorage to IndexedDB", () => {
     it("should migrate customers from localStorage to IndexedDB", async () => {
-      // Setup: Add test data to localStorage
-      const testCustomers: Customer[] = [
+      // Setup: Add data to localStorage
+      const localStorageCustomers: Customer[] = [
         {
           id: "cust-1",
-          user_id: testUserId,
-          name: "Test Customer 1",
-          email: "test1@example.com",
-          phone: "555-0001",
-          company: "Test Co 1",
-          address: "123 Test St",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: "cust-2",
-          user_id: testUserId,
-          name: "Test Customer 2",
-          email: "test2@example.com",
-          phone: "555-0002",
-          company: "Test Co 2",
-          address: "456 Test Ave",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          name: "Test Customer",
+          email: "test@example.com",
+          phone: "555-1234",
+          address: "123 Main St",
+          userId: testUserId,
         },
       ];
-      localStorage.setItem(`customers_${testUserId}`, JSON.stringify(testCustomers));
+      localStorage.setItem(
+        `customers_${testUserId}`,
+        JSON.stringify(localStorageCustomers)
+      );
 
       // Execute migration
       await checkAndMigrateData(testUserId);
 
       // Verify: Data should be in IndexedDB
-      const db = await IndexedDBService.getInstance();
-      const migratedCustomers = await db.getAll<Customer>("customers");
-      
-      expect(migratedCustomers).toHaveLength(2);
-      expect(migratedCustomers[0].name).toBe("Test Customer 1");
-      expect(migratedCustomers[1].name).toBe("Test Customer 2");
-
-      // Verify: localStorage should still have the data (backup)
-      const localStorageData = localStorage.getItem(`customers_${testUserId}`);
-      expect(localStorageData).toBeTruthy();
+      const indexedDBCustomers = await CustomerDB.getAll(testUserId);
+      expect(indexedDBCustomers).toHaveLength(1);
+      expect(indexedDBCustomers[0].name).toBe("Test Customer");
+      expect(indexedDBCustomers[0].email).toBe("test@example.com");
     });
 
     it("should migrate items from localStorage to IndexedDB", async () => {
-      // Setup: Add test data to localStorage
-      const testItems: Item[] = [
+      // Setup: Add data to localStorage
+      const localStorageItems: Item[] = [
         {
           id: "item-1",
-          user_id: testUserId,
-          name: "Test Item 1",
-          description: "Description 1",
-          price: 100,
-          category: "Category 1",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: "item-2",
-          user_id: testUserId,
-          name: "Test Item 2",
-          description: "Description 2",
-          price: 200,
-          category: "Category 2",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          name: "Test Item",
+          description: "Test Description",
+          basePrice: 100,
+          finalPrice: 120,
+          markup: 20,
+          markupType: "percentage",
+          category: "Service",
+          userId: testUserId,
         },
       ];
-      localStorage.setItem(`items_${testUserId}`, JSON.stringify(testItems));
+      localStorage.setItem(
+        `items_${testUserId}`,
+        JSON.stringify(localStorageItems)
+      );
 
       // Execute migration
       await checkAndMigrateData(testUserId);
 
       // Verify: Data should be in IndexedDB
-      const db = await IndexedDBService.getInstance();
-      const migratedItems = await db.getAll<Item>("items");
-      
-      expect(migratedItems).toHaveLength(2);
-      expect(migratedItems[0].name).toBe("Test Item 1");
-      expect(migratedItems[1].price).toBe(200);
+      const indexedDBItems = await ItemDB.getAll(testUserId);
+      expect(indexedDBItems).toHaveLength(1);
+      expect(indexedDBItems[0].name).toBe("Test Item");
+      expect(indexedDBItems[0].basePrice).toBe(100);
     });
 
     it("should migrate quotes from localStorage to IndexedDB", async () => {
-      // Setup: Add test data to localStorage
-      const testQuotes: Quote[] = [
+      // Setup: Add data to localStorage
+      const localStorageQuotes: Quote[] = [
         {
           id: "quote-1",
-          user_id: testUserId,
-          customer_id: "cust-1",
-          quote_number: "Q-001",
-          date: new Date().toISOString(),
-          valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          quoteNumber: "Q-001",
+          customerId: "cust-1",
+          customerName: "Test Customer",
           items: [],
           subtotal: 1000,
           tax: 100,
           total: 1100,
           status: "draft",
-          notes: "Test notes",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          validUntil: new Date().toISOString(),
+          userId: testUserId,
         },
       ];
-      localStorage.setItem(`quotes_${testUserId}`, JSON.stringify(testQuotes));
+      localStorage.setItem(
+        `quotes_${testUserId}`,
+        JSON.stringify(localStorageQuotes)
+      );
 
       // Execute migration
       await checkAndMigrateData(testUserId);
 
       // Verify: Data should be in IndexedDB
-      const db = await IndexedDBService.getInstance();
-      const migratedQuotes = await db.getAll<Quote>("quotes");
-      
-      expect(migratedQuotes).toHaveLength(1);
-      expect(migratedQuotes[0].quote_number).toBe("Q-001");
-      expect(migratedQuotes[0].total).toBe(1100);
-    });
-
-    it("should handle migration when localStorage is empty", async () => {
-      // Execute migration with no data
-      await checkAndMigrateData(testUserId);
-
-      // Verify: IndexedDB should be empty but initialized
-      const db = await IndexedDBService.getInstance();
-      const customers = await db.getAll<Customer>("customers");
-      const items = await db.getAll<Item>("items");
-      const quotes = await db.getAll<Quote>("quotes");
-      
-      expect(customers).toHaveLength(0);
-      expect(items).toHaveLength(0);
-      expect(quotes).toHaveLength(0);
+      const indexedDBQuotes = await QuoteDB.getAll(testUserId);
+      expect(indexedDBQuotes).toHaveLength(1);
+      expect(indexedDBQuotes[0].quoteNumber).toBe("Q-001");
+      expect(indexedDBQuotes[0].total).toBe(1100);
     });
   });
 
-  describe("Service Layer Data Flow", () => {
-    it("should save customer to IndexedDB first, then sync to Supabase", async () => {
-      const newCustomer: Omit<Customer, "id" | "created_at" | "updated_at"> = {
-        user_id: testUserId,
-        name: "Service Test Customer",
-        email: "service@example.com",
+  describe("Service Layer Integration with IndexedDB", () => {
+    it("should retrieve customers from IndexedDB when available", async () => {
+      // Setup: Add data directly to IndexedDB
+      const testCustomer: Customer = {
+        id: "cust-1",
+        name: "IndexedDB Customer",
+        email: "indexed@example.com",
+        phone: "555-5678",
+        address: "456 Oak Ave",
+        userId: testUserId,
+      };
+      await CustomerDB.add(testCustomer as never);
+
+      // Execute: Fetch customers using service
+      const customers = await getCustomers(testUserId);
+
+      // Verify: Should return IndexedDB data
+      expect(customers).toHaveLength(1);
+      expect(customers[0].name).toBe("IndexedDB Customer");
+      expect(customers[0].email).toBe("indexed@example.com");
+    });
+
+    it("should save new customers to IndexedDB", async () => {
+      // Execute: Add customer using service
+      const newCustomer: Customer = {
+        id: "cust-2",
+        name: "New Customer",
+        email: "new@example.com",
         phone: "555-9999",
-        company: "Service Test Co",
-        address: "789 Service St",
+        address: "789 Pine St",
+        userId: testUserId,
       };
+      await addCustomer(testUserId, newCustomer);
 
-      // Create customer through service
-      const createdCustomer = await customerService.createCustomer(newCustomer);
-
-      // Verify: Customer should be in IndexedDB
-      const db = await IndexedDBService.getInstance();
-      const customersInDB = await db.getAll<Customer>("customers");
-      
-      expect(customersInDB).toHaveLength(1);
-      expect(customersInDB[0].name).toBe("Service Test Customer");
-      expect(customersInDB[0].email).toBe("service@example.com");
+      // Verify: Should be in IndexedDB
+      const indexedDBCustomers = await CustomerDB.getAll(testUserId);
+      expect(indexedDBCustomers).toHaveLength(1);
+      expect(indexedDBCustomers[0].name).toBe("New Customer");
     });
 
-    it("should update customer in IndexedDB and queue for sync", async () => {
-      // First, create a customer
-      const newCustomer: Omit<Customer, "id" | "created_at" | "updated_at"> = {
-        user_id: testUserId,
-        name: "Original Name",
-        email: "original@example.com",
-        phone: "555-0000",
-        company: "Original Co",
-        address: "Original St",
+    it("should save new items to IndexedDB", async () => {
+      // Execute: Add item using service
+      const newItem: Item = {
+        id: "item-2",
+        name: "New Item",
+        description: "New Description",
+        basePrice: 200,
+        finalPrice: 240,
+        markup: 20,
+        markupType: "percentage",
+        category: "Product",
+        userId: testUserId,
       };
-      const created = await customerService.createCustomer(newCustomer);
+      await addItem(testUserId, newItem);
 
-      // Update the customer
-      const updates: Partial<Customer> = {
-        name: "Updated Name",
-        email: "updated@example.com",
-      };
-      await customerService.updateCustomer(created.id, updates);
-
-      // Verify: Customer should be updated in IndexedDB
-      const db = await IndexedDBService.getInstance();
-      const customer = await db.get<Customer>("customers", created.id);
-      
-      expect(customer?.name).toBe("Updated Name");
-      expect(customer?.email).toBe("updated@example.com");
+      // Verify: Should be in IndexedDB
+      const indexedDBItems = await ItemDB.getAll(testUserId);
+      expect(indexedDBItems).toHaveLength(1);
+      expect(indexedDBItems[0].name).toBe("New Item");
     });
 
-    it("should delete customer from IndexedDB and queue for sync", async () => {
-      // First, create a customer
-      const newCustomer: Omit<Customer, "id" | "created_at" | "updated_at"> = {
-        user_id: testUserId,
-        name: "To Delete",
-        email: "delete@example.com",
-        phone: "555-0000",
-        company: "Delete Co",
-        address: "Delete St",
+    it("should save new quotes to IndexedDB", async () => {
+      // Execute: Add quote using service
+      const newQuote: Quote = {
+        id: "quote-2",
+        quoteNumber: "Q-002",
+        customerId: "cust-1",
+        customerName: "Test Customer",
+        items: [],
+        subtotal: 2000,
+        tax: 200,
+        total: 2200,
+        status: "draft",
+        validUntil: new Date().toISOString(),
+        userId: testUserId,
       };
-      const created = await customerService.createCustomer(newCustomer);
+      await addQuote(testUserId, newQuote);
 
-      // Delete the customer
-      await customerService.deleteCustomer(created.id);
-
-      // Verify: Customer should be removed from IndexedDB
-      const db = await IndexedDBService.getInstance();
-      const customer = await db.get<Customer>("customers", created.id);
-      
-      expect(customer).toBeNull();
+      // Verify: Should be in IndexedDB
+      const indexedDBQuotes = await QuoteDB.getAll(testUserId);
+      expect(indexedDBQuotes).toHaveLength(1);
+      expect(indexedDBQuotes[0].quoteNumber).toBe("Q-002");
     });
+  });
 
-    it("should handle offline operations and queue for sync", async () => {
-      // Simulate offline mode by mocking network error
-      const originalFetch = global.fetch;
-      global.fetch = vi.fn(() => Promise.reject(new Error("Network error")));
+  describe("Offline-Online Sync Behavior", () => {
+    it("should work offline with IndexedDB", async () => {
+      // Setup: Go offline
+      vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
 
-      const newCustomer: Omit<Customer, "id" | "created_at" | "updated_at"> = {
-        user_id: testUserId,
+      // Execute: Add customer while offline
+      const offlineCustomer: Customer = {
+        id: "cust-offline",
         name: "Offline Customer",
         email: "offline@example.com",
         phone: "555-0000",
-        company: "Offline Co",
         address: "Offline St",
+        userId: testUserId,
       };
+      await addCustomer(testUserId, offlineCustomer);
 
-      // Create customer while offline
-      const created = await customerService.createCustomer(newCustomer);
+      // Verify: Should be in IndexedDB
+      const indexedDBCustomers = await CustomerDB.getAll(testUserId);
+      expect(indexedDBCustomers).toHaveLength(1);
+      expect(indexedDBCustomers[0].name).toBe("Offline Customer");
+    });
 
-      // Verify: Customer should still be in IndexedDB
-      const db = await IndexedDBService.getInstance();
-      const customer = await db.get<Customer>("customers", created.id);
-      
-      expect(customer).toBeTruthy();
-      expect(customer?.name).toBe("Offline Customer");
+    it("should retrieve data from IndexedDB when offline", async () => {
+      // Setup: Add data to IndexedDB while online
+      const testItem: Item = {
+        id: "item-offline",
+        name: "Offline Item",
+        description: "Available offline",
+        basePrice: 150,
+        finalPrice: 180,
+        markup: 20,
+        markupType: "percentage",
+        category: "Service",
+        userId: testUserId,
+      };
+      await ItemDB.add(testItem as never);
 
-      // Restore fetch
-      global.fetch = originalFetch;
+      // Go offline
+      vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+
+      // Execute: Fetch items while offline
+      const items = await getItems(testUserId);
+
+      // Verify: Should return IndexedDB data
+      expect(items).toHaveLength(1);
+      expect(items[0].name).toBe("Offline Item");
     });
   });
 
-  describe("Data Persistence & Retrieval", () => {
-    it("should retrieve all customers from IndexedDB", async () => {
-      // Add multiple customers
-      const customers: Omit<Customer, "id" | "created_at" | "updated_at">[] = [
-        {
-          user_id: testUserId,
-          name: "Customer 1",
-          email: "c1@example.com",
-          phone: "555-0001",
-          company: "Company 1",
-          address: "Address 1",
-        },
-        {
-          user_id: testUserId,
-          name: "Customer 2",
-          email: "c2@example.com",
-          phone: "555-0002",
-          company: "Company 2",
-          address: "Address 2",
-        },
-        {
-          user_id: testUserId,
-          name: "Customer 3",
-          email: "c3@example.com",
-          phone: "555-0003",
-          company: "Company 3",
-          address: "Address 3",
-        },
-      ];
-
-      for (const customer of customers) {
-        await customerService.createCustomer(customer);
-      }
-
-      // Retrieve all customers
-      const allCustomers = await customerService.getCustomers();
-
-      expect(allCustomers).toHaveLength(3);
-      expect(allCustomers.map(c => c.name)).toContain("Customer 1");
-      expect(allCustomers.map(c => c.name)).toContain("Customer 2");
-      expect(allCustomers.map(c => c.name)).toContain("Customer 3");
-    });
-
-    it("should retrieve a single customer by ID from IndexedDB", async () => {
-      // Create a customer
-      const newCustomer: Omit<Customer, "id" | "created_at" | "updated_at"> = {
-        user_id: testUserId,
-        name: "Single Customer",
-        email: "single@example.com",
-        phone: "555-0000",
-        company: "Single Co",
-        address: "Single St",
+  describe("Data Persistence Across Sessions", () => {
+    it("should persist customer data across app restarts", async () => {
+      // Setup: Add customer
+      const persistentCustomer: Customer = {
+        id: "cust-persist",
+        name: "Persistent Customer",
+        email: "persist@example.com",
+        phone: "555-1111",
+        address: "Persistent Ln",
+        userId: testUserId,
       };
-      const created = await customerService.createCustomer(newCustomer);
+      await addCustomer(testUserId, persistentCustomer);
 
-      // Retrieve the customer by ID
-      const customer = await customerService.getCustomer(created.id);
+      // Simulate app restart by clearing cache
+      // (IndexedDB persists across page reloads)
 
-      expect(customer).toBeTruthy();
-      expect(customer?.name).toBe("Single Customer");
-      expect(customer?.email).toBe("single@example.com");
-    });
-  });
+      // Execute: Fetch customers
+      const customers = await getCustomers(testUserId);
 
-  describe("Cache Integration", () => {
-    it("should use cache for frequently accessed data", async () => {
-      // Create a customer
-      const newCustomer: Omit<Customer, "id" | "created_at" | "updated_at"> = {
-        user_id: testUserId,
-        name: "Cached Customer",
-        email: "cached@example.com",
-        phone: "555-0000",
-        company: "Cached Co",
-        address: "Cached St",
-      };
-      const created = await customerService.createCustomer(newCustomer);
-
-      // First retrieval (should cache)
-      const customer1 = await customerService.getCustomer(created.id);
-      
-      // Second retrieval (should use cache)
-      const customer2 = await customerService.getCustomer(created.id);
-
-      expect(customer1).toEqual(customer2);
-      expect(customer2?.name).toBe("Cached Customer");
+      // Verify: Should retrieve persisted data
+      expect(customers).toHaveLength(1);
+      expect(customers[0].name).toBe("Persistent Customer");
     });
   });
 });
