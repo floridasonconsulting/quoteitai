@@ -1,3 +1,4 @@
+
 import { Customer, Item, Quote, CompanySettings } from '@/types';
 
 const STORAGE_KEYS = {
@@ -28,76 +29,148 @@ export const setStorageItem = <T>(key: string, value: T): void => {
   }
 };
 
+// Helper to get user-specific storage key
+const getUserStorageKey = (baseKey: string, userId?: string): string => {
+  if (userId) {
+    // Use user-specific key format: customers_${userId}
+    const keyMap: Record<string, string> = {
+      [STORAGE_KEYS.CUSTOMERS]: 'customers',
+      [STORAGE_KEYS.ITEMS]: 'items',
+      [STORAGE_KEYS.QUOTES]: 'quotes',
+    };
+    const prefix = keyMap[baseKey];
+    if (prefix) {
+      return `${prefix}_${userId}`;
+    }
+  }
+  // Fall back to legacy key format
+  return baseKey;
+};
+
 // Customers
-export const getCustomers = (): Customer[] => 
-  getStorageItem(STORAGE_KEYS.CUSTOMERS, []);
-
-export const saveCustomers = (customers: Customer[]): void => 
-  setStorageItem(STORAGE_KEYS.CUSTOMERS, customers);
-
-export const addCustomer = (customer: Customer): void => {
-  const customers = getCustomers();
-  saveCustomers([...customers, customer]);
+export const getCustomers = (userId?: string): Customer[] => {
+  const key = getUserStorageKey(STORAGE_KEYS.CUSTOMERS, userId);
+  const data = getStorageItem(key, []);
+  
+  // If user-specific key is empty, try legacy key for backward compatibility
+  if (userId && data.length === 0) {
+    const legacyData = getStorageItem(STORAGE_KEYS.CUSTOMERS, []);
+    if (legacyData.length > 0) {
+      // Migrate legacy data to user-specific key
+      setStorageItem(key, legacyData);
+      // Clear legacy data after migration
+      localStorage.removeItem(STORAGE_KEYS.CUSTOMERS);
+      return legacyData;
+    }
+  }
+  
+  return data;
 };
 
-export const updateCustomer = (id: string, updates: Partial<Customer>): void => {
-  const customers = getCustomers();
+export const saveCustomers = (customers: Customer[], userId?: string): void => {
+  const key = getUserStorageKey(STORAGE_KEYS.CUSTOMERS, userId);
+  setStorageItem(key, customers);
+};
+
+export const addCustomer = (customer: Customer, userId?: string): void => {
+  const customers = getCustomers(userId);
+  saveCustomers([...customers, customer], userId);
+};
+
+export const updateCustomer = (id: string, updates: Partial<Customer>, userId?: string): void => {
+  const customers = getCustomers(userId);
   const updated = customers.map(c => c.id === id ? { ...c, ...updates } : c);
-  saveCustomers(updated);
+  saveCustomers(updated, userId);
 };
 
-export const deleteCustomer = (id: string): void => {
-  const customers = getCustomers();
-  saveCustomers(customers.filter(c => c.id !== id));
+export const deleteCustomer = (id: string, userId?: string): void => {
+  const customers = getCustomers(userId);
+  saveCustomers(customers.filter(c => c.id !== id), userId);
 };
 
 // Items
-export const getItems = (): Item[] => 
-  getStorageItem(STORAGE_KEYS.ITEMS, []);
-
-export const saveItems = (items: Item[]): void => 
-  setStorageItem(STORAGE_KEYS.ITEMS, items);
-
-export const addItem = (item: Item): void => {
-  const items = getItems();
-  saveItems([...items, item]);
+export const getItems = (userId?: string): Item[] => {
+  const key = getUserStorageKey(STORAGE_KEYS.ITEMS, userId);
+  const data = getStorageItem(key, []);
+  
+  // If user-specific key is empty, try legacy key for backward compatibility
+  if (userId && data.length === 0) {
+    const legacyData = getStorageItem(STORAGE_KEYS.ITEMS, []);
+    if (legacyData.length > 0) {
+      // Migrate legacy data to user-specific key
+      setStorageItem(key, legacyData);
+      // Clear legacy data after migration
+      localStorage.removeItem(STORAGE_KEYS.ITEMS);
+      return legacyData;
+    }
+  }
+  
+  return data;
 };
 
-export const updateItem = (id: string, updates: Partial<Item>): void => {
-  const items = getItems();
+export const saveItems = (items: Item[], userId?: string): void => {
+  const key = getUserStorageKey(STORAGE_KEYS.ITEMS, userId);
+  setStorageItem(key, items);
+};
+
+export const addItem = (item: Item, userId?: string): void => {
+  const items = getItems(userId);
+  saveItems([...items, item], userId);
+};
+
+export const updateItem = (id: string, updates: Partial<Item>, userId?: string): void => {
+  const items = getItems(userId);
   const updated = items.map(i => i.id === id ? { ...i, ...updates } : i);
-  saveItems(updated);
+  saveItems(updated, userId);
 };
 
-export const deleteItem = (id: string): void => {
-  const items = getItems();
-  saveItems(items.filter(i => i.id !== id));
+export const deleteItem = (id: string, userId?: string): void => {
+  const items = getItems(userId);
+  saveItems(items.filter(i => i.id !== id), userId);
 };
 
 // Quotes
-export const getQuotes = (): Quote[] => 
-  getStorageItem(STORAGE_KEYS.QUOTES, []);
-
-export const saveQuotes = (quotes: Quote[]): void => 
-  setStorageItem(STORAGE_KEYS.QUOTES, quotes);
-
-export const addQuote = (quote: Quote): void => {
-  const quotes = getQuotes();
-  saveQuotes([...quotes, quote]);
+export const getQuotes = (userId?: string): Quote[] => {
+  const key = getUserStorageKey(STORAGE_KEYS.QUOTES, userId);
+  const data = getStorageItem(key, []);
+  
+  // If user-specific key is empty, try legacy key for backward compatibility
+  if (userId && data.length === 0) {
+    const legacyData = getStorageItem(STORAGE_KEYS.QUOTES, []);
+    if (legacyData.length > 0) {
+      // Migrate legacy data to user-specific key
+      setStorageItem(key, legacyData);
+      // Clear legacy data after migration
+      localStorage.removeItem(STORAGE_KEYS.QUOTES);
+      return legacyData;
+    }
+  }
+  
+  return data;
 };
 
-export const updateQuote = (id: string, updates: Partial<Quote>): void => {
-  const quotes = getQuotes();
+export const saveQuotes = (quotes: Quote[], userId?: string): void => {
+  const key = getUserStorageKey(STORAGE_KEYS.QUOTES, userId);
+  setStorageItem(key, quotes);
+};
+
+export const addQuote = (quote: Quote, userId?: string): void => {
+  const quotes = getQuotes(userId);
+  saveQuotes([...quotes, quote], userId);
+};
+
+export const updateQuote = (id: string, updates: Partial<Quote>, userId?: string): void => {
+  const quotes = getQuotes(userId);
   const updated = quotes.map(q => q.id === id ? { ...q, ...updates } : q);
-  saveQuotes(updated);
+  saveQuotes(updated, userId);
 };
 
-export const deleteQuote = (id: string): void => {
-  const quotes = getQuotes();
-  saveQuotes(quotes.filter(q => q.id !== id));
+export const deleteQuote = (id: string, userId?: string): void => {
+  const quotes = getQuotes(userId);
+  saveQuotes(quotes.filter(q => q.id !== id), userId);
 };
 
-// Settings
+// Settings (always global, not user-specific)
 export const getSettings = (): CompanySettings => 
   getStorageItem(STORAGE_KEYS.SETTINGS, {
     name: '',
@@ -133,12 +206,20 @@ export const saveTemplatePreference = (template: string): void =>
   setStorageItem(STORAGE_KEYS.TEMPLATE_PREFERENCE, template);
 
 // Clear All Data
-export const clearAllData = (): Promise<void> => {
+export const clearAllData = (userId?: string): Promise<void> => {
   return new Promise((resolve, reject) => {
     try {
-      localStorage.removeItem(STORAGE_KEYS.CUSTOMERS);
-      localStorage.removeItem(STORAGE_KEYS.ITEMS);
-      localStorage.removeItem(STORAGE_KEYS.QUOTES);
+      if (userId) {
+        // Clear user-specific data
+        localStorage.removeItem(`customers_${userId}`);
+        localStorage.removeItem(`items_${userId}`);
+        localStorage.removeItem(`quotes_${userId}`);
+      } else {
+        // Clear legacy data
+        localStorage.removeItem(STORAGE_KEYS.CUSTOMERS);
+        localStorage.removeItem(STORAGE_KEYS.ITEMS);
+        localStorage.removeItem(STORAGE_KEYS.QUOTES);
+      }
       // Note: We preserve SETTINGS and THEME
       
       // Small delay to ensure localStorage operations are flushed

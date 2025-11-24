@@ -1,6 +1,6 @@
 
 import { Customer, Item, Quote, CompanySettings } from "@/types";
-import { CustomerDB, ItemDB, QuoteDB, SettingsDB, isIndexedDBSupported, getStorageStats } from "./indexed-db";
+import { CustomerDB, ItemDB, QuoteDB, SettingsDB, isIndexedDBSupported, getRecordCounts } from "./indexed-db";
 import { getCustomers, getItems, getQuotes, getSettings } from "./storage";
 
 const MIGRATION_STATUS_KEY = "indexeddb_migration_status";
@@ -56,7 +56,7 @@ export class IndexedDBMigrationService {
     }
 
     // Check if IndexedDB is empty
-    const stats = await getStorageStats(this.userId);
+    const stats = await getRecordCounts(this.userId);
     const isIDBEmpty = stats.customers.count === 0 && stats.items.count === 0 && stats.quotes.count === 0;
 
     return hasLocalData && isIDBEmpty;
@@ -263,7 +263,7 @@ export class IndexedDBMigrationService {
   }
 
   private async verifyMigration(expectedCounts: { customers: number, items: number, quotes: number }): Promise<{ success: boolean; message: string }> {
-    const stats = await getStorageStats(this.userId);
+    const stats = await getRecordCounts(this.userId);
     const actual = { customers: stats.customers.count, items: stats.items.count, quotes: stats.quotes.count };
     
     const matches = actual.customers === expectedCounts.customers &&

@@ -347,6 +347,36 @@ export async function getStorageStats(): Promise<{
 }
 
 /**
+ * Get record counts for a specific user across all stores
+ */
+export async function getRecordCounts(userId: string): Promise<{
+  customers: { count: number };
+  items: { count: number };
+  quotes: { count: number };
+}> {
+  try {
+    const [customers, items, quotes] = await Promise.all([
+      getAll<Customer>(STORES.CUSTOMERS, userId),
+      getAll<Item>(STORES.ITEMS, userId),
+      getAll<Quote>(STORES.QUOTES, userId),
+    ]);
+
+    return {
+      customers: { count: customers.length },
+      items: { count: items.length },
+      quotes: { count: quotes.length },
+    };
+  } catch (error) {
+    console.error("[IndexedDB] Failed to get record counts:", error);
+    return {
+      customers: { count: 0 },
+      items: { count: 0 },
+      quotes: { count: 0 },
+    };
+  }
+}
+
+/**
  * Close the database connection
  */
 export function closeDB(): void {
