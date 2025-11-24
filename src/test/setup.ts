@@ -334,21 +334,22 @@ beforeAll(() => {
 });
 
 vi.mock('@/lib/rate-limiter', () => {
-  return {
-    checkRateLimit: vi.fn().mockReturnValue({
-      rateLimit: {
-        limit: 100,
-        remaining: 99,
-        reset: 1688256000,
-      },
-      error: null,
-      allowed: true,
-      resetIn: 0,
+  const mockRateLimiter = {
+    register: vi.fn(),
+    isAllowed: vi.fn().mockReturnValue({ allowed: true }),
+    trackRequest: vi.fn().mockImplementation(async (_key, fn) => fn()),
+    reset: vi.fn(),
+    resetAll: vi.fn(),
+    getStatus: vi.fn().mockReturnValue({
+      count: 0,
+      limit: 10,
+      resetAt: Date.now() + 60000,
+      isBlocked: false
     }),
-    RATE_LIMITS: {
-      // Define your rate limits here
-      // For example:
-      // 'some-action': { limit: 10, window: 60 },
-    },
+  };
+
+  return {
+    rateLimiter: mockRateLimiter,
+    withRateLimit: vi.fn().mockImplementation(async (_key, fn) => fn()),
   };
 });
