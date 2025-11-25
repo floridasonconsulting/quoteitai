@@ -86,11 +86,12 @@ export default function Customers() {
       const dataPromise = getCustomers(user?.id);
       const data = await Promise.race([dataPromise, timeoutPromise]);
 
+      // CRITICAL FIX: Use setCustomers from useOptimisticList to update the displayed list
       setCustomers(data);
       setSelectedCustomers([]);
       setError(null);
       setRetryCount(0);
-      console.log(`[Customers] Loaded ${data.length} customers successfully`);
+      console.log(`[Customers] Loaded ${data.length} customers successfully - displaying in UI`);
     } catch (err: unknown) {
       console.error('[Customers] Load failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
@@ -108,7 +109,7 @@ export default function Customers() {
       stopLoading('load-customers');
       setLoadStartTime(null);
     }
-  }, [user?.id, startLoading, stopLoading, retryCount]); // Keep retryCount to access current value
+  }, [user?.id, startLoading, stopLoading, retryCount, setCustomers]); // Add setCustomers to dependencies
 
   useEffect(() => {
     loadCustomers();
