@@ -24,3 +24,6 @@ export { clearInFlightRequests } from './services/request-pool-service';
 
 // Re-export getSettings from storage for backward compatibility
 export { getSettings } from './storage';
+
+// Re-export saveSettings from storage for backward compatibility
+export { saveSettings } from './storage';
