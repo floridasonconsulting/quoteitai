@@ -303,7 +303,7 @@ describe('Settings - White-Label Branding', () => {
 
       // CRITICAL: Wait for logo image to appear (confirms logo data loaded)
       await waitFor(() => {
-        const logoImg = screen.getByAlt(/Company logo/i);
+        const logoImg = screen.getByAltText(/Company logo/i);
         expect(logoImg).toBeInTheDocument();
         expect(logoImg).toHaveAttribute('src', 'https://example.com/test-logo.png');
       }, { timeout: 5000 });
@@ -343,7 +343,7 @@ describe('Settings - White-Label Branding', () => {
 
       // Wait for logo to be displayed (confirms data loaded)
       await waitFor(() => {
-        const logoImg = screen.getByAlt(/Company logo/i);
+        const logoImg = screen.getByAltText(/Company logo/i);
         expect(logoImg).toBeInTheDocument();
       }, { timeout: 5000 });
 

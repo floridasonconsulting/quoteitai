@@ -8,6 +8,7 @@ import NewQuote from '@/pages/NewQuote';
 import Settings from '@/pages/Settings';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@supabase/supabase-js';
+import * as dbService from '@/lib/db-service';
 
 // Mock Supabase
 vi.mock('@/integrations/supabase/client', () => ({
@@ -17,6 +18,7 @@ vi.mock('@/integrations/supabase/client', () => ({
         eq: vi.fn(() => ({
           order: vi.fn(() => Promise.resolve({ data: [], error: null })),
           single: vi.fn(() => Promise.resolve({ data: {}, error: null })),
+          maybeSingle: vi.fn(() => Promise.resolve({ data: {}, error: null })),
         })),
       })),
     })),
@@ -24,6 +26,14 @@ vi.mock('@/integrations/supabase/client', () => ({
       invoke: vi.fn(() => Promise.resolve({ data: null, error: null })),
     },
   },
+}));
+
+// Mock db-service
+vi.mock('@/lib/db-service', () => ({
+  getSettings: vi.fn().mockResolvedValue({}),
+  getQuotes: vi.fn().mockResolvedValue([]),
+  getCustomers: vi.fn().mockResolvedValue([]),
+  getItems: vi.fn().mockResolvedValue([]),
 }));
 
 type MockAuthContext = Partial<ReturnType<typeof useAuth>>;

@@ -137,8 +137,8 @@ describe('Pro Tier Features', () => {
 
     await waitFor(() => {
       // Pro tier should see upgrade message for white-label features
-      const upgradeText = screen.queryByText(/max ai/i);
-      expect(upgradeText).toBeInTheDocument();
+      const upgradeTexts = screen.getAllByText(/max ai/i);
+      expect(upgradeTexts.length).toBeGreaterThan(0);
     });
   });
 });
