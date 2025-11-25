@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as LocalDB from '@/lib/local-db';
 import { Customer, Item, Quote } from '@/types';
 
-// Mock localStorage
+// Mock localStorage with user-specific key support
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
   return {
@@ -16,6 +16,14 @@ const localStorageMock = (() => {
     clear: () => {
       store = {};
     },
+    // Add method to clear user-specific keys
+    clearUserData: (userId: string) => {
+      Object.keys(store).forEach(key => {
+        if (key.includes(userId) || !key.includes('user-')) {
+          delete store[key];
+        }
+      });
+    },
   };
 })();
 
@@ -24,8 +32,13 @@ Object.defineProperty(window, 'localStorage', {
 });
 
 describe('Local Database Operations', () => {
+  const TEST_USER_ID = 'test-user-123';
+  
   beforeEach(() => {
+    // Clear all storage including user-specific keys
     localStorage.clear();
+    // Also clear any test user data
+    (localStorage as any).clearUserData?.(TEST_USER_ID);
     vi.clearAllMocks();
   });
 

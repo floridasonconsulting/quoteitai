@@ -1,11 +1,20 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as dbService from '@/lib/db-service';
 import { Customer, Item, Quote } from '@/types';
+import * as indexedDB from '@/lib/indexed-db';
 
-// Mock Supabase
+// Mock Supabase to simulate offline state
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: vi.fn(),
+    from: vi.fn(() => ({
+      select: vi.fn(() => Promise.reject(new Error('Network error'))),
+      insert: vi.fn(() => Promise.reject(new Error('Network error'))),
+      update: vi.fn(() => Promise.reject(new Error('Network error'))),
+      delete: vi.fn(() => Promise.reject(new Error('Network error'))),
+    })),
+    auth: {
+      getSession: vi.fn(() => Promise.resolve({ data: { session: null }, error: null })),
+    },
   },
 }));
 
@@ -56,28 +65,60 @@ const createTestQuote = (id: string): Quote => ({
 });
 
 describe('Offline CRUD Operations', () => {
-  beforeEach(() => {
+  const TEST_USER_ID = 'test-user-123';
+  
+  beforeEach(async () => {
+    // Clear IndexedDB for test user
+    const customerDB = indexedDB.getCustomerDB();
+    const itemDB = indexedDB.getItemDB();
+    const quoteDB = indexedDB.getQuoteDB();
+    
+    await customerDB.clear();
+    await itemDB.clear();
+    await quoteDB.clear();
+    
+    // Clear localStorage cache
     localStorage.clear();
     vi.clearAllMocks();
+    
+    // Set offline mode
     Object.defineProperty(navigator, 'onLine', {
       writable: true,
       value: false,
     });
   });
+  
+  afterEach(async () => {
+    // Clean up after each test
+    const customerDB = indexedDB.getCustomerDB();
+    const itemDB = indexedDB.getItemDB();
+    const quoteDB = indexedDB.getQuoteDB();
+    
+    await customerDB.clear();
+    await itemDB.clear();
+    await quoteDB.clear();
+  });
 
   describe('Offline Customer Operations', () => {
-    it('should create customer offline and store in cache', async () => {
+    it('should create customer offline and store in IndexedDB', async () => {
       const customer = createTestCustomer('cust-1');
-      const result = await dbService.addCustomer('user-1', customer);
-      expect(result).toEqual({ ...customer, user_id: 'user-1' });
-      const cached = localStorage.getItem('customers-cache');
-      expect(cached).toBeTruthy();
+      const result = await dbService.addCustomer(TEST_USER_ID, customer);
+      
+      expect(result).toEqual({ ...customer, user_id: TEST_USER_ID });
+      
+      // Verify stored in IndexedDB
+      const customerDB = indexedDB.getCustomerDB();
+      const stored = await customerDB.getById('cust-1', TEST_USER_ID);
+      expect(stored).toBeTruthy();
+      expect(stored?.id).toBe('cust-1');
     });
 
-    it('should read customer offline from cache', async () => {
+    it('should read customer offline from IndexedDB', async () => {
       const customer = createTestCustomer('cust-1');
-      await dbService.addCustomer('user-1', customer);
-      const customers = await dbService.getCustomers('user-1');
+      await dbService.addCustomer(TEST_USER_ID, customer);
+      
+      const customers = await dbService.getCustomers(TEST_USER_ID);
+      
       expect(customers).toHaveLength(1);
       expect(customers[0].id).toBe(customer.id);
       expect(customers[0].name).toBe(customer.name);
