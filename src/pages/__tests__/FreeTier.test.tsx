@@ -80,10 +80,14 @@ describe('Free Tier Features', () => {
 
     render(<NewQuote />, { wrapper });
 
+    // Check for loading state first to debug potential hangs
+    // expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+
     await waitFor(() => {
       // Free tier should see basic quote creation
-      expect(screen.getByText(/create quote/i)).toBeInTheDocument();
-    });
+      // Use getByRole for better accessibility finding
+      expect(screen.getByRole('heading', { name: /create new quote/i })).toBeInTheDocument();
+    }, { timeout: 5000 });
 
     // AI features should not be available or show upgrade prompts
     // This would need more detailed implementation based on actual UI
