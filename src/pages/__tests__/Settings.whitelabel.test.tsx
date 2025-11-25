@@ -291,7 +291,7 @@ describe('Settings - White-Label Branding', () => {
       await waitFor(() => {
         const logoImg = screen.getByAltText(/Company logo/i);
         expect(logoImg).toBeInTheDocument();
-        expect(logoImg).toHaveAttribute('src', 'https://example.com/test-logo.png');
+        expect(logoImg).toHaveAttribute('src', 'https://example.com/storage/v1/object/public/company-logos/test-logo.png');
       }, { timeout: 5000 });
 
       // Now check for Remove Logo button
