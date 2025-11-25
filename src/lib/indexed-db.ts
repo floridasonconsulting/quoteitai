@@ -240,7 +240,7 @@ export async function add<T extends { id: string; userId?: string }>(
     // Fallback to existing user_id if userId is missing (for SettingsDB)
     const dbRecord = {
       ...record,
-      user_id: record.userId || (record as any).user_id,
+      user_id: record.userId || (record as Record<string, unknown>).user_id,
     };
     
     const request = store.add(dbRecord);
@@ -272,7 +272,7 @@ export async function update<T extends { id: string; userId?: string }>(
     // Fallback to existing user_id if userId is missing (for SettingsDB)
     const dbRecord = {
       ...record,
-      user_id: record.userId || (record as any).user_id,
+      user_id: record.userId || (record as Record<string, unknown>).user_id,
     };
     
     const request = store.put(dbRecord);

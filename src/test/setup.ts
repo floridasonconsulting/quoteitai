@@ -274,7 +274,7 @@ const { createSelectChain, createUpdateChain, createDeleteChain, createFromHandl
     const mockData = getMockDataForTable(tableName);
     
     // Helper to return a promise that also has chainable methods
-    const createChainable = (mockResult: any) => {
+    const createChainable = (mockResult: { data: unknown; error: Error | null; }) => {
       const promise = Promise.resolve(mockResult);
       const chainable = {
         select: vi.fn(() => createChainable({ data: Array.isArray(mockResult?.data) ? mockResult.data : [mockResult?.data], error: null })),

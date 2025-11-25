@@ -39,7 +39,7 @@ describe('Local Database Operations', () => {
   
   beforeEach(() => {
     // Completely reset localStorage mock
-    (localStorageMock as any).clear();
+    localStorageMock.clear();
     
     // CRITICAL: Clear storage cache to prevent stale data
     storageCache.clearCache();

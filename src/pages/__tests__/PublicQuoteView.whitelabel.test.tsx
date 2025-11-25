@@ -95,6 +95,24 @@ const getMockAuthContext = (overrides: MockAuthContext): ReturnType<typeof useAu
   return { ...defaultValues, ...overrides };
 };
 
+// Helper to create mock supabase chain for this test file
+const createFromHandler = (role: 'free' | 'pro' | 'max') => (table: string) => {
+  if (table === 'quotes') {
+    return { select: () => mockQuoteSelect };
+  }
+  if (table === 'user_roles') {
+    return { select: () => mockRoleSelect(role) };
+  }
+  if (table === 'company_settings') {
+    return { select: () => mockSettingsSelect(null) };
+  }
+  return {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: null, error: null }),
+  };
+};
+
 const renderPublicQuoteView = () => {
   return render(
     <BrowserRouter>
@@ -111,7 +129,7 @@ describe('PublicQuoteView - White-Label Branding', () => {
 
   describe('Tier-Based Footer Display', () => {
     it('should show "Powered by Quote-it AI" footer for Pro tier users', async () => {
-      (supabase.from as any).mockImplementation(createFromHandler('max')); // should be pro?
+      (supabase.from as vi.Mock).mockImplementation(createFromHandler('pro'));
       vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
         user: { id: 'user-123' } as User,
         isMaxAITier: false,
@@ -130,6 +148,7 @@ describe('PublicQuoteView - White-Label Branding', () => {
     });
 
     it('should NOT show footer for Max AI tier users', async () => {
+      (supabase.from as vi.Mock).mockImplementation(createFromHandler('max'));
       vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
         user: { id: 'user-123' } as User,
         isMaxAITier: true,
@@ -144,6 +163,7 @@ describe('PublicQuoteView - White-Label Branding', () => {
     });
 
     it('should show footer for Free tier users', async () => {
+      (supabase.from as vi.Mock).mockImplementation(createFromHandler('free'));
       vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
         user: { id: 'user-123' } as User,
         isMaxAITier: false,

@@ -8,7 +8,7 @@ import * as AuthContext from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { useAuth } from '@/contexts/AuthContext';
-import { User } from '@supabase/supabase-js';
+import { User, type StorageFileApi } from '@supabase/supabase-js';
 import * as dbService from '@/lib/db-service';
 
 const mockToast = vi.fn();
@@ -231,7 +231,7 @@ describe('Settings - White-Label Branding', () => {
         getPublicUrl: () => ({
           data: { publicUrl: 'https://example.com/logo.png' },
         }),
-      } as any);
+      } as Partial<StorageFileApi>);
 
       mockSaveSettings.mockResolvedValue();
 
@@ -324,7 +324,7 @@ describe('Settings - White-Label Branding', () => {
 
       vi.mocked(supabase.storage.from).mockReturnValue({
         remove: mockRemove,
-      } as any);
+      } as Partial<StorageFileApi>);
 
       mockSaveSettings.mockResolvedValue();
 
