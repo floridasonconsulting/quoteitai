@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Moon, Sun, Palette } from "lucide-react";
+import { ProposalTheme } from "@/types/proposal";
 
 export function GlobalSettingsForm() {
   const { proposal, updateSettings } = useProposal();
@@ -20,7 +21,7 @@ export function GlobalSettingsForm() {
             <Label>Theme Layout</Label>
             <Select 
                 value={settings.theme} 
-                onValueChange={(val: any) => updateSettings({ theme: val })}
+                onValueChange={(val) => updateSettings({ theme: val as ProposalTheme })}
             >
                 <SelectTrigger>
                     <SelectValue />

@@ -6,7 +6,6 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ data }: HeroSectionProps) {
-  // Tracking hook logic will be moved to a reusable hook later if needed
   const sectionRef = useRef&lt;HTMLElement&gt;(null);
 
   useEffect(() =&gt; {

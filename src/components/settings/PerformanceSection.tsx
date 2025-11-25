@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Clock, Layout, MousePointerClick, Zap } from "lucide-react";
+import { Activity, Clock, Layout, MousePointerClick, Zap, LucideIcon } from "lucide-react";
 import { performanceMonitor, type PerformanceMetrics } from "@/lib/performance-monitor";
 
 export function PerformanceSection() {
@@ -48,7 +48,7 @@ export function PerformanceSection() {
     title: string; 
     value: number | null; 
     description: string; 
-    icon: any; 
+    icon: LucideIcon; 
     thresholds: { good: number; poor: number };
     unit?: string;
   }) => (
