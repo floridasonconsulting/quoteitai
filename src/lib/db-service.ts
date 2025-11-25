@@ -27,3 +27,14 @@ export { getSettings } from './storage';
 
 // Re-export saveSettings from storage for backward compatibility
 export { saveSettings } from './storage';
+
+// Re-export clearAllData from storage as clearDatabaseData for backward compatibility
+export { clearAllData as clearDatabaseData } from './storage';
+
+// Placeholder for clearSampleData - this function doesn't exist yet but is imported
+// TODO: Implement clearSampleData in sample-data.ts and export it here
+export const clearSampleData = async (userId?: string): Promise<void> => {
+  console.log('[db-service] clearSampleData called for user:', userId);
+  // For now, just log that this was called
+  // The actual implementation should be in sample-data.ts
+};
