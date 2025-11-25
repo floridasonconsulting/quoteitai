@@ -1,3 +1,4 @@
+
 import { ProposalSection } from "@/types/proposal";
 import { useEffect, useRef } from "react";
 

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { Check, X, Receipt, FileSignature, ArrowUp, Printer, BookOpen, Sidebar as SidebarIcon } from 'lucide-react';
 import { ProposalData, ProposalSection } from '@/types/proposal';
@@ -89,17 +90,17 @@ export function ProposalViewer({ proposal, readOnly = false, onSign }: ProposalV
 
   const TemplateSwitcher = () =&gt; (
     &lt;div className="fixed bottom-4 left-4 z-50 flex gap-2 bg-black/80 p-2 rounded-lg backdrop-blur border border-white/10 template-switcher"&gt;
-        <button onClick={() => setActiveTemplate('sidebar')} className={`p-2 rounded ${activeTemplate === 'sidebar' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Corporate Sidebar">
-            <SidebarIcon className="w-4 h-4" />
-        </button>
-        <button onClick={() => setActiveTemplate('deck')} className={`p-2 rounded ${activeTemplate === 'deck' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Presentation Deck">
-            <BookOpen className="w-4 h-4" />
-        </button>
-        <div className="w-px bg-white/20 mx-1"></div>
-        <button onClick={handleDownloadPDF} className="p-2 rounded text-slate-400 hover:text-white hover:bg-white/10" title="Download/Print PDF">
-             <Printer className="w-4 h-4" />
-        </button>
-    </div>
+        &lt;button onClick={() =&gt; setActiveTemplate('sidebar')} className={`p-2 rounded ${activeTemplate === 'sidebar' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Corporate Sidebar"&gt;
+            &lt;SidebarIcon className="w-4 h-4" /&gt;
+        &lt;/button&gt;
+        &lt;button onClick={() =&gt; setActiveTemplate('deck')} className={`p-2 rounded ${activeTemplate === 'deck' ? 'bg-teal-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Presentation Deck"&gt;
+            &lt;BookOpen className="w-4 h-4" /&gt;
+        &lt;/button&gt;
+        &lt;div className="w-px bg-white/20 mx-1"&gt;&lt;/div&gt;
+        &lt;button onClick={handleDownloadPDF} className="p-2 rounded text-slate-400 hover:text-white hover:bg-white/10" title="Download/Print PDF"&gt;
+             &lt;Printer className="w-4 h-4" /&gt;
+        &lt;/button&gt;
+    &lt;/div&gt;
   );
 
   return (
