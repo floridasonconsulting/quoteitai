@@ -403,6 +403,9 @@ describe('Local Database Operations', () => {
     });
 
     it('should handle corrupted localStorage data gracefully', () => {
+      // First, ensure localStorage is completely clean
+      localStorage.clear();
+      
       // Set corrupted data in localStorage
       localStorage.setItem('customers-local-v1', 'invalid-json');
 
@@ -412,9 +415,12 @@ describe('Local Database Operations', () => {
       
       // Verify localStorage was cleared/reset for corrupted key
       const storedAfter = localStorage.getItem('customers-local-v1');
-      // Should either be null or valid JSON
+      // Should either be null or valid JSON (empty array)
       if (storedAfter !== null) {
         expect(() => JSON.parse(storedAfter)).not.toThrow();
+        const parsed = JSON.parse(storedAfter);
+        expect(Array.isArray(parsed)).toBe(true);
+        expect(parsed.length).toBe(0);
       }
     });
   });
