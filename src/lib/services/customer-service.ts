@@ -11,6 +11,7 @@ import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 import { CustomerDB, isIndexedDBSupported } from '../indexed-db';
 import { apiTracker } from '@/lib/api-performance-tracker';
+import { getData } from '../local-db';
 
 /**
  * Fetch all customers for a user
@@ -94,30 +95,61 @@ export async function getCustomers(userId: string | undefined): Promise<Customer
         const result = data ? data.map(item => toCamelCase(item)) as Customer[] : [];
         console.log(`[CustomerService] Supabase returned ${result.length} customers`);
         
-        // Only update IndexedDB if we received data from Supabase
-        // If Supabase returns empty but IndexedDB has data, keep IndexedDB data (offline-created records)
-        if (isIndexedDBSupported()) {
+        // CRITICAL FIX: If Supabase returns empty, check if we have local data BEFORE clearing cache
+        // This prevents data loss if the user is offline or sync hasn't completed
+        if (result.length === 0 && isIndexedDBSupported()) {
+          console.log(`[CustomerService] Supabase empty - checking IndexedDB for local data`);
           try {
-            if (result.length > 0) {
-              console.log(`[CustomerService] Syncing ${result.length} customers from Supabase to IndexedDB`);
-              // Sync Supabase data to IndexedDB
-              for (const customer of result) {
-                await CustomerDB.update({ ...customer, user_id: userId } as never);
-              }
-              console.log(`[CustomerService] Saved ${result.length} customers to IndexedDB`);
-            } else {
-              // Supabase returned empty - check if IndexedDB has data
-              console.log(`[CustomerService] Supabase empty - checking IndexedDB for local data`);
-              const indexedDBData = await CustomerDB.getAll(userId);
-              console.log(`[CustomerService] IndexedDB has ${indexedDBData?.length || 0} customers`);
-              if (indexedDBData && indexedDBData.length > 0) {
-                console.log(`[CustomerService] Supabase empty, using ${indexedDBData.length} customers from IndexedDB`);
-                // Update cache with IndexedDB data
-                await cacheManager.set('customers', indexedDBData);
-                console.log(`[CustomerService] RETURNING ${indexedDBData.length} customers from IndexedDB`);
-                return indexedDBData;
-              }
+            const indexedDBData = await CustomerDB.getAll(userId);
+            if (indexedDBData && indexedDBData.length > 0) {
+              console.log(`[CustomerService] Supabase empty but IndexedDB has ${indexedDBData.length} customers - PRESERVING LOCAL DATA`);
+              // Update cache with IndexedDB data instead of empty Supabase result
+              await cacheManager.set('customers', indexedDBData);
+              return indexedDBData;
             }
+            
+            // NEW FALLBACK: Check localStorage if IndexedDB is also empty
+            // This handles cases where migration might have failed or not run
+            console.log('[CustomerService] IndexedDB empty - checking legacy localStorage');
+            const legacyData = getData<Customer[]>('customers');
+            if (legacyData && legacyData.length > 0) {
+               console.log(`[CustomerService] Found ${legacyData.length} customers in legacy storage - migrating now`);
+               // Migrate to IndexedDB on the fly
+               const migratedCustomers: Customer[] = [];
+               for (const customer of legacyData) {
+                 const customerWithUserId = { ...customer, user_id: userId } as Customer;
+                 try {
+                   // CRITICAL FIX: Use add() for new records, not update()
+                   await CustomerDB.add(customerWithUserId as never);
+                   migratedCustomers.push(customerWithUserId);
+                 } catch (addError) {
+                   console.error(`[CustomerService] Failed to migrate customer ${customer.id}:`, addError);
+                 }
+               }
+               
+               if (migratedCustomers.length > 0) {
+                 console.log(`✅ Migrated ${migratedCustomers.length} customers from localStorage to IndexedDB`);
+                 // Cache the migrated data
+                 await cacheManager.set('customers', migratedCustomers);
+                 // Return the migrated data
+                 return migratedCustomers;
+               }
+            }
+            
+          } catch (err) {
+             console.warn('[CustomerService] IndexedDB check failed:', err);
+          }
+        }
+
+        // Only update IndexedDB if we received data from Supabase
+        if (isIndexedDBSupported() && result.length > 0) {
+          try {
+            console.log(`[CustomerService] Syncing ${result.length} customers from Supabase to IndexedDB`);
+            // Sync Supabase data to IndexedDB
+            for (const customer of result) {
+              await CustomerDB.update({ ...customer, user_id: userId } as never);
+            }
+            console.log(`[CustomerService] Saved ${result.length} customers to IndexedDB`);
           } catch (error) {
             console.warn('[CustomerService] Failed to save to IndexedDB:', error);
           }

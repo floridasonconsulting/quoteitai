@@ -52,7 +52,10 @@ export default function PublicQuoteView() {
   }, [settings, isMaxAITier]);
 
   const loadQuote = async () => {
-    if (!shareToken) return;
+    if (!shareToken) {
+      setLoading(false);
+      return;
+    }
     
     setLoading(true);
     try {
