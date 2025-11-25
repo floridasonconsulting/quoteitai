@@ -52,7 +52,7 @@ export default function Customers() {
     onAdd: (customer: Customer) => addCustomer(user?.id, customer, queueChange),
     onUpdate: (customer: Customer) => updateCustomer(user?.id, customer.id, customer, queueChange),
     onDelete: (id: string) => deleteCustomer(user?.id, id, queueChange)
-  }), [user?.id, queueChange]);
+  }), [user?.id]);
 
   const {
     items: customers,
@@ -108,7 +108,7 @@ export default function Customers() {
       stopLoading('load-customers');
       setLoadStartTime(null);
     }
-  }, [retryCount, startLoading, stopLoading]);
+  }, [user?.id, startLoading, stopLoading, retryCount]); // Keep retryCount to access current value
 
   useEffect(() => {
     loadCustomers();
