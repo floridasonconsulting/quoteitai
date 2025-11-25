@@ -38,11 +38,10 @@ export function Layout({ children }: LayoutProps) {
   // Load company logo for dynamic favicon
   useEffect(() => {
     if (user?.id) {
-      getSettings(user.id).then(settings => {
-        if (settings.logo) {
-          setCompanyLogo(settings.logo);
-        }
-      }).catch(console.error);
+      const settings = getSettings();
+      if (settings.logo) {
+        setCompanyLogo(settings.logo);
+      }
     }
   }, [user?.id]);
 
