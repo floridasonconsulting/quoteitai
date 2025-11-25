@@ -1,5 +1,5 @@
-export const PrintStyles = () =&gt; (
-  &lt;style&gt;{`
+export const PrintStyles = () => (
+  <style>{`
     @media print {
       @page { margin: 0; size: auto; }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -17,5 +17,5 @@ export const PrintStyles = () =&gt; (
       table { width: 100% !important; border-collapse: collapse !important; }
       th, td { border: 1px solid #e2e8f0 !important; padding: 8px !important; }
     }
-  `}&lt;/style&gt;
+  `}</style>
 );
