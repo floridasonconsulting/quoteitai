@@ -10,6 +10,7 @@ import { dedupedRequest, withTimeout } from './request-pool-service';
 import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 import { QuoteDB, isIndexedDBSupported } from '../indexed-db';
+import { apiTracker } from '@/lib/api-performance-tracker';
 
 /**
  * Fetch all quotes for a user

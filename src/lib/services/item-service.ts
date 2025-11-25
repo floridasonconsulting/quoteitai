@@ -10,6 +10,7 @@ import { dedupedRequest, withTimeout } from './request-pool-service';
 import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 import { ItemDB, isIndexedDBSupported } from '../indexed-db';
+import { apiTracker } from '@/lib/api-performance-tracker';
 
 /**
  * Fetch all items for a user
@@ -60,15 +61,20 @@ export async function getItems(userId: string | undefined): Promise<Item[]> {
     // Use cache manager's request coalescing for network requests
     return cacheManager.coalesce(`items-${userId}`, async () => {
       try {
-        const dbQueryPromise = Promise.resolve(
-          supabase
-            .from('items')
-            .select('*')
-            .eq('user_id', userId)
+        const startTime = performance.now();
+        const { data, error } = await supabase
+          .from('items')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+
+        apiTracker.track(
+          'items.select',
+          'GET',
+          performance.now() - startTime,
+          error ? 'error' : 'success'
         );
-        
-        const { data, error } = await withTimeout(dbQueryPromise, 15000);
-        
+
         if (error) {
           console.error('Error fetching items:', error);
           // Try IndexedDB as fallback
@@ -189,8 +195,16 @@ export async function addItem(
 
   try {
     const dbItem = toSnakeCase(itemWithUser);
+    const startTime = performance.now();
     const { error } = await supabase.from('items').insert(dbItem as unknown);
     
+    apiTracker.track(
+      'items.insert',
+      'POST',
+      performance.now() - startTime,
+      error ? 'error' : 'success'
+    );
+
     if (error) {
       console.error('❌ Database insert failed for item:', error);
       throw error;
@@ -259,12 +273,22 @@ export async function updateItem(
 
   try {
     const dbUpdates = toSnakeCase(updates);
+    const startTime = performance.now();
     const { error } = await supabase
       .from('items')
       .update(dbUpdates as unknown)
       .eq('id', id)
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .select()
+      .single();
     
+    apiTracker.track(
+      'items.update',
+      'PUT',
+      performance.now() - startTime,
+      error ? 'error' : 'success'
+    );
+
     if (error) throw error;
     
     dispatchDataRefresh('items-changed');
@@ -305,12 +329,20 @@ export async function deleteItem(
   }
 
   try {
+    const startTime = performance.now();
     const { error } = await supabase
       .from('items')
       .delete()
       .eq('id', id)
       .eq('user_id', userId);
     
+    apiTracker.track(
+      'items.delete',
+      'DELETE',
+      performance.now() - startTime,
+      error ? 'error' : 'success'
+    );
+
     if (error) throw error;
     
     dispatchDataRefresh('items-changed');

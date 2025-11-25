@@ -10,6 +10,7 @@ import { dedupedRequest, withTimeout } from './request-pool-service';
 import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 import { CustomerDB, isIndexedDBSupported } from '../indexed-db';
+import { apiTracker } from '@/lib/api-performance-tracker';
 
 /**
  * Fetch all customers for a user
