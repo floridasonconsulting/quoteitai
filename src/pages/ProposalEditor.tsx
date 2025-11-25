@@ -34,7 +34,7 @@ const MOCK_INITIAL_DATA: ProposalData = {
       id: "sec_2",
       type: "text",
       title: "Executive Summary",
-      content: "&lt;p&gt;We are excited to present this proposal for your renovation project. Our team is dedicated to delivering high-quality craftsmanship and ensuring your vision comes to life.&lt;/p&gt;"
+      content: "<p>We are excited to present this proposal for your renovation project. Our team is dedicated to delivering high-quality craftsmanship and ensuring your vision comes to life.</p>"
     },
     {
       id: "sec_3",
@@ -60,7 +60,7 @@ const MOCK_INITIAL_DATA: ProposalData = {
       id: "sec_5",
       type: "legal",
       title: "Terms & Conditions",
-      content: "&lt;p&gt;Payment is due within 30 days of invoice. Work will commence upon receipt of deposit.&lt;/p&gt;"
+      content: "<p>Payment is due within 30 days of invoice. Work will commence upon receipt of deposit.</p>"
     }
   ]
 };
@@ -69,17 +69,17 @@ function EditorContent() {
   const { proposal } = useProposal();
   
   return (
-    &lt;ProposalEditorLayout 
-        builder={&lt;ProposalBuilder /&gt;}
-        preview={&lt;ProposalViewer proposal={proposal} readOnly={true} /&gt;}
-    /&gt;
+    <ProposalEditorLayout 
+        builder={<ProposalBuilder />}
+        preview={<ProposalViewer proposal={proposal} readOnly={true} />}
+    />
   );
 }
 
 export default function ProposalEditor() {
   return (
-    &lt;ProposalProvider initialData={MOCK_INITIAL_DATA}&gt;
-        &lt;EditorContent /&gt;
-    &lt;/ProposalProvider&gt;
+    <ProposalProvider initialData={MOCK_INITIAL_DATA}>
+        <EditorContent />
+    </ProposalProvider>
   );
 }
