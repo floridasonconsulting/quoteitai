@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import * as dbService from '@/lib/db-service';
 import { Customer, Item, Quote } from '@/types';
-import * as indexedDB from '@/lib/indexed-db';
+import { CustomerDB, ItemDB, QuoteDB } from '@/lib/indexed-db';
 
 // Mock Supabase to simulate offline state
 vi.mock('@/integrations/supabase/client', () => ({
@@ -69,13 +69,9 @@ describe('Offline CRUD Operations', () => {
   
   beforeEach(async () => {
     // Clear IndexedDB for test user
-    const customerDB = indexedDB.getCustomerDB();
-    const itemDB = indexedDB.getItemDB();
-    const quoteDB = indexedDB.getQuoteDB();
-    
-    await customerDB.clear();
-    await itemDB.clear();
-    await quoteDB.clear();
+    await CustomerDB.clear();
+    await ItemDB.clear();
+    await QuoteDB.clear();
     
     // Clear localStorage cache
     localStorage.clear();
@@ -90,13 +86,9 @@ describe('Offline CRUD Operations', () => {
   
   afterEach(async () => {
     // Clean up after each test
-    const customerDB = indexedDB.getCustomerDB();
-    const itemDB = indexedDB.getItemDB();
-    const quoteDB = indexedDB.getQuoteDB();
-    
-    await customerDB.clear();
-    await itemDB.clear();
-    await quoteDB.clear();
+    await CustomerDB.clear();
+    await ItemDB.clear();
+    await QuoteDB.clear();
   });
 
   describe('Offline Customer Operations', () => {
@@ -107,8 +99,7 @@ describe('Offline CRUD Operations', () => {
       expect(result).toEqual({ ...customer, user_id: TEST_USER_ID });
       
       // Verify stored in IndexedDB
-      const customerDB = indexedDB.getCustomerDB();
-      const stored = await customerDB.getById('cust-1', TEST_USER_ID);
+      const stored = await CustomerDB.getById('cust-1', TEST_USER_ID);
       expect(stored).toBeTruthy();
       expect(stored?.id).toBe('cust-1');
     });
