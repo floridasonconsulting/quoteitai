@@ -109,7 +109,7 @@ export default function Customers() {
       stopLoading('load-customers');
       setLoadStartTime(null);
     }
-  }, [user?.id, startLoading, stopLoading, retryCount, setCustomers]); // Add setCustomers to dependencies
+  }, [user?.id, startLoading, stopLoading, retryCount]); // REMOVED setCustomers from dependencies
 
   useEffect(() => {
     loadCustomers();
