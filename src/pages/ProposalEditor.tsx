@@ -53,7 +53,7 @@ export default function ProposalEditor() {
 
   useEffect(() => {
     // Check if proposal data was passed via navigation state
-    if (location.state &amp;&amp; location.state.proposalData) {
+    if (location.state && location.state.proposalData) {
       setInitialData(location.state.proposalData);
     } else {
       // If accessed directly without state, redirect or show default
