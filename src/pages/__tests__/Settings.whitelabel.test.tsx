@@ -9,11 +9,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@supabase/supabase-js';
+import * as dbService from '@/lib/db-service';
 
 const mockToast = vi.fn();
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: mockToast }),
 }));
+
+// Mock db-service to return settings with logo
+vi.mock('@/lib/db-service', async () => {
+  const actual = await vi.importActual('@/lib/db-service');
+  return {
+    ...actual,
+    getSettings: vi.fn(),
+    saveSettings: vi.fn(),
+  };
+});
 
 type MockAuthContext = Partial<ReturnType<typeof useAuth>>;
 
@@ -59,6 +70,19 @@ describe('Settings - White-Label Branding', () => {
         userRole: 'pro',
       }));
 
+      // Mock getSettings to return basic settings without logo
+      vi.mocked(dbService.getSettings).mockResolvedValue({
+        name: 'Test Company',
+        address: '',
+        city: '',
+        state: '',
+        zip: '',
+        phone: '',
+        email: '',
+        website: '',
+        terms: '',
+      });
+
       const { getByText, queryByText } = renderSettings();
       
       // Wait for loading to complete
@@ -80,6 +104,19 @@ describe('Settings - White-Label Branding', () => {
         userRole: 'max',
       }));
 
+      // Mock getSettings to return basic settings
+      vi.mocked(dbService.getSettings).mockResolvedValue({
+        name: 'Test Company',
+        address: '',
+        city: '',
+        state: '',
+        zip: '',
+        phone: '',
+        email: '',
+        website: '',
+        terms: '',
+      });
+
       const { getByText, queryByText } = renderSettings();
 
       await waitFor(() => {
@@ -96,10 +133,28 @@ describe('Settings - White-Label Branding', () => {
         isMaxAITier: true,
         userRole: 'max',
       }));
+
+      // Mock getSettings to return basic settings
+      vi.mocked(dbService.getSettings).mockResolvedValue({
+        name: 'Test Company',
+        address: '',
+        city: '',
+        state: '',
+        zip: '',
+        phone: '',
+        email: '',
+        website: '',
+        terms: '',
+      });
     });
 
     it('should validate file size (max 2MB)', async () => {
       const { getByLabelText } = renderSettings();
+
+      // Wait for component to load
+      await waitFor(() => {
+        expect(getByLabelText(/Company Logo for Branding/i)).toBeInTheDocument();
+      });
 
       const file = new File(['x'.repeat(3 * 1024 * 1024)], 'large-logo.png', {
         type: 'image/png',
@@ -124,6 +179,11 @@ describe('Settings - White-Label Branding', () => {
     it('should validate file type (images only)', async () => {
       const { getByLabelText } = renderSettings();
 
+      // Wait for component to load
+      await waitFor(() => {
+        expect(getByLabelText(/Company Logo for Branding/i)).toBeInTheDocument();
+      });
+
       const file = new File(['content'], 'document.pdf', {
         type: 'application/pdf',
       });
@@ -146,26 +206,23 @@ describe('Settings - White-Label Branding', () => {
 
     it('should successfully upload valid logo', async () => {
       const mockUpload = vi.fn().mockResolvedValue({ error: null });
-      const mockUpdate = vi.fn().mockResolvedValue({ error: null });
+      const mockSaveSettings = vi.mocked(dbService.saveSettings);
       
       vi.mocked(supabase.storage.from).mockReturnValue({
         upload: mockUpload,
         getPublicUrl: () => ({
           data: { publicUrl: 'https://example.com/logo.png' },
         }),
-      } as ReturnType<typeof supabase.storage.from>);
+      } as any);
 
-      vi.mocked(supabase.from).mockReturnValue({
-        update: () => ({
-          eq: () => ({
-            select: () => ({
-              single: mockUpdate,
-            }),
-          }),
-        }),
-      } as ReturnType<typeof supabase.from>);
+      mockSaveSettings.mockResolvedValue();
 
       const { getByLabelText } = renderSettings();
+
+      // Wait for component to load
+      await waitFor(() => {
+        expect(getByLabelText(/Company Logo for Branding/i)).toBeInTheDocument();
+      });
 
       const file = new File(['logo'], 'logo.png', { type: 'image/png' });
       const input = getByLabelText(/Company Logo for Branding/i) as HTMLInputElement;
@@ -193,31 +250,21 @@ describe('Settings - White-Label Branding', () => {
         userRole: 'max',
       }));
       
-      // CRITICAL: Mock Supabase to return existing logo so Remove button appears
-      const mockSelect = vi.fn().mockResolvedValue({
-        data: { 
-          name: 'Test Company',
-          logo: 'https://example.com/logo.png',
-          primary_color: '#3b82f6',
-          secondary_color: '#8b5cf6'
-        },
-        error: null,
+      // CRITICAL: Mock getSettings to return logo data so Remove button appears
+      vi.mocked(dbService.getSettings).mockResolvedValue({
+        name: 'Test Company',
+        address: '',
+        city: '',
+        state: '',
+        zip: '',
+        phone: '',
+        email: '',
+        website: '',
+        terms: '',
+        logo: 'https://example.com/logo.png',
+        primaryColor: '#3b82f6',
+        secondaryColor: '#8b5cf6',
       });
-
-      vi.mocked(supabase.from).mockReturnValue({
-        select: () => ({
-          eq: () => ({
-            single: mockSelect,
-          }),
-        }),
-        update: () => ({
-          eq: () => ({
-            select: () => ({
-              single: vi.fn().mockResolvedValue({ error: null }),
-            }),
-          }),
-        }),
-      } as ReturnType<typeof supabase.from>);
     });
 
     it('should show remove button when logo exists', async () => {
@@ -239,34 +286,13 @@ describe('Settings - White-Label Branding', () => {
 
     it('should successfully delete logo', async () => {
       const mockRemove = vi.fn().mockResolvedValue({ error: null });
-      const mockUpdate = vi.fn().mockResolvedValue({ error: null });
+      const mockSaveSettings = vi.mocked(dbService.saveSettings);
 
       vi.mocked(supabase.storage.from).mockReturnValue({
         remove: mockRemove,
-      } as ReturnType<typeof supabase.storage.from>);
+      } as any);
 
-      vi.mocked(supabase.from).mockReturnValue({
-        select: () => ({
-          eq: () => ({
-            single: vi.fn().mockResolvedValue({
-              data: { 
-                name: 'Test Company',
-                logo: 'https://example.com/company-logos/user-123/logo.png',
-                primary_color: '#3b82f6',
-                secondary_color: '#8b5cf6'
-              },
-              error: null,
-            }),
-          }),
-        }),
-        update: () => ({
-          eq: () => ({
-            select: () => ({
-              single: mockUpdate,
-            }),
-          }),
-        }),
-      } as ReturnType<typeof supabase.from>);
+      mockSaveSettings.mockResolvedValue();
 
       const { getByText, queryByText } = renderSettings();
       const user = userEvent.setup();
@@ -295,7 +321,7 @@ describe('Settings - White-Label Branding', () => {
       // Verify deletion API calls were made
       await waitFor(() => {
         expect(mockRemove).toHaveBeenCalled();
-        expect(mockUpdate).toHaveBeenCalled();
+        expect(mockSaveSettings).toHaveBeenCalled();
         expect(mockToast).toHaveBeenCalledWith(
           expect.objectContaining({
             title: 'Success',
