@@ -39,6 +39,7 @@ import { AccountSection } from "@/components/settings/AccountSection";
 import { AppearanceSection } from "@/components/settings/AppearanceSection";
 import { IntegrationsSection } from "@/components/settings/IntegrationsSection";
 import { CacheDebugPanel } from "@/components/settings/CacheDebugPanel";
+import { PerformanceSection } from "@/components/settings/PerformanceSection";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -364,6 +365,9 @@ export default function Settings() {
 
         {/* Data Management */}
         <DataManagementSection />
+
+        {/* Performance Metrics */}
+        <PerformanceSection />
 
         {/* Cache Management */}
         <CacheDebugPanel />

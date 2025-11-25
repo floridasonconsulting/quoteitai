@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { CompanySettings, QueueChange } from '@/types';
 import { getStorageItem, setStorageItem } from './storage';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
+import { apiTracker } from './api-performance-tracker';
 
 // Re-export cache utilities
 export {
@@ -96,11 +97,19 @@ export const getSettings = async (userId: string | undefined): Promise<CompanySe
   }
 
   try {
+    const startTime = performance.now();
     const { data, error } = await supabase
       .from('company_settings')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
+
+    apiTracker.track(
+      'company_settings.select',
+      'GET',
+      performance.now() - startTime,
+      error ? 'error' : 'success'
+    );
 
     if (error) throw error;
 
@@ -181,9 +190,17 @@ export const saveSettings = async (
       onboardingCompleted: settingsData.onboarding_completed,
     });
 
+    const startTime = performance.now();
     const { error } = await supabase
       .from('company_settings')
       .upsert(settingsData, { onConflict: 'user_id' });
+
+    apiTracker.track(
+      'company_settings.upsert',
+      'POST',
+      performance.now() - startTime,
+      error ? 'error' : 'success'
+    );
 
     if (error) {
       console.error('[DB Service] Error saving settings:', error);
