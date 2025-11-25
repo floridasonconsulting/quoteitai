@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
 interface OptimisticUpdateOptions<T> {
@@ -14,10 +14,19 @@ export function useOptimisticList<T extends { id: string }>(
 ) {
   const [items, setItems] = useState<T[]>(initialData);
   const { entityName = 'item' } = options;
+  
+  // Use a ref to track the previous data to avoid infinite loops
+  const prevDataRef = useRef<string>('');
 
   // Sync with external data changes (e.g. initial load)
+  // CRITICAL FIX: Only update if the serialized data actually changed
+  // This prevents infinite loops caused by array reference changes
   useEffect(() => {
-    setItems(initialData);
+    const currentDataStr = JSON.stringify(initialData);
+    if (currentDataStr !== prevDataRef.current) {
+      prevDataRef.current = currentDataStr;
+      setItems(initialData);
+    }
   }, [initialData]);
 
   const add = useCallback(async (newItem: T) => {
