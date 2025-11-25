@@ -374,6 +374,9 @@ describe('Local Database Operations', () => {
 
   describe('Data Persistence', () => {
     it('should persist data across page reloads', () => {
+      // Start with clean slate
+      localStorage.clear();
+      
       const customer: Customer = {
         id: 'cust-1',
         name: 'Test Customer',
@@ -391,9 +394,12 @@ describe('Local Database Operations', () => {
       // Simulate page reload by reading directly from localStorage
       // Check for both legacy and new key formats
       const legacyKey = 'customers-local-v1';
-      const stored = JSON.parse(localStorage.getItem(legacyKey) || '[]');
+      const storedData = localStorage.getItem(legacyKey);
       
-      // Should have persisted the customer
+      // Should have persisted data
+      expect(storedData).not.toBeNull();
+      
+      const stored = JSON.parse(storedData || '[]');
       expect(stored.length).toBeGreaterThanOrEqual(1);
       
       // Find the customer we just added
@@ -403,20 +409,25 @@ describe('Local Database Operations', () => {
     });
 
     it('should handle corrupted localStorage data gracefully', () => {
-      // First, ensure localStorage is completely clean
+      // CRITICAL: Clear all localStorage data first
       localStorage.clear();
       
-      // Set corrupted data in localStorage
+      // Verify localStorage is actually empty
+      expect(localStorage.length).toBe(0);
+      
+      // Now set corrupted data
       localStorage.setItem('customers-local-v1', 'invalid-json');
 
       // Should return empty array and not throw
       const customers = LocalDB.getLocalCustomers();
       expect(customers).toEqual([]);
       
-      // Verify localStorage was cleared/reset for corrupted key
+      // Verify localStorage was fixed (should now have valid empty array)
       const storedAfter = localStorage.getItem('customers-local-v1');
-      // Should either be null or valid JSON (empty array)
+      
+      // Should either be null or valid empty JSON array
       if (storedAfter !== null) {
+        // Should not throw when parsing
         expect(() => JSON.parse(storedAfter)).not.toThrow();
         const parsed = JSON.parse(storedAfter);
         expect(Array.isArray(parsed)).toBe(true);
