@@ -14,31 +14,31 @@ const localStorageMock = (() => {
       delete store[key];
     },
     clear: () => {
+      // Completely reset the store
       store = {};
     },
-    // Add method to clear user-specific keys
-    clearUserData: (userId: string) => {
-      Object.keys(store).forEach(key => {
-        if (key.includes(userId) || !key.includes('user-')) {
-          delete store[key];
-        }
-      });
+    get length() {
+      return Object.keys(store).length;
+    },
+    key: (index: number) => {
+      const keys = Object.keys(store);
+      return keys[index] || null;
     },
   };
 })();
 
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
+  writable: true,
+  configurable: true,
 });
 
 describe('Local Database Operations', () => {
   const TEST_USER_ID = 'test-user-123';
   
   beforeEach(() => {
-    // Clear all storage including user-specific keys
-    localStorage.clear();
-    // Also clear any test user data
-    (localStorage as any).clearUserData?.(TEST_USER_ID);
+    // Completely reset localStorage mock
+    (localStorageMock as any).clear();
     vi.clearAllMocks();
   });
 
