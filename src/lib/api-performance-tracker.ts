@@ -50,7 +50,7 @@ class APIPerformanceTracker {
   }
 
   getSlowestEndpoints(limit = 5): { endpoint: string, avgDuration: number }[] {
-    const endpointStats = new Map&lt;string, { count: number, totalDuration: number }&gt;();
+    const endpointStats = new Map<string, { count: number, totalDuration: number }>();
     
     this.metrics.forEach(m => {
       const current = endpointStats.get(m.endpoint) || { count: 0, totalDuration: 0 };

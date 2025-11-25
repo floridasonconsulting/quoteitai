@@ -5,7 +5,7 @@ import { Activity, Clock, Layout, MousePointerClick, Zap } from "lucide-react";
 import { performanceMonitor, type PerformanceMetrics } from "@/lib/performance-monitor";
 
 export function PerformanceSection() {
-  const [metrics, setMetrics] = useState&lt;PerformanceMetrics&gt;(performanceMonitor.getMetrics());
+  const [metrics, setMetrics] = useState<PerformanceMetrics>(performanceMonitor.getMetrics());
 
   useEffect(() => {
     // Subscribe to performance updates
@@ -19,16 +19,16 @@ export function PerformanceSection() {
   // Helper to determine metric status color
   const getStatusColor = (value: number | null, thresholds: { good: number; poor: number }) => {
     if (value === null) return "bg-muted text-muted-foreground";
-    if (value &lt;= thresholds.good) return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 hover:bg-green-100";
-    if (value &gt; thresholds.poor) return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100 hover:bg-red-100";
+    if (value <= thresholds.good) return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 hover:bg-green-100";
+    if (value > thresholds.poor) return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100 hover:bg-red-100";
     return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100 hover:bg-yellow-100";
   };
 
   // Helper to determine metric status text
   const getStatusText = (value: number | null, thresholds: { good: number; poor: number }) => {
     if (value === null) return "Waiting...";
-    if (value &lt;= thresholds.good) return "Good";
-    if (value &gt; thresholds.poor) return "Poor";
+    if (value <= thresholds.good) return "Good";
+    if (value > thresholds.poor) return "Poor";
     return "Needs Improvement";
   };
 

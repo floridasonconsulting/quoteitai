@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from 'react';
 import { Plus, Search, Download, Upload, RefreshCw, AlertCircle, FileText, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,9 +18,26 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { useLoadingState } from '@/hooks/useLoadingState';
 import { CustomersTable } from '@/components/customers/CustomersTable';
+import { useOptimisticList } from '@/hooks/useOptimisticList';
 
 export default function Customers() {
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const { user } = useAuth();
+  const { queueChange, pauseSync, resumeSync } = useSyncManager();
+  const { startLoading, stopLoading } = useLoadingState();
+  
+  const {
+    items: customers,
+    setItems: setCustomers,
+    add: optimisticAdd,
+    update: optimisticUpdate,
+    remove: optimisticDelete
+  } = useOptimisticList<Customer>([], {
+    entityName: 'Customer',
+    onAdd: (customer) => addCustomer(user?.id, customer, queueChange),
+    onUpdate: (customer) => updateCustomer(user?.id, customer.id, customer, queueChange),
+    onDelete: (id) => deleteCustomer(user?.id, id, queueChange)
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -41,9 +57,6 @@ export default function Customers() {
     contactFirstName: '',
     contactLastName: '',
   });
-  const { user } = useAuth();
-  const { queueChange, pauseSync, resumeSync } = useSyncManager();
-  const { startLoading, stopLoading } = useLoadingState();
   const loadingRef = useRef(false);
 
   const loadCustomers = async (forceRefresh = false) => {
@@ -142,12 +155,15 @@ export default function Customers() {
     if (confirm(`Are you sure you want to delete ${selectedCustomers.length} customer${selectedCustomers.length > 1 ? 's' : ''}?`)) {
       try {
         const deletedIds = [...selectedCustomers];
-        setCustomers(prev => prev.filter(c => !deletedIds.includes(c.id)));
+        
+        // Optimistically update UI first
+        const remainingCustomers = customers.filter(c => !deletedIds.includes(c.id));
+        setCustomers(remainingCustomers);
         setSelectedCustomers([]);
         
-        for (const id of deletedIds) {
-          await deleteCustomer(user?.id, id, queueChange);
-        }
+        // Perform deletions
+        const promises = deletedIds.map(id => deleteCustomer(user?.id, id, queueChange));
+        await Promise.all(promises);
         
         toast.success(`Deleted ${deletedIds.length} customer${deletedIds.length > 1 ? 's' : ''}`);
       } catch (error) {
@@ -168,9 +184,8 @@ export default function Customers() {
 
     try {
       if (editingCustomer) {
-        const updated = await updateCustomer(user?.id, editingCustomer.id, formData, queueChange);
-        setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c));
-        toast.success('Customer updated successfully');
+        const updatedCustomer = { ...editingCustomer, ...formData };
+        await optimisticUpdate(updatedCustomer);
       } else {
         const newCustomer: Customer = {
           id: crypto.randomUUID(),
@@ -185,16 +200,13 @@ export default function Customers() {
           contactLastName: formData.contactLastName,
           createdAt: new Date().toISOString(),
         };
-        const added = await addCustomer(user?.id, newCustomer, queueChange);
-        setCustomers(prev => [...prev, added]);
-        toast.success('Customer added successfully');
+        await optimisticAdd(newCustomer);
       }
 
       handleCloseDialog();
     } catch (error) {
       console.error('Error saving customer:', error);
-      toast.error('Failed to save customer. Please try again.');
-      await loadCustomers();
+      // Toast handled by useOptimisticList
     }
   };
 
@@ -218,13 +230,10 @@ export default function Customers() {
     if (!confirm('Are you sure you want to delete this customer?')) return;
     
     try {
-      await deleteCustomer(user?.id, id, queueChange);
-      setCustomers(prev => prev.filter(c => c.id !== id));
-      toast.success('Customer deleted successfully');
+      await optimisticDelete(id);
     } catch (error) {
       console.error('Error deleting customer:', error);
-      toast.error('Failed to delete customer. Please try again.');
-      await loadCustomers();
+      // Toast handled by useOptimisticList
     }
   };
 
