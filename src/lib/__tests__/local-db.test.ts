@@ -409,17 +409,40 @@ describe('Local Database Operations', () => {
     });
 
     it('should handle corrupted localStorage data gracefully', () => {
-      // CRITICAL: Clear ALL localStorage data and verify it's empty
-      (localStorageMock as any).clear();
+      // FORCE COMPLETE RESET - recreate the mock entirely
+      const freshStore: Record<string, string> = {};
+      Object.defineProperty(window, 'localStorage', {
+        value: {
+          getItem: (key: string) => freshStore[key] || null,
+          setItem: (key: string, value: string) => {
+            freshStore[key] = value;
+          },
+          removeItem: (key: string) => {
+            delete freshStore[key];
+          },
+          clear: () => {
+            Object.keys(freshStore).forEach(key => delete freshStore[key]);
+          },
+          get length() {
+            return Object.keys(freshStore).length;
+          },
+          key: (index: number) => {
+            const keys = Object.keys(freshStore);
+            return keys[index] || null;
+          },
+        },
+        writable: true,
+        configurable: true,
+      });
       
-      // Verify localStorage is actually empty
+      // Verify localStorage is completely empty
       expect(localStorage.length).toBe(0);
       expect(localStorage.getItem('customers-local-v1')).toBeNull();
       
-      // Now set corrupted data - this should be the ONLY data in localStorage
+      // Set corrupted data
       localStorage.setItem('customers-local-v1', 'invalid-json');
       
-      // Verify corrupted data is set
+      // Verify corrupted data is the only thing in storage
       expect(localStorage.getItem('customers-local-v1')).toBe('invalid-json');
       expect(localStorage.length).toBe(1);
 
