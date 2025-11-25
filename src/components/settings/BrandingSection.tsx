@@ -3,22 +3,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Palette, Upload } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Palette, Upload, X, Crown } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BrandingSectionProps {
   settings: {
     primaryColor?: string;
     secondaryColor?: string;
-    logoUrl?: string;
+    logo?: string;
   };
   onUpdate: (updates: Partial<BrandingSectionProps["settings"]>) => Promise<void>;
 }
 
 export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
+  const { user, isMaxAITier } = useAuth();
   const [primaryColor, setPrimaryColor] = useState(settings.primaryColor || "#3b82f6");
   const [secondaryColor, setSecondaryColor] = useState(settings.secondaryColor || "#8b5cf6");
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleSave = async () => {
     try {
@@ -37,6 +44,11 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
   };
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isMaxAITier) {
+      toast.error("Logo upload is only available for Max AI tier users");
+      return;
+    }
+
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -51,16 +63,63 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
     }
 
     try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const logoUrl = e.target?.result as string;
-        await onUpdate({ logoUrl });
-        toast.success("Logo uploaded successfully");
-      };
-      reader.readAsDataURL(file);
+      setIsUploading(true);
+      
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user?.id}/logo.${fileExt}`;
+      const filePath = `company-logos/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('company-logos')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('company-logos')
+        .getPublicUrl(filePath);
+
+      // Update company settings
+      await onUpdate({ logo: publicUrl });
+      toast.success("Logo uploaded successfully");
     } catch (error) {
       console.error("Failed to upload logo:", error);
       toast.error("Failed to upload logo");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleLogoRemove = async () => {
+    if (!isMaxAITier || !settings.logo) return;
+
+    try {
+      setIsDeleting(true);
+
+      // Extract file path from URL
+      const logoPath = settings.logo.split('/company-logos/')[1];
+      
+      if (logoPath) {
+        // Remove from storage
+        const { error: deleteError } = await supabase.storage
+          .from('company-logos')
+          .remove([`company-logos/${logoPath}`]);
+
+        if (deleteError) {
+          console.warn("Failed to delete logo from storage:", deleteError);
+        }
+      }
+
+      // Update company settings
+      await onUpdate({ logo: '' });
+      toast.success("Logo removed successfully");
+    } catch (error) {
+      console.error("Failed to remove logo:", error);
+      toast.error("Failed to remove logo");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -76,38 +135,78 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Logo Upload */}
+        {/* White-Label Logo Upload (Max AI Tier Only) */}
         <div className="space-y-3">
-          <Label>Company Logo</Label>
-          {settings.logoUrl && (
-            <div className="mb-3">
-              <img
-                src={settings.logoUrl}
-                alt="Company logo"
-                className="h-16 w-auto object-contain"
-              />
-            </div>
+          <Label htmlFor="logo-upload">Company Logo for Branding</Label>
+          
+          {!isMaxAITier && (
+            <Alert>
+              <Crown className="h-4 w-4" />
+              <AlertDescription>
+                White-label branding is available exclusively for Max AI tier subscribers. 
+                <Button variant="link" className="p-0 h-auto ml-1" onClick={() => window.location.href = '/subscription'}>
+                  Upgrade to Max AI
+                </Button>
+              </AlertDescription>
+            </Alert>
           )}
-          <div>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleLogoUpload}
-              className="hidden"
-              id="logo-upload"
-            />
-            <label htmlFor="logo-upload">
-              <Button variant="outline" asChild>
-                <span>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload Logo
-                </span>
-              </Button>
-            </label>
-            <p className="text-sm text-muted-foreground mt-2">
-              Recommended: PNG or SVG, max 2MB
-            </p>
-          </div>
+
+          {isMaxAITier && (
+            <>
+              {settings.logo && (
+                <div className="mb-3 flex items-center gap-4">
+                  <img
+                    src={settings.logo}
+                    alt="Company logo"
+                    className="h-16 w-auto object-contain"
+                  />
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" disabled={isDeleting}>
+                        <X className="mr-2 h-4 w-4" />
+                        Remove Logo
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remove Logo</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to remove your company logo? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleLogoRemove}>
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                  id="logo-upload"
+                  aria-label="Company Logo for Branding"
+                />
+                <label htmlFor="logo-upload">
+                  <Button variant="outline" asChild disabled={isUploading}>
+                    <span>
+                      <Upload className="mr-2 h-4 w-4" />
+                      {isUploading ? "Uploading..." : "Upload Logo"}
+                    </span>
+                  </Button>
+                </label>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Recommended: PNG or SVG, max 2MB
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Color Pickers */}
