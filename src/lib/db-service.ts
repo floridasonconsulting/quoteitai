@@ -20,11 +20,7 @@ export * from './services/customer-service';
 export * from './services/item-service';
     
 // Re-export the clearInFlightRequests from the request pool service
-// Note: We need to ensure this is exported from request-pool-service first, 
-// or we keep a stub here if it was local.
-// Looking at dashboard.tsx import: import { ..., clearInFlightRequests } from "@/lib/db-service";
-// We should import it from request-pool-service and export it.
 export { clearInFlightRequests } from './services/request-pool-service';
-    
-// If there are any other utility functions that were in db-service, 
-// check if they need to be preserved or if they are now in the services.
+
+// Re-export getSettings from storage for backward compatibility
+export { getSettings } from './storage';
