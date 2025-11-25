@@ -261,7 +261,7 @@ describe('Settings - White-Label Branding', () => {
         userRole: 'max',
       }));
       
-      // Mock getSettings to return logo data
+      // Mock getSettings to return logo data - MUST be set up before render
       vi.mocked(dbService.getSettings).mockResolvedValue({
         name: 'Test Company',
         address: '',
@@ -281,15 +281,27 @@ describe('Settings - White-Label Branding', () => {
     it('should show remove button when logo exists', async () => {
       renderSettings();
 
-      // Wait for loading to complete and logo to render
+      // Wait for loading to complete
       await waitFor(() => {
         expect(screen.queryByText(/Loading settings/i)).not.toBeInTheDocument();
       }, { timeout: 5000 });
 
-      // Wait for Remove Logo button to appear
+      // Wait for getSettings to be called and data to load
+      await waitFor(() => {
+        expect(dbService.getSettings).toHaveBeenCalled();
+      }, { timeout: 3000 });
+
+      // Give component time to re-render with logo data
+      await waitFor(() => {
+        // Check for logo image first (confirms data loaded)
+        const logoImg = screen.queryByAlt(/Company logo/i);
+        expect(logoImg).toBeInTheDocument();
+      }, { timeout: 5000 });
+
+      // Now check for Remove Logo button
       await waitFor(() => {
         expect(screen.getByText(/Remove Logo/i)).toBeInTheDocument();
-      }, { timeout: 5000 });
+      }, { timeout: 3000 });
       
       // Verify no upgrade prompt
       expect(screen.queryByText(/Upgrade to Max AI/i)).not.toBeInTheDocument();
@@ -308,15 +320,21 @@ describe('Settings - White-Label Branding', () => {
       renderSettings();
       const user = userEvent.setup();
 
-      // Wait for component to load
+      // Wait for loading to complete
       await waitFor(() => {
         expect(screen.queryByText(/Loading settings/i)).not.toBeInTheDocument();
+      }, { timeout: 5000 });
+
+      // Wait for logo to be displayed (confirms data loaded)
+      await waitFor(() => {
+        const logoImg = screen.queryByAlt(/Company logo/i);
+        expect(logoImg).toBeInTheDocument();
       }, { timeout: 5000 });
 
       // Wait for Remove Logo button
       await waitFor(() => {
         expect(screen.getByText(/Remove Logo/i)).toBeInTheDocument();
-      }, { timeout: 5000 });
+      }, { timeout: 3000 });
 
       // Click Remove Logo button
       const removeButton = screen.getByText(/Remove Logo/i);
