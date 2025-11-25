@@ -396,6 +396,9 @@ describe('Local Database Operations', () => {
       };
 
       LocalDB.addLocalCustomer(customer);
+      
+      // CRITICAL: Flush pending writes to ensure data is written to localStorage
+      storageCache.flush();
 
       // Simulate page reload by reading directly from localStorage
       // Check for both legacy and new key formats
