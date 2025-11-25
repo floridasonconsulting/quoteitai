@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   getStorageItem,
   setStorageItem,
-  getSettings as getLocalSettings,
+  getSettings,
 } from "./storage";
 import { toSnakeCase } from "./services/transformation-utils";
 import { IndexedDBMigrationService } from "./indexed-db-migration";
