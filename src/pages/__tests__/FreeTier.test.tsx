@@ -34,6 +34,7 @@ vi.mock('@/lib/db-service', () => ({
   getQuotes: vi.fn().mockResolvedValue([]),
   getCustomers: vi.fn().mockResolvedValue([]),
   getItems: vi.fn().mockResolvedValue([]),
+  clearInFlightRequests: vi.fn(),
 }));
 
 type MockAuthContext = Partial<ReturnType<typeof useAuth>>;
