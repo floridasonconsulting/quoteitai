@@ -222,7 +222,7 @@ describe('Settings - White-Label Branding', () => {
       }, { timeout: 3000 });
     });
 
-    it('should successfully upload valid logo', async () => {
+    it('should successfully upload valid logo', { timeout: 10000 }, async () => {
       const mockUpload = vi.fn().mockResolvedValue({ error: null });
       const mockSaveSettings = vi.mocked(dbService.saveSettings);
       
@@ -260,7 +260,7 @@ describe('Settings - White-Label Branding', () => {
           })
         );
       }, { timeout: 5000 });
-    }, { timeout: 10000 }); // Increase timeout for this test
+    });
   });
 
   describe('Logo Delete Functionality', () => {
@@ -288,7 +288,7 @@ describe('Settings - White-Label Branding', () => {
       });
     });
 
-    it('should show remove button when logo exists', async () => {
+    it('should show remove button when logo exists', { timeout: 15000 }, async () => {
       renderSettings();
 
       // Wait for loading to complete
@@ -316,9 +316,9 @@ describe('Settings - White-Label Branding', () => {
       
       // Verify no upgrade prompt
       expect(screen.queryByText(/Upgrade to Max AI/i)).not.toBeInTheDocument();
-    }, { timeout: 15000 }); // Increase timeout for this test
+    });
 
-    it('should successfully delete logo', async () => {
+    it('should successfully delete logo', { timeout: 15000 }, async () => {
       const mockRemove = vi.fn().mockResolvedValue({ error: null });
       const mockSaveSettings = vi.mocked(dbService.saveSettings);
 
@@ -374,6 +374,6 @@ describe('Settings - White-Label Branding', () => {
           })
         );
       }, { timeout: 5000 });
-    }, { timeout: 15000 }); // Increase timeout for this test
+    });
   });
 });
