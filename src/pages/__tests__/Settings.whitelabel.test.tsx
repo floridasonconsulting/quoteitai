@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { waitFor } from '@testing-library/dom';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
@@ -10,12 +10,17 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, type StorageFileApi } from '@supabase/supabase-js';
 import * as dbService from '@/lib/db-service';
+import { toast } from 'sonner';
 
-const mockToast = vi.fn();
-vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({ toast: mockToast }),
+// Mock sonner toast
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
 }));
 
+// Remove unused use-toast mock
 // Mock db-service completely
 vi.mock('@/lib/db-service', () => ({
   getSettings: vi.fn(),
@@ -24,7 +29,7 @@ vi.mock('@/lib/db-service', () => ({
   clearSampleData: vi.fn(),
 }));
 
-// Mock useSyncManager to avoid sync operations during tests
+// Mock useSyncManager ...
 vi.mock('@/hooks/useSyncManager', () => ({
   useSyncManager: () => ({
     queueChange: vi.fn(),
@@ -171,23 +176,15 @@ describe('Settings - White-Label Branding', () => {
         expect(screen.getByText(/Company Logo for Branding/i)).toBeInTheDocument();
       }, { timeout: 3000 });
 
-      const file = new File(['x'.repeat(3 * 1024 * 1024)], 'large-logo.png', {
-        type: 'image/png',
-      });
+      const file = new File(['x'], 'large-logo.png', { type: 'image/png' });
+      Object.defineProperty(file, 'size', { value: 3 * 1024 * 1024 });
 
       const input = screen.getByLabelText(/Company Logo for Branding/i) as HTMLInputElement;
-      const user = userEvent.setup();
       
-      await user.upload(input, file);
+      fireEvent.change(input, { target: { files: [file] } });
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith(
-          expect.objectContaining({
-            title: 'Error',
-            description: expect.stringContaining('2MB'),
-            variant: 'destructive',
-          })
-        );
+        expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('2MB'));
       }, { timeout: 3000 });
     });
 
@@ -207,18 +204,11 @@ describe('Settings - White-Label Branding', () => {
       });
 
       const input = screen.getByLabelText(/Company Logo for Branding/i) as HTMLInputElement;
-      const user = userEvent.setup();
       
-      await user.upload(input, file);
+      fireEvent.change(input, { target: { files: [file] } });
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith(
-          expect.objectContaining({
-            title: 'Error',
-            description: expect.stringContaining('image'),
-            variant: 'destructive',
-          })
-        );
+        expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('image'));
       }, { timeout: 3000 });
     });
 
@@ -231,7 +221,8 @@ describe('Settings - White-Label Branding', () => {
         getPublicUrl: () => ({
           data: { publicUrl: 'https://example.com/logo.png' },
         }),
-      } as Partial<StorageFileApi>);
+        remove: vi.fn(),
+      } as unknown as StorageFileApi);
 
       mockSaveSettings.mockResolvedValue();
 
@@ -247,18 +238,12 @@ describe('Settings - White-Label Branding', () => {
 
       const file = new File(['logo'], 'logo.png', { type: 'image/png' });
       const input = screen.getByLabelText(/Company Logo for Branding/i) as HTMLInputElement;
-      const user = userEvent.setup();
       
-      await user.upload(input, file);
+      fireEvent.change(input, { target: { files: [file] } });
 
       await waitFor(() => {
         expect(mockUpload).toHaveBeenCalled();
-        expect(mockToast).toHaveBeenCalledWith(
-          expect.objectContaining({
-            title: 'Success',
-            description: expect.stringContaining('uploaded'),
-          })
-        );
+        expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('uploaded'));
       }, { timeout: 5000 });
     });
   });
@@ -282,7 +267,8 @@ describe('Settings - White-Label Branding', () => {
         email: '',
         website: '',
         terms: '',
-        logo: 'https://example.com/test-logo.png',
+        // CRITICAL: Logo URL must contain /company-logos/ for the split() logic to work
+        logo: 'https://example.com/storage/v1/object/public/company-logos/test-logo.png',
         primaryColor: '#3b82f6',
         secondaryColor: '#8b5cf6',
       });
@@ -367,12 +353,7 @@ describe('Settings - White-Label Branding', () => {
       await waitFor(() => {
         expect(mockRemove).toHaveBeenCalled();
         expect(mockSaveSettings).toHaveBeenCalled();
-        expect(mockToast).toHaveBeenCalledWith(
-          expect.objectContaining({
-            title: 'Success',
-            description: expect.stringContaining('removed'),
-          })
-        );
+        expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('removed'));
       }, { timeout: 5000 });
     });
   });

@@ -81,7 +81,9 @@ describe('Free Tier Features', () => {
     render(<NewQuote />, { wrapper });
 
     // Check for loading state first to debug potential hangs
-    // expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+    }, { timeout: 5000 });
 
     await waitFor(() => {
       // Free tier should see basic quote creation
