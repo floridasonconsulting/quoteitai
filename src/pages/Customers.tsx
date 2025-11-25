@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Plus, Search, Download, Upload, RefreshCw, AlertCircle, FileText, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -25,19 +25,6 @@ export default function Customers() {
   const { queueChange, pauseSync, resumeSync } = useSyncManager();
   const { startLoading, stopLoading } = useLoadingState();
   
-  const {
-    items: customers,
-    setItems: setCustomers,
-    add: optimisticAdd,
-    update: optimisticUpdate,
-    remove: optimisticDelete
-  } = useOptimisticList<Customer>([], {
-    entityName: 'Customer',
-    onAdd: (customer) => addCustomer(user?.id, customer, queueChange),
-    onUpdate: (customer) => updateCustomer(user?.id, customer.id, customer, queueChange),
-    onDelete: (id) => deleteCustomer(user?.id, id, queueChange)
-  });
-
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -58,8 +45,25 @@ export default function Customers() {
     contactLastName: '',
   });
   const loadingRef = useRef(false);
+  
+  // Memoize the options for useOptimisticList to prevent re-initialization
+  const optimisticOptions = useMemo(() => ({
+    entityName: 'Customer',
+    onAdd: (customer: Customer) => addCustomer(user?.id, customer, queueChange),
+    onUpdate: (customer: Customer) => updateCustomer(user?.id, customer.id, customer, queueChange),
+    onDelete: (id: string) => deleteCustomer(user?.id, id, queueChange)
+  }), [user?.id, queueChange]);
 
-  const loadCustomers = async (forceRefresh = false) => {
+  const {
+    items: customers,
+    setItems: setCustomers,
+    add: optimisticAdd,
+    update: optimisticUpdate,
+    remove: optimisticDelete
+  } = useOptimisticList<Customer>([], optimisticOptions);
+
+  // Wrap loadCustomers in useCallback to prevent recreation on every render
+  const loadCustomers = useCallback(async (forceRefresh = false) => {
     if (loadingRef.current) {
       console.log('[Customers] Load already in progress, skipping');
       return;
@@ -104,11 +108,11 @@ export default function Customers() {
       stopLoading('load-customers');
       setLoadStartTime(null);
     }
-  };
+  }, [retryCount, startLoading, stopLoading]);
 
   useEffect(() => {
     loadCustomers();
-  }, [user]);
+  }, [loadCustomers]);
 
   useEffect(() => {
     let lastFocusTime = Date.now();
