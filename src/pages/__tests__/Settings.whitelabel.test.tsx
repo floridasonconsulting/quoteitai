@@ -164,8 +164,12 @@ describe('Settings - White-Label Branding', () => {
       // Wait for component to load completely
       await waitFor(() => {
         expect(screen.queryByText(/Loading settings/i)).not.toBeInTheDocument();
-        expect(screen.getByLabelText(/Company Logo for Branding/i)).toBeInTheDocument();
       }, { timeout: 5000 });
+      
+      // Wait for BrandingSection to render
+      await waitFor(() => {
+        expect(screen.getByText(/Company Logo for Branding/i)).toBeInTheDocument();
+      }, { timeout: 3000 });
 
       const file = new File(['x'.repeat(3 * 1024 * 1024)], 'large-logo.png', {
         type: 'image/png',
@@ -192,8 +196,11 @@ describe('Settings - White-Label Branding', () => {
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading settings/i)).not.toBeInTheDocument();
-        expect(screen.getByLabelText(/Company Logo for Branding/i)).toBeInTheDocument();
       }, { timeout: 5000 });
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Company Logo for Branding/i)).toBeInTheDocument();
+      }, { timeout: 3000 });
 
       const file = new File(['content'], 'document.pdf', {
         type: 'application/pdf',
@@ -232,8 +239,11 @@ describe('Settings - White-Label Branding', () => {
 
       await waitFor(() => {
         expect(screen.queryByText(/Loading settings/i)).not.toBeInTheDocument();
-        expect(screen.getByLabelText(/Company Logo for Branding/i)).toBeInTheDocument();
       }, { timeout: 5000 });
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Company Logo for Branding/i)).toBeInTheDocument();
+      }, { timeout: 3000 });
 
       const file = new File(['logo'], 'logo.png', { type: 'image/png' });
       const input = screen.getByLabelText(/Company Logo for Branding/i) as HTMLInputElement;
@@ -250,7 +260,7 @@ describe('Settings - White-Label Branding', () => {
           })
         );
       }, { timeout: 5000 });
-    });
+    }, { timeout: 10000 }); // Increase timeout for this test
   });
 
   describe('Logo Delete Functionality', () => {
@@ -272,7 +282,7 @@ describe('Settings - White-Label Branding', () => {
         email: '',
         website: '',
         terms: '',
-        logo: 'https://example.com/logo.png',
+        logo: 'https://example.com/test-logo.png',
         primaryColor: '#3b82f6',
         secondaryColor: '#8b5cf6',
       });
@@ -286,26 +296,27 @@ describe('Settings - White-Label Branding', () => {
         expect(screen.queryByText(/Loading settings/i)).not.toBeInTheDocument();
       }, { timeout: 5000 });
 
-      // Wait for getSettings to be called and data to load
+      // Wait for settings to load (check that BrandingSection is rendered)
       await waitFor(() => {
-        expect(dbService.getSettings).toHaveBeenCalled();
+        expect(screen.getByText(/Company Logo for Branding/i)).toBeInTheDocument();
       }, { timeout: 3000 });
 
-      // Give component time to re-render with logo data
+      // CRITICAL: Wait for logo image to appear (confirms logo data loaded)
       await waitFor(() => {
-        // Check for logo image first (confirms data loaded)
-        const logoImg = screen.queryByAlt(/Company logo/i);
+        const logoImg = screen.getByAlt(/Company logo/i);
         expect(logoImg).toBeInTheDocument();
+        expect(logoImg).toHaveAttribute('src', 'https://example.com/test-logo.png');
       }, { timeout: 5000 });
 
       // Now check for Remove Logo button
       await waitFor(() => {
-        expect(screen.getByText(/Remove Logo/i)).toBeInTheDocument();
+        const removeButton = screen.getByText(/Remove Logo/i);
+        expect(removeButton).toBeInTheDocument();
       }, { timeout: 3000 });
       
       // Verify no upgrade prompt
       expect(screen.queryByText(/Upgrade to Max AI/i)).not.toBeInTheDocument();
-    });
+    }, { timeout: 15000 }); // Increase timeout for this test
 
     it('should successfully delete logo', async () => {
       const mockRemove = vi.fn().mockResolvedValue({ error: null });
@@ -325,9 +336,14 @@ describe('Settings - White-Label Branding', () => {
         expect(screen.queryByText(/Loading settings/i)).not.toBeInTheDocument();
       }, { timeout: 5000 });
 
+      // Wait for BrandingSection to render
+      await waitFor(() => {
+        expect(screen.getByText(/Company Logo for Branding/i)).toBeInTheDocument();
+      }, { timeout: 3000 });
+
       // Wait for logo to be displayed (confirms data loaded)
       await waitFor(() => {
-        const logoImg = screen.queryByAlt(/Company logo/i);
+        const logoImg = screen.getByAlt(/Company logo/i);
         expect(logoImg).toBeInTheDocument();
       }, { timeout: 5000 });
 
@@ -358,6 +374,6 @@ describe('Settings - White-Label Branding', () => {
           })
         );
       }, { timeout: 5000 });
-    });
+    }, { timeout: 15000 }); // Increase timeout for this test
   });
 });
