@@ -434,12 +434,21 @@ describe('Local Database Operations', () => {
       // Verify corrupted data is set
       expect(localStorage.getItem('customers-local-v1')).toBe('invalid-json');
 
+      // Mock console.error to suppress expected error logs
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
       // Should return empty array and not throw when encountering corrupted data
       const customers = LocalDB.getLocalCustomers();
       expect(customers).toEqual([]);
       
-      // Verify the error was handled gracefully
-      // The storage cache should have returned an empty array without crashing
+      // Verify the error was logged (expected behavior)
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to read from localStorage'),
+        expect.any(Error)
+      );
+      
+      // Restore console.error
+      consoleErrorSpy.mockRestore();
     });
   });
 });
