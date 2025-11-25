@@ -11,7 +11,6 @@ import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 import { CustomerDB, isIndexedDBSupported } from '../indexed-db';
 import { apiTracker } from '@/lib/api-performance-tracker';
-import { getData } from '../local-db';
 
 /**
  * Fetch all customers for a user
@@ -110,30 +109,38 @@ export async function getCustomers(userId: string | undefined): Promise<Customer
             
             // NEW FALLBACK: Check localStorage if IndexedDB is also empty
             // This handles cases where migration might have failed or not run
-            console.log('[CustomerService] IndexedDB empty - checking legacy localStorage');
-            const legacyData = getData<Customer[]>('customers');
-            if (legacyData && legacyData.length > 0) {
-               console.log(`[CustomerService] Found ${legacyData.length} customers in legacy storage - migrating now`);
-               // Migrate to IndexedDB on the fly
-               const migratedCustomers: Customer[] = [];
-               for (const customer of legacyData) {
-                 const customerWithUserId = { ...customer, user_id: userId } as Customer;
-                 try {
-                   // CRITICAL FIX: Use add() for new records, not update()
-                   await CustomerDB.add(customerWithUserId as never);
-                   migratedCustomers.push(customerWithUserId);
-                 } catch (addError) {
-                   console.error(`[CustomerService] Failed to migrate customer ${customer.id}:`, addError);
+            console.log('[CustomerService] IndexedDB empty - checking legacy localStorage for "customers" key');
+            try {
+              const legacyJSON = localStorage.getItem('customers');
+              const legacyData = legacyJSON ? JSON.parse(legacyJSON) as Customer[] : null;
+
+              if (legacyData && legacyData.length > 0) {
+                 console.log(`[CustomerService] Found ${legacyData.length} customers in legacy storage - migrating now`);
+                 // Migrate to IndexedDB on the fly
+                 const migratedCustomers: Customer[] = [];
+                 for (const customer of legacyData) {
+                   const customerWithUserId = { ...customer, user_id: userId } as Customer;
+                   try {
+                     // CRITICAL FIX: Use add() for new records, not update()
+                     await CustomerDB.add(customerWithUserId as never);
+                     migratedCustomers.push(customerWithUserId);
+                   } catch (addError) {
+                     console.error(`[CustomerService] Failed to migrate customer ${customer.id}:`, addError);
+                   }
                  }
-               }
-               
-               if (migratedCustomers.length > 0) {
-                 console.log(`✅ Migrated ${migratedCustomers.length} customers from localStorage to IndexedDB`);
-                 // Cache the migrated data
-                 await cacheManager.set('customers', migratedCustomers);
-                 // Return the migrated data
-                 return migratedCustomers;
-               }
+                 
+                 if (migratedCustomers.length > 0) {
+                   console.log(`✅ Migrated ${migratedCustomers.length} customers from localStorage to IndexedDB`);
+                   // Cache the migrated data
+                   await cacheManager.set('customers', migratedCustomers);
+                   // Remove the old legacy data to prevent re-migration
+                   localStorage.removeItem('customers');
+                   // Return the migrated data
+                   return migratedCustomers;
+                 }
+              }
+            } catch (e) {
+              console.error('[CustomerService] Error parsing legacy customer data from localStorage', e);
             }
             
           } catch (err) {
