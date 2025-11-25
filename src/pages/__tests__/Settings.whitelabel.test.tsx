@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { waitFor } from '@testing-library/dom';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
@@ -16,15 +16,26 @@ vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: mockToast }),
 }));
 
-// Mock db-service to return settings with logo
-vi.mock('@/lib/db-service', async () => {
-  const actual = await vi.importActual('@/lib/db-service');
-  return {
-    ...actual,
-    getSettings: vi.fn(),
-    saveSettings: vi.fn(),
-  };
-});
+// Mock db-service completely
+vi.mock('@/lib/db-service', () => ({
+  getSettings: vi.fn(),
+  saveSettings: vi.fn(),
+  clearDatabaseData: vi.fn(),
+  clearSampleData: vi.fn(),
+}));
+
+// Mock useSyncManager to avoid sync operations during tests
+vi.mock('@/hooks/useSyncManager', () => ({
+  useSyncManager: () => ({
+    queueChange: vi.fn(),
+    pauseSync: vi.fn(),
+    resumeSync: vi.fn(),
+    isOnline: true,
+    isSyncing: false,
+    pendingCount: 0,
+    failedCount: 0,
+  }),
+}));
 
 type MockAuthContext = Partial<ReturnType<typeof useAuth>>;
 
@@ -64,44 +75,11 @@ describe('Settings - White-Label Branding', () => {
 
   describe('Tier-Based Access Control', () => {
     it('should show upgrade prompt for non-Max AI tier users', async () => {
+      // Set up auth context mock BEFORE rendering
       vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
         user: { id: 'user-123' } as User,
         isMaxAITier: false,
         userRole: 'pro',
-      }));
-
-      // Mock getSettings to return basic settings without logo
-      vi.mocked(dbService.getSettings).mockResolvedValue({
-        name: 'Test Company',
-        address: '',
-        city: '',
-        state: '',
-        zip: '',
-        phone: '',
-        email: '',
-        website: '',
-        terms: '',
-      });
-
-      const { getByText, queryByText } = renderSettings();
-      
-      // Wait for loading to complete
-      await waitFor(() => {
-        expect(queryByText(/Loading settings/i)).not.toBeInTheDocument();
-      }, { timeout: 3000 });
-
-      // Now check for the upgrade prompt
-      await waitFor(() => {
-        expect(getByText(/Upgrade to Max AI/i)).toBeInTheDocument();
-        expect(getByText(/White-label branding is available/i)).toBeInTheDocument();
-      });
-    });
-
-    it('should show logo upload for Max AI tier users', async () => {
-      vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
-        user: { id: 'user-123' } as User,
-        isMaxAITier: true,
-        userRole: 'max',
       }));
 
       // Mock getSettings to return basic settings
@@ -117,12 +95,45 @@ describe('Settings - White-Label Branding', () => {
         terms: '',
       });
 
-      const { getByText, queryByText } = renderSettings();
+      renderSettings();
+      
+      // Wait for loading to complete
+      await waitFor(() => {
+        expect(screen.queryByText(/Loading settings/i)).not.toBeInTheDocument();
+      }, { timeout: 5000 });
+
+      // Check for upgrade prompt
+      await waitFor(() => {
+        expect(screen.getByText(/Upgrade to Max AI/i)).toBeInTheDocument();
+        expect(screen.getByText(/White-label branding is available/i)).toBeInTheDocument();
+      }, { timeout: 3000 });
+    });
+
+    it('should show logo upload for Max AI tier users', async () => {
+      vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
+        user: { id: 'user-123' } as User,
+        isMaxAITier: true,
+        userRole: 'max',
+      }));
+
+      vi.mocked(dbService.getSettings).mockResolvedValue({
+        name: 'Test Company',
+        address: '',
+        city: '',
+        state: '',
+        zip: '',
+        phone: '',
+        email: '',
+        website: '',
+        terms: '',
+      });
+
+      renderSettings();
 
       await waitFor(() => {
-        expect(getByText(/Company Logo for Branding/i)).toBeInTheDocument();
-        expect(queryByText(/Upgrade to Max AI/i)).not.toBeInTheDocument();
-      });
+        expect(screen.getByText(/Company Logo for Branding/i)).toBeInTheDocument();
+        expect(screen.queryByText(/Upgrade to Max AI/i)).not.toBeInTheDocument();
+      }, { timeout: 5000 });
     });
   });
 
@@ -134,7 +145,6 @@ describe('Settings - White-Label Branding', () => {
         userRole: 'max',
       }));
 
-      // Mock getSettings to return basic settings
       vi.mocked(dbService.getSettings).mockResolvedValue({
         name: 'Test Company',
         address: '',
@@ -149,18 +159,19 @@ describe('Settings - White-Label Branding', () => {
     });
 
     it('should validate file size (max 2MB)', async () => {
-      const { getByLabelText } = renderSettings();
+      renderSettings();
 
-      // Wait for component to load
+      // Wait for component to load completely
       await waitFor(() => {
-        expect(getByLabelText(/Company Logo for Branding/i)).toBeInTheDocument();
-      });
+        expect(screen.queryByText(/Loading settings/i)).not.toBeInTheDocument();
+        expect(screen.getByLabelText(/Company Logo for Branding/i)).toBeInTheDocument();
+      }, { timeout: 5000 });
 
       const file = new File(['x'.repeat(3 * 1024 * 1024)], 'large-logo.png', {
         type: 'image/png',
       });
 
-      const input = getByLabelText(/Company Logo for Branding/i) as HTMLInputElement;
+      const input = screen.getByLabelText(/Company Logo for Branding/i) as HTMLInputElement;
       const user = userEvent.setup();
       
       await user.upload(input, file);
@@ -173,22 +184,22 @@ describe('Settings - White-Label Branding', () => {
             variant: 'destructive',
           })
         );
-      });
+      }, { timeout: 3000 });
     });
 
     it('should validate file type (images only)', async () => {
-      const { getByLabelText } = renderSettings();
+      renderSettings();
 
-      // Wait for component to load
       await waitFor(() => {
-        expect(getByLabelText(/Company Logo for Branding/i)).toBeInTheDocument();
-      });
+        expect(screen.queryByText(/Loading settings/i)).not.toBeInTheDocument();
+        expect(screen.getByLabelText(/Company Logo for Branding/i)).toBeInTheDocument();
+      }, { timeout: 5000 });
 
       const file = new File(['content'], 'document.pdf', {
         type: 'application/pdf',
       });
 
-      const input = getByLabelText(/Company Logo for Branding/i) as HTMLInputElement;
+      const input = screen.getByLabelText(/Company Logo for Branding/i) as HTMLInputElement;
       const user = userEvent.setup();
       
       await user.upload(input, file);
@@ -201,7 +212,7 @@ describe('Settings - White-Label Branding', () => {
             variant: 'destructive',
           })
         );
-      });
+      }, { timeout: 3000 });
     });
 
     it('should successfully upload valid logo', async () => {
@@ -217,15 +228,15 @@ describe('Settings - White-Label Branding', () => {
 
       mockSaveSettings.mockResolvedValue();
 
-      const { getByLabelText } = renderSettings();
+      renderSettings();
 
-      // Wait for component to load
       await waitFor(() => {
-        expect(getByLabelText(/Company Logo for Branding/i)).toBeInTheDocument();
-      });
+        expect(screen.queryByText(/Loading settings/i)).not.toBeInTheDocument();
+        expect(screen.getByLabelText(/Company Logo for Branding/i)).toBeInTheDocument();
+      }, { timeout: 5000 });
 
       const file = new File(['logo'], 'logo.png', { type: 'image/png' });
-      const input = getByLabelText(/Company Logo for Branding/i) as HTMLInputElement;
+      const input = screen.getByLabelText(/Company Logo for Branding/i) as HTMLInputElement;
       const user = userEvent.setup();
       
       await user.upload(input, file);
@@ -238,7 +249,7 @@ describe('Settings - White-Label Branding', () => {
             description: expect.stringContaining('uploaded'),
           })
         );
-      });
+      }, { timeout: 5000 });
     });
   });
 
@@ -250,7 +261,7 @@ describe('Settings - White-Label Branding', () => {
         userRole: 'max',
       }));
       
-      // CRITICAL: Mock getSettings to return logo data so Remove button appears
+      // Mock getSettings to return logo data
       vi.mocked(dbService.getSettings).mockResolvedValue({
         name: 'Test Company',
         address: '',
@@ -268,20 +279,20 @@ describe('Settings - White-Label Branding', () => {
     });
 
     it('should show remove button when logo exists', async () => {
-      const { getByText, queryByText } = renderSettings();
+      renderSettings();
 
-      // Wait for component to load with logo data
+      // Wait for loading to complete and logo to render
       await waitFor(() => {
-        expect(queryByText(/Loading settings/i)).not.toBeInTheDocument();
-      }, { timeout: 3000 });
+        expect(screen.queryByText(/Loading settings/i)).not.toBeInTheDocument();
+      }, { timeout: 5000 });
 
-      // Should show Remove Logo button since logo exists in mock data
+      // Wait for Remove Logo button to appear
       await waitFor(() => {
-        expect(getByText(/Remove Logo/i)).toBeInTheDocument();
-      }, { timeout: 3000 });
+        expect(screen.getByText(/Remove Logo/i)).toBeInTheDocument();
+      }, { timeout: 5000 });
       
-      // Should NOT show upgrade prompt since user is Max tier
-      expect(queryByText(/Upgrade to Max AI/i)).not.toBeInTheDocument();
+      // Verify no upgrade prompt
+      expect(screen.queryByText(/Upgrade to Max AI/i)).not.toBeInTheDocument();
     });
 
     it('should successfully delete logo', async () => {
@@ -294,31 +305,31 @@ describe('Settings - White-Label Branding', () => {
 
       mockSaveSettings.mockResolvedValue();
 
-      const { getByText, queryByText } = renderSettings();
+      renderSettings();
       const user = userEvent.setup();
 
       // Wait for component to load
       await waitFor(() => {
-        expect(queryByText(/Loading settings/i)).not.toBeInTheDocument();
-      }, { timeout: 3000 });
+        expect(screen.queryByText(/Loading settings/i)).not.toBeInTheDocument();
+      }, { timeout: 5000 });
 
-      // Wait for Remove Logo button to appear
+      // Wait for Remove Logo button
       await waitFor(() => {
-        expect(getByText(/Remove Logo/i)).toBeInTheDocument();
-      }, { timeout: 3000 });
+        expect(screen.getByText(/Remove Logo/i)).toBeInTheDocument();
+      }, { timeout: 5000 });
 
       // Click Remove Logo button
-      const removeButton = getByText(/Remove Logo/i);
+      const removeButton = screen.getByText(/Remove Logo/i);
       await user.click(removeButton);
 
       // Wait for confirmation dialog and click Delete
       await waitFor(() => {
-        const confirmButton = getByText(/^Delete$/i);
+        const confirmButton = screen.getByText(/^Delete$/i);
         expect(confirmButton).toBeInTheDocument();
         return user.click(confirmButton);
-      });
+      }, { timeout: 3000 });
 
-      // Verify deletion API calls were made
+      // Verify deletion calls
       await waitFor(() => {
         expect(mockRemove).toHaveBeenCalled();
         expect(mockSaveSettings).toHaveBeenCalled();
@@ -328,7 +339,7 @@ describe('Settings - White-Label Branding', () => {
             description: expect.stringContaining('removed'),
           })
         );
-      });
+      }, { timeout: 5000 });
     });
   });
 });
