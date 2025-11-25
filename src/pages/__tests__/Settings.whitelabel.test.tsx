@@ -192,11 +192,15 @@ describe('Settings - White-Label Branding', () => {
         isMaxAITier: true,
         userRole: 'max',
       }));
-    });
-
-    it('should show remove button when logo exists', async () => {
+      
+      // CRITICAL: Mock Supabase to return existing logo so Remove button appears
       const mockSelect = vi.fn().mockResolvedValue({
-        data: { logo: 'https://example.com/logo.png' },
+        data: { 
+          name: 'Test Company',
+          logo: 'https://example.com/logo.png',
+          primary_color: '#3b82f6',
+          secondary_color: '#8b5cf6'
+        },
         error: null,
       });
 
@@ -206,14 +210,31 @@ describe('Settings - White-Label Branding', () => {
             single: mockSelect,
           }),
         }),
+        update: () => ({
+          eq: () => ({
+            select: () => ({
+              single: vi.fn().mockResolvedValue({ error: null }),
+            }),
+          }),
+        }),
       } as ReturnType<typeof supabase.from>);
+    });
 
-      const { getByText } = renderSettings();
+    it('should show remove button when logo exists', async () => {
+      const { getByText, queryByText } = renderSettings();
 
+      // Wait for component to load with logo data
       await waitFor(() => {
-        // Use exact match or more specific regex
-        expect(getByText(/Upgrade to Max AI/i)).toBeInTheDocument();
-      });
+        expect(queryByText(/Loading settings/i)).not.toBeInTheDocument();
+      }, { timeout: 3000 });
+
+      // Should show Remove Logo button since logo exists in mock data
+      await waitFor(() => {
+        expect(getByText(/Remove Logo/i)).toBeInTheDocument();
+      }, { timeout: 3000 });
+      
+      // Should NOT show upgrade prompt since user is Max tier
+      expect(queryByText(/Upgrade to Max AI/i)).not.toBeInTheDocument();
     });
 
     it('should successfully delete logo', async () => {
@@ -228,7 +249,12 @@ describe('Settings - White-Label Branding', () => {
         select: () => ({
           eq: () => ({
             single: vi.fn().mockResolvedValue({
-              data: { logo: 'company-logos/user-123/logo.png' },
+              data: { 
+                name: 'Test Company',
+                logo: 'https://example.com/company-logos/user-123/logo.png',
+                primary_color: '#3b82f6',
+                secondary_color: '#8b5cf6'
+              },
               error: null,
             }),
           }),
@@ -242,20 +268,31 @@ describe('Settings - White-Label Branding', () => {
         }),
       } as ReturnType<typeof supabase.from>);
 
-      const { getByText } = renderSettings();
+      const { getByText, queryByText } = renderSettings();
       const user = userEvent.setup();
 
+      // Wait for component to load
       await waitFor(() => {
-        // Updated matcher for Remove Logo button
-        expect(getByText(/Remove Logo/i)).toBeInTheDocument(); // Changed to getByText as it might not be an aria-label
+        expect(queryByText(/Loading settings/i)).not.toBeInTheDocument();
+      }, { timeout: 3000 });
+
+      // Wait for Remove Logo button to appear
+      await waitFor(() => {
+        expect(getByText(/Remove Logo/i)).toBeInTheDocument();
+      }, { timeout: 3000 });
+
+      // Click Remove Logo button
+      const removeButton = getByText(/Remove Logo/i);
+      await user.click(removeButton);
+
+      // Wait for confirmation dialog and click Delete
+      await waitFor(() => {
+        const confirmButton = getByText(/^Delete$/i);
+        expect(confirmButton).toBeInTheDocument();
+        return user.click(confirmButton);
       });
 
-      // Confirm deletion in dialog
-      await waitFor(() => {
-        const confirmButton = getByText(/Delete/i);
-        user.click(confirmButton);
-      });
-
+      // Verify deletion API calls were made
       await waitFor(() => {
         expect(mockRemove).toHaveBeenCalled();
         expect(mockUpdate).toHaveBeenCalled();
