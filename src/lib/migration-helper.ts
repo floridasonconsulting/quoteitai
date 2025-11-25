@@ -1,11 +1,10 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import {
   getStorageItem,
   setStorageItem,
   getSettings as getLocalSettings,
 } from "./storage";
-import { toSnakeCase } from "./db-service";
+import { toSnakeCase } from "./services/transformation-utils";
 import { IndexedDBMigrationService } from "./indexed-db-migration";
 import { CustomerDB, ItemDB, QuoteDB, SettingsDB } from "./indexed-db";
 
