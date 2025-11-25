@@ -1,4 +1,3 @@
-
 import { ProposalSection } from "@/types/proposal";
 import { useEffect, useRef, useState } from "react";
 import { Check, CheckCircle } from "lucide-react";

@@ -1,4 +1,3 @@
-
 export const PrintStyles = () =&gt; (
   &lt;style&gt;{`
     @media print {

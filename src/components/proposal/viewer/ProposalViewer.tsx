@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Check, X, Receipt, FileSignature, ArrowUp, Printer, BookOpen, Sidebar as SidebarIcon } from 'lucide-react';
 import { ProposalData, ProposalSection } from '@/types/proposal';
