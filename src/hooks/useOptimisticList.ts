@@ -45,11 +45,15 @@ export function useOptimisticList<T extends { id: string }>(
   }, [options, entityName]);
 
   const update = useCallback(async (updatedItem: T) => {
-    const originalItem = items.find(item => item.id === updatedItem.id);
-    if (!originalItem) return updatedItem;
+    // Use functional form to get current items without adding to dependencies
+    let originalItem: T | undefined;
+    setItems(prev => {
+      originalItem = prev.find(item => item.id === updatedItem.id);
+      // Optimistic update
+      return prev.map(item => item.id === updatedItem.id ? updatedItem : item);
+    });
     
-    // Optimistic update
-    setItems(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+    if (!originalItem) return updatedItem;
 
     try {
       if (options.onUpdate) {
@@ -61,19 +65,23 @@ export function useOptimisticList<T extends { id: string }>(
       }
       return updatedItem;
     } catch (error) {
-      // Rollback
+      // Rollback using the captured originalItem
       setItems(prev => prev.map(item => item.id === updatedItem.id ? originalItem : item));
       toast.error(`Failed to update ${entityName}`);
       throw error;
     }
-  }, [items, options, entityName]);
+  }, [options, entityName]);
 
   const remove = useCallback(async (id: string) => {
-    const originalItem = items.find(item => item.id === id);
-    if (!originalItem) return;
+    // Use functional form to capture original item without adding items to dependencies
+    let originalItem: T | undefined;
+    setItems(prev => {
+      originalItem = prev.find(item => item.id === id);
+      // Optimistic update
+      return prev.filter(item => item.id !== id);
+    });
     
-    // Optimistic update
-    setItems(prev => prev.filter(item => item.id !== id));
+    if (!originalItem) return;
 
     try {
       if (options.onDelete) {
@@ -81,12 +89,14 @@ export function useOptimisticList<T extends { id: string }>(
         toast.success(`${entityName} deleted successfully`);
       }
     } catch (error) {
-      // Rollback
-      setItems(prev => [...prev, originalItem]);
+      // Rollback using the captured originalItem
+      if (originalItem) {
+        setItems(prev => [...prev, originalItem]);
+      }
       toast.error(`Failed to delete ${entityName}`);
       throw error;
     }
-  }, [items, options, entityName]);
+  }, [options, entityName]); // Removed items from dependencies
 
   return {
     items,
