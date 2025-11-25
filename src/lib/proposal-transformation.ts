@@ -1,5 +1,5 @@
-import { Quote, Customer, Item, CompanySettings } from "@/types";
-import { ProposalData, ProposalSection, ProposalItem } from "@/types/proposal";
+import { Quote, Customer, CompanySettings } from "@/types";
+import { ProposalData, ProposalSection, ProposalItem, ProposalStatus, ProposalTheme } from "@/types/proposal";
 
 export function transformQuoteToProposal(
   quote: Quote,
@@ -74,11 +74,22 @@ export function transformQuoteToProposal(
     });
   }
 
+  // Map status safely
+  let status: ProposalStatus = 'draft';
+  if (quote.status === 'accepted') status = 'accepted';
+  else if (quote.status === 'declined') status = 'declined';
+  else if (quote.status === 'sent') status = 'sent';
+  
+  // Map theme safely
+  let theme: ProposalTheme = 'corporate_sidebar';
+  if (settings?.proposalTemplate === 'presentation_deck') theme = 'presentation_deck';
+  else if (settings?.proposalTemplate === 'modern') theme = 'modern_scroll';
+
   return {
     id: quote.id,
-    status: quote.status as any, // Cast status to match if close enough
+    status: status,
     settings: {
-      theme: (settings?.proposalTemplate as any) === "presentation_deck" ? "presentation_deck" : "corporate_sidebar",
+      theme: theme,
       mode: "light",
       primaryColor: primaryColor,
       currency: currency,

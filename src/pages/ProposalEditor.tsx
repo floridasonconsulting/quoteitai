@@ -1,12 +1,15 @@
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ProposalProvider, useProposal } from "@/contexts/ProposalContext";
 import { ProposalEditorLayout } from "@/components/proposal/editor/ProposalEditorLayout";
 import { ProposalBuilder } from "@/components/proposal/editor/ProposalBuilder";
 import { ProposalViewer } from "@/components/proposal/viewer/ProposalViewer";
 import { ProposalData } from "@/types/proposal";
+import { Loader2 } from "lucide-react";
 
-// --- MOCK INITIAL DATA ---
-const MOCK_INITIAL_DATA: ProposalData = {
-  id: "prop_demo_123",
+// Fallback data if no quote is passed
+const DEFAULT_PROPOSAL: ProposalData = {
+  id: "new_proposal",
   status: "draft",
   settings: {
     theme: "corporate_sidebar",
@@ -14,53 +17,20 @@ const MOCK_INITIAL_DATA: ProposalData = {
     primaryColor: "#0f766e",
     currency: "$"
   },
-  client: { name: "Acme Corp", email: "client@acme.com" },
+  client: { name: "", email: "" },
   sender: {
-    name: "John Builder",
-    company: "Elite Constructions",
-    logoUrl: "https://placehold.co/40x40/0f766e/ffffff?text=E"
+    name: "",
+    company: "My Company",
   },
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   sections: [
     {
-      id: "sec_1",
+      id: "hero_default",
       type: "hero",
-      title: "Project Proposal",
-      subtitle: "Custom Renovation Project • Q4 2025",
-      backgroundImage: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?q=80&w=2089&auto=format&fit=crop"
-    },
-    {
-      id: "sec_2",
-      type: "text",
-      title: "Executive Summary",
-      content: "<p>We are excited to present this proposal for your renovation project. Our team is dedicated to delivering high-quality craftsmanship and ensuring your vision comes to life.</p>"
-    },
-    {
-      id: "sec_3",
-      type: "line-items",
-      title: "Scope of Work",
-      showPrices: true,
-      items: [
-        { id: "item_1", name: "Demolition", desc: "Removal of existing fixtures and walls.", price: 2500, optional: false },
-        { id: "item_2", name: "Framing", desc: "Structural framing for new layout.", price: 4000, optional: false },
-        { id: "item_3", name: "Premium Fixtures", desc: "Upgrade to gold-plated fixtures.", price: 1500, optional: true }
-      ]
-    },
-    {
-      id: "sec_4",
-      type: "pricing",
-      title: "Investment Options",
-      packages: [
-        { id: "pkg_1", name: "Standard", price: 15000, features: ["Basic Materials", "Standard Warranty"], recommended: false },
-        { id: "pkg_2", name: "Premium", price: 22000, features: ["High-end Materials", "Extended Warranty", "Priority Support"], recommended: true }
-      ]
-    },
-    {
-      id: "sec_5",
-      type: "legal",
-      title: "Terms & Conditions",
-      content: "<p>Payment is due within 30 days of invoice. Work will commence upon receipt of deposit.</p>"
+      title: "New Proposal",
+      subtitle: "Created on " + new Date().toLocaleDateString(),
+      backgroundImage: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80"
     }
   ]
 };
@@ -77,8 +47,32 @@ function EditorContent() {
 }
 
 export default function ProposalEditor() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [initialData, setInitialData] = useState<ProposalData | null>(null);
+
+  useEffect(() => {
+    // Check if proposal data was passed via navigation state
+    if (location.state &amp;&amp; location.state.proposalData) {
+      setInitialData(location.state.proposalData);
+    } else {
+      // If accessed directly without state, redirect or show default
+      // For now, we'll just use default but warn
+      console.warn("No proposal data found in state, using default template.");
+      setInitialData(DEFAULT_PROPOSAL);
+    }
+  }, [location.state, navigate]);
+
+  if (!initialData) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+      </div>
+    );
+  }
+
   return (
-    <ProposalProvider initialData={MOCK_INITIAL_DATA}>
+    <ProposalProvider initialData={initialData}>
         <EditorContent />
     </ProposalProvider>
   );

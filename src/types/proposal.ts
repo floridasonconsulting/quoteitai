@@ -1,6 +1,6 @@
 export type ProposalTheme = 'corporate_sidebar' | 'modern_scroll' | 'presentation_deck';
 export type ProposalMode = 'light' | 'dark' | 'vibrant';
-export type ProposalStatus = 'draft' | 'sent' | 'viewed' | 'signed';
+export type ProposalStatus = 'draft' | 'sent' | 'viewed' | 'signed' | 'accepted' | 'declined';
 
 export interface ProposalSettings {
   theme: ProposalTheme;

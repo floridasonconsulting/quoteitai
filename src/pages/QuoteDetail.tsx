@@ -1,23 +1,23 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Mail, Trash2, FileText, Calendar, DollarSign, Edit, Clock, Link2, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Mail, Trash2, Calendar, Edit, Clock, Link2, Copy, Check, Palette, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { getQuotes, deleteQuote, getSettings, getCustomers, updateQuote } from '@/lib/db-service';
-import { Quote, Customer } from '@/types';
+import { Quote, Customer, CompanySettings } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { FollowUpDialog } from '@/components/FollowUpDialog';
 import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
-import { generateClassicPDF, generateModernPDF, generateDetailedPDF } from '@/lib/proposal-templates';
 import { supabase } from '@/integrations/supabase/client';
 import { QuoteSummaryAI } from '@/components/QuoteSummaryAI';
 import { FollowUpMessageAI } from '@/components/FollowUpMessageAI';
 import { SendQuoteDialog, EmailContent } from '@/components/SendQuoteDialog';
 import { rateLimiter } from '@/lib/rate-limiter';
+import { transformQuoteToProposal } from '@/lib/proposal-transformation';
 
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -25,13 +25,17 @@ export default function QuoteDetail() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { queueChange } = useSyncManager();
+  
   const [quote, setQuote] = useState<Quote | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [settings, setSettings] = useState<CompanySettings | null>(null);
+  
   const [loading, setLoading] = useState(true);
   const [followUpDialogOpen, setFollowUpDialogOpen] = useState(false);
   const [shareLink, setShareLink] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  
   const mainContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,7 +44,7 @@ export default function QuoteDetail() {
       return;
     }
 
-    loadQuote();
+    loadData();
   }, [id, navigate, user]);
 
   // Focus management for accessibility
@@ -50,52 +54,42 @@ export default function QuoteDetail() {
     }
   }, [loading]);
 
-  // Keyboard navigation support
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      // Ctrl/Cmd + E to edit
-      if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
-        e.preventDefault();
-        handleEdit();
-      }
-      // Ctrl/Cmd + D to download
-      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
-        e.preventDefault();
-        generatePDF();
-      }
-      // Ctrl/Cmd + M to email
-      if ((e.ctrlKey || e.metaKey) && e.key === 'm') {
-        e.preventDefault();
-        handleEmail();
-      }
-    };
+  const loadData = async () => {
+    try {
+      const [quotes, customers, loadedSettings] = await Promise.all([
+        getQuotes(user?.id),
+        getCustomers(user?.id),
+        getSettings(user?.id)
+      ]);
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [quote, navigate]);
+      const foundQuote = quotes.find(q => q.id === id);
+      
+      if (!foundQuote) {
+        navigate('/404');
+        return;
+      }
 
-  const loadQuote = async () => {
-    const quotes = await getQuotes(user?.id);
-    const foundQuote = quotes.find(q => q.id === id);
-    
-    if (!foundQuote) {
-      navigate('/404');
-      return;
+      const foundCustomer = customers.find(c => c.id === foundQuote.customerId);
+
+      setQuote(foundQuote);
+      setCustomer(foundCustomer || null);
+      setSettings(loadedSettings);
+      
+      // Generate share link if token exists
+      if (foundQuote.shareToken) {
+        const url = `${window.location.origin}/quotes/public/${foundQuote.shareToken}`;
+        setShareLink(url);
+      }
+    } catch (error) {
+      console.error("Failed to load quote data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load quote details",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-
-    const customers = await getCustomers(user?.id);
-    const foundCustomer = customers.find(c => c.id === foundQuote.customerId);
-
-    setQuote(foundQuote);
-    setCustomer(foundCustomer || null);
-    
-    // Generate share link if token exists
-    if (foundQuote.shareToken) {
-      const url = `${window.location.origin}/quote/view/${foundQuote.shareToken}`;
-      setShareLink(url);
-    }
-    
-    setLoading(false);
   };
 
   const handleDelete = async () => {
@@ -107,92 +101,6 @@ export default function QuoteDetail() {
       description: 'The quote has been successfully deleted.',
     });
     navigate('/quotes');
-  };
-
-  const generatePDF = async () => {
-    if (!quote) return;
-
-    // Force fresh settings fetch - bypass all caches
-    localStorage.removeItem('quote-it-settings');
-    
-    // Fetch directly from Supabase to bypass service worker cache
-    const { data } = await supabase
-      .from('company_settings')
-      .select('*')
-      .eq('user_id', user?.id)
-      .maybeSingle();
-    
-    // Map snake_case to camelCase
-    const settings = data ? {
-      name: data.name || '',
-      address: data.address || '',
-      city: data.city || '',
-      state: data.state || '',
-      zip: data.zip || '',
-      phone: data.phone || '',
-      email: data.email || '',
-      website: data.website || '',
-      license: data.license || '',
-      insurance: data.insurance || '',
-      logoDisplayOption: (data.logo_display_option || 'both') as 'both' | 'logo' | 'name',
-      logo: data.logo,
-      terms: data.terms || 'Payment due within 30 days. Thank you for your business!',
-      proposalTemplate: (data.proposal_template || 'classic') as 'classic' | 'modern' | 'detailed',
-      notifyEmailAccepted: data.notify_email_accepted ?? true,
-      notifyEmailDeclined: data.notify_email_declined ?? true,
-    } : {
-      name: '',
-      address: '',
-      city: '',
-      state: '',
-      zip: '',
-      phone: '',
-      email: '',
-      website: '',
-      license: '',
-      insurance: '',
-      logoDisplayOption: 'both' as const,
-      logo: null,
-      terms: 'Payment due within 30 days. Thank you for your business!',
-      proposalTemplate: 'classic' as const,
-      notifyEmailAccepted: true,
-      notifyEmailDeclined: true,
-    };
-    
-    const template = settings.proposalTemplate || 'classic';
-    
-    console.log('[QuoteDetail] Generating PDF with fresh settings:', {
-      template,
-      logoDisplayOption: settings.logoDisplayOption,
-      proposalTemplate: settings.proposalTemplate
-    });
-    
-    try {
-      switch (template) {
-        case 'modern':
-          await generateModernPDF(quote, customer, settings);
-          break;
-        case 'detailed':
-          await generateDetailedPDF(quote, customer, settings);
-          break;
-        case 'classic':
-        default:
-          await generateClassicPDF(quote, customer, settings);
-          break;
-      }
-      
-      toast({
-        title: 'PDF generated',
-        description: 'Quote PDF has been downloaded.',
-      });
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to generate PDF. Please try again.',
-        variant: 'destructive',
-      });
-    }
   };
 
   const handleGenerateShareLink = async () => {
@@ -213,7 +121,7 @@ export default function QuoteDetail() {
         if (error) throw error;
 
         const token = data.share_token;
-        const url = `${window.location.origin}/quote/view/${token}`;
+        const url = `${window.location.origin}/quotes/public/${token}`;
         setShareLink(url);
         setQuote({ ...quote, shareToken: token, sharedAt: new Date().toISOString() });
       }
@@ -222,6 +130,7 @@ export default function QuoteDetail() {
         title: 'Share link generated!',
         description: 'Copy the link to share with your customer.',
       });
+      return shareLink; // Return for chaining
     } catch (error) {
       console.error('Failed to generate share link:', error);
       toast({
@@ -260,17 +169,38 @@ export default function QuoteDetail() {
     setSendDialogOpen(true);
   };
 
-  // Change the edit navigation to use /quotes/new with state
-  const handleEdit = () => {
+  const handleEditContent = () => {
     if (!quote) return;
-    // Navigate to new quote page with the current quote data as state
     navigate('/quotes/new', { 
       state: { 
         editQuote: quote,
         editMode: true 
       },
-      replace: false // Don't replace history
+      replace: false 
     });
+  };
+
+  const handleCustomizeDesign = () => {
+    if (!quote) return;
+    const proposalData = transformQuoteToProposal(quote, customer || undefined, settings || undefined);
+    navigate('/proposal-editor', { 
+      state: { proposalData } 
+    });
+  };
+
+  const handlePreview = async () => {
+    if (!shareLink) {
+        // If no link, we can't open public preview directly without token.
+        // We could generate one, but that changes state.
+        // Better to prompt user or auto-generate.
+        await handleGenerateShareLink();
+    }
+    // Re-check link after potential generation
+    const currentLink = shareLink || (quote?.shareToken ? `${window.location.origin}/quotes/public/${quote.shareToken}` : '');
+    
+    if (currentLink) {
+        window.open(currentLink, '_blank');
+    }
   };
 
   const handleConfirmSend = async (emailContent: EmailContent) => {
@@ -292,9 +222,12 @@ export default function QuoteDetail() {
       let currentShareLink = shareLink;
       if (!currentShareLink && emailContent.includeShareLink) {
         await handleGenerateShareLink();
-        // Wait a moment for state to update
-        await new Promise(resolve => setTimeout(resolve, 100));
-        currentShareLink = shareLink;
+        // Wait a moment for state to update (local) or use the token we just got?
+        // Since we re-fetch/update state in handleGenerate, shareLink state might lag slightly in this closure
+        // Ideally handleGenerateShareLink returns the URL.
+        if (quote.shareToken) {
+             currentShareLink = `${window.location.origin}/quotes/public/${quote.shareToken}`;
+        }
       }
 
       // Update quote status and executive summary
@@ -306,16 +239,6 @@ export default function QuoteDetail() {
       
       // Update local state
       setQuote(updatedQuote);
-
-      // Fetch company settings for email
-      const { data: settingsData } = await supabase
-        .from('company_settings')
-        .select('*')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
-      const companyName = settingsData?.name || undefined;
-      const companyLogo = settingsData?.logo || undefined;
 
       // Try to send via edge function
       try {
@@ -334,8 +257,8 @@ export default function QuoteDetail() {
             quoteNumber: updatedQuote.quoteNumber,
             quoteTitle: updatedQuote.title,
             quoteTotal: updatedQuote.total,
-            companyName,
-            companyLogo,
+            companyName: settings?.name,
+            companyLogo: settings?.logo,
           },
         });
 
@@ -446,23 +369,34 @@ export default function QuoteDetail() {
         </Badge>
       </div>
 
+      {/* Primary Actions Toolbar */}
       <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Quote actions">
         <Button 
-          onClick={handleEdit}
-          aria-label="Edit quote (Keyboard: Ctrl+E)"
-          aria-keyshortcuts="Control+E"
+          onClick={handleEditContent}
+          aria-label="Edit quote content"
         >
           <Edit className="mr-2 h-4 w-4" aria-hidden="true" />
-          Edit
+          Edit Content
         </Button>
+        
         <Button 
-          onClick={generatePDF}
-          aria-label="Download quote as PDF (Keyboard: Ctrl+D)"
-          aria-keyshortcuts="Control+D"
+          variant="secondary"
+          onClick={handleCustomizeDesign}
+          aria-label="Customize proposal design"
         >
-          <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-          Download PDF
+          <Palette className="mr-2 h-4 w-4" aria-hidden="true" />
+          Customize Design
         </Button>
+
+        <Button 
+          variant="outline"
+          onClick={handlePreview}
+          aria-label="Preview and Print"
+        >
+          <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
+          Preview / Print
+        </Button>
+
         {!shareLink ? (
           <Button 
             variant="outline" 
@@ -490,8 +424,7 @@ export default function QuoteDetail() {
         <Button 
           variant="outline" 
           onClick={handleEmail}
-          aria-label="Send quote via email (Keyboard: Ctrl+M)"
-          aria-keyshortcuts="Control+M"
+          aria-label="Send quote via email"
         >
           <Mail className="mr-2 h-4 w-4" aria-hidden="true" />
           Email
@@ -600,10 +533,22 @@ export default function QuoteDetail() {
                 role="listitem"
                 aria-label={`Item ${index + 1}: ${item.name}`}
               >
-                <p className="font-medium">{item.name}</p>
-                {item.description && (
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
-                )}
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-medium">{item.name}</p>
+                    {item.description && (
+                      <p className="text-sm text-muted-foreground">{item.description}</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono text-sm">
+                      {item.quantity} x {formatCurrency(item.price)}
+                    </p>
+                    <p className="font-bold text-sm">
+                      {formatCurrency(item.total)}
+                    </p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
