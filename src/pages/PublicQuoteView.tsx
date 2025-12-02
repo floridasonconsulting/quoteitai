@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Quote, Customer, CompanySettings, QuoteItem } from '@/types';
 import { ProposalViewer } from '@/components/proposal/viewer/ProposalViewer';
+import { OTPSecurityWall } from '@/components/proposal/viewer/OTPSecurityWall';
 import { transformQuoteToProposal } from '@/lib/proposal-transformation';
 import { PaymentDialog } from '@/components/PaymentDialog';
 import { createPaymentIntent } from '@/lib/stripe-service';
@@ -12,45 +13,68 @@ import { createPaymentIntent } from '@/lib/stripe-service';
 export default function PublicQuoteView() {
   const { id: shareToken } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [expired, setExpired] = useState(false);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState('');
   const [quote, setQuote] = useState<Quote | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [isMaxAITier, setIsMaxAITier] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
 
+  // Check for existing session token on mount
   useEffect(() => {
-    loadQuote();
+    checkSession();
   }, [shareToken]);
 
-  // Update browser title and favicon with company branding
-  useEffect(() => {
-    const originalTitle = document.title;
-    const originalFavicon = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
-    const originalFaviconHref = originalFavicon?.href;
-    
-    if (settings?.name) {
-      document.title = `${settings.name} - Proposal`;
-      
-      // Apply custom favicon for Max AI tier users
-      if (isMaxAITier && settings.logo) {
-        let faviconLink = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
-        if (!faviconLink) {
-          faviconLink = document.createElement('link');
-          faviconLink.rel = 'icon';
-          document.head.appendChild(faviconLink);
+  const checkSession = () => {
+    try {
+      const sessionData = sessionStorage.getItem('proposal_session');
+      if (sessionData) {
+        const session = JSON.parse(sessionData);
+        
+        // Check if session is valid and matches current share token
+        if (session.shareToken === shareToken && 
+            new Date(session.expiresAt) > new Date()) {
+          setSessionToken(session.token);
+          setUserEmail(session.email);
+          setAuthenticated(true);
+          loadQuote();
+        } else {
+          // Clear expired/invalid session
+          sessionStorage.removeItem('proposal_session');
+          setLoading(false);
         }
-        faviconLink.href = settings.logo;
+      } else {
+        setLoading(false);
       }
+    } catch (error) {
+      console.error('Error checking session:', error);
+      setLoading(false);
     }
+  };
 
-    return () => {
-      document.title = originalTitle;
-      if (originalFaviconHref && originalFavicon) {
-        originalFavicon.href = originalFaviconHref;
-      }
-    };
-  }, [settings, isMaxAITier]);
+  const handleVerified = (token: string) => {
+    setSessionToken(token);
+    setAuthenticated(true);
+    
+    // Get email from session
+    const sessionData = sessionStorage.getItem('proposal_session');
+    if (sessionData) {
+      const session = JSON.parse(sessionData);
+      setUserEmail(session.email);
+    }
+    
+    loadQuote();
+  };
 
+  const handleExpired = () => {
+    setExpired(true);
+    setLoading(false);
+  };
+
+  // Load quote data after authentication
   const loadQuote = async () => {
     if (!shareToken) {
       console.error('[PublicQuoteView] No shareToken provided in URL');
@@ -61,13 +85,12 @@ export default function PublicQuoteView() {
     console.log('[PublicQuoteView] Loading quote with shareToken:', shareToken);
     setLoading(true);
     try {
-      // Fetch quote by share token (public access via RLS policy)
-      // Try both share_token (snake_case) and shareToken (camelCase) for compatibility
+      // Fetch quote by share token
       const { data: quoteData, error: quoteError } = await supabase
         .from('quotes')
         .select('*')
         .or(`share_token.eq.${shareToken},shareToken.eq.${shareToken}`)
-        .maybeSingle(); // Use maybeSingle instead of single to avoid error on no results
+        .maybeSingle();
 
       if (quoteError) {
         console.error('[PublicQuoteView] Supabase error:', quoteError);
@@ -77,6 +100,12 @@ export default function PublicQuoteView() {
       if (!quoteData) {
         console.error('[PublicQuoteView] No quote found with shareToken:', shareToken);
         toast.error('Quote not found or link has expired');
+        return;
+      }
+
+      // Check if quote has expired
+      if (quoteData.expires_at && new Date(quoteData.expires_at) < new Date()) {
+        setExpired(true);
         return;
       }
       
@@ -102,7 +131,7 @@ export default function PublicQuoteView() {
         shareToken: quoteData.share_token,
         sharedAt: quoteData.shared_at,
         viewedAt: quoteData.viewed_at,
-        executiveSummary: quoteData.executive_summary, // Important for transformation
+        executiveSummary: quoteData.executive_summary,
       };
 
       setQuote(formattedQuote);
@@ -156,7 +185,7 @@ export default function PublicQuoteView() {
         });
       }
 
-      // Check if quote owner is Max AI tier (for white-label branding)
+      // Check if quote owner is Max AI tier
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
