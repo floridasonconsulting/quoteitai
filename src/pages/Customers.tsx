@@ -64,6 +64,12 @@ export default function Customers() {
 
   // Wrap loadCustomers in useCallback with proper dependencies
   const loadCustomers = useCallback(async (forceRefresh = false) => {
+    // Guard: Don't run if no user
+    if (!user?.id) {
+      console.log('[Customers] Skipping load - no user ID');
+      return;
+    }
+
     if (loadingRef.current) {
       console.log('[Customers] Load already in progress, skipping');
       return;
@@ -76,6 +82,8 @@ export default function Customers() {
     startLoading('load-customers', 'Loading customers');
 
     try {
+      console.log(`[Customers] Loading customers for user: ${user.id}`);
+      
       const backoffDelay = retryCount > 0 ? Math.pow(2, retryCount - 1) * 5000 : 0;
       const timeoutMs = 15000 + backoffDelay;
 
@@ -83,7 +91,7 @@ export default function Customers() {
         setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
       );
 
-      const dataPromise = getCustomers(user?.id);
+      const dataPromise = getCustomers(user.id);
       const data = await Promise.race([dataPromise, timeoutPromise]);
 
       console.log(`[Customers] Received ${data.length} customers from getCustomers`);
@@ -93,7 +101,7 @@ export default function Customers() {
       setSelectedCustomers([]);
       setError(null);
       setRetryCount(0);
-      console.log(`[Customers] Successfully updated UI with ${data.length} customers`);
+      console.log(`[Customers] ✅ Successfully updated UI with ${data.length} customers`);
     } catch (err: unknown) {
       console.error('[Customers] Load failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
@@ -113,14 +121,15 @@ export default function Customers() {
     }
   }, [user?.id, startLoading, stopLoading, retryCount, setCustomers]);
 
+  // Effect to load customers when user is ready
   useEffect(() => {
-    // Guard: Only load if user is available and has an ID
+    // Only run if we have a user ID and haven't loaded yet
     if (!user?.id) {
-      console.log('[Customers] Skipping load - user not ready');
+      console.log('[Customers] Effect: No user ID, skipping load');
       return;
     }
     
-    console.log('[Customers] User ready, loading customers for user:', user.id);
+    console.log('[Customers] Effect: User ready, loading customers');
     loadCustomers();
   }, [user?.id, loadCustomers]);
 
