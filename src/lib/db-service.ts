@@ -25,8 +25,11 @@ export { clearInFlightRequests } from './services/request-pool-service';
 // Re-export getSettings from storage for backward compatibility
 export { getSettings } from './storage';
 
-// Re-export saveSettings from storage for backward compatibility
-export { saveSettings } from './storage';
+// Wrap saveSettings to accept userId parameter
+export const saveSettings = async (userId: string, settings: CompanySettings): Promise<void> => {
+  const { saveSettings: storageSaveSettings } = await import('./storage');
+  return storageSaveSettings(settings, userId);
+};
 
 // Re-export clearAllData from storage as clearDatabaseData for backward compatibility
 export { clearAllData as clearDatabaseData } from './storage';

@@ -170,9 +170,19 @@ export const deleteQuote = (id: string, userId?: string): void => {
   saveQuotes(quotes.filter(q => q.id !== id), userId);
 };
 
-// Settings (always global, not user-specific)
-export const getSettings = (): CompanySettings => 
-  getStorageItem(STORAGE_KEYS.SETTINGS, {
+// Settings (now supports user-specific storage)
+export const getSettings = (userId?: string): CompanySettings => {
+  // Try user-specific key first
+  if (userId) {
+    const userKey = `settings_${userId}`;
+    const userSettings = getStorageItem<CompanySettings | null>(userKey, null);
+    if (userSettings && (userSettings.name || userSettings.email)) {
+      return userSettings;
+    }
+  }
+  
+  // Fall back to global settings key
+  return getStorageItem(STORAGE_KEYS.SETTINGS, {
     name: '',
     address: '',
     city: '',
@@ -187,9 +197,20 @@ export const getSettings = (): CompanySettings =>
     terms: 'Payment due within 30 days. Thank you for your business!',
     proposalTemplate: 'classic',
   });
+};
 
-export const saveSettings = (settings: CompanySettings): void => 
+export const saveSettings = (settings: CompanySettings, userId?: string): void => {
+  // Save to both user-specific key and global key for redundancy
+  if (userId) {
+    const userKey = `settings_${userId}`;
+    setStorageItem(userKey, settings);
+    console.log(`[Storage] Saved settings to user-specific key: ${userKey}`);
+  }
+  
+  // Also save to global key for backward compatibility
   setStorageItem(STORAGE_KEYS.SETTINGS, settings);
+  console.log('[Storage] Saved settings to global key');
+};
 
 // Theme
 export const getTheme = (): 'light' | 'dark' => 
