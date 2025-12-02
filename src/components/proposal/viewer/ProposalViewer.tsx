@@ -4,9 +4,17 @@ import { TextSection } from './TextSection';
 import { LineItemSection } from './LineItemSection';
 import { PricingSection } from './PricingSection';
 import { LegalSection } from './LegalSection';
-import { SidebarLayout } from './SidebarLayout';
-import { PrintStyles } from './PrintStyles';
 import { ProposalActionBar } from './ProposalActionBar';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination, EffectCube, Keyboard, Mousewheel } from 'swiper/modules';
+import { useRef } from 'react';
+import type { Swiper as SwiperType } from 'swiper';
+
+// Import Swiper styles
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+import 'swiper/css/effect-cube';
 
 interface ActionBarProps {
   quoteId: string;
@@ -26,46 +34,115 @@ interface ProposalViewerProps {
 }
 
 export function ProposalViewer({ proposal, onSign, readOnly = false, actionBar }: ProposalViewerProps) {
+  const swiperRef = useRef<SwiperType>();
+
   const renderSection = (section: ProposalData['sections'][0]) => {
     switch (section.type) {
       case 'hero':
-        return <HeroSection key={section.id} section={section} />;
+        return <HeroSection section={section} />;
       case 'text':
-        return <TextSection key={section.id} section={section} />;
+        return <TextSection section={section} />;
       case 'lineItems':
-        return <LineItemSection key={section.id} section={section} />;
+        return <LineItemSection section={section} />;
       case 'pricing':
-        return <PricingSection key={section.id} section={section} onSign={onSign} readOnly={readOnly} />;
+        return <PricingSection section={section} onSign={onSign} readOnly={readOnly} />;
       case 'legal':
-        return <LegalSection key={section.id} section={section} />;
+        return <LegalSection section={section} />;
       default:
         return null;
     }
   };
 
+  // Apply theme-based colors
+  const getThemeColors = () => {
+    switch (proposal.theme) {
+      case 'modern':
+        return {
+          background: 'bg-gradient-to-br from-blue-50 via-white to-purple-50',
+          pagination: '#6366f1',
+          navigation: '#4f46e5'
+        };
+      case 'creative':
+        return {
+          background: 'bg-gradient-to-br from-pink-50 via-white to-orange-50',
+          pagination: '#f43f5e',
+          navigation: '#e11d48'
+        };
+      case 'minimalist':
+        return {
+          background: 'bg-white',
+          pagination: '#000000',
+          navigation: '#000000'
+        };
+      default:
+        return {
+          background: 'bg-slate-50',
+          pagination: '#64748b',
+          navigation: '#475569'
+        };
+    }
+  };
+
+  const themeColors = getThemeColors();
+
   return (
-    <>
-      <PrintStyles />
-      <div className="min-h-screen bg-slate-50">
-        <SidebarLayout proposal={proposal}>
-          <div className="space-y-8 pb-24">
-            {proposal.sections.map(renderSection)}
-          </div>
-        </SidebarLayout>
-        
-        {/* Action Bar */}
-        {actionBar && (
-          <ProposalActionBar
-            quoteId={actionBar.quoteId}
-            total={actionBar.total}
-            status={actionBar.status}
-            userEmail={actionBar.userEmail}
-            userName={actionBar.userName}
-            onAccept={actionBar.onAccept}
-            onReject={actionBar.onReject}
-          />
-        )}
-      </div>
-    </>
+    <div className={`min-h-screen ${themeColors.background}`}>
+      <Swiper
+        modules={[Navigation, Pagination, EffectCube, Keyboard, Mousewheel]}
+        spaceBetween={0}
+        slidesPerView={1}
+        navigation
+        pagination={{
+          clickable: true,
+          dynamicBullets: true,
+        }}
+        keyboard={{
+          enabled: true,
+        }}
+        mousewheel={{
+          forceToAxis: true,
+          sensitivity: 1,
+        }}
+        effect="cube"
+        cubeEffect={{
+          shadow: true,
+          slideShadows: true,
+          shadowOffset: 20,
+          shadowScale: 0.94,
+        }}
+        onSwiper={(swiper) => {
+          swiperRef.current = swiper;
+        }}
+        className="h-screen"
+        style={{
+          '--swiper-pagination-color': themeColors.pagination,
+          '--swiper-navigation-color': themeColors.navigation,
+        } as React.CSSProperties}
+      >
+        {proposal.sections.map((section) => (
+          <SwiperSlide key={section.id} className="overflow-y-auto">
+            <div className="container mx-auto px-4 py-8 max-w-4xl">
+              <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+                {renderSection(section)}
+              </div>
+            </div>
+          </SwiperSlide>
+        ))}
+      </Swiper>
+
+      {/* Action Bar - Fixed at bottom, sits above Swiper pagination */}
+      {actionBar && (
+        <ProposalActionBar
+          quoteId={actionBar.quoteId}
+          total={actionBar.total}
+          status={actionBar.status}
+          userEmail={actionBar.userEmail}
+          userName={actionBar.userName}
+          onAccept={actionBar.onAccept}
+          onReject={actionBar.onReject}
+          className="z-[60]"
+        />
+      )}
+    </div>
   );
 }
