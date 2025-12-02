@@ -414,9 +414,9 @@ export function OnboardingWizard() {
       await saveSettings(user.id, updatedSettings);
       console.log("[OnboardingWizard] ✓ saveSettings completed");
 
-      // Step 4: Wait 2 seconds for storage propagation (increased from 1s)
-      console.log("[OnboardingWizard] Step 4: Waiting for storage propagation (2000ms)...");
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Step 4: Wait 3 seconds for storage propagation (increased from 2s)
+      console.log("[OnboardingWizard] Step 4: Waiting for storage propagation (3000ms)...");
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Step 5: Verify settings were saved (with longer delays between retries)
       console.log("[OnboardingWizard] Step 5: Verifying settings...");
@@ -449,10 +449,13 @@ export function OnboardingWizard() {
       
       if (!isValid) {
         console.warn("[OnboardingWizard] ⚠️ Verification failed after 5 attempts");
-        // Don't throw - proceed anyway as the data is likely saved
-        console.log("[OnboardingWizard] Proceeding despite verification failure - data should be saved");
+        console.log("[OnboardingWizard] Settings are likely saved despite verification failure");
+        console.log("[OnboardingWizard] This can happen due to IndexedDB async timing");
+        // Show a warning but don't prevent completion
+        toast.warning("Setup completed! If settings don't appear, try refreshing the page.");
       } else {
         console.log("[OnboardingWizard] ✓ Settings verified successfully");
+        toast.success("Setup complete! Your company information has been saved.");
       }
 
       // Step 6: Handle import option
@@ -461,7 +464,9 @@ export function OnboardingWizard() {
         const { generateSampleData } = await import("@/lib/sample-data");
         await generateSampleData(user.id, true);
         console.log("[OnboardingWizard] ✓ Sample data loaded");
-        toast.success("Sample data loaded successfully!");
+        if (isValid) {
+          toast.success("Sample data loaded successfully!");
+        }
       } else {
         console.log("[OnboardingWizard] Step 6: Skipping sample data (option:", importOption, ")");
       }
@@ -488,13 +493,9 @@ export function OnboardingWizard() {
       
       if (!finalCheck) {
         console.error("[OnboardingWizard] ✗ Failed to set completion flags");
-        // Don't throw - the settings are saved, we just want to close the wizard
       }
 
       console.log("[OnboardingWizard] ✓ All steps completed");
-      
-      // Show success message
-      toast.success("Setup complete! Your company information has been saved.");
       
       // Close the wizard
       console.log("[OnboardingWizard] Closing wizard...");

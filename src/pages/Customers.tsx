@@ -380,7 +380,7 @@ export default function Customers() {
   };
 
   return (
-    <div className="space-y-6 overflow-x-hidden max-w-full">
+    <div className="space-y-6 overflow-x-hidden max-w-full" key={dataKey}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
