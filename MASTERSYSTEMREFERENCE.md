@@ -164,25 +164,34 @@ quote-it-ai/
 - ✅ Optimization of sync manager.
 - ✅ Comprehensive test suites.
 
-### ✅ Completed (Week 2 - Phase 1 & 2)
+### ✅ Completed (Week 2 - Phase 1 & 2 - November 24, 2025)
 - ✅ **IndexedDB Foundation**: Full implementation and migration.
 - ✅ **Advanced Caching**: Service Worker with Workbox strategies.
-- ✅ **White-Label Features**: Max AI branding implementation.
-- ✅ **Test Coverage**: 100% pass rate (207 tests).
+- ✅ **Integration Testing**: 100% test pass rate (38 tests).
+- ✅ **Data Migration**: Two-phase localStorage → IndexedDB → Supabase.
+- ✅ **User Isolation**: Proper data separation by userId.
 
-### 🔄 In Progress (Week 2 - Phase 3: UX & Polish)
+### ✅ Completed (Week 2 - Day 2 - December 2, 2025)
+- ✅ **Public Quote View Fix**: Onboarding wizard now properly skips public pages.
+- ✅ **CSP Update**: Allow WebSocket connections for development.
+- ✅ **Bug Fixes**: 
+  - Fixed onboarding wizard appearing on public pages.
+  - Fixed CSP blocking Vite dev server WebSocket.
+  - Fixed customer loading issues with proper dependency management.
+- ✅ **Documentation**: Complete Master System Reference update.
 
-#### ✅ Day 4: Smart Proposal System (Feature Injection)
-- ✅ **Architecture**: JSON-driven proposal schema (`src/types/proposal.ts`).
-- ✅ **Viewer**: Interactive client microsite with toggles and print styles.
-- ✅ **Editor**: Split-screen admin interface with real-time preview.
-- ✅ **Integration**: Seamless transformation of legacy quotes to new format.
-- ✅ **Public View**: Replaced static view with new `ProposalViewer`.
+### 🔄 In Progress (Week 2 - Phase 3: Performance & UX - December 2-6, 2025)
 
-#### 📋 Day 5: Performance & Mobile Polish (Upcoming)
+#### 📋 Day 3: Service Worker Foundation (December 3, 2025)
+- ⬜ **Service Worker Architecture**: Refactor with Workbox-based lifecycle.
+- ⬜ **Cache Warmup System**: Pre-cache critical assets on install.
+- ⬜ **Cache Management**: Implement quota management and expiration policies.
+
+#### 📋 Day 4: Performance & UX Polish (December 4, 2025)
+- ⬜ **Performance Monitoring**: Core Web Vitals tracking dashboard.
 - ⬜ **Optimistic UI**: Instant feedback for all CRUD operations.
-- ⬜ **Mobile Gestures**: Pull-to-refresh, swipe actions.
-- ⬜ **Advanced Error Recovery**: Exponential backoff strategies.
+- ⬜ **Mobile UX**: Pull-to-refresh, swipe gestures, haptic feedback.
+- ⬜ **Advanced Error Recovery**: Retry with exponential backoff.
 
 ### Q1 2026 - Major Features
 - ⬜ QuickBooks Integration.
@@ -191,10 +200,64 @@ quote-it-ai/
 
 ---
 
-## 📝 Document Maintenance
+## 🔧 Troubleshooting
 
-**Last Updated:** December 2, 2025
-**Next Review:** December 3, 2025
-**Status:** ✅ Phase 1 & 2 Complete | ✅ Proposal System Integrated | 🔄 Phase 3 Ongoing
+### Common Issues
+
+#### 1. Public Quote View Not Loading
+**Symptom:** Public quote view shows authentication errors or onboarding wizard
+
+**Cause:** Onboarding wizard running on public pages
+
+**Fix:** ✅ **RESOLVED (December 2, 2025)**
+- OnboardingWizard now detects public routes before any async operations
+- Early return prevents rendering on public pages
+- CSP updated to allow dev server WebSocket connections
+
+**Resolution Status:** ✅ Fixed in v2.2
+
+#### 2. Customers Not Showing
+**Symptom:** Customer list appears empty after loading
+
+**Cause:** Complex dependency chain in customer loading logic
+
+**Fix:** ✅ **RESOLVED (December 2, 2025)**
+- Simplified `loadCustomers` dependency array
+- Added `dataKey` increment AFTER data loads to force re-renders
+- Removed circular dependencies with `customers.length`
+
+**Resolution Status:** ✅ Fixed in v2.2
+
+#### 3. Onboarding Wizard Reappearing
+**Symptom:** Onboarding wizard shows after completion
+
+**Cause:** Completion flags not persisting or verification failing
+
+**Fix:** ✅ **RESOLVED (December 2, 2025)**
+- Set completion flags FIRST before any async operations
+- Removed blocking verification logic
+- Always close wizard after first completion attempt
+
+**Resolution Status:** ✅ Fixed in v2.2
 
 ---
+
+## 📝 Document Maintenance
+
+**Version:** 2.2
+**Last Updated:** December 2, 2025, 21:57 UTC
+**Next Review:** December 3, 2025
+**Status:** ✅ Phase 1 & 2 Complete | ✅ Public View Fixed | 🔄 Phase 3 Starting
+
+---
+
+**Recent Changes (December 2, 2025):**
+- ✅ Fixed public quote view authentication issues
+- ✅ Updated CSP to allow dev server WebSocket connections
+- ✅ Fixed customer loading dependency issues
+- ✅ Completed Phase 2 integration testing
+- ✅ All 38 tests passing
+
+---
+
+*This document is the single source of truth for Quote.it AI system architecture and should be referenced for all development decisions.*
