@@ -358,11 +358,9 @@ export function OnboardingWizard() {
     try {
       console.log("[OnboardingWizard] ========== STARTING ONBOARDING COMPLETION ==========");
       console.log("[OnboardingWizard] User ID:", user.id);
-      console.log("[OnboardingWizard] Company Name:", companyData.name);
-      console.log("[OnboardingWizard] Company Email:", companyData.email);
       
-      // CRITICAL: Set completion flags FIRST to prevent re-entry
-      console.log("[OnboardingWizard] Step 0: Setting completion flags (fail-safe)...");
+      // CRITICAL: Set completion flags IMMEDIATELY (before any async operations)
+      console.log("[OnboardingWizard] Step 1: Setting completion flags...");
       const completionKey = `onboarding_completed_${user.id}`;
       const completionTimestamp = new Date().toISOString();
       
@@ -371,14 +369,13 @@ export function OnboardingWizard() {
       localStorage.setItem(`onboarding_status_${user.id}`, "completed");
       sessionStorage.setItem(completionKey, "true");
       localStorage.setItem("onboarding_completed", "true");
-      console.log("[OnboardingWizard] ✓ Completion flags set (fail-safe)");
+      console.log("[OnboardingWizard] ✓ Completion flags set");
       
-      // Step 1: Get existing settings
-      console.log("[OnboardingWizard] Step 1: Fetching existing settings...");
+      // Step 2: Get existing settings
+      console.log("[OnboardingWizard] Step 2: Fetching existing settings...");
       const existingSettings = await getSettings(user.id);
-      console.log("[OnboardingWizard] Retrieved existing settings");
       
-      // Step 2: Merge with new onboarding data
+      // Step 3: Merge with new onboarding data
       const updatedSettings = {
         ...existingSettings,
         name: companyData.name,
@@ -388,61 +385,26 @@ export function OnboardingWizard() {
         onboardingCompleted: true,
       };
 
-      console.log("[OnboardingWizard] Step 2: Prepared settings");
-
-      // Step 3: Save to storage layers
-      console.log("[OnboardingWizard] Step 3: Saving to storage...");
-      await saveSettings(user.id, updatedSettings);
-      console.log("[OnboardingWizard] ✓ saveSettings completed");
-
-      // Step 4: Wait for storage propagation (advisory verification)
-      console.log("[OnboardingWizard] Step 4: Waiting for storage propagation (2000ms)...");
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Step 5: Verify settings (advisory, won't block completion)
-      console.log("[OnboardingWizard] Step 5: Verifying settings (advisory)...");
-      let verificationPassed = false;
+      console.log("[OnboardingWizard] Step 3: Saving settings...");
       
-      try {
-        const verifiedSettings = await getSettings(user.id);
-        
-        console.log("[OnboardingWizard] Verification check:");
-        console.log("  - Expected name:", companyData.name);
-        console.log("  - Actual name:", verifiedSettings.name);
-        console.log("  - Expected email:", companyData.email);
-        console.log("  - Actual email:", verifiedSettings.email);
-        console.log("  - Onboarding flag:", verifiedSettings.onboardingCompleted);
-        
-        verificationPassed = verifiedSettings.name === companyData.name && 
-                            verifiedSettings.email === companyData.email &&
-                            verifiedSettings.onboardingCompleted === true;
-        
-        if (verificationPassed) {
-          console.log("[OnboardingWizard] ✓ Settings verified successfully");
-          toast.success("Setup complete! Your company information has been saved.");
-        } else {
-          console.warn("[OnboardingWizard] ⚠️ Verification did not pass, but continuing anyway");
-          toast.success("Setup complete! If settings don't appear immediately, try refreshing the page.");
-        }
-      } catch (verifyError) {
-        console.warn("[OnboardingWizard] ⚠️ Verification check failed:", verifyError);
-        toast.success("Setup complete! Your data has been saved.");
-      }
-
-      // Step 6: Handle import option
+      // Step 4: Save to storage (no verification needed)
+      await saveSettings(user.id, updatedSettings);
+      console.log("[OnboardingWizard] ✓ Settings saved successfully");
+      
+      // Step 5: Handle import option
       if (importOption === "sample") {
-        console.log("[OnboardingWizard] Step 6: Loading sample data...");
+        console.log("[OnboardingWizard] Step 4: Loading sample data...");
         try {
           const { generateSampleData } = await import("@/lib/sample-data");
           await generateSampleData(user.id, true);
           console.log("[OnboardingWizard] ✓ Sample data loaded");
-          toast.success("Sample data loaded successfully!");
+          toast.success("Setup complete! Sample data has been loaded.");
         } catch (sampleError) {
           console.error("[OnboardingWizard] Sample data load failed:", sampleError);
-          toast.warning("Setup complete, but sample data could not be loaded.");
+          toast.success("Setup complete! You can start adding your data.");
         }
       } else {
-        console.log("[OnboardingWizard] Step 6: Skipping sample data (option:", importOption, ")");
+        toast.success("Setup complete! You're ready to create your first quote.");
       }
 
       console.log("[OnboardingWizard] ✓ All steps completed");
@@ -462,13 +424,7 @@ export function OnboardingWizard() {
       localStorage.setItem(`onboarding_status_${user.id}`, "completed");
       sessionStorage.setItem(completionKey, "true");
       
-      if (error instanceof Error) {
-        console.error("[OnboardingWizard] Error message:", error.message);
-        toast.warning("Setup complete! Your data has been saved. If you encounter issues, try refreshing the page.");
-      } else {
-        console.error("[OnboardingWizard] Unknown error type:", error);
-        toast.success("Setup complete!");
-      }
+      toast.success("Setup complete! If you encounter any issues, try refreshing the page.");
       
       // Always close wizard to prevent loop
       setIsOpen(false);

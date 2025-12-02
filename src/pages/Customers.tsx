@@ -33,7 +33,7 @@ export default function Customers() {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [loadStartTime, setLoadStartTime] = useState<number | null>(null);
-  const [dataKey, setDataKey] = useState(0); // NEW: Force re-render key
+  const [dataKey, setDataKey] = useState(0); // Force re-render key
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -63,7 +63,7 @@ export default function Customers() {
     remove: optimisticDelete
   } = useOptimisticList<Customer>([], optimisticOptions);
 
-  // Wrap loadCustomers in useCallback with proper dependencies
+  // Wrap loadCustomers in useCallback - REMOVED dataKey from dependencies to break circular dependency
   const loadCustomers = useCallback(async (forceRefresh = false) => {
     // Guard: Don't run if no user
     if (!user?.id) {
@@ -79,7 +79,6 @@ export default function Customers() {
     console.log('[Customers] ========== LOAD CUSTOMERS START ==========');
     console.log('[Customers] User ID:', user.id);
     console.log('[Customers] Current customer count:', customers.length);
-    console.log('[Customers] Current dataKey:', dataKey);
     
     loadingRef.current = true;
     setLoading(true);
@@ -101,18 +100,11 @@ export default function Customers() {
       console.log('[Customers] ✓ Received data from getCustomers');
       console.log('[Customers]   - Count:', data.length);
       console.log('[Customers]   - First customer:', data[0]?.name || 'N/A');
-      console.log('[Customers]   - Data sample:', JSON.stringify(data.slice(0, 2), null, 2));
       
-      // CRITICAL: Update the displayed list using setCustomers from useOptimisticList
+      // CRITICAL: Update the displayed list
       console.log('[Customers] Calling setCustomers with', data.length, 'customers');
       setCustomers(data);
       console.log('[Customers] ✓ Called setCustomers');
-      
-      // Force React re-render by updating key
-      const newDataKey = dataKey + 1;
-      console.log('[Customers] Updating dataKey from', dataKey, 'to', newDataKey);
-      setDataKey(newDataKey);
-      console.log('[Customers] ✓ Updated dataKey');
       
       // Additional state updates to trigger re-render
       setSelectedCustomers([]);
@@ -121,11 +113,6 @@ export default function Customers() {
       
       console.log('[Customers] ========== LOAD CUSTOMERS COMPLETE ==========');
       console.log('[Customers] Final customer count:', data.length);
-      console.log('[Customers] Final dataKey:', newDataKey);
-      
-      // Force a tiny delay to ensure state updates propagate
-      await new Promise(resolve => setTimeout(resolve, 50));
-      console.log('[Customers] State propagation delay complete');
     } catch (err: unknown) {
       console.error('[Customers] ========== LOAD CUSTOMERS FAILED ==========');
       console.error('[Customers] Error:', err);
@@ -145,7 +132,7 @@ export default function Customers() {
       setLoadStartTime(null);
       console.log('[Customers] Cleanup complete');
     }
-  }, [user?.id, startLoading, stopLoading, retryCount, setCustomers, customers.length, dataKey]);
+  }, [user?.id, startLoading, stopLoading, retryCount, setCustomers, customers.length]); // REMOVED dataKey from dependencies
 
   // Effect to load customers when user is ready
   useEffect(() => {
@@ -155,7 +142,14 @@ export default function Customers() {
     }
     
     console.log('[Customers] Effect: User ready, loading customers');
-    loadCustomers();
+    loadCustomers().then(() => {
+      // Update dataKey AFTER load completes to force re-render
+      setDataKey(prev => {
+        const newKey = prev + 1;
+        console.log('[Customers] Updated dataKey from', prev, 'to', newKey);
+        return newKey;
+      });
+    });
   }, [user?.id, loadCustomers]);
 
   useEffect(() => {
