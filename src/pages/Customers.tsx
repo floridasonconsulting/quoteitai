@@ -63,7 +63,8 @@ export default function Customers() {
     remove: optimisticDelete
   } = useOptimisticList<Customer>([], optimisticOptions);
 
-  // Wrap loadCustomers in useCallback - REMOVE customers.length to break circular dependency
+  // Wrap loadCustomers in useCallback with proper dependencies
+  // CRITICAL: setCustomers is stable from useOptimisticList, so we DON'T need it in dependencies
   const loadCustomers = useCallback(async (forceRefresh = false) => {
     // Guard: Don't run if no user
     if (!user?.id) {
@@ -78,6 +79,7 @@ export default function Customers() {
 
     console.log('[Customers] ========== LOAD CUSTOMERS START ==========');
     console.log('[Customers] User ID:', user.id);
+    console.log('[Customers] Current customer count:', customers.length);
     
     loadingRef.current = true;
     setLoading(true);
@@ -99,11 +101,13 @@ export default function Customers() {
       console.log('[Customers] ✓ Received data from getCustomers');
       console.log('[Customers]   - Count:', data.length);
       console.log('[Customers]   - First customer:', data[0]?.name || 'N/A');
+      console.log('[Customers]   - Data is array:', Array.isArray(data));
+      console.log('[Customers]   - Data sample:', JSON.stringify(data.slice(0, 2), null, 2));
       
       // CRITICAL: Update the displayed list
-      console.log('[Customers] Calling setCustomers with', data.length, 'customers');
+      console.log('[Customers] BEFORE setCustomers - current count:', customers.length);
       setCustomers(data);
-      console.log('[Customers] ✓ Called setCustomers');
+      console.log('[Customers] AFTER setCustomers - should be:', data.length);
       
       // Additional state updates to trigger re-render
       setSelectedCustomers([]);
@@ -111,7 +115,7 @@ export default function Customers() {
       setRetryCount(0);
       
       console.log('[Customers] ========== LOAD CUSTOMERS COMPLETE ==========');
-      console.log('[Customers] Final customer count:', data.length);
+      console.log('[Customers] Final customer count should be:', data.length);
     } catch (err: unknown) {
       console.error('[Customers] ========== LOAD CUSTOMERS FAILED ==========');
       console.error('[Customers] Error:', err);
@@ -131,7 +135,7 @@ export default function Customers() {
       setLoadStartTime(null);
       console.log('[Customers] Cleanup complete');
     }
-  }, [user?.id, startLoading, stopLoading, retryCount, setCustomers]); // REMOVED customers.length
+  }, [user?.id, startLoading, stopLoading, retryCount, customers.length]); // Added customers.length for debugging
 
   // Effect to load customers when user is ready
   useEffect(() => {
@@ -141,16 +145,22 @@ export default function Customers() {
     }
     
     console.log('[Customers] Effect: User ready, loading customers');
+    console.log('[Customers] Effect: Current customers.length:', customers.length);
     
     // Load customers and update dataKey synchronously
     const loadAndUpdate = async () => {
       await loadCustomers();
       console.log('[Customers] Load complete, updating dataKey');
-      setDataKey(prev => prev + 1);
+      console.log('[Customers] customers.length after load:', customers.length);
+      setDataKey(prev => {
+        const newKey = prev + 1;
+        console.log('[Customers] dataKey updated from', prev, 'to', newKey);
+        return newKey;
+      });
     };
     
     loadAndUpdate();
-  }, [user?.id, loadCustomers]);
+  }, [user?.id, loadCustomers]); // loadCustomers is stable now
 
   useEffect(() => {
     let lastFocusTime = Date.now();
