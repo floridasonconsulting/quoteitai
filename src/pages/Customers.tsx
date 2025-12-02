@@ -63,7 +63,7 @@ export default function Customers() {
     remove: optimisticDelete
   } = useOptimisticList<Customer>([], optimisticOptions);
 
-  // Wrap loadCustomers in useCallback - REMOVED dataKey from dependencies to break circular dependency
+  // Wrap loadCustomers in useCallback - REMOVE customers.length to break circular dependency
   const loadCustomers = useCallback(async (forceRefresh = false) => {
     // Guard: Don't run if no user
     if (!user?.id) {
@@ -78,7 +78,6 @@ export default function Customers() {
 
     console.log('[Customers] ========== LOAD CUSTOMERS START ==========');
     console.log('[Customers] User ID:', user.id);
-    console.log('[Customers] Current customer count:', customers.length);
     
     loadingRef.current = true;
     setLoading(true);
@@ -132,7 +131,7 @@ export default function Customers() {
       setLoadStartTime(null);
       console.log('[Customers] Cleanup complete');
     }
-  }, [user?.id, startLoading, stopLoading, retryCount, setCustomers, customers.length]); // REMOVED dataKey from dependencies
+  }, [user?.id, startLoading, stopLoading, retryCount, setCustomers]); // REMOVED customers.length
 
   // Effect to load customers when user is ready
   useEffect(() => {
