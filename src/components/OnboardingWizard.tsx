@@ -247,8 +247,14 @@ export function OnboardingWizard() {
   const { user } = useAuth();
   const location = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isChecking, setIsChecking] = useState(true); // Add checking state
+  
+  // CRITICAL: Check if this is a public page BEFORE any state initialization
+  const publicPaths = ['/public-quote-view', '/auth', '/landing', '/', '/privacy-policy', '/terms-of-service'];
+  const isPublicPage = publicPaths.some(path => 
+    location.pathname === path || location.pathname.startsWith(path + '/')
+  );
   
   // Form data
   const [companyData, setCompanyData] = useState<CompanyData>({
@@ -266,14 +272,11 @@ export function OnboardingWizard() {
   const [importOption, setImportOption] = useState("fresh");
 
   useEffect(() => {
-    // CRITICAL: Don't run onboarding check on public pages
-    const publicPaths = ['/public-quote-view', '/auth', '/landing', '/'];
-    const isPublicPage = publicPaths.some(path => location.pathname.startsWith(path));
-    
+    // CRITICAL: Don't run onboarding check on public pages - check FIRST before any async operations
     if (isPublicPage) {
-      console.log('[OnboardingWizard] Public page detected, skipping wizard');
+      console.log('[OnboardingWizard] Public page detected:', location.pathname);
       setIsChecking(false);
-      setIsOpen(false);
+      setIsDialogOpen(false);
       return;
     }
     
@@ -301,7 +304,7 @@ export function OnboardingWizard() {
       // If ANY flag is set, consider onboarding complete (no database verification)
       if (localFlag === "true" || statusFlag === "completed" || sessionFlag === "true") {
         console.log("[OnboardingWizard] ✓ Onboarding completed (flags found) - wizard will NOT show");
-        setIsOpen(false);
+        setIsDialogOpen(false);
         setIsChecking(false);
         console.log("[OnboardingWizard] ========== CHECK COMPLETE: WIZARD CLOSED ==========");
         return;
@@ -309,7 +312,7 @@ export function OnboardingWizard() {
       
       // If no flags found, show onboarding wizard
       console.log("[OnboardingWizard] No completion flags found - wizard WILL show");
-      setIsOpen(true);
+      setIsDialogOpen(true);
       setIsChecking(false);
       console.log("[OnboardingWizard] ========== CHECK COMPLETE: WIZARD OPENING ==========");
     };
@@ -427,7 +430,7 @@ export function OnboardingWizard() {
       
       // Close the wizard
       console.log("[OnboardingWizard] Closing wizard...");
-      setIsOpen(false);
+      setIsDialogOpen(false);
       
       console.log("[OnboardingWizard] ========== ONBOARDING COMPLETION SUCCESSFUL ==========");
     } catch (error) {
@@ -443,7 +446,7 @@ export function OnboardingWizard() {
       toast.success("Setup complete! If you encounter any issues, try refreshing the page.");
       
       // Always close wizard to prevent loop
-      setIsOpen(false);
+      setIsDialogOpen(false);
     }
   };
 
@@ -451,13 +454,18 @@ export function OnboardingWizard() {
     // Don't render anything while checking - prevents flash of wizard
     return null;
   }
+  
+  // CRITICAL: Early exit for public pages - don't render at all
+  if (isPublicPage) {
+    return null;
+  }
 
-  if (!isOpen) {
+  if (!isDialogOpen) {
     return null;
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogContent className="max-w-2xl p-0 max-h-[90vh] overflow-hidden flex flex-col" data-demo="onboarding-wizard">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle className="text-2xl">{steps[currentStep].title}</DialogTitle>
