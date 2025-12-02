@@ -2,23 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- Content Security Policy for enhanced security -->
+    <!-- Content Security Policy -->
     <meta http-equiv="Content-Security-Policy" content="
-      default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://js.stripe.com https://cdn.jsdelivr.net;
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      img-src 'self' data: blob: https: http:;
-      font-src 'self' data: https://fonts.gstatic.com;
-      connect-src 'self' https://*.supabase.co https://api.openai.com https://api.stripe.com https://www.google-analytics.com wss://*.supabase.co;
-      frame-src 'self' https://js.stripe.com https://hooks.stripe.com;
-      worker-src 'self' blob:;
-      object-src 'none';
-      base-uri 'self';
-      form-action 'self';
-      frame-ancestors 'none';
-      upgrade-insecure-requests;
+      default-src 'self'; 
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com; 
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
+      font-src 'self' https://fonts.gstatic.com data:; 
+      img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://unsplash.com https://pexels.com https://pixabay.com https://giphy.com https://wikimedia.org; 
+      connect-src 'self' https://*.supabase.co https://api.openai.com https://api.stripe.com https://www.google-analytics.com wss://*.supabase.co wss://localhost:* wss://*.softgen.dev; 
+      worker-src 'self' blob:; 
+      object-src 'none'; 
+      base-uri 'self'; 
+      form-action 'self' https://js.stripe.com;
     ">
     
     <meta name="mobile-web-app-capable" content="yes" />

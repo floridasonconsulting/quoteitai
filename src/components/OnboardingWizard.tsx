@@ -11,6 +11,7 @@ import { CheckCircle2, Building, Upload, FileText, Palette } from "lucide-react"
 import { getSettings, saveSettings } from "@/lib/db-service";
 import { SettingsDB, isIndexedDBSupported } from "@/lib/indexed-db";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useLocation } from "react-router-dom";
 
 interface CompanyData {
   name: string;
@@ -244,6 +245,7 @@ const CompletionStep = () => (
 
 export function OnboardingWizard() {
   const { user } = useAuth();
+  const location = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [isChecking, setIsChecking] = useState(true); // Add checking state
@@ -264,6 +266,17 @@ export function OnboardingWizard() {
   const [importOption, setImportOption] = useState("fresh");
 
   useEffect(() => {
+    // CRITICAL: Don't run onboarding check on public pages
+    const publicPaths = ['/public-quote-view', '/auth', '/landing', '/'];
+    const isPublicPage = publicPaths.some(path => location.pathname.startsWith(path));
+    
+    if (isPublicPage) {
+      console.log('[OnboardingWizard] Public page detected, skipping wizard');
+      setIsChecking(false);
+      setIsOpen(false);
+      return;
+    }
+    
     // Check onboarding status when user is loaded
     const checkOnboardingStatus = async () => {
       if (!user?.id) {
