@@ -273,7 +273,7 @@ export function OnboardingWizard() {
       
       console.log("[OnboardingWizard] Checking onboarding status for user:", user.id);
       
-      // Check 1: localStorage completion flags
+      // SIMPLIFIED CHECK: Only check localStorage flags (no database verification)
       const localFlag = localStorage.getItem(`onboarding_completed_${user.id}`);
       const statusFlag = localStorage.getItem(`onboarding_status_${user.id}`);
       const sessionFlag = sessionStorage.getItem(`onboarding_completed_${user.id}`);
@@ -284,47 +284,16 @@ export function OnboardingWizard() {
         sessionFlag
       });
       
-      // If ANY flag is set, consider onboarding complete
+      // If ANY flag is set, consider onboarding complete (no database verification)
       if (localFlag === "true" || statusFlag === "completed" || sessionFlag === "true") {
-        console.log("[OnboardingWizard] ✓ Onboarding already completed (flags found)");
+        console.log("[OnboardingWizard] ✓ Onboarding completed (flags found)");
         setIsOpen(false);
         setIsChecking(false);
         return;
       }
       
-      // Check 2: Verify database settings (fallback if localStorage was cleared)
-      try {
-        console.log("[OnboardingWizard] No completion flags found, checking database...");
-        const dbSettings = await getSettings(user.id);
-        
-        // If company name and email are set in database, consider onboarding complete
-        if (dbSettings.name && dbSettings.name.trim() !== "" && 
-            dbSettings.email && dbSettings.email.trim() !== "") {
-          console.log("[OnboardingWizard] ✓ Onboarding already completed (database has settings)");
-          console.log("[OnboardingWizard] Company name:", dbSettings.name);
-          console.log("[OnboardingWizard] Company email:", dbSettings.email);
-          
-          // Restore completion flags since database confirms completion
-          localStorage.setItem(`onboarding_completed_${user.id}`, "true");
-          localStorage.setItem(`onboarding_status_${user.id}`, "completed");
-          sessionStorage.setItem(`onboarding_completed_${user.id}`, "true");
-          
-          console.log("[OnboardingWizard] ✓ Restored completion flags from database verification");
-          
-          setIsOpen(false);
-          setIsChecking(false);
-          return;
-        }
-        
-        console.log("[OnboardingWizard] Database settings not complete, showing onboarding");
-        console.log("[OnboardingWizard] Company name:", dbSettings.name || "(empty)");
-        console.log("[OnboardingWizard] Company email:", dbSettings.email || "(empty)");
-      } catch (error) {
-        console.error("[OnboardingWizard] Error checking database settings:", error);
-      }
-      
-      // If we get here, onboarding is not complete - show wizard
-      console.log("[OnboardingWizard] Opening onboarding wizard");
+      // If no flags found, show onboarding wizard
+      console.log("[OnboardingWizard] No completion flags found, showing wizard");
       setIsOpen(true);
       setIsChecking(false);
     };
