@@ -10,7 +10,7 @@ import { PaymentDialog } from '@/components/PaymentDialog';
 import { createPaymentIntent } from '@/lib/stripe-service';
 
 export default function PublicQuoteView() {
-  const { shareToken } = useParams<{ shareToken: string }>();
+  const { id: shareToken } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);

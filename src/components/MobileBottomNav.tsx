@@ -6,6 +6,9 @@ import { useEffect, useState, useRef } from "react";
 export function MobileBottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
+  const ticking = useRef(false);
   
   // CRITICAL: Don't render on public pages
   const publicPaths = ['/auth', '/landing', '/', '/terms', '/privacy'];
@@ -19,10 +22,6 @@ export function MobileBottomNav() {
   if (isPublicPage) {
     return null;
   }
-  
-  const [isVisible, setIsVisible] = useState(true);
-  const lastScrollY = useRef(0);
-  const ticking = useRef(false);
 
   const navItems = [
     { icon: Home, label: 'Dashboard', path: '/' },
