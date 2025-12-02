@@ -15,7 +15,7 @@ export interface Customer {
 
 export interface Item {
   id: string;
-  userId: string;  // Required for IndexedDB user_id index
+  userId?: string;
   name: string;
   description: string;
   category: string;
@@ -24,6 +24,7 @@ export interface Item {
   markup: number;
   finalPrice: number;
   units: string;
+  minQuantity: number; // NEW: Default minimum quantity for AI and manual addition
   createdAt: string;
 }
 
