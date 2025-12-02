@@ -349,14 +349,24 @@ Required JSON format:
   ]
 }
 
-Rules:
+### RULES FOR ITEM QUANTITIES (CRITICAL)
+You must determine the quantity (qty) for each line item using the following strict hierarchy:
+
+1. **User Override (Highest Priority)**: If the User's Project Description explicitly states a quantity (e.g., "Install 5 lights", "Need 200 sq ft"), YOU MUST use that specific number, even if it differs from the catalog minimum.
+
+2. **Catalog Minimum (Default Priority)**: If the User's Project Description is vague or does not specify a number (e.g., "Install lighting"), you MUST check the min_quantity field in the provided Item Catalog. If min_quantity is greater than 0, use that value.
+
+3. **Global Fallback**: If no specific quantity is requested, and the item has no min_quantity (or it is 0/1), default the qty to 1.
+
+Other Rules:
 - Return ONLY raw JSON, no markdown formatting
 - Only suggest items that exist in the provided catalog
 - Use exact itemId, name, and units from catalog
 - Calculate total = quantity * price
 - Suggest 3-8 relevant items based on project scope
 - Make notes specific to the project (reference actual details)
-- Summary should mention total value and key deliverables`;
+- Summary should mention total value and key deliverables
+- ALWAYS include min_quantity from catalog when calculating quantities`;
         break;
       case "item_recommendations":
         systemPrompt = `You are a sales consultant specializing in item recommendations. Based on the current quote items, suggest 3-5 complementary items from the available catalog.
