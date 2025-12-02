@@ -114,9 +114,14 @@ export default function Customers() {
   }, [user?.id, startLoading, stopLoading, retryCount, setCustomers]);
 
   useEffect(() => {
-    if (user?.id) { // Ensure user is available before loading
-        loadCustomers();
+    // Guard: Only load if user is available and has an ID
+    if (!user?.id) {
+      console.log('[Customers] Skipping load - user not ready');
+      return;
     }
+    
+    console.log('[Customers] User ready, loading customers for user:', user.id);
+    loadCustomers();
   }, [user?.id, loadCustomers]);
 
   useEffect(() => {

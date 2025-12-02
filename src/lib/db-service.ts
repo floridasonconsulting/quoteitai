@@ -15,6 +15,7 @@
  */
 
 import type { CompanySettings } from '@/types';
+import { SettingsDB, isIndexedDBSupported } from './indexed-db';
 
 // Re-export everything from the specialized services
 export * from './services/quote-service';
@@ -30,10 +31,29 @@ export { getSettings } from './storage';
 // Import the specific function with an alias to avoid naming conflicts
 import { saveSettings as storageSaveSettings } from './storage';
 
-// Wrap saveSettings to accept userId as the first parameter
-export const saveSettings = (userId: string, settings: CompanySettings): void => {
-  // Call the aliased storage function with the correct parameter order
-  return storageSaveSettings(settings, userId);
+// Wrap saveSettings to accept userId and make it async for proper IndexedDB handling
+export const saveSettings = async (userId: string, settings: CompanySettings): Promise<void> => {
+  console.log('[db-service] saveSettings called with userId:', userId);
+  console.log('[db-service] Settings to save:', JSON.stringify(settings).substring(0, 200));
+  
+  // Save to localStorage first (synchronous, immediate)
+  storageSaveSettings(settings, userId);
+  console.log('[db-service] ✓ Saved to localStorage');
+  
+  // Save to IndexedDB if supported (async, more reliable)
+  if (isIndexedDBSupported()) {
+    try {
+      await SettingsDB.set(userId, settings);
+      console.log('[db-service] ✓ Saved to IndexedDB');
+    } catch (error) {
+      console.error('[db-service] ✗ IndexedDB save failed:', error);
+      // Don't throw - localStorage save succeeded
+    }
+  }
+  
+  // Add small delay to ensure storage operations are flushed
+  await new Promise(resolve => setTimeout(resolve, 100));
+  console.log('[db-service] ✓ saveSettings completed');
 };
 
 // Re-export clearAllData from storage as clearDatabaseData for backward compatibility

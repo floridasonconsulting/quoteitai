@@ -177,12 +177,13 @@ export const getSettings = (userId?: string): CompanySettings => {
     const userKey = `settings_${userId}`;
     const userSettings = getStorageItem<CompanySettings | null>(userKey, null);
     if (userSettings && (userSettings.name || userSettings.email)) {
+      console.log(`[Storage] Retrieved settings from user key: ${userKey}`);
       return userSettings;
     }
   }
   
   // Fall back to global settings key
-  return getStorageItem(STORAGE_KEYS.SETTINGS, {
+  const globalSettings = getStorageItem(STORAGE_KEYS.SETTINGS, {
     name: '',
     address: '',
     city: '',
@@ -197,19 +198,34 @@ export const getSettings = (userId?: string): CompanySettings => {
     terms: 'Payment due within 30 days. Thank you for your business!',
     proposalTemplate: 'classic',
   });
+  console.log('[Storage] Retrieved settings from global key');
+  return globalSettings;
 };
 
 export const saveSettings = (settings: CompanySettings, userId?: string): void => {
+  console.log('[Storage] saveSettings called');
+  console.log('[Storage] userId:', userId);
+  console.log('[Storage] settings.name:', settings.name);
+  console.log('[Storage] settings.email:', settings.email);
+  
   // Save to both user-specific key and global key for redundancy
   if (userId) {
     const userKey = `settings_${userId}`;
     setStorageItem(userKey, settings);
-    console.log(`[Storage] Saved settings to user-specific key: ${userKey}`);
+    console.log(`[Storage] ✓ Saved settings to user-specific key: ${userKey}`);
+    
+    // Verify the save
+    const verified = localStorage.getItem(userKey);
+    if (verified) {
+      console.log(`[Storage] ✓ Verified save in localStorage (${verified.length} chars)`);
+    } else {
+      console.error('[Storage] ✗ Failed to verify save in localStorage');
+    }
   }
   
   // Also save to global key for backward compatibility
   setStorageItem(STORAGE_KEYS.SETTINGS, settings);
-  console.log('[Storage] Saved settings to global key');
+  console.log('[Storage] ✓ Saved settings to global key');
 };
 
 // Theme
