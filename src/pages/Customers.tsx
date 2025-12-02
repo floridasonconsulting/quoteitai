@@ -114,8 +114,10 @@ export default function Customers() {
   }, [user?.id, startLoading, stopLoading, retryCount, setCustomers]);
 
   useEffect(() => {
-    loadCustomers();
-  }, [loadCustomers]);
+    if (user?.id) { // Ensure user is available before loading
+        loadCustomers();
+    }
+  }, [user?.id, loadCustomers]);
 
   useEffect(() => {
     let lastFocusTime = Date.now();

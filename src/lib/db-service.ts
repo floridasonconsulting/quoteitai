@@ -27,10 +27,12 @@ export { clearInFlightRequests } from './services/request-pool-service';
 // Re-export getSettings from storage for backward compatibility
 export { getSettings } from './storage';
 
-// Wrap saveSettings to accept userId as first parameter
+// Import the specific function with an alias to avoid naming conflicts
+import { saveSettings as storageSaveSettings } from './storage';
+
+// Wrap saveSettings to accept userId as the first parameter
 export const saveSettings = (userId: string, settings: CompanySettings): void => {
-  const { saveSettings: storageSaveSettings } = require('./storage');
-  // Call with correct parameter order: settings first, then userId
+  // Call the aliased storage function with the correct parameter order
   return storageSaveSettings(settings, userId);
 };
 
