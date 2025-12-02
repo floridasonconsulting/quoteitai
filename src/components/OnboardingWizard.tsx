@@ -395,7 +395,7 @@ export function OnboardingWizard() {
       // Step 1: Get existing settings
       console.log("[OnboardingWizard] Step 1: Fetching existing settings...");
       const existingSettings = await getSettings(user.id);
-      console.log("[OnboardingWizard] Retrieved existing settings:", existingSettings);
+      console.log("[OnboardingWizard] Retrieved existing settings:", JSON.stringify(existingSettings).substring(0, 100));
       
       // Step 2: Merge with new onboarding data
       const updatedSettings: CompanySettings = {
@@ -407,55 +407,45 @@ export function OnboardingWizard() {
         onboardingCompleted: true,
       };
 
-      console.log("[OnboardingWizard] Step 2: Merged settings:", updatedSettings);
+      console.log("[OnboardingWizard] Step 2: Prepared settings:", JSON.stringify(updatedSettings).substring(0, 100));
 
-      // Step 3: Save to all storage layers
-      console.log("[OnboardingWizard] Step 3: Saving to storage layers...");
+      // Step 3: Save to storage layers
+      console.log("[OnboardingWizard] Step 3: Saving to storage...");
       
-      // Save to localStorage (via db-service)
-      await saveSettings(user.id, updatedSettings);
-      console.log("[OnboardingWizard] ✓ Saved to localStorage");
+      // Save via db-service (handles localStorage + IndexedDB)
+      saveSettings(user.id, updatedSettings);
+      console.log("[OnboardingWizard] ✓ Saved via db-service");
       
-      // Save to IndexedDB if supported
+      // Save directly to IndexedDB if supported
       if (isIndexedDBSupported()) {
         try {
           await SettingsDB.set(user.id, updatedSettings);
-          console.log("[OnboardingWizard] ✓ Saved to IndexedDB");
+          console.log("[OnboardingWizard] ✓ Saved to IndexedDB directly");
         } catch (indexedDBError) {
-          console.warn("[OnboardingWizard] IndexedDB save failed:", indexedDBError);
+          console.warn("[OnboardingWizard] IndexedDB save failed (non-critical):", indexedDBError);
         }
       }
 
-      // Step 4: Wait for storage operations to complete
+      // Step 4: Wait for storage propagation
       console.log("[OnboardingWizard] Step 4: Waiting for storage propagation...");
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       // Step 5: Verify settings were saved
       console.log("[OnboardingWizard] Step 5: Verifying settings...");
+      const verifiedSettings = await getSettings(user.id);
       
-      // Verify localStorage
-      const localStorageSettings = await getSettings(user.id);
-      const localStorageValid = localStorageSettings.name === companyData.name && 
-                                localStorageSettings.email === companyData.email;
-      console.log("[OnboardingWizard] localStorage verification:", localStorageValid);
+      console.log("[OnboardingWizard] Verification check:");
+      console.log("  - Expected name:", companyData.name);
+      console.log("  - Actual name:", verifiedSettings.name);
+      console.log("  - Expected email:", companyData.email);
+      console.log("  - Actual email:", verifiedSettings.email);
       
-      // Verify IndexedDB if supported
-      let indexedDBValid = true;
-      if (isIndexedDBSupported()) {
-        try {
-          const indexedDBSettings = await SettingsDB.get(user.id);
-          indexedDBValid = indexedDBSettings?.name === companyData.name && 
-                          indexedDBSettings?.email === companyData.email;
-          console.log("[OnboardingWizard] IndexedDB verification:", indexedDBValid);
-        } catch (error) {
-          console.warn("[OnboardingWizard] IndexedDB verification failed:", error);
-          indexedDBValid = true; // Don't fail if IndexedDB isn't available
-        }
-      }
-
-      // Require at least localStorage to be valid
-      if (!localStorageValid) {
-        throw new Error("Settings verification failed - localStorage data does not match");
+      const isValid = verifiedSettings.name === companyData.name && 
+                      verifiedSettings.email === companyData.email;
+      
+      if (!isValid) {
+        console.error("[OnboardingWizard] ✗ Verification failed - data mismatch!");
+        throw new Error("Settings verification failed - data was not saved correctly");
       }
 
       console.log("[OnboardingWizard] ✓ Settings verified successfully");
@@ -471,8 +461,8 @@ export function OnboardingWizard() {
         console.log("[OnboardingWizard] Step 6: Skipping sample data (option:", importOption, ")");
       }
 
-      // Step 7: Mark onboarding as complete (multiple flags for redundancy)
-      console.log("[OnboardingWizard] Step 7: Marking onboarding as complete...");
+      // Step 7: Mark onboarding as complete
+      console.log("[OnboardingWizard] Step 7: Setting completion flags...");
       const completionKey = `onboarding_completed_${user.id}`;
       const completionTimestamp = new Date().toISOString();
       
@@ -483,12 +473,13 @@ export function OnboardingWizard() {
       
       console.log("[OnboardingWizard] ✓ Completion flags set");
 
-      // Step 8: Final verification
-      const finalLocalFlag = localStorage.getItem(completionKey);
-      const finalStatusFlag = localStorage.getItem(`onboarding_status_${user.id}`);
+      // Step 8: Final verification of flags
+      const finalCheck = localStorage.getItem(completionKey) === "true" &&
+                        localStorage.getItem(`onboarding_status_${user.id}`) === "completed";
       
-      if (finalLocalFlag !== "true" || finalStatusFlag !== "completed") {
-        throw new Error("Failed to set completion flags");
+      if (!finalCheck) {
+        console.error("[OnboardingWizard] ✗ Failed to set completion flags");
+        throw new Error("Failed to mark onboarding as complete");
       }
 
       console.log("[OnboardingWizard] ✓ All verifications passed");
@@ -512,7 +503,7 @@ export function OnboardingWizard() {
         toast.error(`Failed to save settings: ${error.message}`);
       } else {
         console.error("[OnboardingWizard] Unknown error type:", error);
-        toast.error("An unexpected error occurred. Please try again or contact support.");
+        toast.error("An unexpected error occurred. Please try again.");
       }
     }
   };

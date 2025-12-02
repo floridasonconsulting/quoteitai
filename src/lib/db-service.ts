@@ -14,6 +14,8 @@
  * - quote-service.ts: Quote CRUD operations
  */
 
+import type { CompanySettings } from '@/types';
+
 // Re-export everything from the specialized services
 export * from './services/quote-service';
 export * from './services/customer-service';
@@ -25,9 +27,10 @@ export { clearInFlightRequests } from './services/request-pool-service';
 // Re-export getSettings from storage for backward compatibility
 export { getSettings } from './storage';
 
-// Wrap saveSettings to accept userId parameter
-export const saveSettings = async (userId: string, settings: CompanySettings): Promise<void> => {
-  const { saveSettings: storageSaveSettings } = await import('./storage');
+// Wrap saveSettings to accept userId as first parameter
+export const saveSettings = (userId: string, settings: CompanySettings): void => {
+  const { saveSettings: storageSaveSettings } = require('./storage');
+  // Call with correct parameter order: settings first, then userId
   return storageSaveSettings(settings, userId);
 };
 

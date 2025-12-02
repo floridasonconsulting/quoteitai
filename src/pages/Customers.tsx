@@ -62,7 +62,7 @@ export default function Customers() {
     remove: optimisticDelete
   } = useOptimisticList<Customer>([], optimisticOptions);
 
-  // Wrap loadCustomers in useCallback to prevent recreation on every render
+  // Wrap loadCustomers in useCallback with proper dependencies
   const loadCustomers = useCallback(async (forceRefresh = false) => {
     if (loadingRef.current) {
       console.log('[Customers] Load already in progress, skipping');
@@ -86,12 +86,14 @@ export default function Customers() {
       const dataPromise = getCustomers(user?.id);
       const data = await Promise.race([dataPromise, timeoutPromise]);
 
-      // CRITICAL FIX: Use setCustomers from useOptimisticList to update the displayed list
+      console.log(`[Customers] Received ${data.length} customers from getCustomers`);
+      
+      // Update the displayed list using setCustomers from useOptimisticList
       setCustomers(data);
       setSelectedCustomers([]);
       setError(null);
       setRetryCount(0);
-      console.log(`[Customers] Loaded ${data.length} customers successfully - displaying in UI`);
+      console.log(`[Customers] Successfully updated UI with ${data.length} customers`);
     } catch (err: unknown) {
       console.error('[Customers] Load failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
@@ -109,7 +111,7 @@ export default function Customers() {
       stopLoading('load-customers');
       setLoadStartTime(null);
     }
-  }, [user?.id, startLoading, stopLoading, retryCount]); // REMOVED setCustomers from dependencies
+  }, [user?.id, startLoading, stopLoading, retryCount, setCustomers]);
 
   useEffect(() => {
     loadCustomers();
