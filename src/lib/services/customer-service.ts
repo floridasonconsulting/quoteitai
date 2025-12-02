@@ -12,6 +12,9 @@ import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 import { CustomerDB, isIndexedDBSupported } from '../indexed-db';
 import { apiTracker } from '@/lib/api-performance-tracker';
 
+// Track if this is the first load for this user session
+const firstLoadMap = new Map<string, boolean>();
+
 /**
  * Fetch all customers for a user
  * Priority: Cache > IndexedDB > Supabase > Empty
@@ -23,20 +26,31 @@ export async function getCustomers(userId: string | undefined): Promise<Customer
   }
 
   console.log(`[CustomerService] getCustomers called for user: ${userId}`);
+  
+  // Check if this is the first load for this user
+  const isFirstLoad = !firstLoadMap.has(userId);
+  if (isFirstLoad) {
+    console.log(`[CustomerService] First load for user ${userId} - bypassing cache`);
+    firstLoadMap.set(userId, true);
+    // Clear any stale cache on first load
+    await cacheManager.invalidate('customers');
+  }
 
   const dedupKey = `fetch-customers-${userId}`;
 
   return dedupedRequest(dedupKey, async () => {
-    // Check cache first (but not on first load)
-    const cached = await cacheManager.get<Customer[]>('customers');
-    const hasCache = cached && Array.isArray(cached);
-    
-    if (hasCache && cached.length > 0) {
-      console.log(`[CustomerService] ✓ Retrieved ${cached.length} customers from cache`);
-      return cached;
+    // On first load, skip cache and go straight to IndexedDB/Supabase
+    if (!isFirstLoad) {
+      const cached = await cacheManager.get<Customer[]>('customers');
+      const hasCache = cached && Array.isArray(cached);
+      
+      if (hasCache && cached.length > 0) {
+        console.log(`[CustomerService] ✓ Retrieved ${cached.length} customers from cache`);
+        return cached;
+      }
     }
 
-    // If cache is empty or missing, try IndexedDB
+    // Try IndexedDB
     if (isIndexedDBSupported()) {
       try {
         const indexedDBData = await CustomerDB.getAll(userId);
@@ -53,7 +67,7 @@ export async function getCustomers(userId: string | undefined): Promise<Customer
             return indexedDBData;
           }
           
-          // If online, sync with Supabase in background but return IndexedDB data now
+          // If online and first load, sync with Supabase but return IndexedDB data for now
           console.log(`[CustomerService] Online - will sync with Supabase`);
         }
       } catch (error) {

@@ -37,12 +37,19 @@ export function Layout({ children }: LayoutProps) {
 
   // Load company logo for dynamic favicon
   useEffect(() => {
-    if (user?.id) {
-      const settings = getSettings();
-      if (settings.logo) {
-        setCompanyLogo(settings.logo);
+    const loadSettings = async () => {
+      if (user?.id) {
+        try {
+          const userSettings = await getSettings(user.id);
+          if (userSettings.logo) {
+            setCompanyLogo(userSettings.logo);
+          }
+        } catch (error) {
+          console.error('[Layout] Error loading settings:', error);
+        }
       }
-    }
+    };
+    loadSettings();
   }, [user?.id]);
 
   // Apply dynamic favicon for Max AI tier

@@ -25,11 +25,34 @@ export * from './services/item-service';
 // Re-export the clearInFlightRequests from the request pool service
 export { clearInFlightRequests } from './services/request-pool-service';
 
-// Re-export getSettings from storage for backward compatibility
-export { getSettings } from './storage';
+// Import the storage getSettings with an alias
+import { getSettings as storageGetSettings } from './storage';
 
 // Import the specific function with an alias to avoid naming conflicts
 import { saveSettings as storageSaveSettings } from './storage';
+
+// Wrap getSettings to check IndexedDB first (async for proper data retrieval)
+export const getSettings = async (userId: string): Promise<CompanySettings> => {
+  console.log('[db-service] getSettings called with userId:', userId);
+  
+  // Try IndexedDB first if supported
+  if (isIndexedDBSupported()) {
+    try {
+      const indexedDBSettings = await SettingsDB.get(userId);
+      if (indexedDBSettings && (indexedDBSettings.name || indexedDBSettings.email)) {
+        console.log('[db-service] ✓ Retrieved settings from IndexedDB');
+        return indexedDBSettings;
+      }
+    } catch (error) {
+      console.warn('[db-service] IndexedDB read failed, falling back to localStorage:', error);
+    }
+  }
+  
+  // Fall back to localStorage
+  const localStorageSettings = storageGetSettings(userId);
+  console.log('[db-service] ✓ Retrieved settings from localStorage');
+  return localStorageSettings;
+};
 
 // Wrap saveSettings to accept userId and make it async for proper IndexedDB handling
 export const saveSettings = async (userId: string, settings: CompanySettings): Promise<void> => {
@@ -45,6 +68,14 @@ export const saveSettings = async (userId: string, settings: CompanySettings): P
     try {
       await SettingsDB.set(userId, settings);
       console.log('[db-service] ✓ Saved to IndexedDB');
+      
+      // Verify the save immediately
+      const verified = await SettingsDB.get(userId);
+      if (verified && verified.name === settings.name && verified.email === settings.email) {
+        console.log('[db-service] ✓ Verified IndexedDB save');
+      } else {
+        console.warn('[db-service] ⚠️ IndexedDB verification mismatch');
+      }
     } catch (error) {
       console.error('[db-service] ✗ IndexedDB save failed:', error);
       // Don't throw - localStorage save succeeded
