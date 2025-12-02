@@ -114,6 +114,13 @@ export default function Customers() {
       setError(null);
       setRetryCount(0);
       
+      // CRITICAL: Increment dataKey AFTER setCustomers to force re-render with new data
+      setDataKey(prev => {
+        const newKey = prev + 1;
+        console.log('[Customers] dataKey updated from', prev, 'to', newKey, 'with', data.length, 'customers');
+        return newKey;
+      });
+      
       console.log('[Customers] ========== LOAD CUSTOMERS COMPLETE ==========');
       console.log('[Customers] Final customer count should be:', data.length);
     } catch (err: unknown) {
@@ -135,7 +142,7 @@ export default function Customers() {
       setLoadStartTime(null);
       console.log('[Customers] Cleanup complete');
     }
-  }, [user?.id, startLoading, stopLoading, retryCount, customers.length]); // Added customers.length for debugging
+  }, [user?.id, startLoading, stopLoading, retryCount, customers.length, setCustomers, setDataKey]); // Added setCustomers and setDataKey
 
   // Effect to load customers when user is ready
   useEffect(() => {
@@ -147,19 +154,8 @@ export default function Customers() {
     console.log('[Customers] Effect: User ready, loading customers');
     console.log('[Customers] Effect: Current customers.length:', customers.length);
     
-    // Load customers and update dataKey synchronously
-    const loadAndUpdate = async () => {
-      await loadCustomers();
-      console.log('[Customers] Load complete, updating dataKey');
-      console.log('[Customers] customers.length after load:', customers.length);
-      setDataKey(prev => {
-        const newKey = prev + 1;
-        console.log('[Customers] dataKey updated from', prev, 'to', newKey);
-        return newKey;
-      });
-    };
-    
-    loadAndUpdate();
+    // Just call loadCustomers - dataKey increment now happens inside it
+    loadCustomers();
   }, [user?.id, loadCustomers]); // loadCustomers is stable now
 
   useEffect(() => {
