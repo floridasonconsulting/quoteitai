@@ -63,7 +63,8 @@ export function FullQuoteGenerationAI({ items, onQuoteGenerated }: FullQuoteGene
       description: item.description,
       category: item.category,
       price: item.finalPrice,
-      units: item.units
+      units: item.units,
+      min_quantity: item.minQuantity || 1 // NEW: Include minimum quantity for AI
     }));
 
     const prompt = `Generate a complete quote for the following project:
