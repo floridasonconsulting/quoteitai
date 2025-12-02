@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -36,6 +35,7 @@ export interface FormData {
   markup: string;
   markupType: 'percentage' | 'fixed';
   units: string;
+  minQuantity: string; // NEW: Minimum quantity field
 }
 
 export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemFormProps) {
@@ -47,6 +47,7 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemForm
     markup: '',
     markupType: 'percentage',
     units: 'Each',
+    minQuantity: '1', // NEW: Default to 1
   });
 
   useEffect(() => {
@@ -59,6 +60,7 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemForm
         markup: editingItem.markup.toString(),
         markupType: editingItem.markupType,
         units: editingItem.units || 'Each',
+        minQuantity: editingItem.minQuantity?.toString() || '1', // NEW: Load from editing item
       });
     } else {
       setFormData({
@@ -69,6 +71,7 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemForm
         markup: '',
         markupType: 'percentage',
         units: 'Each',
+        minQuantity: '1', // NEW: Default to 1
       });
     }
   }, [editingItem, open]);
@@ -164,6 +167,25 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemForm
             </div>
           </div>
 
+          {/* NEW: Minimum Quantity Field */}
+          <div className="space-y-2">
+            <Label htmlFor="minQuantity" className="flex items-center gap-2">
+              Minimum Quantity
+              <span className="text-xs text-muted-foreground font-normal">
+                (Default quantity used for AI and manual addition)
+              </span>
+            </Label>
+            <Input
+              id="minQuantity"
+              type="number"
+              step="1"
+              min="1"
+              value={formData.minQuantity}
+              onChange={(e) => setFormData({ ...formData, minQuantity: e.target.value })}
+              placeholder="1"
+            />
+          </div>
+
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="basePrice">Base Price *</Label>
@@ -178,6 +200,9 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemForm
                 required
               />
             </div>
+          </div>
+
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="markup">Markup</Label>
               <div className="flex gap-2">

@@ -207,6 +207,7 @@ export default function Items() {
     try {
       const basePrice = parseFloat(formData.basePrice);
       const markup = parseFloat(formData.markup) || 0;
+      const minQuantity = parseInt(formData.minQuantity) || 1; // NEW: Parse minQuantity
       const finalPrice = formData.markupType === 'percentage'
         ? basePrice + (basePrice * markup / 100)
         : basePrice + markup;
@@ -218,6 +219,7 @@ export default function Items() {
           basePrice,
           markup,
           finalPrice,
+          minQuantity, // NEW: Include minQuantity
         }, queueChange);
         setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
         toast.success('Item updated successfully');
@@ -229,6 +231,7 @@ export default function Items() {
           basePrice,
           markup,
           finalPrice,
+          minQuantity, // NEW: Include minQuantity
           createdAt: new Date().toISOString(),
         };
         const added = await addItem(user?.id, newItem, queueChange);

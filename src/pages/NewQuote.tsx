@@ -137,19 +137,23 @@ export default function NewQuote() {
     const existingItem = quoteItems.find(qi => qi.itemId === item.id);
     
     if (existingItem) {
+      // If item already exists, add the minimum quantity to current quantity
+      const newQuantity = existingItem.quantity + (item.minQuantity || 1);
       setQuoteItems(quoteItems.map(qi =>
         qi.itemId === item.id
-          ? { ...qi, quantity: qi.quantity + 1, total: calculateItemTotal(qi.quantity + 1, qi.price) }
+          ? { ...qi, quantity: newQuantity, total: calculateItemTotal(newQuantity, qi.price) }
           : qi
       ));
     } else {
+      // NEW: Use item.minQuantity as the default quantity
+      const defaultQuantity = item.minQuantity || 1;
       const newQuoteItem: QuoteItem = {
         itemId: item.id,
         name: item.name,
         description: item.description,
-        quantity: 1,
+        quantity: defaultQuantity, // NEW: Use minQuantity instead of hardcoded 1
         price: item.finalPrice,
-        total: item.finalPrice,
+        total: calculateItemTotal(defaultQuantity, item.finalPrice), // NEW: Calculate with minQuantity
         units: item.units,
       };
       setQuoteItems([...quoteItems, newQuoteItem]);
