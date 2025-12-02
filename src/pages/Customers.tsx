@@ -141,14 +141,15 @@ export default function Customers() {
     }
     
     console.log('[Customers] Effect: User ready, loading customers');
-    loadCustomers().then(() => {
-      // Update dataKey AFTER load completes to force re-render
-      setDataKey(prev => {
-        const newKey = prev + 1;
-        console.log('[Customers] Updated dataKey from', prev, 'to', newKey);
-        return newKey;
-      });
-    });
+    
+    // Load customers and update dataKey synchronously
+    const loadAndUpdate = async () => {
+      await loadCustomers();
+      console.log('[Customers] Load complete, updating dataKey');
+      setDataKey(prev => prev + 1);
+    };
+    
+    loadAndUpdate();
   }, [user?.id, loadCustomers]);
 
   useEffect(() => {

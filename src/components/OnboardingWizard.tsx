@@ -267,35 +267,38 @@ export function OnboardingWizard() {
     // Check onboarding status when user is loaded
     const checkOnboardingStatus = async () => {
       if (!user?.id) {
+        console.log('[OnboardingWizard] No user ID, setting isChecking to false');
         setIsChecking(false);
         return;
       }
       
-      console.log("[OnboardingWizard] Checking onboarding status for user:", user.id);
+      console.log("[OnboardingWizard] ========== CHECKING ONBOARDING STATUS ==========");
+      console.log("[OnboardingWizard] User ID:", user.id);
       
       // SIMPLIFIED CHECK: Only check localStorage flags (no database verification)
       const localFlag = localStorage.getItem(`onboarding_completed_${user.id}`);
       const statusFlag = localStorage.getItem(`onboarding_status_${user.id}`);
       const sessionFlag = sessionStorage.getItem(`onboarding_completed_${user.id}`);
       
-      console.log("[OnboardingWizard] Completion flags:", {
-        localFlag,
-        statusFlag,
-        sessionFlag
-      });
+      console.log("[OnboardingWizard] Completion flags check:");
+      console.log("  - localFlag:", localFlag);
+      console.log("  - statusFlag:", statusFlag);
+      console.log("  - sessionFlag:", sessionFlag);
       
       // If ANY flag is set, consider onboarding complete (no database verification)
       if (localFlag === "true" || statusFlag === "completed" || sessionFlag === "true") {
-        console.log("[OnboardingWizard] ✓ Onboarding completed (flags found)");
+        console.log("[OnboardingWizard] ✓ Onboarding completed (flags found) - wizard will NOT show");
         setIsOpen(false);
         setIsChecking(false);
+        console.log("[OnboardingWizard] ========== CHECK COMPLETE: WIZARD CLOSED ==========");
         return;
       }
       
       // If no flags found, show onboarding wizard
-      console.log("[OnboardingWizard] No completion flags found, showing wizard");
+      console.log("[OnboardingWizard] No completion flags found - wizard WILL show");
       setIsOpen(true);
       setIsChecking(false);
+      console.log("[OnboardingWizard] ========== CHECK COMPLETE: WIZARD OPENING ==========");
     };
     
     checkOnboardingStatus();
