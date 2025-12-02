@@ -139,11 +139,10 @@ export default function Customers() {
     }
     
     console.log('[Customers] Effect: User ready, loading customers');
-    console.log('[Customers] Effect: Current customers.length:', customers.length);
     
     // Just call loadCustomers - dataKey increment now happens inside it
     loadCustomers();
-  }, [user?.id, loadCustomers]); // loadCustomers is stable now
+  }, [user?.id, loadCustomers]); // Removed customers.length - it causes circular updates
 
   useEffect(() => {
     let lastFocusTime = Date.now();
