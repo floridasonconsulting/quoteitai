@@ -222,12 +222,47 @@ export default function PublicQuoteView() {
 
       setQuote({ ...quote, status: 'accepted' });
       toast.success(`Quote accepted successfully!`);
-      
-      // Optional: Trigger payment logic here if needed
-      // setPaymentDialogOpen(true); 
     } catch (error) {
       console.error('Error accepting quote:', error);
       toast.error('Failed to accept quote');
+    }
+  };
+
+  const handleAccept = async () => {
+    if (!quote || !shareToken) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('update-quote-status', {
+        body: { shareToken, status: 'accepted' }
+      });
+
+      if (error) throw error;
+
+      setQuote({ ...quote, status: 'accepted' });
+    } catch (error) {
+      console.error('Error accepting quote:', error);
+      throw error;
+    }
+  };
+
+  const handleReject = async (reason?: string) => {
+    if (!quote || !shareToken) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('update-quote-status', {
+        body: { 
+          shareToken, 
+          status: 'declined',
+          rejectionReason: reason 
+        }
+      });
+
+      if (error) throw error;
+
+      setQuote({ ...quote, status: 'declined' });
+    } catch (error) {
+      console.error('Error rejecting quote:', error);
+      throw error;
     }
   };
 
@@ -261,6 +296,7 @@ export default function PublicQuoteView() {
     }
   };
 
+  // Show loading state
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -269,6 +305,32 @@ export default function PublicQuoteView() {
     );
   }
 
+  // Show expired state
+  if (expired) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="p-8 text-center max-w-md">
+          <h1 className="text-2xl font-bold mb-2">Link Expired</h1>
+          <p className="text-muted-foreground">
+            This proposal link has expired. Please contact the sender for a new link.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show OTP wall if not authenticated
+  if (!authenticated && shareToken) {
+    return (
+      <OTPSecurityWall
+        shareToken={shareToken}
+        onVerified={handleVerified}
+        onExpired={handleExpired}
+      />
+    );
+  }
+
+  // Show not found if no quote
   if (!quote) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -281,7 +343,6 @@ export default function PublicQuoteView() {
   }
 
   // Transform legacy data to new Proposal format
-  // We use 'as any' for settings because we might have partial data, but the transformer handles fallbacks
   const proposalData = transformQuoteToProposal(quote, customer || undefined, settings || undefined);
 
   return (
@@ -290,9 +351,20 @@ export default function PublicQuoteView() {
         proposal={proposalData} 
         onSign={handleSign}
         readOnly={quote.status === 'accepted' || quote.status === 'declined'}
+        actionBar={{
+          quoteId: quote.id,
+          total: quote.total,
+          status: quote.status,
+          userEmail,
+          userName: customer?.contactFirstName 
+            ? `${customer.contactFirstName}${customer.contactLastName ? ' ' + customer.contactLastName : ''}`
+            : undefined,
+          onAccept: handleAccept,
+          onReject: handleReject
+        }}
       />
 
-      {/* Hidden Payment Dialog - can be triggered from ProposalViewer if we add a payment button there */}
+      {/* Hidden Payment Dialog */}
       <PaymentDialog
         open={paymentDialogOpen}
         onOpenChange={setPaymentDialogOpen}
