@@ -1,4 +1,3 @@
-
 import { Home, FileText, Users, Package, Settings } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -7,6 +6,20 @@ import { useEffect, useState, useRef } from "react";
 export function MobileBottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // CRITICAL: Don't render on public pages
+  const publicPaths = ['/auth', '/landing', '/', '/terms', '/privacy'];
+  const isPublicPage = publicPaths.some(path => 
+    location.pathname === path || 
+    location.pathname.startsWith('/public-quote-view') ||
+    location.pathname.startsWith('/quotes/public')
+  );
+  
+  // Early return if on public page - don't render at all
+  if (isPublicPage) {
+    return null;
+  }
+  
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
   const ticking = useRef(false);

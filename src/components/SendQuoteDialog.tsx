@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -52,6 +52,16 @@ export function SendQuoteDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [requiredTier, setRequiredTier] = useState<'pro' | 'max'>('pro');
+  
+  // Log share token for debugging
+  useEffect(() => {
+    if (quote.shareToken) {
+      console.log('[SendQuoteDialog] Quote has shareToken:', quote.shareToken);
+      console.log('[SendQuoteDialog] Public URL:', `${window.location.origin}/quotes/public/${quote.shareToken}`);
+    } else {
+      console.warn('[SendQuoteDialog] ⚠️ Quote missing shareToken - public link will not work!');
+    }
+  }, [quote.shareToken]);
 
   const summaryAI = useAI('quote_summary', {
     onSuccess: (content) => {

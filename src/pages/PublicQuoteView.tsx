@@ -53,25 +53,34 @@ export default function PublicQuoteView() {
 
   const loadQuote = async () => {
     if (!shareToken) {
+      console.error('[PublicQuoteView] No shareToken provided in URL');
       setLoading(false);
       return;
     }
     
+    console.log('[PublicQuoteView] Loading quote with shareToken:', shareToken);
     setLoading(true);
     try {
       // Fetch quote by share token (public access via RLS policy)
+      // Try both share_token (snake_case) and shareToken (camelCase) for compatibility
       const { data: quoteData, error: quoteError } = await supabase
         .from('quotes')
         .select('*')
-        .eq('share_token', shareToken)
-        .single();
+        .or(`share_token.eq.${shareToken},shareToken.eq.${shareToken}`)
+        .maybeSingle(); // Use maybeSingle instead of single to avoid error on no results
 
-      if (quoteError) throw quoteError;
+      if (quoteError) {
+        console.error('[PublicQuoteView] Supabase error:', quoteError);
+        throw quoteError;
+      }
 
       if (!quoteData) {
+        console.error('[PublicQuoteView] No quote found with shareToken:', shareToken);
         toast.error('Quote not found or link has expired');
         return;
       }
+      
+      console.log('[PublicQuoteView] Quote loaded successfully:', quoteData.id);
 
       // Convert database format to app format
       const formattedQuote: Quote = {
