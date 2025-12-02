@@ -390,11 +390,16 @@ export function OnboardingWizard() {
       localStorage.setItem("onboarding_completed", "true");
       console.log("[OnboardingWizard] ✓ Completion flags set");
       
-      // Step 2: Get existing settings
-      console.log("[OnboardingWizard] Step 2: Fetching existing settings...");
+      // CRITICAL: Close wizard immediately to prevent reopening
+      console.log("[OnboardingWizard] Step 2: Closing wizard...");
+      setIsDialogOpen(false);
+      console.log("[OnboardingWizard] ✓ Wizard closed");
+      
+      // Step 3: Get existing settings (non-blocking)
+      console.log("[OnboardingWizard] Step 3: Fetching existing settings...");
       const existingSettings = await getSettings(user.id);
       
-      // Step 3: Merge with new onboarding data
+      // Step 4: Merge with new onboarding data
       const updatedSettings = {
         ...existingSettings,
         name: companyData.name,
@@ -404,15 +409,15 @@ export function OnboardingWizard() {
         onboardingCompleted: true,
       };
 
-      console.log("[OnboardingWizard] Step 3: Saving settings...");
+      console.log("[OnboardingWizard] Step 4: Saving settings...");
       
-      // Step 4: Save to storage (no verification needed)
+      // Step 5: Save to storage
       await saveSettings(user.id, updatedSettings);
       console.log("[OnboardingWizard] ✓ Settings saved successfully");
       
-      // Step 5: Handle import option
+      // Step 6: Handle import option
       if (importOption === "sample") {
-        console.log("[OnboardingWizard] Step 4: Loading sample data...");
+        console.log("[OnboardingWizard] Step 5: Loading sample data...");
         try {
           const { generateSampleData } = await import("@/lib/sample-data");
           await generateSampleData(user.id, true);
@@ -427,11 +432,6 @@ export function OnboardingWizard() {
       }
 
       console.log("[OnboardingWizard] ✓ All steps completed");
-      
-      // Close the wizard
-      console.log("[OnboardingWizard] Closing wizard...");
-      setIsDialogOpen(false);
-      
       console.log("[OnboardingWizard] ========== ONBOARDING COMPLETION SUCCESSFUL ==========");
     } catch (error) {
       console.error("[OnboardingWizard] ========== ONBOARDING COMPLETION ERROR ==========");

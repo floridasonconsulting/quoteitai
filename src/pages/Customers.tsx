@@ -79,7 +79,6 @@ export default function Customers() {
 
     console.log('[Customers] ========== LOAD CUSTOMERS START ==========');
     console.log('[Customers] User ID:', user.id);
-    console.log('[Customers] Current customer count:', customers.length);
     
     loadingRef.current = true;
     setLoading(true);
@@ -100,29 +99,18 @@ export default function Customers() {
 
       console.log('[Customers] ✓ Received data from getCustomers');
       console.log('[Customers]   - Count:', data.length);
-      console.log('[Customers]   - First customer:', data[0]?.name || 'N/A');
-      console.log('[Customers]   - Data is array:', Array.isArray(data));
-      console.log('[Customers]   - Data sample:', JSON.stringify(data.slice(0, 2), null, 2));
       
       // CRITICAL: Update the displayed list
-      console.log('[Customers] BEFORE setCustomers - current count:', customers.length);
       setCustomers(data);
-      console.log('[Customers] AFTER setCustomers - should be:', data.length);
       
-      // Additional state updates to trigger re-render
+      // Force component re-render by incrementing key
+      setDataKey(prev => prev + 1);
+      
       setSelectedCustomers([]);
       setError(null);
       setRetryCount(0);
       
-      // CRITICAL: Increment dataKey AFTER setCustomers to force re-render with new data
-      setDataKey(prev => {
-        const newKey = prev + 1;
-        console.log('[Customers] dataKey updated from', prev, 'to', newKey, 'with', data.length, 'customers');
-        return newKey;
-      });
-      
       console.log('[Customers] ========== LOAD CUSTOMERS COMPLETE ==========');
-      console.log('[Customers] Final customer count should be:', data.length);
     } catch (err: unknown) {
       console.error('[Customers] ========== LOAD CUSTOMERS FAILED ==========');
       console.error('[Customers] Error:', err);
@@ -140,9 +128,8 @@ export default function Customers() {
       loadingRef.current = false;
       stopLoading('load-customers');
       setLoadStartTime(null);
-      console.log('[Customers] Cleanup complete');
     }
-  }, [user?.id, startLoading, stopLoading, retryCount, customers.length, setCustomers, setDataKey]); // Added setCustomers and setDataKey
+  }, [user?.id, startLoading, stopLoading, retryCount, setCustomers]); // Removed customers.length dependency
 
   // Effect to load customers when user is ready
   useEffect(() => {
