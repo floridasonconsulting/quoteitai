@@ -9,29 +9,8 @@ export function MobileBottomNav() {
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
-  
-  // CRITICAL: Don't render on public pages
-  const publicPaths = ['/auth', '/landing', '/', '/terms', '/privacy'];
-  const isPublicPage = publicPaths.some(path => 
-    location.pathname === path || 
-    location.pathname.startsWith('/public-quote-view') ||
-    location.pathname.startsWith('/quotes/public')
-  );
-  
-  // Early return if on public page - don't render at all
-  if (isPublicPage) {
-    return null;
-  }
 
-  const navItems = [
-    { icon: Home, label: 'Dashboard', path: '/' },
-    { icon: FileText, label: 'Quotes', path: '/quotes' },
-    { icon: Users, label: 'Customers', path: '/customers' },
-    { icon: Package, label: 'Items', path: '/items' },
-    { icon: Settings, label: 'Settings', path: '/settings' }
-  ];
-
-  // Auto-hide navigation on scroll
+  // Auto-hide navigation on scroll - MUST be before conditional returns
   useEffect(() => {
     const handleScroll = () => {
       if (!ticking.current) {
@@ -56,6 +35,27 @@ export function MobileBottomNav() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // CRITICAL: Don't render on public pages
+  const publicPaths = ['/auth', '/landing', '/', '/terms', '/privacy'];
+  const isPublicPage = publicPaths.some(path => 
+    location.pathname === path || 
+    location.pathname.startsWith('/public-quote-view') ||
+    location.pathname.startsWith('/quotes/public')
+  );
+  
+  // Early return if on public page - don't render at all
+  if (isPublicPage) {
+    return null;
+  }
+
+  const navItems = [
+    { icon: Home, label: 'Dashboard', path: '/' },
+    { icon: FileText, label: 'Quotes', path: '/quotes' },
+    { icon: Users, label: 'Customers', path: '/customers' },
+    { icon: Package, label: 'Items', path: '/items' },
+    { icon: Settings, label: 'Settings', path: '/settings' }
+  ];
 
   // Haptic feedback helper
   const triggerHapticFeedback = () => {
