@@ -33,6 +33,7 @@ export default function Customers() {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [loadStartTime, setLoadStartTime] = useState<number | null>(null);
+  const [dataKey, setDataKey] = useState(0); // NEW: Force re-render key
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -75,6 +76,10 @@ export default function Customers() {
       return;
     }
 
+    console.log('[Customers] ========== LOAD CUSTOMERS START ==========');
+    console.log('[Customers] User ID:', user.id);
+    console.log('[Customers] Current customer count:', customers.length);
+    
     loadingRef.current = true;
     setLoading(true);
     setError(null);
@@ -82,8 +87,6 @@ export default function Customers() {
     startLoading('load-customers', 'Loading customers');
 
     try {
-      console.log(`[Customers] Loading customers for user: ${user.id}`);
-      
       const backoffDelay = retryCount > 0 ? Math.pow(2, retryCount - 1) * 5000 : 0;
       const timeoutMs = 15000 + backoffDelay;
 
@@ -94,16 +97,27 @@ export default function Customers() {
       const dataPromise = getCustomers(user.id);
       const data = await Promise.race([dataPromise, timeoutPromise]);
 
-      console.log(`[Customers] Received ${data.length} customers from getCustomers`);
+      console.log('[Customers] ✓ Received data from getCustomers');
+      console.log('[Customers]   - Count:', data.length);
+      console.log('[Customers]   - First customer:', data[0]?.name || 'N/A');
       
       // Update the displayed list using setCustomers from useOptimisticList
       setCustomers(data);
+      console.log('[Customers] ✓ Called setCustomers with data');
+      
+      // Force re-render by updating key
+      setDataKey(prev => prev + 1);
+      console.log('[Customers] ✓ Incremented dataKey for re-render');
+      
       setSelectedCustomers([]);
       setError(null);
       setRetryCount(0);
-      console.log(`[Customers] ✅ Successfully updated UI with ${data.length} customers`);
+      
+      console.log('[Customers] ========== LOAD CUSTOMERS COMPLETE ==========');
+      console.log('[Customers] Final customer count:', data.length);
     } catch (err: unknown) {
-      console.error('[Customers] Load failed:', err);
+      console.error('[Customers] ========== LOAD CUSTOMERS FAILED ==========');
+      console.error('[Customers] Error:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
       const errorMsg = errorMessage === 'Request timeout' 
         ? 'Loading is taking longer than expected. Try clearing cache or check your connection.'
@@ -119,11 +133,10 @@ export default function Customers() {
       stopLoading('load-customers');
       setLoadStartTime(null);
     }
-  }, [user?.id, startLoading, stopLoading, retryCount, setCustomers]);
+  }, [user?.id, startLoading, stopLoading, retryCount, setCustomers, customers.length]);
 
   // Effect to load customers when user is ready
   useEffect(() => {
-    // Only run if we have a user ID and haven't loaded yet
     if (!user?.id) {
       console.log('[Customers] Effect: No user ID, skipping load');
       return;
@@ -597,6 +610,7 @@ export default function Customers() {
           {loading ? (
             <div className="text-center py-12 text-muted-foreground">
               <p>Loading customers...</p>
+              <p className="text-xs mt-2">Data key: {dataKey}</p>
             </div>
           ) : filteredCustomers.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
@@ -605,6 +619,9 @@ export default function Customers() {
               ) : (
                 <>
                   <p className="mb-4">No customers yet. Add your first customer to get started!</p>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Customer count: {customers.length} | Data key: {dataKey}
+                  </p>
                   <Button onClick={() => setIsDialogOpen(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Customer
@@ -613,13 +630,18 @@ export default function Customers() {
               )}
             </div>
           ) : (
-            <CustomersTable
-              customers={filteredCustomers}
-              selectedCustomers={selectedCustomers}
-              onSelectCustomer={handleSelectCustomer}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
+            <>
+              <div className="text-xs text-muted-foreground mb-2">
+                Showing {filteredCustomers.length} customers | Data key: {dataKey}
+              </div>
+              <CustomersTable
+                customers={filteredCustomers}
+                selectedCustomers={selectedCustomers}
+                onSelectCustomer={handleSelectCustomer}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            </>
           )}
         </CardContent>
       </Card>

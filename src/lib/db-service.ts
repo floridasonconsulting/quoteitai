@@ -41,6 +41,8 @@ export const getSettings = async (userId: string): Promise<CompanySettings> => {
       const indexedDBSettings = await SettingsDB.get(userId);
       if (indexedDBSettings && (indexedDBSettings.name || indexedDBSettings.email)) {
         console.log('[db-service] ✓ Retrieved settings from IndexedDB');
+        console.log('[db-service]   - name:', indexedDBSettings.name);
+        console.log('[db-service]   - email:', indexedDBSettings.email);
         return indexedDBSettings;
       }
     } catch (error) {
@@ -56,25 +58,43 @@ export const getSettings = async (userId: string): Promise<CompanySettings> => {
 
 // Wrap saveSettings to accept userId and make it async for proper IndexedDB handling
 export const saveSettings = async (userId: string, settings: CompanySettings): Promise<void> => {
-  console.log('[db-service] saveSettings called with userId:', userId);
-  console.log('[db-service] Settings to save:', JSON.stringify(settings).substring(0, 200));
+  console.log('[db-service] ========== SAVE SETTINGS START ==========');
+  console.log('[db-service] userId:', userId);
+  console.log('[db-service] settings.name:', settings.name);
+  console.log('[db-service] settings.email:', settings.email);
+  console.log('[db-service] settings.onboardingCompleted:', settings.onboardingCompleted);
   
   // Save to localStorage first (synchronous, immediate)
   storageSaveSettings(settings, userId);
-  console.log('[db-service] ✓ Saved to localStorage');
+  console.log('[db-service] ✓ Step 1: Saved to localStorage');
   
   // Save to IndexedDB if supported (async, more reliable)
   if (isIndexedDBSupported()) {
     try {
       await SettingsDB.set(userId, settings);
-      console.log('[db-service] ✓ Saved to IndexedDB');
+      console.log('[db-service] ✓ Step 2: Saved to IndexedDB');
       
-      // Verify the save immediately
-      const verified = await SettingsDB.get(userId);
-      if (verified && verified.name === settings.name && verified.email === settings.email) {
-        console.log('[db-service] ✓ Verified IndexedDB save');
-      } else {
-        console.warn('[db-service] ⚠️ IndexedDB verification mismatch');
+      // Wait longer for IndexedDB transaction to commit
+      await new Promise(resolve => setTimeout(resolve, 300));
+      console.log('[db-service] ✓ Step 3: Waited for IndexedDB transaction commit');
+      
+      // Verify the save with multiple attempts
+      let verified = false;
+      for (let i = 0; i < 3; i++) {
+        const readBack = await SettingsDB.get(userId);
+        if (readBack && readBack.name === settings.name && readBack.email === settings.email) {
+          console.log(`[db-service] ✓ Step 4: Verified IndexedDB save (attempt ${i + 1})`);
+          verified = true;
+          break;
+        }
+        // Wait between verification attempts
+        if (i < 2) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
+      
+      if (!verified) {
+        console.warn('[db-service] ⚠️ IndexedDB verification failed after 3 attempts');
       }
     } catch (error) {
       console.error('[db-service] ✗ IndexedDB save failed:', error);
@@ -82,9 +102,7 @@ export const saveSettings = async (userId: string, settings: CompanySettings): P
     }
   }
   
-  // Add small delay to ensure storage operations are flushed
-  await new Promise(resolve => setTimeout(resolve, 100));
-  console.log('[db-service] ✓ saveSettings completed');
+  console.log('[db-service] ========== SAVE SETTINGS COMPLETE ==========');
 };
 
 // Re-export clearAllData from storage as clearDatabaseData for backward compatibility
