@@ -8,16 +8,13 @@ export default defineConfig({
   server: {
     host: "::",
     port: 3000,
-    // Configure HMR for Softgen sandbox environment
     hmr: {
       protocol: 'ws',
       host: 'localhost',
       port: 3000,
       clientPort: 3000,
-      // Disable overlay to prevent errors from blocking the preview
       overlay: false
     },
-    // Disable CORS for iframe embedding
     cors: true
   },
   plugins: [
@@ -85,6 +82,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Force all React imports to resolve to the same instance
+      "react": path.resolve(__dirname, "./node_modules/react"),
+      "react-dom": path.resolve(__dirname, "./node_modules/react-dom"),
     },
     dedupe: ["react", "react-dom"]
   },
@@ -100,7 +100,16 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ["react", "react-dom", "react/jsx-runtime"],
+    // Force React to be pre-bundled and deduplicated
+    include: [
+      "react",
+      "react-dom",
+      "react-dom/client",
+      "react/jsx-runtime",
+      "react/jsx-dev-runtime"
+    ],
     exclude: ["lucide-react"],
+    // Force Vite to use a single React instance
+    force: true
   },
 });
