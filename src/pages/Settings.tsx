@@ -31,7 +31,6 @@ import { dispatchDataRefresh } from "@/hooks/useDataRefresh";
 // Import modular settings components
 import { CompanyInfoSection } from "@/components/settings/CompanyInfoSection";
 import { BrandingSection } from "@/components/settings/BrandingSection";
-import { ProposalTemplateSection } from "@/components/settings/ProposalTemplateSection";
 import { TermsSection } from "@/components/settings/TermsSection";
 import { NotificationPreferencesSection } from "@/components/settings/NotificationPreferencesSection";
 import { DataManagementSection } from "@/components/settings/DataManagementSection";
@@ -334,10 +333,18 @@ export default function Settings() {
         />
 
         {/* Proposal Template */}
-        <ProposalTemplateSection 
-          settings={settings} 
-          onUpdate={handleUpdateSettings} 
-        />
+        <Card>
+          <CardHeader>
+            <CardTitle>Proposal Settings</CardTitle>
+            <CardDescription>
+              Configure your proposal appearance and delivery options. Proposals now feature secure OTP verification, interactive action bars with comments/accept/reject, and smooth flip-style navigation with mobile swipe gestures.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* REMOVED: ProposalTemplateSection - now using new secure interactive proposal viewer */}
+            <TermsSection settings={settings} onUpdate={handleUpdate} />
+          </CardContent>
+        </Card>
 
         {/* Terms & Conditions */}
         <TermsSection 
