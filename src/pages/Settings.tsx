@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, ChevronDown, RefreshCw, Shield, Activity, CreditCard } from "lucide-react";
+import { AlertTriangle, ChevronDown, RefreshCw, Shield, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +28,6 @@ import { useSyncManager } from "@/hooks/useSyncManager";
 import { checkAndMigrateData } from "@/lib/migration-helper";
 import { dispatchDataRefresh } from "@/hooks/useDataRefresh";
 
-// Import modular settings components
 import { CompanyInfoSection } from "@/components/settings/CompanyInfoSection";
 import { BrandingSection } from "@/components/settings/BrandingSection";
 import { TermsSection } from "@/components/settings/TermsSection";
@@ -99,7 +98,6 @@ export default function Settings() {
       await saveSettings(user.id, updatedSettings, queueChange);
       setSettings(updatedSettings);
       
-      // Clear cache to ensure fresh data
       localStorage.removeItem("quote-it-settings");
       
       toast.success("Settings updated successfully");
@@ -320,66 +318,48 @@ export default function Settings() {
       </div>
 
       <div className="space-y-6">
-        {/* Branding Section */}
         <BrandingSection 
           settings={settings} 
           onUpdate={handleUpdateSettings} 
         />
 
-        {/* Company Information */}
         <CompanyInfoSection 
           settings={settings} 
           onUpdate={handleUpdateSettings} 
         />
 
-        {/* Proposal Template */}
         <Card>
           <CardHeader>
             <CardTitle>Proposal Settings</CardTitle>
             <CardDescription>
-              Configure your proposal appearance and delivery options. Proposals now feature secure OTP verification, interactive action bars with comments/accept/reject, and smooth flip-style navigation with mobile swipe gestures.
+              Configure your proposal terms and conditions. Proposals now feature secure OTP verification, interactive action bars with comments/accept/reject, and smooth flip-style navigation with mobile swipe gestures.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* REMOVED: ProposalTemplateSection - now using new secure interactive proposal viewer */}
-            <TermsSection settings={settings} onUpdate={handleUpdate} />
+            <TermsSection settings={settings} onUpdate={handleUpdateSettings} />
           </CardContent>
         </Card>
 
-        {/* Terms & Conditions */}
-        <TermsSection 
-          settings={settings} 
-          onUpdate={handleUpdateSettings} 
-        />
-
-        {/* Notification Preferences */}
         <NotificationPreferencesSection 
           settings={settings} 
           onUpdate={handleUpdateSettings} 
         />
 
-        {/* Appearance */}
         <AppearanceSection />
 
-        {/* Account Settings */}
         <AccountSection />
 
-        {/* Integrations */}
         <IntegrationsSection 
           settings={settings} 
           onUpdate={handleUpdateSettings} 
         />
 
-        {/* Data Management */}
         <DataManagementSection />
 
-        {/* Performance Metrics */}
         <PerformanceSection />
 
-        {/* Cache Management */}
         <CacheDebugPanel />
 
-        {/* Manual Sync */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -408,7 +388,6 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* System Diagnostics */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -439,7 +418,6 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Admin Controls */}
         {isAdmin && (
           <Card className="border-primary/50 bg-primary/5">
             <CardHeader>
@@ -452,7 +430,6 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Role Management */}
               <div className="space-y-3">
                 <Label>AI Account Tier</Label>
                 <Select value={userRole || "free"} onValueChange={handleRoleChange}>
@@ -469,7 +446,6 @@ export default function Settings() {
 
               <Separator />
 
-              {/* Sample Data Management */}
               <div className="space-y-3">
                 <Label>Sample Data Management</Label>
                 <div className="flex gap-2">
@@ -495,7 +471,6 @@ export default function Settings() {
 
               <Separator />
 
-              {/* Clear & Import */}
               <div className="space-y-3">
                 <Label>Clear Database & Import</Label>
                 <Button 
@@ -511,7 +486,6 @@ export default function Settings() {
           </Card>
         )}
 
-        {/* Danger Zone */}
         <Collapsible open={dangerZoneOpen} onOpenChange={setDangerZoneOpen}>
           <Card className="border-destructive/50 bg-destructive/5">
             <CardHeader>
