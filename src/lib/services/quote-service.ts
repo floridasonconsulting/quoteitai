@@ -106,6 +106,88 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
 }
 
 /**
+ * Fetch a single quote by its ID
+ * Priority: Cache > IndexedDB > Supabase
+ */
+export async function getQuote(userId: string, id: string): Promise<Quote | null> {
+  const cacheKey = `quote-${id}`;
+  
+  // 1. Check memory cache
+  const cached = await cacheManager.get<Quote>(cacheKey);
+  if (cached) {
+    console.log(`[QuoteService] Retrieved quote ${id} from memory cache`);
+    return cached;
+  }
+
+  // 2. Try IndexedDB
+  if (isIndexedDBSupported()) {
+    try {
+      const indexedDBData = await QuoteDB.getById(id);
+      if (indexedDBData && indexedDBData.userId === userId) {
+        console.log(`[QuoteService] Retrieved quote ${id} from IndexedDB`);
+        // Update memory cache
+        await cacheManager.set(cacheKey, indexedDBData);
+        return indexedDBData;
+      }
+    } catch (error) {
+      console.warn(`[QuoteService] IndexedDB read for quote ${id} failed, falling back to Supabase:`, error);
+    }
+  }
+
+  if (!navigator.onLine) {
+    console.log("[QuoteService] Offline, cannot fetch quote from Supabase.");
+    const allQuotes = await getQuotes(userId);
+    const quoteFromList = allQuotes.find(q => q.id === id);
+    if(quoteFromList) await cacheManager.set(cacheKey, quoteFromList);
+    return quoteFromList || null;
+  }
+
+  // 3. Fetch from Supabase
+  try {
+    const apiCall = supabase
+      .from("quotes")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("id", id)
+      .single();
+
+    const { data, error } = await withTimeout(apiCall, 10000);
+
+    if (error) {
+      // PGRST116: "exact one row was not found" - this is not a fatal error
+      if (error.code !== "PGRST116") {
+        console.error(`Error fetching quote ${id}:`, error);
+      }
+      return null;
+    }
+
+    if (!data) {
+      return null;
+    }
+
+    const result = toCamelCase(data) as Quote;
+
+    // Save to IndexedDB
+    if (isIndexedDBSupported()) {
+      try {
+        await QuoteDB.update({ ...result, user_id: userId } as never);
+        console.log(`[QuoteService] Saved quote ${id} to IndexedDB`);
+      } catch (dbError) {
+        console.warn("[QuoteService] Failed to save quote to IndexedDB:", dbError);
+      }
+    }
+
+    // Update memory cache
+    await cacheManager.set(cacheKey, result);
+
+    return result;
+  } catch (error) {
+    console.error(`Error fetching quote ${id}:`, error);
+    return null;
+  }
+}
+
+/**
  * Create a new quote
  * Priority: Supabase + IndexedDB + Cache
  */
