@@ -36,6 +36,9 @@ import { DataManagementSection } from "@/components/settings/DataManagementSecti
 import { AccountSection } from "@/components/settings/AccountSection";
 import { AppearanceSection } from "@/components/settings/AppearanceSection";
 import { IntegrationsSection } from "@/components/settings/IntegrationsSection";
+// REMOVED: Performance and Cache sections - moved to Diagnostics for admin use
+// import { PerformanceSection } from "@/components/settings/PerformanceSection";
+// import { CacheDebugPanel } from "@/components/settings/CacheDebugPanel";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -97,11 +100,14 @@ export default function Settings() {
       const updatedSettings = { ...settings, ...updates };
       console.log('[Settings] Full settings object:', updatedSettings);
       
+      // Save settings with sync queue
       await saveSettings(user.id, updatedSettings, queueChange);
+      
+      // Update local state
       setSettings(updatedSettings);
       
       // REMOVED: localStorage.removeItem("quote-it-settings");
-      // This was causing issues - let the cache manager handle invalidation
+      // This was causing issues - the cache manager and IndexedDB handle invalidation
       
       toast.success("Settings updated successfully");
       console.log('[Settings] Settings updated successfully');
@@ -109,6 +115,7 @@ export default function Settings() {
       console.error("[Settings] Update failed:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to update settings";
       toast.error(errorMessage);
+      // Re-throw to allow caller to handle
       throw error;
     }
   };
@@ -361,8 +368,11 @@ export default function Settings() {
 
         <DataManagementSection />
 
-        {/* REMOVED: <PerformanceSection /> - Moved to Diagnostics page for admin use */}
-        {/* REMOVED: <CacheDebugPanel /> - Moved to Diagnostics page for admin use */}
+        {/* REMOVED: Performance Monitor - Moved to Diagnostics page for admin use */}
+        {/* <PerformanceSection /> */}
+
+        {/* REMOVED: Cache Management - Moved to Diagnostics page for admin use */}
+        {/* <CacheDebugPanel /> */}
 
         <Card>
           <CardHeader>

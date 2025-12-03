@@ -16,6 +16,8 @@
 
 import type { CompanySettings } from '@/types';
 import { SettingsDB, isIndexedDBSupported } from './indexed-db';
+import { cacheManager } from './cache-manager';
+import { setItem } from './storage';
 
 // Re-export everything from the specialized services
 export * from './services/quote-service';
@@ -30,6 +32,15 @@ import { getSettings as storageGetSettings } from './storage';
 
 // Import the specific function with an alias to avoid naming conflicts
 import { saveSettings as storageSaveSettings } from './storage';
+
+// Add SyncChange type definition
+interface SyncChange {
+  id: string;
+  type: string;
+  action: string;
+  data: unknown;
+  timestamp: number;
+}
 
 // Wrap getSettings to check IndexedDB first (async for proper data retrieval)
 export const getSettings = async (userId: string): Promise<CompanySettings> => {
