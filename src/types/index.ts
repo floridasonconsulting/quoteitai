@@ -85,7 +85,7 @@ export interface CompanySettings {
   insurance?: string;
   terms: string;
   proposalTemplate?: "classic" | "modern" | "detailed";
-  proposalTheme?: "modern-corporate" | "creative-studio" | "minimalist"; // NEW: Visual theme for proposals
+  proposalTheme?: "modern-corporate" | "creative-studio" | "minimalist" | "bold-impact" | "elegant-serif" | "tech-future"; // Updated with all 6 themes
   notifyEmailAccepted?: boolean;
   notifyEmailDeclined?: boolean;
   onboardingCompleted?: boolean;
