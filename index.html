@@ -6,99 +6,59 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- Content Security Policy -->
-    <meta http-equiv="Content-Security-Policy" content="
-      default-src 'self'; 
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com; 
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
-      font-src 'self' https://fonts.gstatic.com data:; 
-      img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com https://unsplash.com https://pexels.com https://pixabay.com https://giphy.com https://wikimedia.org; 
-      connect-src 'self' https://*.supabase.co https://api.openai.com https://api.stripe.com https://www.google-analytics.com wss://*.supabase.co wss://localhost:* wss://*.softgen.dev; 
-      frame-src 'self' https://js.stripe.com https://*.stripe.com;
-      worker-src 'self' blob:; 
-      object-src 'none'; 
-      base-uri 'self'; 
-      form-action 'self' https://js.stripe.com;
-    ">
+    <!-- Remove CSP headers that block Stripe and Supabase in iframe -->
+    <!-- CSP is handled at the server/hosting level, not in HTML -->
     
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="theme-color" content="#6366f1" />
+    <title>Quote.it AI - Smart Quote Management</title>
     
-    <title>Quote-it AI - Smart Quote Management</title>
-    <meta name="description" content="Create professional quotes instantly with AI-powered assistance. Complete quote management system for contractors, freelancers, and service professionals.">
-    <meta name="author" content="Quote-it AI" />
-    <meta name="keywords" content="quotes, AI, business, invoices, crm, mobile, pwa, quote generator, estimate, contractor">
-
+    <!-- Preconnect to critical domains for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#4B0E4B" />
+    <meta name="description" content="AI-powered quote management platform for small businesses. Create professional quotes, manage customers, and grow your business." />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     
+    <!-- Open Graph Meta Tags for Social Sharing -->
+    <meta property="og:title" content="Quote.it AI - Smart Quote Management" />
+    <meta property="og:description" content="AI-powered quote management platform for small businesses" />
+    <meta property="og:image" content="/logo.png" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/VEekRH7w9FZzmIFS6hWKoZzPh8q1/social-images/social-1759413979040-Quote-it.png">
-
+    
+    <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Quote.it AI - Smart Quote Management" />
+    <meta name="twitter:description" content="AI-powered quote management platform for small businesses" />
+    <meta name="twitter:image" content="/logo.png" />
     
+    <!-- Favicon Variations -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
     
-    <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/VEekRH7w9FZzmIFS6hWKoZzPh8q1/social-images/social-1759413979040-Quote-it.png">
+    <!-- iOS Safari Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Quote.it AI" />
     
-    <link rel="manifest" href="/manifest.json" id="pwa-manifest" />
+    <!-- Android Chrome Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
     
-    <!-- Preload critical above-the-fold screenshot -->
-    <link rel="preload" as="image" href="/screenshots/dashboard.png" fetchpriority="high">
-  
-  
-  
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <meta property="og:title" content="Quote-it AI - Smart Quote Management">
-  <meta name="twitter:title" content="Quote-it AI - Smart Quote Management">
-  <meta property="og:description" content="Create professional quotes instantly with AI-powered assistance. Complete quote management system for contractors, freelancers, and service professionals.">
-  <meta name="twitter:description" content="Create professional quotes instantly with AI-powered assistance. Complete quote management system for contractors, freelancers, and service professionals.">
-</head>
-
+    <!-- Performance Optimization -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    
+    <!-- Google Fonts - Optimized Loading -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    
+    <!-- Prevent unwanted zoom on iOS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     
-    <!-- Dynamic manifest loading for white-label branding -->
-    <script>
-      // Update manifest link for Max AI tier users with custom branding
-      const updateManifest = () => {
-        try {
-          const authKey = 'sb-onxyqhixydadpnkvdtvm-auth-token';
-          const authData = localStorage.getItem(authKey);
-          
-          if (authData) {
-            const parsedAuth = JSON.parse(authData);
-            const userId = parsedAuth?.user?.id;
-            
-            if (userId) {
-              const manifestLink = document.getElementById('pwa-manifest');
-              const supabaseUrl = 'https://onxyqhixydadpnkvdtvm.supabase.co';
-              const dynamicManifestUrl = `${supabaseUrl}/functions/v1/generate-manifest?userId=${userId}`;
-              
-              if (manifestLink) {
-                manifestLink.setAttribute('href', dynamicManifestUrl);
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Failed to update manifest:', error);
-        }
-      };
-      
-      // Update on page load
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', updateManifest);
-      } else {
-        updateManifest();
-      }
-      
-      // Update on auth state change
-      window.addEventListener('storage', (e) => {
-        if (e.key?.includes('auth-token')) {
-          updateManifest();
-        }
-      });
-    </script>
+    <!-- Service Worker Registration (handled by VitePWA plugin) -->
   </body>
 </html>

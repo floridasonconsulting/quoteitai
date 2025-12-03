@@ -8,10 +8,8 @@ export default defineConfig({
   server: {
     host: "::",
     port: 3000,
-    hmr: {
-      clientPort: 3000,
-      host: "3000-b694112b-c970-4b95-b2b0-997c240046f7.softgen.dev"
-    }
+    // Disable HMR for Softgen sandbox environment (WebSocket issues)
+    hmr: false
   },
   plugins: [
     react(),
@@ -50,7 +48,7 @@ export default defineConfig({
               cacheName: 'google-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+                maxAgeSeconds: 60 * 60 * 24 * 365
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -64,7 +62,7 @@ export default defineConfig({
               cacheName: 'gstatic-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+                maxAgeSeconds: 60 * 60 * 24 * 365
               },
               cacheableResponse: {
                 statuses: [0, 200]
