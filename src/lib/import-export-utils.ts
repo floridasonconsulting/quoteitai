@@ -139,6 +139,8 @@ export async function importItemsFromCSV(
         
         if (['basePrice', 'finalPrice'].includes(headerName)) {
           (item as Record<string, unknown>)[headerName] = parseFloat(value) || 0;
+        } else if (headerName === 'minQuantity') {
+          (item as Record<string, unknown>)[headerName] = parseInt(value, 10) || 1;
         } else if (headerName === 'markup') {
           // Parse markup and detect type from format
           const markupValue = value.trim();
