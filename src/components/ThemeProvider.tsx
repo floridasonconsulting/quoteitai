@@ -13,16 +13,20 @@ type ThemeContextType = {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 function getStoredThemeMode(): ThemeMode {
-  const stored = localStorage.getItem("themeMode");
-  if (stored === "light" || stored === "dark" || stored === "auto") {
-    return stored;
+  try {
+    const stored = localStorage.getItem("themeMode");
+    if (stored === "light" || stored === "dark" || stored === "auto") {
+      return stored;
+    }
+  } catch (error) {
+    console.error("[ThemeProvider] Error reading themeMode from localStorage:", error);
   }
   return "auto";
 }
 
 function getAutoTheme(): Theme {
   // Try to use Ambient Light Sensor API if available
-  if ("AmbientLightSensor" in window) {
+  if (typeof window !== "undefined" && "AmbientLightSensor" in window) {
     try {
       // This is experimental and may not work in all browsers
       return "light"; // Default fallback
@@ -38,7 +42,7 @@ function getAutoTheme(): Theme {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => getStoredThemeMode());
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(getStoredThemeMode);
   const [theme, setTheme] = useState<Theme>(() => {
     const mode = getStoredThemeMode();
     if (mode === "auto") {
@@ -71,7 +75,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setThemeMode = (mode: ThemeMode) => {
     setThemeModeState(mode);
-    localStorage.setItem("themeMode", mode);
+    try {
+      localStorage.setItem("themeMode", mode);
+    } catch (error) {
+      console.error("[ThemeProvider] Error saving themeMode to localStorage:", error);
+    }
   };
 
   const toggleTheme = () => {
