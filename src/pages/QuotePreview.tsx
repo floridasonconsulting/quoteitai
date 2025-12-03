@@ -5,7 +5,7 @@ import { RefreshCw, ArrowLeft, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getQuote } from "@/lib/db-service";
+import { getQuote } from "@/lib/services/quote-service";
 import { getSettings } from "@/lib/db-service";
 import { Quote, CompanySettings } from "@/types";
 import { ProposalViewer } from "@/components/proposal/viewer/ProposalViewer";
