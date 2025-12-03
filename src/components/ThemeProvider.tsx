@@ -38,7 +38,8 @@ function getAutoTheme(): Theme {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [themeMode, setThemeModeState] = React.useState<ThemeMode>(getStoredThemeMode);
+  // CRITICAL FIX: Call getStoredThemeMode() with parentheses to invoke the function
+  const [themeMode, setThemeModeState] = React.useState<ThemeMode>(() => getStoredThemeMode());
   const [theme, setTheme] = React.useState<Theme>(() => {
     const mode = getStoredThemeMode();
     if (mode === "auto") {
