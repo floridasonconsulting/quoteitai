@@ -11,6 +11,8 @@ import { CTASection } from "@/components/landing/CTASection";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { ScrollTopButton } from "@/components/landing/ScrollTopButton";
 
+// Deployment timestamp: 2025-12-03T23:31:32Z - Force fresh Vercel build
+
 export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
