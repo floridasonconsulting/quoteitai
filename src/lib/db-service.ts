@@ -17,7 +17,7 @@
 import type { CompanySettings } from '@/types';
 import { SettingsDB, isIndexedDBSupported } from './indexed-db';
 import { cacheManager } from './cache-manager';
-import { setItem } from './storage';
+import { setStorageItem } from './storage';
 
 // Re-export everything from the specialized services
 export * from './services/quote-service';
@@ -89,7 +89,7 @@ export async function saveSettings(
     } catch (indexedDBError) {
       console.error('[DB Service] IndexedDB save failed, falling back to localStorage:', indexedDBError);
       // Fallback to localStorage
-      setItem(`settings-${userId}`, settings);
+      setStorageItem(`settings-${userId}`, settings);
     }
 
     // Queue for Supabase sync
