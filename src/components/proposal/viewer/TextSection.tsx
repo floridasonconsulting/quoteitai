@@ -1,37 +1,42 @@
-import { ProposalSection } from "@/types/proposal";
-import { useEffect, useRef } from "react";
+
+import { ProposalData } from '@/types/proposal';
 
 interface TextSectionProps {
-  data: ProposalSection;
+  section: Extract<ProposalData['sections'][0], { type: 'text' }>;
 }
 
-export function TextSection({ data }: TextSectionProps) {
-  const sectionRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          // Tracking logic placeholder
-        }
-      },
-      { threshold: 0.2 }
-    );
-    if (sectionRef.current) observer.observe(sectionRef.current);
-    return () => observer.disconnect();
-  }, []);
-
+export function TextSection({ section }: TextSectionProps) {
   return (
-    <section ref={sectionRef} className="py-20 px-6 md:px-12 bg-white h-full flex flex-col justify-center print:py-10">
-      <div className="max-w-4xl mx-auto w-full">
-        <h2 className="text-3xl font-bold text-slate-900 mb-8 border-l-4 border-teal-600 pl-4 print:border-black">{data.title}</h2>
-        {data.content && (
+    <div 
+      className="w-full py-12 px-4"
+      style={{
+        fontFamily: 'var(--theme-font-body)',
+      }}
+    >
+      <div className="max-w-4xl mx-auto">
+        <h2 
+          className="text-3xl font-bold mb-6 border-l-4 pl-4"
+          style={{
+            color: 'var(--theme-text-primary)',
+            borderColor: 'var(--theme-accent)',
+            fontSize: 'var(--theme-font-size-h2, 2rem)',
+            fontWeight: 'var(--theme-font-weight-heading, 700)',
+          }}
+        >
+          {section.title}
+        </h2>
+        
+        {section.content && (
           <div 
-            className="prose prose-lg text-slate-600 leading-relaxed break-words max-w-none" 
-            dangerouslySetInnerHTML={{ __html: data.content }}
-          ></div>
+            className="prose prose-lg max-w-none leading-relaxed"
+            style={{
+              color: 'var(--theme-text-secondary)',
+              lineHeight: 'var(--theme-line-height-body, 1.6)',
+            }}
+            dangerouslySetInnerHTML={{ __html: section.content }}
+          />
         )}
       </div>
-    </section>
+    </div>
   );
 }
