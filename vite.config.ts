@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -9,6 +10,18 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 3000,
+    hmr: {
+      clientPort: 3000,
+      protocol: 'wss',
+      host: typeof process !== 'undefined' && process.env.GITPOD_WORKSPACE_URL
+        ? process.env.GITPOD_WORKSPACE_URL.replace('https://', '3000-')
+        : typeof process !== 'undefined' && process.env.CODESPACE_NAME
+        ? `${process.env.CODESPACE_NAME}-3000.app.github.dev`
+        : 'localhost',
+    },
+    watch: {
+      usePolling: true,
+    },
   },
   plugins: [
     react(), 
