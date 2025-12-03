@@ -24,6 +24,13 @@ export const generateItemTemplate = (): string => {
   ].join('\n');
 };
 
+export const generateItemsTemplate = (): string => {
+  const headers = ['Name', 'Description', 'Category', 'Base Price', 'Markup Type', 'Markup', 'Final Price', 'Units', 'Min Quantity'];
+  const sampleRow = ['Sample Item', 'Item description', 'General', '100.00', 'percentage', '20', '120.00', 'unit', '1'];
+  
+  return [headers, sampleRow].map(row => row.join(',')).join('\n');
+};
+
 export const downloadTemplate = (content: string, filename: string) => {
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);

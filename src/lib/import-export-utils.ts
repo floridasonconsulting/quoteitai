@@ -594,3 +594,51 @@ export async function importAllData(file: File): Promise<void> {
     throw error;
   }
 }
+
+// Add minQuantity to item parsing
+const parseItemsCSV = (csvText: string): Item[] => {
+  const lines = csvText.split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  
+  return lines.slice(1)
+    .filter(line => line.trim())
+    .map(line => {
+      const values = line.split(',');
+      const row: Record<string, string> = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index]?.trim() || '';
+      });
+      
+      return {
+        id: crypto.randomUUID(),
+        name: row.name || row.item || '',
+        description: row.description || '',
+        category: row.category || 'General',
+        basePrice: parseFloat(row.baseprice || row['base price'] || '0'),
+        markupType: (row.markuptype || row['markup type'] || 'percentage') as 'percentage' | 'fixed',
+        markup: parseFloat(row.markup || '0'),
+        finalPrice: parseFloat(row.finalprice || row['final price'] || '0'),
+        units: row.units || 'unit',
+        minQuantity: parseInt(row.minquantity || row['min quantity'] || row['minimum quantity'] || '1', 10),
+        createdAt: new Date().toISOString(),
+      };
+    });
+};
+
+// Add minQuantity to CSV export headers and data
+export const exportItemsToCSV = (items: Item[]): string => {
+  const headers = ['Name', 'Description', 'Category', 'Base Price', 'Markup Type', 'Markup', 'Final Price', 'Units', 'Min Quantity'];
+  const rows = items.map(item => [
+    item.name,
+    item.description,
+    item.category,
+    item.basePrice.toString(),
+    item.markupType,
+    item.markup.toString(),
+    item.finalPrice.toString(),
+    item.units,
+    (item.minQuantity || 1).toString()
+  ]);
+  
+  return [headers, ...rows].map(row => row.join(',')).join('\n');
+};
