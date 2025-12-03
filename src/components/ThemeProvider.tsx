@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
 type ThemeMode = "light" | "dark" | "auto";
@@ -38,9 +38,9 @@ function getAutoTheme(): Theme {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // CRITICAL FIX: Call getStoredThemeMode() with parentheses to invoke the function
-  const [themeMode, setThemeModeState] = React.useState<ThemeMode>(() => getStoredThemeMode());
-  const [theme, setTheme] = React.useState<Theme>(() => {
+  // CRITICAL FIX: Use standard useState import instead of React.useState
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => getStoredThemeMode());
+  const [theme, setTheme] = useState<Theme>(() => {
     const mode = getStoredThemeMode();
     if (mode === "auto") {
       return getAutoTheme();
