@@ -11,7 +11,7 @@ import { Item } from '@/types';
 import { toast } from 'sonner';
 import { formatCSVLine } from '@/lib/csv-utils';
 import { importItemsFromCSV } from '@/lib/import-export-utils';
-import { generateItemTemplate, downloadTemplate } from '@/lib/csv-template-utils';
+import { generateItemsTemplate, downloadTemplate } from '@/lib/csv-template-utils';
 import { ImportOptionsDialog, DuplicateStrategy } from '@/components/ImportOptionsDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
@@ -351,7 +351,7 @@ export default function Items() {
   };
 
   const handleDownloadTemplate = () => {
-    const template = generateItemTemplate();
+    const template = generateItemsTemplate();
     downloadTemplate(template, 'items-template.csv');
     toast.success('Item template downloaded');
   };

@@ -608,8 +608,6 @@ export default function Customers() {
           {loading ? (
             <div className="text-center py-12 text-muted-foreground">
               <p>Loading customers...</p>
-              <p className="text-xs mt-2">Data key: {dataKey}</p>
-              <p className="text-xs mt-1">User ID: {user?.id}</p>
             </div>
           ) : filteredCustomers.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
@@ -623,12 +621,6 @@ export default function Customers() {
               ) : (
                 <>
                   <p className="mb-4">No customers yet. Add your first customer to get started!</p>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    Customer count: {customers.length} | Filtered: {filteredCustomers.length} | Data key: {dataKey}
-                  </p>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    User ID: {user?.id || 'No user'} | Search: "{searchTerm}"
-                  </p>
                   <Button onClick={() => setIsDialogOpen(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Customer
@@ -637,18 +629,13 @@ export default function Customers() {
               )}
             </div>
           ) : (
-            <>
-              <div className="text-xs text-muted-foreground mb-2">
-                Showing {filteredCustomers.length} of {customers.length} customers | Data key: {dataKey} | User: {user?.id}
-              </div>
-              <CustomersTable
-                customers={filteredCustomers}
-                selectedCustomers={selectedCustomers}
-                onSelectCustomer={handleSelectCustomer}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            </>
+            <CustomersTable
+              customers={filteredCustomers}
+              selectedCustomers={selectedCustomers}
+              onSelectCustomer={handleSelectCustomer}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
           )}
         </CardContent>
       </Card>
