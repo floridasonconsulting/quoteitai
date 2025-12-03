@@ -8,8 +8,17 @@ export default defineConfig({
   server: {
     host: "::",
     port: 3000,
-    // Disable HMR for Softgen sandbox environment (WebSocket issues)
-    hmr: false
+    // Configure HMR for Softgen sandbox environment
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      port: 3000,
+      clientPort: 3000,
+      // Disable overlay to prevent errors from blocking the preview
+      overlay: false
+    },
+    // Disable CORS for iframe embedding
+    cors: true
   },
   plugins: [
     react(),
