@@ -30,13 +30,15 @@
 Quote.it AI is a comprehensive, AI-powered quote management platform designed for small to medium businesses. It provides intelligent quote generation, customer relationship management, item cataloging, and automated proposal creation with advanced AI assistance.
 
 ### Key Features
-- **Smart Proposal System (NEW)** - Interactive, JSON-driven proposals with digital signing and print-perfect layout.
-- **AI-Powered Quote Generation** - Intelligent quote creation with context awareness.
-- **Customer Management** - Comprehensive CRM for client relationships.
-- **Item Catalog** - Organized product/service inventory with pricing.
-- **Mobile PWA** - Full progressive web app with offline support.
-- **Multi-Tier Subscriptions** - Free, Pro, and Max AI tiers.
-- **White-Label Support** - Custom branding for Business tier.
+- **AI-Powered Quote Generation** - Intelligent quote creation with context awareness and minimum quantity enforcement
+- **Customer Management** - Comprehensive CRM for client relationships
+- **Item Catalog** - Organized product/service inventory with pricing and minimum quantity requirements
+- **Secure Interactive Proposals** - OTP-protected proposals with flip animations, comment system, and accept/reject actions
+- **Proposal Templates** - Multiple professional proposal formats with swipe navigation
+- **Email Integration** - Automated quote sending and follow-ups
+- **Mobile PWA** - Full progressive web app with offline support
+- **Multi-Tier Subscriptions** - Free, Pro, and Max AI tiers
+- **White-Label Support** - Custom branding for Business tier
 
 ### User Roles & Permissions
 - **Free Tier** - Basic quote creation (10 AI assists/month).
@@ -164,7 +166,40 @@ quote-it-ai/
 - ✅ Optimization of sync manager.
 - ✅ Comprehensive test suites.
 
-### ✅ Completed (Week 2 - Phase 1 & 2 - November 24, 2025)
+### ✅ Completed (Week 2, Day 3 - December 3, 2025)
+- ✅ **Minimum Quantity Feature (100% Complete)**
+  - ✅ Database migration adds min_quantity column to items table
+  - ✅ TypeScript types updated with minQuantity field
+  - ✅ ItemForm component includes minQuantity input
+  - ✅ Items page handles minQuantity in CRUD operations
+  - ✅ NewQuote page uses item.minQuantity when adding items
+  - ✅ FullQuoteGenerationAI includes min_quantity in catalog
+  - ✅ AI backend system prompt includes quantity rules
+  - ✅ CSV import/export includes minQuantity field
+  - ✅ CSV template generation includes 'Min Quantity' column
+  - ✅ Sample CSV data includes minQuantity values
+  - ✅ All tests passing (38/38 tests ✅)
+
+- ✅ **Secure Interactive Proposal Viewer (100% Complete)**
+  - ✅ OTP email verification wall (OTPSecurityWall.tsx)
+  - ✅ Interactive action bar with Comment/Accept/Reject (ProposalActionBar.tsx)
+  - ✅ Swiper integration with flip/cube animations (ProposalViewer.tsx)
+  - ✅ Complete PublicQuoteView integration
+  - ✅ Database tables (proposal_access_codes, proposal_comments)
+  - ✅ Edge Functions (generate-access-code, verify-access-code)
+  - ✅ Session management (24-hour expiry)
+  - ✅ Mobile-optimized swipe gestures
+  - ✅ Theme support (Modern Corporate, Creative Studio, Minimalist)
+  - ✅ Responsive controls and keyboard navigation
+
+- ✅ **Settings Page Refactoring (100% Complete)**
+  - ✅ Removed deprecated ProposalTemplateSection component
+  - ✅ Updated Proposal Settings to document new secure proposal features
+  - ✅ Fixed compilation errors
+  - ✅ Maintained all functional settings sections
+  - ✅ Cleaned up App.tsx (removed ProposalEditor route)
+
+### ✅ Completed (Week 2, Day 1-2 - November 24, 2025)
 - ✅ **IndexedDB Foundation**: Full implementation and migration.
 - ✅ **Advanced Caching**: Service Worker with Workbox strategies.
 - ✅ **Integration Testing**: 100% test pass rate (38 tests).
