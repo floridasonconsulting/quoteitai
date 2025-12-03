@@ -7,12 +7,15 @@ import { clearDatabaseData } from "@/lib/db-service";
 import { clearAllData } from "@/lib/storage";
 import { exportAllData, importAllData } from "@/lib/import-export-utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
 
 export function DataManagementSection() {
   const { user } = useAuth();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleExport = async () => {
     try {
@@ -73,15 +76,67 @@ export function DataManagementSection() {
     }
   };
 
+  const handleDeleteAllData = async () => {
+    if (!user?.id) {
+      toast.error("You must be signed in to delete data");
+      return;
+    }
+
+    // First confirmation
+    const firstConfirm = window.confirm(
+      "⚠️ WARNING: This will permanently delete ALL your data including customers, items, quotes, and settings.\n\nAre you absolutely sure you want to continue?"
+    );
+    
+    if (!firstConfirm) return;
+
+    // Second confirmation with typing requirement
+    const typedConfirmation = window.prompt(
+      'This action CANNOT be undone. Type "DELETE ALL DATA" to confirm:'
+    );
+
+    if (typedConfirmation !== "DELETE ALL DATA") {
+      toast.error("Deletion cancelled - confirmation text did not match");
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      // Import necessary functions
+      const { clearDatabaseData } = await import('@/lib/db-service');
+      const { clearAllData } = await import('@/lib/storage');
+
+      // Clear database
+      await clearDatabaseData(user.id);
+      
+      // Clear local storage
+      await clearAllData();
+      
+      // Clear all localStorage
+      localStorage.clear();
+      
+      toast.success("All data has been permanently deleted");
+      
+      // Reload to fresh state
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000);
+    } catch (error) {
+      console.error("[DataManagement] Delete all failed:", error);
+      toast.error("Failed to delete all data. Please try again.");
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Data Management</CardTitle>
         <CardDescription>
-          Export, import, or clear your application data
+          Export, import, or manage your data
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-3">
           <Button
             variant="outline"
@@ -116,6 +171,28 @@ export function DataManagementSection() {
               </Button>
             </label>
           </div>
+        </div>
+
+        <Separator />
+
+        {/* Danger Zone */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            <Label className="text-destructive font-semibold">Danger Zone</Label>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Permanently delete all your data. This action cannot be undone.
+          </p>
+          <Button
+            variant="destructive"
+            onClick={handleDeleteAllData}
+            disabled={isDeleting || !user}
+            className="w-full"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            {isDeleting ? "Deleting..." : "Delete All Data"}
+          </Button>
         </div>
       </CardContent>
     </Card>

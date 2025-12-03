@@ -36,8 +36,6 @@ import { DataManagementSection } from "@/components/settings/DataManagementSecti
 import { AccountSection } from "@/components/settings/AccountSection";
 import { AppearanceSection } from "@/components/settings/AppearanceSection";
 import { IntegrationsSection } from "@/components/settings/IntegrationsSection";
-import { CacheDebugPanel } from "@/components/settings/CacheDebugPanel";
-import { PerformanceSection } from "@/components/settings/PerformanceSection";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -93,17 +91,24 @@ export default function Settings() {
       return;
     }
 
+    console.log('[Settings] Updating settings with:', updates);
+
     try {
       const updatedSettings = { ...settings, ...updates };
+      console.log('[Settings] Full settings object:', updatedSettings);
+      
       await saveSettings(user.id, updatedSettings, queueChange);
       setSettings(updatedSettings);
       
-      localStorage.removeItem("quote-it-settings");
+      // REMOVED: localStorage.removeItem("quote-it-settings");
+      // This was causing issues - let the cache manager handle invalidation
       
       toast.success("Settings updated successfully");
+      console.log('[Settings] Settings updated successfully');
     } catch (error) {
       console.error("[Settings] Update failed:", error);
-      toast.error("Failed to update settings");
+      const errorMessage = error instanceof Error ? error.message : "Failed to update settings";
+      toast.error(errorMessage);
       throw error;
     }
   };
@@ -356,9 +361,8 @@ export default function Settings() {
 
         <DataManagementSection />
 
-        <PerformanceSection />
-
-        <CacheDebugPanel />
+        {/* REMOVED: <PerformanceSection /> - Moved to Diagnostics page for admin use */}
+        {/* REMOVED: <CacheDebugPanel /> - Moved to Diagnostics page for admin use */}
 
         <Card>
           <CardHeader>

@@ -56,54 +56,71 @@ export const getSettings = async (userId: string): Promise<CompanySettings> => {
   return localStorageSettings;
 };
 
-// Wrap saveSettings to accept userId and make it async for proper IndexedDB handling
-export const saveSettings = async (userId: string, settings: CompanySettings): Promise<void> => {
-  console.log('[db-service] ========== SAVE SETTINGS START ==========');
-  console.log('[db-service] userId:', userId);
-  console.log('[db-service] settings.name:', settings.name);
-  console.log('[db-service] settings.email:', settings.email);
-  console.log('[db-service] settings.onboardingCompleted:', settings.onboardingCompleted);
+export async function saveSettings(
+  userId: string,
+  settings: CompanySettings,
+  queueChange?: (change: SyncChange) => void
+): Promise<void> {
+  console.log('[DB Service] Saving settings for user:', userId);
+  console.log('[DB Service] Settings data:', settings);
   
-  // Save to localStorage first (synchronous, immediate)
-  storageSaveSettings(settings, userId);
-  console.log('[db-service] ✓ Step 1: Saved to localStorage');
-  
-  // Save to IndexedDB if supported (async, more reliable)
-  if (isIndexedDBSupported()) {
+  try {
+    // Store in memory cache first
+    const cacheKey = `settings-${userId}`;
+    cacheManager.set(cacheKey, settings);
+    console.log('[DB Service] Settings cached successfully');
+
+    // Store in IndexedDB
     try {
+      const { default: SettingsDB } = await import('./indexed-db');
       await SettingsDB.set(userId, settings);
-      console.log('[db-service] ✓ Step 2: Saved to IndexedDB');
-      
-      // Wait longer for IndexedDB transaction to commit
-      await new Promise(resolve => setTimeout(resolve, 300));
-      console.log('[db-service] ✓ Step 3: Waited for IndexedDB transaction commit');
-      
-      // Verify the save with multiple attempts
-      let verified = false;
-      for (let i = 0; i < 3; i++) {
-        const readBack = await SettingsDB.get(userId);
-        if (readBack && readBack.name === settings.name && readBack.email === settings.email) {
-          console.log(`[db-service] ✓ Step 4: Verified IndexedDB save (attempt ${i + 1})`);
-          verified = true;
-          break;
-        }
-        // Wait between verification attempts
-        if (i < 2) {
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-      }
-      
-      if (!verified) {
-        console.warn('[db-service] ⚠️ IndexedDB verification failed after 3 attempts');
-      }
-    } catch (error) {
-      console.error('[db-service] ✗ IndexedDB save failed:', error);
-      // Don't throw - localStorage save succeeded
+      console.log('[DB Service] Settings saved to IndexedDB');
+    } catch (indexedDBError) {
+      console.error('[DB Service] IndexedDB save failed, falling back to localStorage:', indexedDBError);
+      // Fallback to localStorage
+      setItem(`settings-${userId}`, settings);
     }
+
+    // Queue for Supabase sync
+    if (queueChange) {
+      queueChange({
+        id: `settings-${userId}`,
+        type: 'settings',
+        action: 'update',
+        data: settings,
+        timestamp: Date.now()
+      });
+      console.log('[DB Service] Settings queued for sync');
+    }
+
+    // Also attempt immediate Supabase save if online
+    if (navigator.onLine) {
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { error } = await supabase
+          .from('company_settings')
+          .upsert({
+            user_id: userId,
+            ...settings,
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) {
+          console.error('[DB Service] Supabase save error:', error);
+        } else {
+          console.log('[DB Service] Settings saved to Supabase successfully');
+        }
+      } catch (supabaseError) {
+        console.error('[DB Service] Supabase save failed:', supabaseError);
+      }
+    }
+
+    console.log('[DB Service] Settings save complete');
+  } catch (error) {
+    console.error('[DB Service] Critical error saving settings:', error);
+    throw new Error('Failed to save settings: ' + (error instanceof Error ? error.message : 'Unknown error'));
   }
-  
-  console.log('[db-service] ========== SAVE SETTINGS COMPLETE ==========');
-};
+}
 
 // Re-export clearAllData from storage as clearDatabaseData for backward compatibility
 export { clearAllData as clearDatabaseData } from './storage';
