@@ -32,7 +32,6 @@ const Items = lazy(() => import("./pages/Items"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Help = lazy(() => import("./pages/Help"));
 const Subscription = lazy(() => import("./pages/Subscription"));
-const AdminDemoRecorder = lazy(() => import("./pages/AdminDemoRecorder"));
 
 const queryClient = new QueryClient();
 
@@ -70,9 +69,6 @@ function AppRoutes() {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/quotes/public/:id" element={<PublicQuoteView />} />
         
-        {/* Redirect /AdminDemoRecorder to /admin/demo-recorder */}
-        <Route path="/AdminDemoRecorder" element={<Navigate to="/admin/demo-recorder" replace />} />
-        
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Dashboard /></Suspense></ProtectedRoute>} />
           <Route path="/quotes" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Quotes /></Suspense></ProtectedRoute>} />
@@ -84,7 +80,6 @@ function AppRoutes() {
           <Route path="/help" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Help /></Suspense></ProtectedRoute>} />
           <Route path="/diagnostics" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Diagnostics /></Suspense></ProtectedRoute>} />
           <Route path="/subscription" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Subscription /></Suspense></ProtectedRoute>} />
-          <Route path="/admin/demo-recorder" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><AdminDemoRecorder /></Suspense></ProtectedRoute>} />
         </Route>
         
         <Route path="*" element={<NotFound />} />
