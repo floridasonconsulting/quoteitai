@@ -80,11 +80,12 @@ export interface CompanySettings {
   email: string;
   website: string;
   logo?: string;
-  logoDisplayOption?: 'logo' | 'name' | 'both';
+  logoDisplayOption?: "logo" | "name" | "both";
   license?: string;
   insurance?: string;
   terms: string;
-  proposalTemplate?: 'classic' | 'modern' | 'detailed';
+  proposalTemplate?: "classic" | "modern" | "detailed";
+  proposalTheme?: "modern-corporate" | "creative-studio" | "minimalist"; // NEW: Visual theme for proposals
   notifyEmailAccepted?: boolean;
   notifyEmailDeclined?: boolean;
   onboardingCompleted?: boolean;

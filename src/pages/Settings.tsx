@@ -36,6 +36,7 @@ import { DataManagementSection } from "@/components/settings/DataManagementSecti
 import { AccountSection } from "@/components/settings/AccountSection";
 import { AppearanceSection } from "@/components/settings/AppearanceSection";
 import { IntegrationsSection } from "@/components/settings/IntegrationsSection";
+import { ProposalThemeSelector } from "@/components/settings/ProposalThemeSelector";
 // REMOVED: Performance and Cache sections - moved to Diagnostics for admin use
 // import { PerformanceSection } from "@/components/settings/PerformanceSection";
 // import { CacheDebugPanel } from "@/components/settings/CacheDebugPanel";
@@ -348,6 +349,8 @@ export default function Settings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            <ProposalThemeSelector settings={settings} onUpdate={handleUpdateSettings} />
+            <Separator />
             <TermsSection settings={settings} onUpdate={handleUpdateSettings} />
           </CardContent>
         </Card>

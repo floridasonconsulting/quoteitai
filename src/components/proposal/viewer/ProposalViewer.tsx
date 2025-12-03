@@ -9,6 +9,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, EffectCube, Keyboard, Mousewheel } from 'swiper/modules';
 import { useRef } from 'react';
 import type { Swiper as SwiperType } from 'swiper';
+import { CompanySettings, Quote } from "@/types";
 
 // Import Swiper styles
 import 'swiper/css';
@@ -27,13 +28,23 @@ interface ActionBarProps {
 }
 
 interface ProposalViewerProps {
-  proposal: ProposalData;
-  onSign?: (signature: string) => Promise<void>;
-  readOnly?: boolean;
-  actionBar?: ActionBarProps;
+  quote: Quote;
+  companySettings: CompanySettings;
+  isPreview?: boolean;
 }
 
-export function ProposalViewer({ proposal, onSign, readOnly = false, actionBar }: ProposalViewerProps) {
+export function ProposalViewer({ quote, companySettings, isPreview = false }: ProposalViewerProps) {
+  const theme = companySettings.proposalTheme || "modern-corporate";
+  
+  // Theme-specific styling classes
+  const themeClasses = {
+    "modern-corporate": "bg-white text-slate-900",
+    "creative-studio": "bg-gradient-to-br from-purple-50 to-pink-50 text-slate-900",
+    "minimalist": "bg-stone-50 text-stone-900"
+  };
+
+  const containerClass = themeClasses[theme];
+
   const swiperRef = useRef<SwiperType>();
 
   const renderSection = (section: ProposalData['sections'][0]) => {
@@ -86,7 +97,7 @@ export function ProposalViewer({ proposal, onSign, readOnly = false, actionBar }
   const themeColors = getThemeColors();
 
   return (
-    <div className={`min-h-screen ${themeColors.background}`}>
+    <div className={`min-h-screen ${containerClass}`}>
       <Swiper
         modules={[Navigation, Pagination, EffectCube, Keyboard, Mousewheel]}
         spaceBetween={0}
