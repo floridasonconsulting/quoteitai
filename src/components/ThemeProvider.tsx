@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from "react";
+
+import * as React from "react";
 
 type Theme = "light" | "dark";
 type ThemeMode = "light" | "dark" | "auto";
@@ -10,7 +11,7 @@ type ThemeContextType = {
   toggleTheme: () => void;
 };
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const ThemeContext = React.createContext<ThemeContextType | undefined>(undefined);
 
 function getStoredThemeMode(): ThemeMode {
   try {
@@ -42,8 +43,8 @@ function getAutoTheme(): Theme {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [themeMode, setThemeModeState] = useState<ThemeMode>(getStoredThemeMode);
-  const [theme, setTheme] = useState<Theme>(() => {
+  const [themeMode, setThemeModeState] = React.useState<ThemeMode>(getStoredThemeMode);
+  const [theme, setTheme] = React.useState<Theme>(() => {
     const mode = getStoredThemeMode();
     if (mode === "auto") {
       return getAutoTheme();
@@ -51,13 +52,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return mode;
   });
 
-  useEffect(() => {
+  React.useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
     root.classList.add(theme);
   }, [theme]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     // Update theme when mode changes
     if (themeMode === "auto") {
       setTheme(getAutoTheme());
@@ -99,7 +100,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 
 export const useTheme = () => {
-  const context = useContext(ThemeContext);
+  const context = React.useContext(ThemeContext);
   if (!context) {
     throw new Error("useTheme must be used within ThemeProvider");
   }
