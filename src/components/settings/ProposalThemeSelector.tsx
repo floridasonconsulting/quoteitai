@@ -1,42 +1,20 @@
-
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check } from "lucide-react";
 import { CompanySettings } from "@/types";
+import { getAllThemes, ProposalTheme } from "@/lib/proposal-themes";
 
 interface ProposalThemeSelectorProps {
   settings: CompanySettings;
   onUpdate: (updates: Partial<CompanySettings>) => Promise<void>;
 }
 
-const themes = [
-  {
-    id: "modern-corporate" as const,
-    name: "Modern Corporate",
-    description: "Professional design with clean lines and bold typography",
-    preview: "/screenshots/theme-modern.png",
-    features: ["Bold headers", "Two-column layout", "Professional colors"]
-  },
-  {
-    id: "creative-studio" as const,
-    name: "Creative Studio",
-    description: "Eye-catching design with artistic flair and vibrant accents",
-    preview: "/screenshots/theme-creative.png",
-    features: ["Unique layouts", "Vibrant colors", "Artistic elements"]
-  },
-  {
-    id: "minimalist" as const,
-    name: "Minimalist",
-    description: "Clean and simple design focusing on content and readability",
-    preview: "/screenshots/theme-minimal.png",
-    features: ["Simple layouts", "Elegant typography", "Maximum readability"]
-  }
-];
+const themes = getAllThemes();
 
 export function ProposalThemeSelector({ settings, onUpdate }: ProposalThemeSelectorProps) {
   const currentTheme = settings.proposalTheme || "modern-corporate";
 
-  const handleThemeSelect = async (themeId: typeof currentTheme) => {
+  const handleThemeSelect = async (themeId: ProposalTheme) => {
     try {
       await onUpdate({ proposalTheme: themeId });
     } catch (error) {
@@ -53,7 +31,7 @@ export function ProposalThemeSelector({ settings, onUpdate }: ProposalThemeSelec
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {themes.map((theme) => (
           <Card
             key={theme.id}
@@ -65,11 +43,38 @@ export function ProposalThemeSelector({ settings, onUpdate }: ProposalThemeSelec
             onClick={() => handleThemeSelect(theme.id)}
           >
             <div className="relative">
-              {/* Theme Preview Image */}
+              {/* Theme Preview with Color Sample */}
               <div className="aspect-video bg-muted rounded-t-lg overflow-hidden relative">
-                {/* Placeholder for now - will add actual screenshots */}
-                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/10">
-                  <span className="text-xs text-muted-foreground">Preview coming soon</span>
+                {/* Color preview based on theme */}
+                <div 
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ 
+                    background: theme.colors.background,
+                    fontFamily: theme.typography.fontFamily.heading
+                  }}
+                >
+                  <div className="text-center space-y-2 p-4">
+                    <div 
+                      className="text-2xl font-bold"
+                      style={{ color: theme.colors.primary }}
+                    >
+                      {theme.name}
+                    </div>
+                    <div className="flex gap-2 justify-center">
+                      <div 
+                        className="w-8 h-8 rounded-full"
+                        style={{ backgroundColor: theme.colors.primary }}
+                      />
+                      <div 
+                        className="w-8 h-8 rounded-full"
+                        style={{ backgroundColor: theme.colors.secondary }}
+                      />
+                      <div 
+                        className="w-8 h-8 rounded-full"
+                        style={{ backgroundColor: theme.colors.accent }}
+                      />
+                    </div>
+                  </div>
                 </div>
                 
                 {/* Selection Badge */}

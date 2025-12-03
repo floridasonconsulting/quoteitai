@@ -10,6 +10,7 @@ import { Navigation, Pagination, EffectCube, Keyboard, Mousewheel } from 'swiper
 import { useRef } from 'react';
 import type { Swiper as SwiperType } from 'swiper';
 import { CompanySettings, Quote } from "@/types";
+import { getTheme, getThemeCSSVars } from "@/lib/proposal-themes";
 
 // Import Swiper styles
 import 'swiper/css';
@@ -17,35 +18,81 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-cube';
 
-interface ActionBarProps {
-  quoteId: string;
-  total: number;
-  status: 'draft' | 'sent' | 'accepted' | 'declined';
-  userEmail: string;
-  userName?: string;
-  onAccept: () => Promise<void>;
-  onReject: (reason?: string) => Promise<void>;
-}
-
 interface ProposalViewerProps {
   quote: Quote;
   companySettings: CompanySettings;
   isPreview?: boolean;
+  actionBar?: {
+    quoteId: string;
+    total: number;
+    status: 'draft' | 'sent' | 'accepted' | 'declined';
+    userEmail: string;
+    userName?: string;
+    onAccept: () => Promise<void>;
+    onReject: (reason?: string) => Promise<void>;
+  };
 }
 
-export function ProposalViewer({ quote, companySettings, isPreview = false }: ProposalViewerProps) {
-  const theme = companySettings.proposalTheme || "modern-corporate";
+export function ProposalViewer({ quote, companySettings, isPreview = false, actionBar }: ProposalViewerProps) {
+  const theme = getTheme(companySettings.proposalTheme || "modern-corporate");
+  const themeCSSVars = getThemeCSSVars(theme);
   
-  // Theme-specific styling classes
-  const themeClasses = {
-    "modern-corporate": "bg-white text-slate-900",
-    "creative-studio": "bg-gradient-to-br from-purple-50 to-pink-50 text-slate-900",
-    "minimalist": "bg-stone-50 text-stone-900"
-  };
-
-  const containerClass = themeClasses[theme];
-
   const swiperRef = useRef<SwiperType>();
+
+  // Create proposal data from quote for section rendering
+  const proposalData: ProposalData = {
+    id: quote.id,
+    quoteId: quote.id,
+    theme: companySettings.proposalTheme || "modern-corporate",
+    sections: [
+      // Hero section
+      {
+        id: 'hero',
+        type: 'hero' as const,
+        title: quote.title,
+        subtitle: companySettings.name,
+        backgroundImage: companySettings.logo || undefined,
+      },
+      // Executive summary if exists
+      ...(quote.executiveSummary ? [{
+        id: 'summary',
+        type: 'text' as const,
+        title: 'Executive Summary',
+        content: quote.executiveSummary,
+      }] : []),
+      // Line items
+      {
+        id: 'items',
+        type: 'lineItems' as const,
+        title: 'Project Scope',
+        items: quote.items.map(item => ({
+          name: item.name,
+          description: item.description,
+          quantity: item.quantity,
+          price: item.price,
+          total: item.total
+        }))
+      },
+      // Pricing
+      {
+        id: 'pricing',
+        type: 'pricing' as const,
+        subtotal: quote.subtotal,
+        tax: quote.tax,
+        total: quote.total,
+        terms: companySettings.terms || "Payment due within 30 days"
+      },
+      // Legal/Terms
+      {
+        id: 'legal',
+        type: 'legal' as const,
+        title: 'Terms & Conditions',
+        content: companySettings.terms || "Standard terms and conditions apply."
+      }
+    ],
+    createdAt: quote.createdAt,
+    updatedAt: quote.updatedAt
+  };
 
   const renderSection = (section: ProposalData['sections'][0]) => {
     switch (section.type) {
@@ -56,7 +103,7 @@ export function ProposalViewer({ quote, companySettings, isPreview = false }: Pr
       case 'lineItems':
         return <LineItemSection section={section} />;
       case 'pricing':
-        return <PricingSection section={section} onSign={onSign} readOnly={readOnly} />;
+        return <PricingSection section={section} />;
       case 'legal':
         return <LegalSection section={section} />;
       default:
@@ -64,40 +111,16 @@ export function ProposalViewer({ quote, companySettings, isPreview = false }: Pr
     }
   };
 
-  // Apply theme-based colors
-  const getThemeColors = () => {
-    switch (proposal.theme) {
-      case 'modern':
-        return {
-          background: 'bg-gradient-to-br from-blue-50 via-white to-purple-50',
-          pagination: '#6366f1',
-          navigation: '#4f46e5'
-        };
-      case 'creative':
-        return {
-          background: 'bg-gradient-to-br from-pink-50 via-white to-orange-50',
-          pagination: '#f43f5e',
-          navigation: '#e11d48'
-        };
-      case 'minimalist':
-        return {
-          background: 'bg-white',
-          pagination: '#000000',
-          navigation: '#000000'
-        };
-      default:
-        return {
-          background: 'bg-slate-50',
-          pagination: '#64748b',
-          navigation: '#475569'
-        };
-    }
-  };
-
-  const themeColors = getThemeColors();
-
   return (
-    <div className={`min-h-screen ${containerClass}`}>
+    <div 
+      className="min-h-screen"
+      style={{
+        ...themeCSSVars,
+        background: theme.colors.background,
+        color: theme.colors.text.primary,
+        fontFamily: theme.typography.fontFamily.body
+      }}
+    >
       <Swiper
         modules={[Navigation, Pagination, EffectCube, Keyboard, Mousewheel]}
         spaceBetween={0}
@@ -126,11 +149,11 @@ export function ProposalViewer({ quote, companySettings, isPreview = false }: Pr
         }}
         className="h-screen"
         style={{
-          '--swiper-pagination-color': themeColors.pagination,
-          '--swiper-navigation-color': themeColors.navigation,
+          '--swiper-pagination-color': theme.swiper.paginationColor,
+          '--swiper-navigation-color': theme.swiper.navigationColor,
         } as React.CSSProperties}
       >
-        {proposal.sections.map((section) => (
+        {proposalData.sections.map((section) => (
           <SwiperSlide key={section.id} className="overflow-y-auto">
             <div className="container mx-auto px-4 py-8 max-w-4xl">
               <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
