@@ -189,18 +189,44 @@ export default function QuoteDetail() {
   };
 
   const handlePreview = async () => {
-    if (!shareLink) {
-        // If no link, we can't open public preview directly without token.
-        // We could generate one, but that changes state.
-        // Better to prompt user or auto-generate.
-        await handleGenerateShareLink();
-    }
-    // Re-check link after potential generation
-    const currentLink = shareLink || (quote?.shareToken ? `${window.location.origin}/quotes/public/${quote.shareToken}` : '');
+    if (!quote) return;
     
-    if (currentLink) {
-        window.open(currentLink, '_blank');
+    // Check if share token exists
+    let token = quote.shareToken;
+    
+    // If no share token, generate one
+    if (!token) {
+      try {
+        const { data, error } = await supabase
+          .from('quotes')
+          .update({ 
+            shared_at: new Date().toISOString(),
+          })
+          .eq('id', quote.id)
+          .select('share_token')
+          .single();
+
+        if (error) throw error;
+        token = data.share_token;
+        
+        // Update local state
+        const url = `${window.location.origin}/quotes/public/${token}`;
+        setShareLink(url);
+        setQuote({ ...quote, shareToken: token, sharedAt: new Date().toISOString() });
+      } catch (error) {
+        console.error('Failed to generate preview link:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to generate preview link',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
+    
+    // Open preview in new tab
+    const previewUrl = `${window.location.origin}/quotes/public/${token}`;
+    window.open(previewUrl, '_blank');
   };
 
   const handleConfirmSend = async (emailContent: EmailContent) => {
@@ -377,15 +403,6 @@ export default function QuoteDetail() {
         >
           <Edit className="mr-2 h-4 w-4" aria-hidden="true" />
           Edit Content
-        </Button>
-        
-        <Button 
-          variant="secondary"
-          onClick={handleCustomizeDesign}
-          aria-label="Customize proposal design"
-        >
-          <Palette className="mr-2 h-4 w-4" aria-hidden="true" />
-          Customize Design
         </Button>
 
         <Button 
