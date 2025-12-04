@@ -25,12 +25,30 @@ export default function PublicQuoteView() {
   const [isMaxAITier, setIsMaxAITier] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  // Check for existing session token or ownership on mount
+  // Wait for auth to initialize before checking session
   useEffect(() => {
-    console.log('[PublicQuoteView] Mount - shareToken:', shareToken, 'user:', user?.id);
+    console.log('[PublicQuoteView] Auth state:', { user: user?.id, loading: authLoading });
+    
+    // Give auth context a moment to initialize
+    const authTimeout = setTimeout(() => {
+      setAuthLoading(false);
+    }, 1000);
+    
+    return () => clearTimeout(authTimeout);
+  }, []);
+
+  // Check for existing session token or ownership once auth is ready
+  useEffect(() => {
+    if (authLoading) {
+      console.log('[PublicQuoteView] Waiting for auth to initialize...');
+      return;
+    }
+    
+    console.log('[PublicQuoteView] Auth ready, checking session - shareToken:', shareToken, 'user:', user?.id);
     checkSession();
-  }, [shareToken, user?.id]);
+  }, [shareToken, user?.id, authLoading]);
 
   const checkSession = async () => {
     console.log('[PublicQuoteView] checkSession - user:', user?.id);
@@ -373,7 +391,7 @@ export default function PublicQuoteView() {
   };
 
   // Show loading state
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
