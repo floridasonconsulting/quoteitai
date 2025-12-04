@@ -13,9 +13,9 @@ export const generateCustomerTemplate = (): string => {
 };
 
 export const generateItemTemplate = (): string => {
-  const headers = ['name', 'description', 'category', 'basePrice', 'markup', 'markupType', 'units'];
-  const sample1 = ['Premium Widget', 'High-quality widget for professional use', 'Widgets', '100.00', '15', 'percentage', 'Each'];
-  const sample2 = ['Standard Service', 'Basic installation service', 'Services', '50.00', '10.00', 'fixed', 'Hour'];
+  const headers = ['name', 'description', 'category', 'basePrice', 'markupType', 'markup', 'finalPrice', 'units', 'minQuantity'];
+  const sample1 = ['Premium Widget', 'High-quality widget for professional use', 'Widgets', '100.00', 'percentage', '15', '115.00', 'Each', '1'];
+  const sample2 = ['Standard Service', 'Basic installation service', 'Services', '50.00', 'fixed', '10.00', '60.00', 'Hour', '1'];
   
   return [
     formatCSVLine(headers),
@@ -25,10 +25,15 @@ export const generateItemTemplate = (): string => {
 };
 
 export const generateItemsTemplate = (): string => {
-  const headers = ['Name', 'Description', 'Category', 'Base Price', 'Markup Type', 'Markup', 'Final Price', 'Units', 'Min Quantity'];
-  const sampleRow = ['Sample Item', 'Item description', 'General', '100.00', 'percentage', '20', '120.00', 'unit', '1'];
+  const headers = ['name', 'description', 'category', 'basePrice', 'markupType', 'markup', 'finalPrice', 'units', 'minQuantity'];
+  const sample1 = ['Premium Widget', 'High-quality widget for professional use', 'Widgets', '100.00', 'percentage', '15', '115.00', 'Each', '1'];
+  const sample2 = ['Standard Service', 'Basic installation service', 'Services', '50.00', 'fixed', '10.00', '60.00', 'Hour', '1'];
   
-  return [headers, sampleRow].map(row => row.join(',')).join('\n');
+  return [
+    formatCSVLine(headers),
+    formatCSVLine(sample1),
+    formatCSVLine(sample2)
+  ].join('\n');
 };
 
 export const downloadTemplate = (content: string, filename: string) => {

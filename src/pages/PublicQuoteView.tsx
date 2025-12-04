@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -26,20 +26,28 @@ export default function PublicQuoteView() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
 
-  // Check for existing session token on mount
+  // Check for existing session token or ownership on mount
   useEffect(() => {
+    console.log('[PublicQuoteView] Mount - shareToken:', shareToken, 'user:', user?.id);
     checkSession();
-  }, [shareToken, user]);
+  }, [shareToken, user?.id]);
 
   const checkSession = async () => {
+    console.log('[PublicQuoteView] checkSession - user:', user?.id);
+    
     try {
-      // If user is logged in, check if they own the quote
-      if (user) {
-        await checkOwnership();
-        return;
+      // PRIORITY 1: If user is logged in, check if they own the quote
+      if (user?.id) {
+        console.log('[PublicQuoteView] User logged in, checking ownership...');
+        const ownershipResult = await checkOwnership();
+        if (ownershipResult) {
+          console.log('[PublicQuoteView] User is owner, bypassing OTP');
+          return; // Exit early - owner authentication handled
+        }
       }
 
-      // Otherwise, check for session token
+      // PRIORITY 2: Check for existing session token (for external customers)
+      console.log('[PublicQuoteView] Not owner, checking session token...');
       const sessionData = sessionStorage.getItem('proposal_session');
       if (sessionData) {
         const session = JSON.parse(sessionData);
@@ -47,67 +55,80 @@ export default function PublicQuoteView() {
         // Check if session is valid and matches current share token
         if (session.shareToken === shareToken && 
             new Date(session.expiresAt) > new Date()) {
+          console.log('[PublicQuoteView] Valid session token found');
           setSessionToken(session.token);
           setUserEmail(session.email);
           setAuthenticated(true);
           loadQuote();
         } else {
           // Clear expired/invalid session
+          console.log('[PublicQuoteView] Session expired or invalid');
           sessionStorage.removeItem('proposal_session');
           setLoading(false);
         }
       } else {
+        console.log('[PublicQuoteView] No session token, showing OTP wall');
         setLoading(false);
       }
     } catch (error) {
-      console.error('Error checking session:', error);
+      console.error('[PublicQuoteView] Error checking session:', error);
       setLoading(false);
     }
   };
 
-  const checkOwnership = async () => {
-    if (!shareToken || !user) {
+  const checkOwnership = async (): Promise<boolean> => {
+    if (!shareToken || !user?.id) {
+      console.log('[PublicQuoteView] Missing shareToken or user.id');
       setLoading(false);
-      return;
+      return false;
     }
 
     try {
+      console.log('[PublicQuoteView] Fetching quote with shareToken:', shareToken);
+      
       // Fetch quote to check ownership
       const { data: quoteData, error: quoteError } = await supabase
         .from('quotes')
-        .select('user_id')
-        .or(`share_token.eq.${shareToken},shareToken.eq.${shareToken}`)
+        .select('user_id, id')
+        .eq('share_token', shareToken)
         .maybeSingle();
 
       if (quoteError) {
         console.error('[PublicQuoteView] Error checking ownership:', quoteError);
         setLoading(false);
-        return;
+        return false;
       }
 
       if (!quoteData) {
-        console.error('[PublicQuoteView] Quote not found');
+        console.error('[PublicQuoteView] Quote not found for shareToken:', shareToken);
         setLoading(false);
-        return;
+        return false;
       }
+
+      console.log('[PublicQuoteView] Quote found - user_id:', quoteData.user_id, 'current user:', user.id);
 
       // If logged-in user owns the quote, bypass OTP
       if (quoteData.user_id === user.id) {
-        console.log('[PublicQuoteView] User owns quote, bypassing OTP');
+        console.log('[PublicQuoteView] ✅ User owns quote, bypassing OTP');
         setIsOwner(true);
         setAuthenticated(true);
         setUserEmail(user.email || '');
-        loadQuote();
+        await loadQuote();
+        return true;
       } else {
+        console.log('[PublicQuoteView] User does not own quote');
         setLoading(false);
+        return false;
       }
     } catch (error) {
       console.error('[PublicQuoteView] Error checking ownership:', error);
       setLoading(false);
+      return false;
     }
   };
 
   const handleVerified = (token: string) => {
+    console.log('[PublicQuoteView] OTP verified');
     setSessionToken(token);
     setAuthenticated(true);
     
@@ -122,6 +143,7 @@ export default function PublicQuoteView() {
   };
 
   const handleExpired = () => {
+    console.log('[PublicQuoteView] Link expired');
     setExpired(true);
     setLoading(false);
   };
@@ -141,7 +163,7 @@ export default function PublicQuoteView() {
       const { data: quoteData, error: quoteError } = await supabase
         .from('quotes')
         .select('*')
-        .or(`share_token.eq.${shareToken},shareToken.eq.${shareToken}`)
+        .eq('share_token', shareToken)
         .maybeSingle();
 
       if (quoteError) {
@@ -257,7 +279,7 @@ export default function PublicQuoteView() {
       }
 
     } catch (error) {
-      console.error('Failed to load quote:', error);
+      console.error('[PublicQuoteView] Failed to load quote:', error);
       toast.error('Failed to load quote');
     } finally {
       setLoading(false);
@@ -275,9 +297,9 @@ export default function PublicQuoteView() {
       if (error) throw error;
 
       setQuote({ ...quote, status: 'accepted' });
-      toast.success(`Quote accepted successfully!`);
+      toast.success('Quote accepted successfully!');
     } catch (error) {
-      console.error('Error accepting quote:', error);
+      console.error('[PublicQuoteView] Error accepting quote:', error);
       toast.error('Failed to accept quote');
     }
   };
@@ -294,7 +316,7 @@ export default function PublicQuoteView() {
 
       setQuote({ ...quote, status: 'accepted' });
     } catch (error) {
-      console.error('Error accepting quote:', error);
+      console.error('[PublicQuoteView] Error accepting quote:', error);
       throw error;
     }
   };
@@ -315,7 +337,7 @@ export default function PublicQuoteView() {
 
       setQuote({ ...quote, status: 'declined' });
     } catch (error) {
-      console.error('Error rejecting quote:', error);
+      console.error('[PublicQuoteView] Error rejecting quote:', error);
       throw error;
     }
   };
@@ -345,7 +367,7 @@ export default function PublicQuoteView() {
         throw new Error('No checkout URL returned');
       }
     } catch (error) {
-      console.error('Payment error:', error);
+      console.error('[PublicQuoteView] Payment error:', error);
       toast.error('Payment initialization failed. Please try again.');
     }
   };
@@ -375,6 +397,7 @@ export default function PublicQuoteView() {
 
   // Show OTP wall only if not authenticated and not the owner
   if (!authenticated && shareToken && !isOwner) {
+    console.log('[PublicQuoteView] Rendering OTP wall');
     return (
       <OTPSecurityWall
         shareToken={shareToken}
@@ -398,6 +421,8 @@ export default function PublicQuoteView() {
 
   // Transform legacy data to new Proposal format
   const proposalData = transformQuoteToProposal(quote, customer || undefined, settings || undefined);
+
+  console.log('[PublicQuoteView] Rendering viewer - isOwner:', isOwner, 'status:', quote.status);
 
   return (
     <div className="min-h-screen bg-slate-50">
