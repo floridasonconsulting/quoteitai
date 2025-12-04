@@ -9,9 +9,11 @@ import { OTPSecurityWall } from '@/components/proposal/viewer/OTPSecurityWall';
 import { transformQuoteToProposal } from '@/lib/proposal-transformation';
 import { PaymentDialog } from '@/components/PaymentDialog';
 import { createPaymentIntent } from '@/lib/stripe-service';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function PublicQuoteView() {
   const { id: shareToken } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [expired, setExpired] = useState(false);
@@ -22,14 +24,22 @@ export default function PublicQuoteView() {
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [isMaxAITier, setIsMaxAITier] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   // Check for existing session token on mount
   useEffect(() => {
     checkSession();
-  }, [shareToken]);
+  }, [shareToken, user]);
 
-  const checkSession = () => {
+  const checkSession = async () => {
     try {
+      // If user is logged in, check if they own the quote
+      if (user) {
+        await checkOwnership();
+        return;
+      }
+
+      // Otherwise, check for session token
       const sessionData = sessionStorage.getItem('proposal_session');
       if (sessionData) {
         const session = JSON.parse(sessionData);
@@ -51,6 +61,48 @@ export default function PublicQuoteView() {
       }
     } catch (error) {
       console.error('Error checking session:', error);
+      setLoading(false);
+    }
+  };
+
+  const checkOwnership = async () => {
+    if (!shareToken || !user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Fetch quote to check ownership
+      const { data: quoteData, error: quoteError } = await supabase
+        .from('quotes')
+        .select('user_id')
+        .or(`share_token.eq.${shareToken},shareToken.eq.${shareToken}`)
+        .maybeSingle();
+
+      if (quoteError) {
+        console.error('[PublicQuoteView] Error checking ownership:', quoteError);
+        setLoading(false);
+        return;
+      }
+
+      if (!quoteData) {
+        console.error('[PublicQuoteView] Quote not found');
+        setLoading(false);
+        return;
+      }
+
+      // If logged-in user owns the quote, bypass OTP
+      if (quoteData.user_id === user.id) {
+        console.log('[PublicQuoteView] User owns quote, bypassing OTP');
+        setIsOwner(true);
+        setAuthenticated(true);
+        setUserEmail(user.email || '');
+        loadQuote();
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('[PublicQuoteView] Error checking ownership:', error);
       setLoading(false);
     }
   };
@@ -196,11 +248,13 @@ export default function PublicQuoteView() {
         setIsMaxAITier(true);
       }
 
-      // Update viewed_at timestamp
-      await supabase
-        .from('quotes')
-        .update({ viewed_at: new Date().toISOString() })
-        .eq('share_token', shareToken);
+      // Only update viewed_at if not the owner
+      if (!isOwner) {
+        await supabase
+          .from('quotes')
+          .update({ viewed_at: new Date().toISOString() })
+          .eq('share_token', shareToken);
+      }
 
     } catch (error) {
       console.error('Failed to load quote:', error);
@@ -319,8 +373,8 @@ export default function PublicQuoteView() {
     );
   }
 
-  // Show OTP wall if not authenticated
-  if (!authenticated && shareToken) {
+  // Show OTP wall only if not authenticated and not the owner
+  if (!authenticated && shareToken && !isOwner) {
     return (
       <OTPSecurityWall
         shareToken={shareToken}
@@ -350,8 +404,8 @@ export default function PublicQuoteView() {
       <ProposalViewer 
         proposal={proposalData} 
         onSign={handleSign}
-        readOnly={quote.status === 'accepted' || quote.status === 'declined'}
-        actionBar={{
+        readOnly={isOwner || quote.status === 'accepted' || quote.status === 'declined'}
+        actionBar={isOwner ? undefined : {
           quoteId: quote.id,
           total: quote.total,
           status: quote.status,
