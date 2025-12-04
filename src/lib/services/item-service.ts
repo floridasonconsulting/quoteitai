@@ -172,7 +172,7 @@ export async function addItem(
     finalPrice
   } as Item;
 
-  // Save to IndexedDB first if supported
+  // Save to IndexedDB first if supported (includes minQuantity)
   if (isIndexedDBSupported()) {
     try {
       await ItemDB.add(itemWithUser as never);
@@ -194,7 +194,10 @@ export async function addItem(
   }
 
   try {
-    const dbItem = toSnakeCase(itemWithUser);
+    // CRITICAL: Remove minQuantity before sending to Supabase (column doesn't exist yet)
+    const { minQuantity, ...itemForDB } = itemWithUser;
+    const dbItem = toSnakeCase(itemForDB);
+    
     const startTime = performance.now();
     const { error } = await supabase.from('items').insert(dbItem as unknown);
     
@@ -253,7 +256,7 @@ export async function updateItem(
 
   const updatedItem = { ...currentItem, ...updates } as Item;
 
-  // Update IndexedDB
+  // Update IndexedDB (includes minQuantity)
   if (isIndexedDBSupported()) {
     try {
       await ItemDB.update({ ...updatedItem, user_id: userId } as never);
@@ -272,7 +275,10 @@ export async function updateItem(
   }
 
   try {
-    const dbUpdates = toSnakeCase(updates);
+    // CRITICAL: Remove minQuantity before sending to Supabase (column doesn't exist yet)
+    const { minQuantity, ...updatesForDB } = updates;
+    const dbUpdates = toSnakeCase(updatesForDB);
+    
     const startTime = performance.now();
     const { error } = await supabase
       .from('items')

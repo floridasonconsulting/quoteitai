@@ -24,7 +24,7 @@ export interface Item {
   markup: number;
   finalPrice: number;
   units: string;
-  minQuantity: number; // NEW: Default minimum quantity for AI and manual addition
+  minQuantity?: number; // OPTIONAL: Default minimum quantity (local-only until migration runs)
   createdAt: string;
 }
 
