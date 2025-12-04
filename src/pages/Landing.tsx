@@ -11,7 +11,14 @@ import { CTASection } from "@/components/landing/CTASection";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { ScrollTopButton } from "@/components/landing/ScrollTopButton";
 
-// Deployment timestamp: 2025-12-03T23:31:32Z - Force fresh Vercel build
+// DEPLOYMENT TRIGGER: 2025-12-04T14:44:57Z
+// Force Vercel to rebuild with latest features:
+// - QuickBooks Integration (NEW)
+// - Stripe Payments (NEW)
+// - AI SOW Drafting (NEW)
+// - Updated Hero Section with badges
+// - Updated Features Section with 10 features
+// - Full Advanced Analytics on Dashboard
 
 export default function Landing() {
   return (
