@@ -142,6 +142,9 @@ export async function importItemsFromCSV(
         } else if (headerName === 'minQuantity') {
           // Store minQuantity locally (IndexedDB/cache only, not sent to Supabase)
           (item as Record<string, unknown>)[headerName] = parseInt(value, 10) || 1;
+        } else if (headerName === 'imageUrl') {
+          // Parse imageUrl field (optional, can be empty)
+          (item as Record<string, unknown>)[headerName] = value.trim() || undefined;
         } else if (headerName === 'markup') {
           // Parse markup and detect type from format
           const markupValue = value.trim();
@@ -623,6 +626,7 @@ const parseItemsCSV = (csvText: string): Item[] => {
         finalPrice: parseFloat(row.finalprice || row['final price'] || '0'),
         units: row.units || 'unit',
         minQuantity: parseInt(row.minquantity || row['min quantity'] || row['minimum quantity'] || '1', 10),
+        imageUrl: row.imageurl || row['image url'] || undefined,
         createdAt: new Date().toISOString(),
       };
     });
@@ -630,7 +634,7 @@ const parseItemsCSV = (csvText: string): Item[] => {
 
 // Add minQuantity to CSV export headers and data
 export const exportItemsToCSV = (items: Item[]): string => {
-  const headers = ['Name', 'Description', 'Category', 'Base Price', 'Markup Type', 'Markup', 'Final Price', 'Units', 'Min Quantity'];
+  const headers = ['Name', 'Description', 'Category', 'Base Price', 'Markup Type', 'Markup', 'Final Price', 'Units', 'Min Quantity', 'Image URL'];
   const rows = items.map(item => [
     item.name,
     item.description,
@@ -640,7 +644,8 @@ export const exportItemsToCSV = (items: Item[]): string => {
     item.markup.toString(),
     item.finalPrice.toString(),
     item.units,
-    (item.minQuantity || 1).toString()
+    (item.minQuantity || 1).toString(),
+    item.imageUrl || ''
   ]);
   
   return [headers, ...rows].map(row => row.join(',')).join('\n');
