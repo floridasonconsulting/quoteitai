@@ -13,9 +13,9 @@ export const generateCustomerTemplate = (): string => {
 };
 
 export const generateItemTemplate = (): string => {
-  const headers = ['name', 'description', 'category', 'basePrice', 'markupType', 'markup', 'finalPrice', 'units', 'imageUrl'];
-  const sample1 = ['Premium Widget', 'High-quality widget for professional use', 'Widgets', '100.00', 'percentage', '15', '115.00', 'Each', 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789'];
-  const sample2 = ['Standard Service', 'Basic installation service', 'Services', '50.00', 'fixed', '10.00', '60.00', 'Hour', ''];
+  const headers = ['name', 'description', 'category', 'basePrice', 'markupType', 'markup', 'finalPrice', 'units', 'minQuantity', 'imageUrl'];
+  const sample1 = ['Premium Widget', 'High-quality widget for professional use', 'Widgets', '100.00', 'percentage', '15', '115.00', 'Each', '1', 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789'];
+  const sample2 = ['Standard Service', 'Basic installation service', 'Services', '50.00', 'fixed', '10.00', '60.00', 'Hour', '1', ''];
   
   return [
     formatCSVLine(headers),
@@ -25,9 +25,9 @@ export const generateItemTemplate = (): string => {
 };
 
 export const generateItemsTemplate = (): string => {
-  const headers = ['name', 'description', 'category', 'basePrice', 'markupType', 'markup', 'finalPrice', 'units', 'imageUrl'];
-  const sample1 = ['Premium Widget', 'High-quality widget for professional use', 'Widgets', '100.00', 'percentage', '15', '115.00', 'Each', 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789'];
-  const sample2 = ['Standard Service', 'Basic installation service', 'Services', '50.00', 'fixed', '10.00', '60.00', 'Hour', ''];
+  const headers = ['name', 'description', 'category', 'basePrice', 'markupType', 'markup', 'finalPrice', 'units', 'minQuantity', 'imageUrl'];
+  const sample1 = ['Premium Widget', 'High-quality widget for professional use', 'Widgets', '100.00', 'percentage', '15', '115.00', 'Each', '1', 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789'];
+  const sample2 = ['Standard Service', 'Basic installation service', 'Services', '50.00', 'fixed', '10.00', '60.00', 'Hour', '1', ''];
   
   return [
     formatCSVLine(headers),
