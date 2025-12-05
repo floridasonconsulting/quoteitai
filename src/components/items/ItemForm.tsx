@@ -9,22 +9,12 @@ import { Item } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 
-const CATEGORIES = [
-  'General',
-  'Products',
-  'Services',
-  'Consulting',
-  'Labor',
-  'Materials',
-  'Equipment',
-  'Other',
-];
-
 interface ItemFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingItem: Item | null;
   onSubmit: (formData: FormData) => Promise<void>;
+  existingCategories?: string[];
 }
 
 export interface FormData {
@@ -39,7 +29,7 @@ export interface FormData {
   imageUrl: string; // NEW: Image URL field
 }
 
-export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemFormProps) {
+export function ItemForm({ open, onOpenChange, editingItem, onSubmit, existingCategories = [] }: ItemFormProps) {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
@@ -49,7 +39,7 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemForm
     markupType: 'percentage',
     units: 'Each',
     minQuantity: '1',
-    imageUrl: '', // NEW: Initialize empty
+    imageUrl: '',
   });
 
   useEffect(() => {
@@ -63,7 +53,7 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemForm
         markupType: editingItem.markupType,
         units: editingItem.units || 'Each',
         minQuantity: editingItem.minQuantity?.toString() || '1',
-        imageUrl: editingItem.imageUrl || '', // NEW: Load from editing item
+        imageUrl: editingItem.imageUrl || '',
       });
     } else {
       setFormData({
@@ -75,7 +65,7 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemForm
         markupType: 'percentage',
         units: 'Each',
         minQuantity: '1',
-        imageUrl: '', // NEW: Initialize empty
+        imageUrl: '',
       });
     }
   }, [editingItem, open]);
@@ -138,19 +128,18 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemForm
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
-              <Select
+              <Input
+                id="category"
+                list="categories"
                 value={formData.category}
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                placeholder="Enter or select category"
+              />
+              <datalist id="categories">
+                {existingCategories.map(cat => (
+                  <option key={cat} value={cat} />
+                ))}
+              </datalist>
             </div>
             <div className="space-y-2">
               <Label htmlFor="units">Units *</Label>

@@ -206,11 +206,14 @@ export default function Items() {
 
       if (editingItem) {
         const updated = await updateItem(user?.id, editingItem.id, {
-          ...formData,
+          name: formData.name,
+          description: formData.description,
           category: formData.category.trim(),
           basePrice,
           markup,
+          markupType: formData.markupType,
           finalPrice,
+          units: formData.units,
           minQuantity,
           imageUrl,
         }, queueChange);
@@ -219,11 +222,14 @@ export default function Items() {
       } else {
         const newItem: Item = {
           id: crypto.randomUUID(),
-          ...formData,
+          name: formData.name,
+          description: formData.description,
           category: formData.category.trim(),
           basePrice,
           markup,
+          markupType: formData.markupType,
           finalPrice,
+          units: formData.units,
           minQuantity,
           imageUrl,
           createdAt: new Date().toISOString(),
@@ -520,6 +526,7 @@ export default function Items() {
         onOpenChange={setIsDialogOpen}
         editingItem={editingItem}
         onSubmit={handleFormSubmit}
+        existingCategories={uniqueCategories}
       />
 
       <ImportOptionsDialog
