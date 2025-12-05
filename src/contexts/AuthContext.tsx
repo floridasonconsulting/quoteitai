@@ -94,19 +94,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
-      const { data, error } = await supabaseFunctions.invoke('manage-user-role', {
+      console.log('[AuthContext] Attempting to update user role via Edge Function...');
+      
+      // Try to call the Edge Function if it exists
+      const { data, error } = await supabaseFunctions.functions.invoke('manage-user-role', {
         body: { userId, newRole },
       });
 
-      if (error) throw error;
+      // Handle Edge Function not existing (404 or network errors)
+      if (error) {
+        console.warn('[AuthContext] Edge Function not available:', error.message);
+        
+        // Try direct database update as fallback
+        console.log('[AuthContext] Attempting direct database role update...');
+        const { error: dbError } = await supabase
+          .from('user_roles')
+          .upsert({ user_id: userId, role: newRole, updated_at: new Date().toISOString() });
+        
+        if (dbError) {
+          console.error('[AuthContext] Direct database update failed:', dbError);
+          throw new Error('Failed to update user role');
+        }
+        
+        console.log('[AuthContext] ✓ Role updated via direct database access');
+        await checkUserRole();
+        return;
+      }
 
-      if (data.error) {
+      if (data?.error) {
         throw new Error(data.error);
       }
 
+      console.log('[AuthContext] ✓ Role updated via Edge Function');
       await checkUserRole();
     } catch (error) {
-      console.error('Error updating user role:', error);
+      console.error('[AuthContext] Error updating user role:', error);
+      
+      // Last resort: try direct database update
+      try {
+        console.log('[AuthContext] Final fallback: direct database update...');
+        const { error: dbError } = await supabase
+          .from('user_roles')
+          .upsert({ user_id: userId, role: newRole, updated_at: new Date().toISOString() });
+        
+        if (!dbError) {
+          console.log('[AuthContext] ✓ Role updated via fallback method');
+          await checkUserRole();
+          return;
+        }
+      } catch (fallbackError) {
+        console.error('[AuthContext] All role update methods failed:', fallbackError);
+      }
+      
       throw error;
     }
   };

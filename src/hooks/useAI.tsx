@@ -79,21 +79,36 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
 
       // Wrap the API call with rate limiting
       const data = await rateLimiter.trackRequest(rateLimitKey, async () => {
-        const { data, error } = await supabaseFunctions.functions.invoke('ai-assist', {
-          body: { 
-            featureType, 
-            prompt: sanitizedPrompt, 
-            context 
-          },
-        });
+        try {
+          const { data, error } = await supabaseFunctions.functions.invoke('ai-assist', {
+            body: { 
+              featureType, 
+              prompt: sanitizedPrompt, 
+              context 
+            },
+          });
 
-        // Handle network/invoke errors
-        if (error) {
-          console.error('AI invoke error:', error);
-          throw new Error('Failed to connect to AI service. Please try again.');
+          // Handle network/invoke errors
+          if (error) {
+            console.error('[useAI] Edge Function invoke error:', error);
+            
+            // Check if it's a 404 (Edge Function doesn't exist)
+            if (error.message?.includes('404') || error.message?.includes('FunctionsRelayError')) {
+              throw new Error('AI features require Edge Functions to be deployed. Please contact support or deploy the ai-assist Edge Function to your Supabase project.');
+            }
+            
+            throw new Error('Failed to connect to AI service. Please try again.');
+          }
+
+          return data;
+        } catch (invokeError) {
+          console.error('[useAI] Edge Function not available:', invokeError);
+          
+          // Return a friendly error for missing Edge Functions
+          return {
+            error: 'AI features are not available. Edge Functions need to be deployed to your Supabase project.'
+          };
         }
-
-        return data;
       });
 
       // Check for upgrade requirement (now returned with 200 status)
@@ -132,13 +147,19 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
       throw new Error('Invalid response from AI service');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'AI generation failed';
-      console.error('AI generation error:', error);
+      console.error('[useAI] AI generation error:', error);
       
       // Special handling for rate limit errors
       if (message.includes('Rate limit exceeded')) {
         toast.error('Too Many Requests', {
           description: message,
           duration: 5000,
+        });
+      } else if (message.includes('Edge Functions')) {
+        // Edge Function deployment error - user-friendly message
+        toast.error('AI Feature Unavailable', {
+          description: 'AI features require additional setup. The app will work without them, but AI assistance won\'t be available.',
+          duration: 7000,
         });
       } else {
         toast.error('AI Generation Error', {
