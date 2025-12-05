@@ -2,18 +2,26 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://nasniikxboyzbbhezdgr.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hc25paWt4Ym95emJiaGV6ZGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2NzA1NjQsImV4cCI6MjA3NTI0NjU2NH0.0L_EbR_cL6DewkCEe5jVNByMNJ7UkaKpFT5NSaGULi0";
+// Primary client - YOUR Supabase (all database operations, auth)
+// Uses environment variables from Vercel or .env.local
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// Original Softgen Supabase (for Edge Functions only)
+// Functions client - Original Softgen Supabase (Edge Functions only: AI, email, etc.)
 const FUNCTIONS_SUPABASE_URL = "https://onxyqhixydadpnkvdtvm.supabase.co";
 const FUNCTIONS_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ueHlxaGl4eWRhZHBua3ZkdHZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1OTg2MjksImV4cCI6MjA3NTE3NDYyOX0.EVvMGQc-oRESw31zxliGKxx99tSor0-35nWBs4HjS8c";
 
-// Import the supabase client like this:
-// import { supabase, supabaseFunctions } from "@/integrations/supabase/client";
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  console.error('⚠️ Missing Supabase environment variables!');
+  console.error('Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel');
+  console.error('Or NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
+}
 
 // Primary client - YOUR Supabase (all database operations, auth)
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export const supabase = createClient<Database>(
+  SUPABASE_URL || 'https://placeholder.supabase.co',
+  SUPABASE_PUBLISHABLE_KEY || 'placeholder-key'
+);
 
 // Functions client - Original Softgen Supabase (Edge Functions only: AI, email, etc.)
 // This allows you to keep your data separate while using existing Edge Functions
