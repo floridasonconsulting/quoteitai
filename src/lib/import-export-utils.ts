@@ -207,12 +207,26 @@ export async function importItemsFromCSV(
       }
 
       // Don't queue to sync manager - direct DB insert during import
-      const inserted = await addItem(userId, item as Item);
+      const newItem: Item = {
+        id: crypto.randomUUID(),
+        name: item.name as string,
+        description: item.description as string,
+        category: item.category as string,
+        basePrice: item.basePrice as number,
+        markup: item.markup as number,
+        markupType: item.markupType as 'percentage' | 'fixed',
+        finalPrice: item.finalPrice as number,
+        units: item.units as string,
+        minQuantity: item.minQuantity as number,
+        imageUrl: item.imageUrl as string,
+        createdAt: new Date().toISOString(),
+      };
+      const added = await addItem(userId, newItem);
       
       // Update local cache immediately so data appears without navigation
       const { getCachedData, setCachedData } = await import('./db-service');
       const cached = getCachedData<Item>('items-cache') || [];
-      setCachedData('items-cache', [...cached, inserted]);
+      setCachedData('items-cache', [...cached, added]);
       
       result.success++;
     } catch (error) {

@@ -4,7 +4,7 @@ import type { User, Session } from "@supabase/supabase-js";
 export interface AuthUser {
   id: string;
   email: string;
-  user_metadata?: Record<string, unknown>;
+  user_metadata?: any;
   created_at?: string;
 }
 
