@@ -172,11 +172,11 @@ export async function addItem(
     finalPrice
   } as Item;
 
-  // Save to IndexedDB first if supported (includes minQuantity)
+  // Save to IndexedDB first if supported (includes minQuantity and imageUrl)
   if (isIndexedDBSupported()) {
     try {
       await ItemDB.add(itemWithUser as never);
-      console.log('[ItemService] Saved item to IndexedDB');
+      console.log('[ItemService] Saved item to IndexedDB (includes minQuantity and imageUrl)');
     } catch (error) {
       console.warn('[ItemService] IndexedDB save failed:', error);
     }
@@ -194,9 +194,13 @@ export async function addItem(
   }
 
   try {
-    // CRITICAL: Remove minQuantity before sending to Supabase (column doesn't exist yet)
-    const { minQuantity, ...itemForDB } = itemWithUser;
+    // TEMPORARY: Remove new fields if migrations haven't been run yet
+    // TODO: Remove this after running migrations in Supabase
+    const { minQuantity, imageUrl, ...itemForDB } = itemWithUser;
     const dbItem = toSnakeCase(itemForDB);
+    
+    console.log('[ItemService] Saving to Supabase (without minQuantity/imageUrl until migrations run)');
+    console.log('[ItemService] Note: minQuantity and imageUrl are saved in IndexedDB only');
     
     const startTime = performance.now();
     const { error } = await supabase.from('items').insert(dbItem as unknown);
@@ -213,7 +217,7 @@ export async function addItem(
       throw error;
     }
     
-    console.log('✅ Successfully inserted item into database');
+    console.log('✅ Successfully inserted item into database (minQuantity/imageUrl in IndexedDB only)');
     
     dispatchDataRefresh('items-changed');
     
@@ -256,11 +260,11 @@ export async function updateItem(
 
   const updatedItem = { ...currentItem, ...updates } as Item;
 
-  // Update IndexedDB (includes minQuantity)
+  // Update IndexedDB (includes minQuantity and imageUrl)
   if (isIndexedDBSupported()) {
     try {
       await ItemDB.update({ ...updatedItem, user_id: userId } as never);
-      console.log('[ItemService] Updated item in IndexedDB');
+      console.log('[ItemService] Updated item in IndexedDB (includes minQuantity and imageUrl)');
     } catch (error) {
       console.warn('[ItemService] IndexedDB update failed:', error);
     }
@@ -275,9 +279,13 @@ export async function updateItem(
   }
 
   try {
-    // CRITICAL: Remove minQuantity before sending to Supabase (column doesn't exist yet)
-    const { minQuantity, ...updatesForDB } = updates;
+    // TEMPORARY: Remove new fields if migrations haven't been run yet
+    // TODO: Remove this after running migrations in Supabase
+    const { minQuantity, imageUrl, ...updatesForDB } = updates;
     const dbUpdates = toSnakeCase(updatesForDB);
+    
+    console.log('[ItemService] Updating Supabase (without minQuantity/imageUrl until migrations run)');
+    console.log('[ItemService] Note: minQuantity and imageUrl are saved in IndexedDB only');
     
     const startTime = performance.now();
     const { error } = await supabase
@@ -296,6 +304,8 @@ export async function updateItem(
     );
 
     if (error) throw error;
+    
+    console.log('✅ Successfully updated item in database (minQuantity/imageUrl in IndexedDB only)');
     
     dispatchDataRefresh('items-changed');
     
