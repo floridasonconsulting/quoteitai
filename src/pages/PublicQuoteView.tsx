@@ -439,29 +439,35 @@ export default function PublicQuoteView() {
     );
   }
 
-  // Show not found if no quote
-  if (!quote) {
+  // Show not found if no quote OR if data is still loading
+  if (!quote || !settings) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="p-8 text-center">
-          <h1 className="text-2xl font-bold mb-2">Quote Not Found</h1>
-          <p className="text-muted-foreground">This link may be invalid or expired.</p>
+          {loading ? (
+            <>
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+              <p className="text-muted-foreground">Loading quote...</p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold mb-2">Quote Not Found</h1>
+              <p className="text-muted-foreground">This link may be invalid or expired.</p>
+            </>
+          )}
         </div>
       </div>
     );
   }
-
-  // Transform legacy data to new Proposal format
-  const proposalData = transformQuoteToProposal(quote, customer || undefined, settings || undefined);
 
   console.log('[PublicQuoteView] Rendering viewer - isOwner:', isOwner, 'status:', quote.status);
 
   return (
     <div className="min-h-screen bg-slate-50">
       <ProposalViewer 
-        proposal={proposalData} 
-        onSign={handleSign}
-        readOnly={isOwner || quote.status === 'accepted' || quote.status === 'declined'}
+        quote={quote}
+        companySettings={settings}
+        isPreview={isOwner}
         actionBar={isOwner ? undefined : {
           quoteId: quote.id,
           total: quote.total,
