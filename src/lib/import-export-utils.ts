@@ -143,8 +143,10 @@ export async function importItemsFromCSV(
           // Store minQuantity locally (IndexedDB/cache only, not sent to Supabase)
           (item as Record<string, unknown>)[headerName] = parseInt(value, 10) || 1;
         } else if (headerName === 'imageUrl') {
-          // Parse imageUrl field (optional, can be empty)
-          (item as Record<string, unknown>)[headerName] = value.trim() || undefined;
+          // Parse imageUrl field (COMPLETELY OPTIONAL)
+          // Handle: missing column, empty string, whitespace-only, or valid URL
+          const trimmedUrl = value.trim();
+          (item as Record<string, unknown>)[headerName] = trimmedUrl ? trimmedUrl : undefined;
         } else if (headerName === 'markup') {
           // Parse markup and detect type from format
           const markupValue = value.trim();
