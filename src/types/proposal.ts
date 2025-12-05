@@ -19,13 +19,21 @@ export interface ProposalClient {
 }
 
 export interface ProposalItem {
-  id: string;
+  itemId?: string;
   name: string;
-  desc: string;
+  description: string;
+  quantity: number;
   price: number;
-  optional: boolean;
-  quantity?: number;
+  total: number;
   units?: string;
+  imageUrl?: string; // NEW: Product/service image
+}
+
+export interface CategoryGroup {
+  category: string;
+  displayName: string;
+  items: ProposalItem[];
+  subtotal: number;
 }
 
 export interface PricingOption {
@@ -38,18 +46,17 @@ export interface PricingOption {
 
 export interface ProposalSection {
   id: string;
-  type: 'hero' | 'text' | 'line-items' | 'pricing' | 'legal';
-  title: string;
-  // Hero specific
+  type: 'hero' | 'text' | 'lineItems' | 'categoryGroup' | 'pricing' | 'legal';
+  title?: string;
   subtitle?: string;
-  backgroundImage?: string;
-  // Text/Legal specific
   content?: string;
-  // Line items specific
-  showPrices?: boolean;
+  backgroundImage?: string;
   items?: ProposalItem[];
-  // Pricing specific
-  packages?: PricingOption[];
+  categoryGroups?: CategoryGroup[]; // NEW: Grouped items by category
+  subtotal?: number;
+  tax?: number;
+  total?: number;
+  terms?: string;
 }
 
 export interface ProposalData {

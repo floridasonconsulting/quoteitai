@@ -1,112 +1,119 @@
-import { Quote, Customer, CompanySettings } from "@/types";
-import { ProposalData, ProposalSection, ProposalItem, ProposalStatus, ProposalTheme } from "@/types/proposal";
+/**
+ * Proposal Transformation Layer
+ * Transforms Quote data into structured ProposalData with category grouping
+ */
 
+import { Quote, Customer, CompanySettings, QuoteItem } from '@/types';
+import { ProposalData, ProposalSection, CategoryGroup, ProposalItem } from '@/types/proposal';
+import { CATEGORY_DISPLAY_ORDER, sortCategoriesByOrder, getCategoryConfig } from './proposal-config';
+
+/**
+ * Transform quote to proposal with intelligent category grouping
+ */
 export function transformQuoteToProposal(
   quote: Quote,
   customer?: Customer,
   settings?: CompanySettings
 ): ProposalData {
-  // Default to branding from settings or generic fallback
-  const primaryColor = settings?.primaryColor || "#0f766e";
-  const currency = "$"; // Could be pulled from settings if available
-
-  // 1. Transform Items to Proposal Items
-  const proposalItems: ProposalItem[] = quote.items.map(item => ({
-    id: item.itemId || crypto.randomUUID(),
-    name: item.name,
-    desc: item.description || "",
-    price: item.price,
-    quantity: item.quantity,
-    units: item.units,
-    optional: false, // Default existing items to required
-  }));
-
-  // 2. Build Sections
-  const sections: ProposalSection[] = [];
-
-  // Hero Section
-  sections.push({
-    id: "hero",
-    type: "hero",
-    title: quote.title,
-    subtitle: `Quote #${quote.quoteNumber} • ${new Date(quote.createdAt).toLocaleDateString()}`,
-    backgroundImage: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80", // Default professional background
-  });
-
-  // Executive Summary (if exists)
-  if (quote.executiveSummary) {
-    sections.push({
-      id: "summary",
-      type: "text",
-      title: "Executive Summary",
-      content: quote.executiveSummary,
-    });
-  }
-
-  // Line Items
-  if (proposalItems.length > 0) {
-    sections.push({
-      id: "items",
-      type: "line-items",
-      title: "Schedule of Values",
-      showPrices: true,
-      items: proposalItems,
-    });
-  }
-
-  // Notes / Terms
-  if (quote.notes) {
-    sections.push({
-      id: "notes",
-      type: "text",
-      title: "Notes",
-      content: quote.notes.replace(/\n/g, "<br/>"),
-    });
-  }
-
-  // Legal / Terms from Settings
-  if (settings?.terms) {
-    sections.push({
-      id: "terms",
-      type: "legal",
-      title: "Terms & Conditions",
-      content: settings.terms.replace(/\n/g, "<br/>"),
-    });
-  }
-
-  // Map status safely
-  let status: ProposalStatus = 'draft';
-  if (quote.status === 'accepted') status = 'accepted';
-  else if (quote.status === 'declined') status = 'declined';
-  else if (quote.status === 'sent') status = 'sent';
+  // Group items by category
+  const categoryGroups = groupItemsByCategory(quote.items);
   
-  // Map theme safely
-  let theme: ProposalTheme = 'corporate_sidebar';
-  if (settings?.proposalTemplate === 'presentation_deck') theme = 'presentation_deck';
-  else if (settings?.proposalTemplate === 'modern') theme = 'modern_scroll';
+  // Build sections in presentation order
+  const sections: ProposalSection[] = [
+    // 1. Hero/Title Page
+    {
+      id: 'hero',
+      type: 'hero',
+      title: quote.title,
+      subtitle: customer?.name || quote.customerName,
+      backgroundImage: settings?.logo,
+    },
+    
+    // 2. Executive Summary (if exists)
+    ...(quote.executiveSummary ? [{
+      id: 'executive-summary',
+      type: 'text' as const,
+      title: 'Executive Summary',
+      content: quote.executiveSummary,
+    }] : []),
+    
+    // 3. Category Groups (dynamic, sorted by display order)
+    ...categoryGroups.map((group, index) => ({
+      id: `category-${index}`,
+      type: 'categoryGroup' as const,
+      title: group.displayName,
+      categoryGroups: [group],
+    })),
+    
+    // 4. Pricing Summary
+    {
+      id: 'pricing',
+      type: 'pricing' as const,
+      title: 'Investment Summary',
+      subtotal: quote.subtotal,
+      tax: quote.tax,
+      total: quote.total,
+      terms: settings?.terms || 'Payment terms to be discussed',
+    },
+    
+    // 5. Terms & Conditions
+    {
+      id: 'legal',
+      type: 'legal' as const,
+      title: 'Terms & Conditions',
+      content: settings?.terms || 'Standard terms and conditions apply.',
+    },
+  ];
 
   return {
     id: quote.id,
-    status: status,
-    settings: {
-      theme: theme,
-      mode: "light",
-      primaryColor: primaryColor,
-      currency: currency,
-    },
-    client: {
-      name: quote.customerName,
-      email: customer?.email || "",
-      address: customer?.address || "",
-      company: customer?.name, // Assuming customer name might be company name
-    },
-    sender: {
-      name: settings?.name || "Sales Team",
-      company: settings?.name || "Our Company",
-      logoUrl: settings?.logo || undefined,
-    },
-    sections: sections,
+    quoteId: quote.id,
+    theme: settings?.proposalTheme || 'modern-corporate',
+    sections,
     createdAt: quote.createdAt,
     updatedAt: quote.updatedAt,
   };
+}
+
+/**
+ * Group quote items by category with sorting
+ */
+function groupItemsByCategory(items: QuoteItem[]): CategoryGroup[] {
+  // Create a map of category -> items
+  const categoryMap = new Map<string, ProposalItem[]>();
+  
+  items.forEach(item => {
+    const category = item.category || 'Uncategorized';
+    
+    if (!categoryMap.has(category)) {
+      categoryMap.set(category, []);
+    }
+    
+    categoryMap.get(category)!.push({
+      itemId: item.itemId,
+      name: item.name,
+      description: item.description,
+      quantity: item.quantity,
+      price: item.price,
+      total: item.total,
+      units: item.units,
+      imageUrl: item.imageUrl,
+    });
+  });
+  
+  // Convert map to sorted array of CategoryGroups
+  const categories = Array.from(categoryMap.keys());
+  const sortedCategories = sortCategoriesByOrder(categories);
+  
+  return sortedCategories.map(category => {
+    const items = categoryMap.get(category)!;
+    const config = getCategoryConfig(category);
+    
+    return {
+      category,
+      displayName: config?.displayName || category,
+      items,
+      subtotal: items.reduce((sum, item) => sum + item.total, 0),
+    };
+  });
 }

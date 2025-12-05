@@ -25,6 +25,7 @@ export interface Item {
   finalPrice: number;
   units: string;
   minQuantity?: number; // OPTIONAL: Default minimum quantity (local-only until migration runs)
+  imageUrl?: string; // NEW: URL to product/service image for proposals
   createdAt: string;
 }
 
