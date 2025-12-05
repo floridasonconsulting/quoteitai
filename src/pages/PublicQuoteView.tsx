@@ -54,14 +54,16 @@ export default function PublicQuoteView() {
     console.log('[PublicQuoteView] checkSession - user:', user?.id);
     
     try {
-      // PRIORITY 1: Check for owner bypass flag from sessionStorage
-      const ownerBypass = sessionStorage.getItem('proposal_owner_bypass');
-      console.log('[PublicQuoteView] Owner bypass flag check:', ownerBypass); // DEBUG
-      if (ownerBypass === 'true') {
-        console.log('[PublicQuoteView] Owner bypass flag found in sessionStorage');
+      // PRIORITY 1: Check for owner bypass flag from URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const ownerParam = urlParams.get('owner');
+      console.log('[PublicQuoteView] Owner parameter check:', ownerParam);
+      
+      if (ownerParam === 'true') {
+        console.log('[PublicQuoteView] Owner bypass flag found in URL');
         setIsOwner(true);
         setAuthenticated(true);
-        setUserEmail(user?.email || '');
+        setUserEmail(user?.email || 'Owner');
         await loadQuote();
         return;
       }

@@ -224,11 +224,8 @@ export default function QuoteDetail() {
       }
     }
     
-    // Store owner bypass flag in sessionStorage
-    sessionStorage.setItem('proposal_owner_bypass', 'true');
-    
-    // Open preview in new tab
-    const previewUrl = `${window.location.origin}/quotes/public/${token}`;
+    // Open preview in new tab with owner bypass parameter
+    const previewUrl = `${window.location.origin}/quotes/public/${token}?owner=true`;
     window.open(previewUrl, '_blank');
   };
 
