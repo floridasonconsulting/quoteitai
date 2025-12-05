@@ -16,83 +16,61 @@ async function runMigrations() {
   console.log("🚀 Starting database migrations...\n");
 
   try {
-    // Migration 1: Add min_quantity column
-    console.log("📝 Migration 1: Adding min_quantity column to items table...");
+    // Test: Try to query items table to see current schema
+    console.log("🔍 Checking current items table schema...");
     
-    const { error: minQuantityError } = await supabase.rpc('exec_sql', {
-      sql: `
-        -- Add min_quantity column to items table
-        DO $$ 
-        BEGIN
-          IF NOT EXISTS (
-            SELECT 1 FROM information_schema.columns 
-            WHERE table_name = 'items' AND column_name = 'min_quantity'
-          ) THEN
-            ALTER TABLE items ADD COLUMN min_quantity INTEGER DEFAULT 1;
-            ALTER TABLE items ADD CONSTRAINT items_min_quantity_positive CHECK (min_quantity > 0);
-            UPDATE items SET min_quantity = 1 WHERE min_quantity IS NULL;
-            ALTER TABLE items ALTER COLUMN min_quantity SET NOT NULL;
-            COMMENT ON COLUMN items.min_quantity IS 'Minimum quantity that must be ordered for this item';
-            RAISE NOTICE 'Added min_quantity column';
-          ELSE
-            RAISE NOTICE 'min_quantity column already exists';
-          END IF;
-        END $$;
-      `
-    });
+    const { data: sampleItem, error: queryError } = await supabase
+      .from('items')
+      .select('*')
+      .limit(1)
+      .single();
 
-    if (minQuantityError) {
-      console.error("❌ Error adding min_quantity:", minQuantityError);
-    } else {
-      console.log("✅ min_quantity column migration complete\n");
+    if (queryError && queryError.code !== 'PGRST116') {
+      console.error("❌ Error querying items table:", queryError);
+      throw queryError;
     }
 
-    // Migration 2: Add image_url column
-    console.log("📝 Migration 2: Adding image_url column to items table...");
-    
-    const { error: imageUrlError } = await supabase.rpc('exec_sql', {
-      sql: `
-        -- Add image_url column to items table
-        DO $$ 
-        BEGIN
-          IF NOT EXISTS (
-            SELECT 1 FROM information_schema.columns 
-            WHERE table_name = 'items' AND column_name = 'image_url'
-          ) THEN
-            ALTER TABLE items ADD COLUMN image_url TEXT;
-            COMMENT ON COLUMN items.image_url IS 'URL to product/service image for proposal presentations';
-            RAISE NOTICE 'Added image_url column';
-          ELSE
-            RAISE NOTICE 'image_url column already exists';
-          END IF;
-        END $$;
-      `
-    });
-
-    if (imageUrlError) {
-      console.error("❌ Error adding image_url:", imageUrlError);
+    if (sampleItem) {
+      console.log("✅ Items table exists");
+      console.log("📊 Sample item columns:", Object.keys(sampleItem));
+      
+      // Check if min_quantity exists
+      if ('min_quantity' in sampleItem) {
+        console.log("✅ min_quantity column already exists");
+      } else {
+        console.log("⚠️  min_quantity column missing - needs manual migration");
+      }
+      
+      // Check if image_url exists
+      if ('image_url' in sampleItem) {
+        console.log("✅ image_url column already exists");
+      } else {
+        console.log("⚠️  image_url column missing - needs manual migration");
+      }
     } else {
-      console.log("✅ image_url column migration complete\n");
+      console.log("ℹ️  No items in table yet, cannot verify schema");
     }
 
-    // Verify columns exist
-    console.log("🔍 Verifying migrations...");
-    const { data: columns, error: verifyError } = await supabase
-      .from('information_schema.columns')
-      .select('column_name, data_type')
-      .eq('table_name', 'items')
-      .in('column_name', ['min_quantity', 'image_url']);
-
-    if (verifyError) {
-      console.error("❌ Verification failed:", verifyError);
-    } else {
-      console.log("✅ Verified columns:", columns);
-    }
-
-    console.log("\n🎉 All migrations completed successfully!");
+    console.log("\n📝 Migration Status:");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("\nThe Supabase anon key doesn't have permission to alter tables.");
+    console.log("You need to run these migrations from the Supabase Dashboard:\n");
+    console.log("1. Go to: https://supabase.com/dashboard/project/onxyqhixydadpnkvdtvm/editor");
+    console.log("2. Click 'SQL Editor' in the left sidebar");
+    console.log("3. Run this SQL:\n");
+    console.log("-- Add min_quantity column");
+    console.log("ALTER TABLE items ADD COLUMN IF NOT EXISTS min_quantity INTEGER DEFAULT 1;");
+    console.log("ALTER TABLE items ADD CONSTRAINT items_min_quantity_positive CHECK (min_quantity > 0);");
+    console.log("");
+    console.log("-- Add image_url column");
+    console.log("ALTER TABLE items ADD COLUMN IF NOT EXISTS image_url TEXT;");
+    console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    console.log("ℹ️  Note: The app works fine without these migrations!");
+    console.log("   Data saves to IndexedDB locally. Migrations only needed");
+    console.log("   if you want to sync minQuantity/imageUrl to Supabase.\n");
 
   } catch (error) {
-    console.error("\n❌ Migration failed:", error);
+    console.error("\n❌ Error:", error);
     process.exit(1);
   }
 }
