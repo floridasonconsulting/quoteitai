@@ -176,7 +176,7 @@ export async function addItem(
   if (isIndexedDBSupported()) {
     try {
       await ItemDB.add(itemWithUser as never);
-      console.log('[ItemService] Saved item to IndexedDB (includes minQuantity and imageUrl)');
+      console.log('[ItemService] ✅ Saved item to IndexedDB (includes minQuantity and imageUrl)');
     } catch (error) {
       console.warn('[ItemService] IndexedDB save failed:', error);
     }
@@ -185,22 +185,29 @@ export async function addItem(
   // Invalidate cache to force refresh
   await cacheManager.invalidate('items');
 
-  if (!navigator.onLine || !userId) {
+  // Check if Supabase is actually connected before attempting sync
+  const isSupabaseConnected = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
+  
+  if (!navigator.onLine || !userId || !isSupabaseConnected) {
     if (!userId) {
-      console.warn('⚠️ No user ID - item saved to IndexedDB only.');
+      console.warn('[ItemService] ⚠️ No user ID - item saved to IndexedDB only.');
     }
-    queueChange?.({ type: 'create', table: 'items', data: itemWithUser });
+    if (!isSupabaseConnected) {
+      console.log('[ItemService] ℹ️ Supabase not connected - item saved to IndexedDB only.');
+    }
+    // Don't queue for sync if Supabase isn't connected
+    if (isSupabaseConnected) {
+      queueChange?.({ type: 'create', table: 'items', data: itemWithUser });
+    }
     return itemWithUser;
   }
 
   try {
-    // TEMPORARY: Remove new fields if migrations haven't been run yet
-    // TODO: Remove this after running migrations in Supabase
+    // Remove new fields until migrations are run
     const { minQuantity, imageUrl, ...itemForDB } = itemWithUser;
     const dbItem = toSnakeCase(itemForDB);
     
-    console.log('[ItemService] Saving to Supabase (without minQuantity/imageUrl until migrations run)');
-    console.log('[ItemService] Note: minQuantity and imageUrl are saved in IndexedDB only');
+    console.log('[ItemService] Syncing to Supabase (without minQuantity/imageUrl until migrations run)');
     
     const startTime = performance.now();
     const { error } = await supabase.from('items').insert(dbItem as unknown);
@@ -213,19 +220,20 @@ export async function addItem(
     );
 
     if (error) {
-      console.error('❌ Database insert failed for item:', error);
+      console.error('[ItemService] ❌ Database insert failed:', error);
       throw error;
     }
     
-    console.log('✅ Successfully inserted item into database (minQuantity/imageUrl in IndexedDB only)');
+    console.log('[ItemService] ✅ Successfully synced to Supabase');
     
     dispatchDataRefresh('items-changed');
     
     return itemWithUser;
   } catch (error) {
-    console.error('⚠️ Error creating item, queued for sync:', error);
+    console.error('[ItemService] ⚠️ Error syncing to Supabase, item saved locally:', error);
     queueChange?.({ type: 'create', table: 'items', data: itemWithUser });
-    throw error;
+    // Still return the item since it's saved locally
+    return itemWithUser;
   }
 }
 
@@ -264,7 +272,7 @@ export async function updateItem(
   if (isIndexedDBSupported()) {
     try {
       await ItemDB.update({ ...updatedItem, user_id: userId } as never);
-      console.log('[ItemService] Updated item in IndexedDB (includes minQuantity and imageUrl)');
+      console.log('[ItemService] ✅ Updated item in IndexedDB (includes minQuantity and imageUrl)');
     } catch (error) {
       console.warn('[ItemService] IndexedDB update failed:', error);
     }
@@ -273,19 +281,26 @@ export async function updateItem(
   // Invalidate cache
   await cacheManager.invalidate('items');
 
-  if (!navigator.onLine || !userId) {
-    queueChange?.({ type: 'update', table: 'items', data: { id, ...updates } });
+  // Check if Supabase is actually connected before attempting sync
+  const isSupabaseConnected = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  if (!navigator.onLine || !userId || !isSupabaseConnected) {
+    if (!isSupabaseConnected) {
+      console.log('[ItemService] ℹ️ Supabase not connected - item updated in IndexedDB only.');
+    }
+    // Don't queue for sync if Supabase isn't connected
+    if (isSupabaseConnected) {
+      queueChange?.({ type: 'update', table: 'items', data: { id, ...updates } });
+    }
     return updatedItem;
   }
 
   try {
-    // TEMPORARY: Remove new fields if migrations haven't been run yet
-    // TODO: Remove this after running migrations in Supabase
+    // Remove new fields until migrations are run
     const { minQuantity, imageUrl, ...updatesForDB } = updates;
     const dbUpdates = toSnakeCase(updatesForDB);
     
-    console.log('[ItemService] Updating Supabase (without minQuantity/imageUrl until migrations run)');
-    console.log('[ItemService] Note: minQuantity and imageUrl are saved in IndexedDB only');
+    console.log('[ItemService] Syncing update to Supabase (without minQuantity/imageUrl until migrations run)');
     
     const startTime = performance.now();
     const { error } = await supabase
@@ -305,13 +320,13 @@ export async function updateItem(
 
     if (error) throw error;
     
-    console.log('✅ Successfully updated item in database (minQuantity/imageUrl in IndexedDB only)');
+    console.log('[ItemService] ✅ Successfully synced update to Supabase');
     
     dispatchDataRefresh('items-changed');
     
     return updatedItem;
   } catch (error) {
-    console.error('Error updating item:', error);
+    console.error('[ItemService] ⚠️ Error syncing update to Supabase, item updated locally:', error);
     queueChange?.({ type: 'update', table: 'items', data: { id, ...updates } });
     return updatedItem;
   }
@@ -330,7 +345,7 @@ export async function deleteItem(
   if (isIndexedDBSupported()) {
     try {
       await ItemDB.delete(id);
-      console.log('[ItemService] Deleted item from IndexedDB');
+      console.log('[ItemService] ✅ Deleted item from IndexedDB');
     } catch (error) {
       console.warn('[ItemService] IndexedDB delete failed:', error);
     }
@@ -339,8 +354,17 @@ export async function deleteItem(
   // Invalidate cache
   await cacheManager.invalidate('items');
 
-  if (!navigator.onLine || !userId) {
-    queueChange?.({ type: 'delete', table: 'items', data: { id } });
+  // Check if Supabase is actually connected before attempting sync
+  const isSupabaseConnected = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  if (!navigator.onLine || !userId || !isSupabaseConnected) {
+    if (!isSupabaseConnected) {
+      console.log('[ItemService] ℹ️ Supabase not connected - item deleted from IndexedDB only.');
+    }
+    // Don't queue for sync if Supabase isn't connected
+    if (isSupabaseConnected) {
+      queueChange?.({ type: 'delete', table: 'items', data: { id } });
+    }
     return;
   }
 
@@ -361,9 +385,11 @@ export async function deleteItem(
 
     if (error) throw error;
     
+    console.log('[ItemService] ✅ Successfully synced delete to Supabase');
+    
     dispatchDataRefresh('items-changed');
   } catch (error) {
-    console.error('Error deleting item:', error);
+    console.error('[ItemService] ⚠️ Error syncing delete to Supabase, item deleted locally:', error);
     queueChange?.({ type: 'delete', table: 'items', data: { id } });
   }
 }
