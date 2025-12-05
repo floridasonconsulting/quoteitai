@@ -18,6 +18,7 @@ import type { CompanySettings } from '@/types';
 import { SettingsDB, isIndexedDBSupported } from './indexed-db';
 import { cacheManager } from './cache-manager';
 import { setStorageItem } from './storage';
+import { supabase } from '@/integrations/supabase/client';
 
 // Re-export everything from the specialized services
 export * from './services/quote-service';
@@ -72,63 +73,110 @@ export async function saveSettings(
   settings: CompanySettings,
   queueChange?: (change: SyncChange) => void
 ): Promise<void> {
-  console.log('[DB Service] Saving settings for user:', userId);
-  console.log('[DB Service] Settings data:', settings);
+  console.log('[DB Service] ========== SAVING SETTINGS ==========');
+  console.log('[DB Service] User ID:', userId);
+  console.log('[DB Service] Settings data:', JSON.stringify(settings, null, 2));
   
   try {
-    // Store in memory cache first
+    // Step 1: Store in memory cache first
     const cacheKey = `settings-${userId}`;
-    cacheManager.set(cacheKey, settings);
-    console.log('[DB Service] Settings cached successfully');
+    await cacheManager.set(cacheKey, settings);
+    console.log('[DB Service] ✓ Settings cached in memory');
 
-    // Store in IndexedDB
-    try {
-      const { default: SettingsDB } = await import('./indexed-db');
-      await SettingsDB.set(userId, settings);
-      console.log('[DB Service] Settings saved to IndexedDB');
-    } catch (indexedDBError) {
-      console.error('[DB Service] IndexedDB save failed, falling back to localStorage:', indexedDBError);
-      // Fallback to localStorage
-      setStorageItem(`settings-${userId}`, settings);
-    }
-
-    // Queue for Supabase sync
-    if (queueChange) {
-      queueChange({
-        id: `settings-${userId}`,
-        type: 'settings',
-        action: 'update',
-        data: settings,
-        timestamp: Date.now()
-      });
-      console.log('[DB Service] Settings queued for sync');
-    }
-
-    // Also attempt immediate Supabase save if online
-    if (navigator.onLine) {
+    // Step 2: Store in IndexedDB
+    if (isIndexedDBSupported()) {
       try {
-        const { supabase } = await import('@/integrations/supabase/client');
-        const { error } = await supabase
+        await SettingsDB.set(userId, settings);
+        console.log('[DB Service] ✓ Settings saved to IndexedDB');
+      } catch (indexedDBError) {
+        console.error('[DB Service] IndexedDB save failed:', indexedDBError);
+        // Fallback to localStorage
+        setStorageItem(`settings-${userId}`, settings);
+        console.log('[DB Service] ✓ Settings saved to localStorage (fallback)');
+      }
+    } else {
+      // No IndexedDB support, use localStorage
+      setStorageItem(`settings-${userId}`, settings);
+      console.log('[DB Service] ✓ Settings saved to localStorage');
+    }
+
+    // Step 3: Attempt immediate Supabase save if online
+    if (navigator.onLine) {
+      console.log('[DB Service] Online - attempting Supabase save...');
+      try {
+        const dbSettings = {
+          user_id: userId,
+          name: settings.name,
+          address: settings.address || '',
+          city: settings.city || '',
+          state: settings.state || '',
+          zip: settings.zip || '',
+          phone: settings.phone || '',
+          email: settings.email,
+          website: settings.website || '',
+          logo: settings.logo || null,
+          logo_display_option: settings.logoDisplayOption || 'both',
+          license: settings.license || '',
+          insurance: settings.insurance || '',
+          terms: settings.terms || '',
+          proposal_template: settings.proposalTemplate || 'classic',
+          proposal_theme: settings.proposalTheme || 'modern-corporate',
+          notify_email_accepted: settings.notifyEmailAccepted ?? true,
+          notify_email_declined: settings.notifyEmailDeclined ?? true,
+          onboarding_completed: settings.onboardingCompleted ?? false,
+          updated_at: new Date().toISOString()
+        };
+
+        console.log('[DB Service] Upserting to Supabase:', dbSettings);
+
+        const { data, error } = await supabase
           .from('company_settings')
-          .upsert({
-            user_id: userId,
-            ...settings,
-            updated_at: new Date().toISOString()
-          });
+          .upsert(dbSettings, { onConflict: 'user_id' })
+          .select()
+          .single();
 
         if (error) {
-          console.error('[DB Service] Supabase save error:', error);
-        } else {
-          console.log('[DB Service] Settings saved to Supabase successfully');
+          console.error('[DB Service] ❌ Supabase save error:', error);
+          throw error;
         }
+
+        console.log('[DB Service] ✓ Settings saved to Supabase successfully');
+        console.log('[DB Service] Supabase response:', data);
       } catch (supabaseError) {
-        console.error('[DB Service] Supabase save failed:', supabaseError);
+        console.error('[DB Service] ❌ Supabase save failed:', supabaseError);
+        
+        // Queue for later sync if queueChange provided
+        if (queueChange) {
+          console.log('[DB Service] Queueing settings for sync...');
+          queueChange({
+            id: `settings-${userId}`,
+            type: 'settings',
+            action: 'update',
+            data: settings,
+            timestamp: Date.now()
+          });
+          console.log('[DB Service] ✓ Settings queued for sync');
+        }
+      }
+    } else {
+      console.log('[DB Service] Offline - queueing for sync');
+      // Offline: queue for sync
+      if (queueChange) {
+        queueChange({
+          id: `settings-${userId}`,
+          type: 'settings',
+          action: 'update',
+          data: settings,
+          timestamp: Date.now()
+        });
+        console.log('[DB Service] ✓ Settings queued for sync');
       }
     }
 
-    console.log('[DB Service] Settings save complete');
+    console.log('[DB Service] ========== SETTINGS SAVE COMPLETE ==========');
   } catch (error) {
-    console.error('[DB Service] Critical error saving settings:', error);
+    console.error('[DB Service] ========== CRITICAL ERROR SAVING SETTINGS ==========');
+    console.error('[DB Service] Error:', error);
     throw new Error('Failed to save settings: ' + (error instanceof Error ? error.message : 'Unknown error'));
   }
 }
