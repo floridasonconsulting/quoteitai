@@ -5,7 +5,16 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://nasniikxboyzbbhezdgr.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hc25paWt4Ym95emJiaGV6ZGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2NzA1NjQsImV4cCI6MjA3NTI0NjU2NH0.0L_EbR_cL6DewkCEe5jVNByMNJ7UkaKpFT5NSaGULi0";
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
+// Original Softgen Supabase (for Edge Functions only)
+const FUNCTIONS_SUPABASE_URL = "https://onxyqhixydadpnkvdtvm.supabase.co";
+const FUNCTIONS_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ueHlxaGl4eWRhZHBua3ZkdHZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1OTg2MjksImV4cCI6MjA3NTE3NDYyOX0.EVvMGQc-oRESw31zxliGKxx99tSor0-35nWBs4HjS8c";
 
+// Import the supabase client like this:
+// import { supabase, supabaseFunctions } from "@/integrations/supabase/client";
+
+// Primary client - YOUR Supabase (all database operations, auth)
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+// Functions client - Original Softgen Supabase (Edge Functions only: AI, email, etc.)
+// This allows you to keep your data separate while using existing Edge Functions
+export const supabaseFunctions = createClient(FUNCTIONS_SUPABASE_URL, FUNCTIONS_SUPABASE_KEY);
