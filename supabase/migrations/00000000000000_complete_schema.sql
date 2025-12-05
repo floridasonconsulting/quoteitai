@@ -261,6 +261,75 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- ============================================================================
+-- ADMIN HELPER FUNCTIONS (for easy test account setup)
+-- ============================================================================
+
+-- Function to set user role by email (for easy admin setup)
+CREATE OR REPLACE FUNCTION set_user_role_by_email(_email TEXT, _role TEXT)
+RETURNS JSONB AS $$
+DECLARE
+    _user_id UUID;
+    result JSONB;
+BEGIN
+    -- Validate role
+    IF _role NOT IN ('free', 'pro', 'max', 'business', 'admin') THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Invalid role. Must be: free, pro, max, business, or admin'
+        );
+    END IF;
+    
+    -- Find user by email
+    SELECT id INTO _user_id
+    FROM auth.users
+    WHERE email = _email;
+    
+    -- Check if user exists
+    IF _user_id IS NULL THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'User not found with email: ' || _email
+        );
+    END IF;
+    
+    -- Insert or update role
+    INSERT INTO user_roles (user_id, role)
+    VALUES (_user_id, _role)
+    ON CONFLICT (user_id) DO UPDATE SET role = _role, updated_at = NOW();
+    
+    -- Return success
+    RETURN jsonb_build_object(
+        'success', true,
+        'user_id', _user_id,
+        'email', _email,
+        'role', _role,
+        'message', 'Role updated successfully'
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to list all users with their roles
+CREATE OR REPLACE FUNCTION list_users_with_roles()
+RETURNS TABLE (
+    user_id UUID,
+    email TEXT,
+    role TEXT,
+    created_at TIMESTAMPTZ
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        u.id as user_id,
+        u.email,
+        COALESCE(r.role, 'free') as role,
+        u.created_at
+    FROM auth.users u
+    LEFT JOIN user_roles r ON u.id = r.user_id
+    ORDER BY u.created_at DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$

@@ -133,6 +133,60 @@ If you want to transfer existing data from Softgen Supabase:
 
 ---
 
+## 👤 Setting Up Admin Test Accounts
+
+After running the schema migration, you need to create admin accounts for testing.
+
+### Quick Method: SQL Function
+
+The schema includes helper functions to easily set user roles!
+
+**Step 1: Create Your Test Account**
+1. In the app, sign up with your test email (e.g., `admin@test.com`)
+2. This creates the account as 'free' tier by default
+
+**Step 2: Upgrade to Admin/MAX**
+In Supabase SQL Editor, run:
+
+```sql
+-- Option A: Set role by email (easiest!)
+SELECT set_user_role_by_email('admin@test.com', 'admin');
+
+-- Option B: Set multiple accounts at once
+SELECT set_user_role_by_email('admin@test.com', 'admin');
+SELECT set_user_role_by_email('test1@test.com', 'max');
+SELECT set_user_role_by_email('test2@test.com', 'pro');
+```
+
+**Step 3: Verify**
+```sql
+-- List all users and their roles
+SELECT * FROM list_users_with_roles();
+```
+
+### Available Roles
+- `admin` - Full system access + unlimited AI
+- `max` - Unlimited AI access
+- `pro` - 100 AI requests/month
+- `free` - 10 AI requests/month
+- `business` - White-label features
+
+### Bulk Admin Setup Script
+If you have multiple test accounts:
+
+```sql
+-- Create admin accounts for your test team
+SELECT set_user_role_by_email('admin1@yourcompany.com', 'admin');
+SELECT set_user_role_by_email('admin2@yourcompany.com', 'admin');
+SELECT set_user_role_by_email('tester1@yourcompany.com', 'max');
+SELECT set_user_role_by_email('tester2@yourcompany.com', 'pro');
+
+-- Verify all were set correctly
+SELECT * FROM list_users_with_roles();
+```
+
+---
+
 ## 📞 Need Help?
 
 - Check the Supabase project logs: **Logs & Analytics** tab
