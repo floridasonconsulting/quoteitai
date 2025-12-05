@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from 'react';
 import { Plus, Search, Download, Upload, RefreshCw, AlertCircle, FileText, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,17 +18,6 @@ import { useLoadingState } from '@/hooks/useLoadingState';
 import { ItemsTable } from '@/components/items/ItemsTable';
 import { ItemForm, type FormData } from '@/components/items/ItemForm';
 
-const CATEGORIES = [
-  'General',
-  'Products',
-  'Services',
-  'Consulting',
-  'Labor',
-  'Materials',
-  'Equipment',
-  'Other',
-];
-
 export default function Items() {
   const { user } = useAuth();
   const { queueChange, pauseSync, resumeSync } = useSyncManager();
@@ -45,6 +33,9 @@ export default function Items() {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const { startLoading, stopLoading } = useLoadingState();
   const loadingRef = useRef(false);
+
+  // Extract unique categories from items
+  const uniqueCategories = Array.from(new Set(items.map(item => item.category))).sort();
 
   const loadItems = async (forceRefresh = false) => {
     if (loadingRef.current) {
@@ -207,7 +198,8 @@ export default function Items() {
     try {
       const basePrice = parseFloat(formData.basePrice);
       const markup = parseFloat(formData.markup) || 0;
-      const minQuantity = parseInt(formData.minQuantity) || 1; // NEW: Parse minQuantity
+      const minQuantity = parseInt(formData.minQuantity) || 1;
+      const imageUrl = formData.imageUrl?.trim() || undefined;
       const finalPrice = formData.markupType === 'percentage'
         ? basePrice + (basePrice * markup / 100)
         : basePrice + markup;
@@ -219,7 +211,8 @@ export default function Items() {
           basePrice,
           markup,
           finalPrice,
-          minQuantity, // NEW: Include minQuantity
+          minQuantity,
+          imageUrl,
         }, queueChange);
         setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
         toast.success('Item updated successfully');
@@ -231,7 +224,8 @@ export default function Items() {
           basePrice,
           markup,
           finalPrice,
-          minQuantity, // NEW: Include minQuantity
+          minQuantity,
+          imageUrl,
           createdAt: new Date().toISOString(),
         };
         const added = await addItem(user?.id, newItem, queueChange);
@@ -487,7 +481,7 @@ export default function Items() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {CATEGORIES.map(cat => (
+                {uniqueCategories.map(cat => (
                   <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                 ))}
               </SelectContent>

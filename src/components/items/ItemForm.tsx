@@ -35,7 +35,8 @@ export interface FormData {
   markup: string;
   markupType: 'percentage' | 'fixed';
   units: string;
-  minQuantity: string; // NEW: Minimum quantity field
+  minQuantity: string;
+  imageUrl: string; // NEW: Image URL field
 }
 
 export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemFormProps) {
@@ -47,7 +48,8 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemForm
     markup: '',
     markupType: 'percentage',
     units: 'Each',
-    minQuantity: '1', // NEW: Default to 1
+    minQuantity: '1',
+    imageUrl: '', // NEW: Initialize empty
   });
 
   useEffect(() => {
@@ -60,7 +62,8 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemForm
         markup: editingItem.markup.toString(),
         markupType: editingItem.markupType,
         units: editingItem.units || 'Each',
-        minQuantity: editingItem.minQuantity?.toString() || '1', // NEW: Load from editing item
+        minQuantity: editingItem.minQuantity?.toString() || '1',
+        imageUrl: editingItem.imageUrl || '', // NEW: Load from editing item
       });
     } else {
       setFormData({
@@ -71,7 +74,8 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemForm
         markup: '',
         markupType: 'percentage',
         units: 'Each',
-        minQuantity: '1', // NEW: Default to 1
+        minQuantity: '1',
+        imageUrl: '', // NEW: Initialize empty
       });
     }
   }, [editingItem, open]);
@@ -183,6 +187,23 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit }: ItemForm
               value={formData.minQuantity}
               onChange={(e) => setFormData({ ...formData, minQuantity: e.target.value })}
               placeholder="1"
+            />
+          </div>
+
+          {/* NEW: Image URL Field */}
+          <div className="space-y-2">
+            <Label htmlFor="imageUrl" className="flex items-center gap-2">
+              Image URL
+              <span className="text-xs text-muted-foreground font-normal">
+                (Optional - URL to product/service image for proposals)
+              </span>
+            </Label>
+            <Input
+              id="imageUrl"
+              type="url"
+              value={formData.imageUrl}
+              onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+              placeholder="https://example.com/image.jpg"
             />
           </div>
 
