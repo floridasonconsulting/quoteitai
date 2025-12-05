@@ -54,7 +54,18 @@ export default function PublicQuoteView() {
     console.log('[PublicQuoteView] checkSession - user:', user?.id);
     
     try {
-      // PRIORITY 1: If user is logged in, check if they own the quote
+      // PRIORITY 1: Check for owner bypass flag from sessionStorage
+      const ownerBypass = sessionStorage.getItem('proposal_owner_bypass');
+      if (ownerBypass === 'true') {
+        console.log('[PublicQuoteView] Owner bypass flag found in sessionStorage');
+        setIsOwner(true);
+        setAuthenticated(true);
+        setUserEmail(user.email || '');
+        await loadQuote();
+        return;
+      }
+
+      // PRIORITY 2: If user is logged in, check if they own the quote
       if (user?.id) {
         console.log('[PublicQuoteView] User logged in, checking ownership...');
         const ownershipResult = await checkOwnership();
@@ -64,7 +75,7 @@ export default function PublicQuoteView() {
         }
       }
 
-      // PRIORITY 2: Check for existing session token (for external customers)
+      // PRIORITY 3: Check for existing session token (for external customers)
       console.log('[PublicQuoteView] Not owner, checking session token...');
       const sessionData = sessionStorage.getItem('proposal_session');
       if (sessionData) {

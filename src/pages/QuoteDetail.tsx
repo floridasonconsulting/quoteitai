@@ -224,6 +224,9 @@ export default function QuoteDetail() {
       }
     }
     
+    // Store owner bypass flag in sessionStorage
+    sessionStorage.setItem('storeOwnerBypass', 'true');
+    
     // Open preview in new tab
     const previewUrl = `${window.location.origin}/quotes/public/${token}`;
     window.open(previewUrl, '_blank');
