@@ -1,22 +1,24 @@
-import { ProposalData } from '@/types/proposal';
+import { useState } from 'react';
+import { CompanySettings, Quote } from "@/types";
+import { getTheme, getThemeCSSVars } from "@/lib/proposal-themes";
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination, EffectCube, Keyboard, Mousewheel } from 'swiper/modules';
+import { ProposalSuccessState } from './ProposalSuccessStates';
+import { transformQuoteToProposal } from '@/lib/proposal-transformation';
 import { HeroSection } from './HeroSection';
 import { TextSection } from './TextSection';
-import { LineItemSection } from './LineItemSection';
+import { CategoryGroupSection } from './CategoryGroupSection';
 import { PricingSection } from './PricingSection';
 import { LegalSection } from './LegalSection';
 import { ProposalActionBar } from './ProposalActionBar';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Pagination, EffectCube, Keyboard, Mousewheel } from 'swiper/modules';
-import { useRef } from 'react';
-import type { Swiper as SwiperType } from 'swiper';
-import { CompanySettings, Quote } from "@/types";
-import { getTheme, getThemeCSSVars } from "@/lib/proposal-themes";
 
 // Import Swiper styles
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-cube';
+
+type SuccessStateType = 'accepted' | 'declined' | 'commented' | null;
 
 interface ProposalViewerProps {
   quote: Quote;
@@ -34,9 +36,9 @@ interface ProposalViewerProps {
 }
 
 export function ProposalViewer({ quote, companySettings, isPreview = false, actionBar }: ProposalViewerProps) {
-  const swiperRef = useRef<SwiperType>();
+  const [successState, setSuccessState] = useState<SuccessStateType>(null);
 
-  // CRITICAL: Guard against undefined props
+  // Defensive checks
   if (!quote) {
     console.error('[ProposalViewer] No quote data provided');
     return (
@@ -55,80 +57,39 @@ export function ProposalViewer({ quote, companySettings, isPreview = false, acti
     );
   }
 
+  // Transform quote to proposal structure with grouped categories
+  const proposalData = transformQuoteToProposal(quote, undefined, companySettings);
+  
   const theme = getTheme(companySettings.proposalTheme || "modern-corporate");
   const themeCSSVars = getThemeCSSVars(theme);
-  
-  // Create proposal data from quote for section rendering
-  const proposalData: ProposalData = {
-    id: quote.id,
-    quoteId: quote.id,
-    theme: companySettings.proposalTheme || "modern-corporate",
-    sections: [
-      // Hero section
-      {
-        id: 'hero',
-        type: 'hero' as const,
-        title: quote.title,
-        subtitle: companySettings.name,
-        backgroundImage: companySettings.logo || undefined,
-      },
-      // Executive summary if exists
-      ...(quote.executiveSummary ? [{
-        id: 'summary',
-        type: 'text' as const,
-        title: 'Executive Summary',
-        content: quote.executiveSummary,
-      }] : []),
-      // Line items
-      {
-        id: 'items',
-        type: 'lineItems' as const,
-        title: 'Project Scope',
-        items: quote.items.map(item => ({
-          name: item.name,
-          description: item.description,
-          quantity: item.quantity,
-          price: item.price,
-          total: item.total
-        }))
-      },
-      // Pricing
-      {
-        id: 'pricing',
-        type: 'pricing' as const,
-        subtotal: quote.subtotal,
-        tax: quote.tax,
-        total: quote.total,
-        terms: companySettings.terms || "Payment due within 30 days"
-      },
-      // Legal/Terms
-      {
-        id: 'legal',
-        type: 'legal' as const,
-        title: 'Terms & Conditions',
-        content: companySettings.terms || "Standard terms and conditions apply."
-      }
-    ],
-    createdAt: quote.createdAt,
-    updatedAt: quote.updatedAt
+
+  // Handle action bar events
+  const handleAccept = async () => {
+    if (!actionBar) return;
+    await actionBar.onAccept();
+    setSuccessState('accepted');
   };
 
-  const renderSection = (section: ProposalData['sections'][0]) => {
-    switch (section.type) {
-      case 'hero':
-        return <HeroSection section={section} />;
-      case 'text':
-        return <TextSection section={section} />;
-      case 'lineItems':
-        return <LineItemSection section={section} />;
-      case 'pricing':
-        return <PricingSection section={section} />;
-      case 'legal':
-        return <LegalSection section={section} />;
-      default:
-        return null;
-    }
+  const handleReject = async (reason?: string) => {
+    if (!actionBar) return;
+    await actionBar.onReject(reason);
+    setSuccessState('declined');
   };
+
+  const handleComment = () => {
+    setSuccessState('commented');
+  };
+
+  // Show success state if action completed
+  if (successState) {
+    return (
+      <ProposalSuccessState
+        type={successState}
+        salesRepName={companySettings.name}
+        onClose={() => window.close()}
+      />
+    );
+  }
 
   return (
     <div 
@@ -163,9 +124,6 @@ export function ProposalViewer({ quote, companySettings, isPreview = false, acti
           shadowOffset: 20,
           shadowScale: 0.94,
         }}
-        onSwiper={(swiper) => {
-          swiperRef.current = swiper;
-        }}
         className="h-screen"
         style={{
           '--swiper-pagination-color': theme.swiper.paginationColor,
@@ -174,25 +132,35 @@ export function ProposalViewer({ quote, companySettings, isPreview = false, acti
       >
         {proposalData.sections.map((section) => (
           <SwiperSlide key={section.id} className="overflow-y-auto">
-            <div className="container mx-auto px-4 py-8 max-w-4xl">
-              <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-                {renderSection(section)}
+            <div className="container mx-auto px-4 py-8 max-w-5xl">
+              <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
+                {section.type === 'hero' && <HeroSection section={section} />}
+                {section.type === 'text' && <TextSection section={section} />}
+                {section.type === 'categoryGroup' && (
+                  <CategoryGroupSection 
+                    section={section}
+                    theme={theme}
+                  />
+                )}
+                {section.type === 'pricing' && <PricingSection section={section} />}
+                {section.type === 'legal' && <LegalSection section={section} />}
               </div>
             </div>
           </SwiperSlide>
         ))}
       </Swiper>
 
-      {/* Action Bar - Fixed at bottom, sits above Swiper pagination */}
-      {actionBar && (
+      {/* Interactive Action Bar - Only show if not preview and actionBar provided */}
+      {!isPreview && actionBar && (
         <ProposalActionBar
           quoteId={actionBar.quoteId}
           total={actionBar.total}
           status={actionBar.status}
           userEmail={actionBar.userEmail}
           userName={actionBar.userName}
-          onAccept={actionBar.onAccept}
-          onReject={actionBar.onReject}
+          onAccept={handleAccept}
+          onReject={handleReject}
+          onComment={handleComment}
           className="z-[60]"
         />
       )}
