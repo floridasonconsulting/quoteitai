@@ -225,7 +225,7 @@ export default function QuoteDetail() {
     }
     
     // Store owner bypass flag in sessionStorage
-    sessionStorage.setItem('storeOwnerBypass', 'true');
+    sessionStorage.setItem('proposal_owner_bypass', 'true');
     
     // Open preview in new tab
     const previewUrl = `${window.location.origin}/quotes/public/${token}`;
