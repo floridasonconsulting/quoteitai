@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { checkAndMigrateData } from '@/lib/migration-helper';
+import { supabaseFunctions } from '@/integrations/supabase/functions';
 
 interface SubscriptionData {
   subscribed: boolean;
@@ -93,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('manage-user-role', {
+      const { data, error } = await supabaseFunctions.invoke('manage-user-role', {
         body: { userId, newRole },
       });
 
