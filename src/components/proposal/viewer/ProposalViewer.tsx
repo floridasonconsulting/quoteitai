@@ -34,6 +34,8 @@ interface ProposalViewerProps {
 }
 
 export function ProposalViewer({ quote, companySettings, isPreview = false, actionBar }: ProposalViewerProps) {
+  const swiperRef = useRef<SwiperType>();
+
   // CRITICAL: Guard against undefined props
   if (!quote) {
     console.error('[ProposalViewer] No quote data provided');
@@ -56,8 +58,6 @@ export function ProposalViewer({ quote, companySettings, isPreview = false, acti
   const theme = getTheme(companySettings.proposalTheme || "modern-corporate");
   const themeCSSVars = getThemeCSSVars(theme);
   
-  const swiperRef = useRef<SwiperType>();
-
   // Create proposal data from quote for section rendering
   const proposalData: ProposalData = {
     id: quote.id,
