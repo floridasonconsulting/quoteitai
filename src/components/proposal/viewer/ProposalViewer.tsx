@@ -34,7 +34,21 @@ interface ProposalViewerProps {
 }
 
 export function ProposalViewer({ quote, companySettings, isPreview = false, actionBar }: ProposalViewerProps) {
-  const theme = getTheme(companySettings.proposalTheme || "modern-corporate");
+  // Provide default values for companySettings to prevent undefined errors
+  const safeSettings: CompanySettings = companySettings || {
+    name: 'Company Name',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    phone: '',
+    email: '',
+    website: '',
+    terms: 'Payment due within 30 days',
+    proposalTheme: 'modern-corporate'
+  };
+
+  const theme = getTheme(safeSettings.proposalTheme || "modern-corporate");
   const themeCSSVars = getThemeCSSVars(theme);
   
   const swiperRef = useRef<SwiperType>();
@@ -43,15 +57,15 @@ export function ProposalViewer({ quote, companySettings, isPreview = false, acti
   const proposalData: ProposalData = {
     id: quote.id,
     quoteId: quote.id,
-    theme: companySettings.proposalTheme || "modern-corporate",
+    theme: safeSettings.proposalTheme || "modern-corporate",
     sections: [
       // Hero section
       {
         id: 'hero',
         type: 'hero' as const,
         title: quote.title,
-        subtitle: companySettings.name,
-        backgroundImage: companySettings.logo || undefined,
+        subtitle: safeSettings.name,
+        backgroundImage: safeSettings.logo || undefined,
       },
       // Executive summary if exists
       ...(quote.executiveSummary ? [{
@@ -80,14 +94,14 @@ export function ProposalViewer({ quote, companySettings, isPreview = false, acti
         subtotal: quote.subtotal,
         tax: quote.tax,
         total: quote.total,
-        terms: companySettings.terms || "Payment due within 30 days"
+        terms: safeSettings.terms || "Payment due within 30 days"
       },
       // Legal/Terms
       {
         id: 'legal',
         type: 'legal' as const,
         title: 'Terms & Conditions',
-        content: companySettings.terms || "Standard terms and conditions apply."
+        content: safeSettings.terms || "Standard terms and conditions apply."
       }
     ],
     createdAt: quote.createdAt,
