@@ -98,7 +98,7 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
 
       // Check for upgrade requirement (now returned with 200 status)
       if (data?.requiresUpgrade) {
-        const needsMax = data.error?.toLowerCase().includes('max');
+        const needsMax = data.error?.toLowerCase?.()?.includes('max') ?? false;
         const requiredTier = needsMax ? 'max' : 'pro';
         
         options?.onUpgradeRequired?.(requiredTier);
