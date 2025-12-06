@@ -25,7 +25,9 @@ function deduplicateQuotes(quotes: Quote[]): Quote[] {
     }
   }
   
-  return Array.from(quoteMap.values());
+  const deduped = Array.from(quoteMap.values());
+  console.log(`[QuoteService] Deduplicated ${quotes.length} quotes to ${deduped.length}`);
+  return deduped;
 }
 
 /**
@@ -85,7 +87,7 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
         if (error) {
           console.error('Error fetching quotes:', error);
           if (cached) {
-            console.log('[Cache] Using cached quotes after error');
+            console.log('[QuoteService] Using cached quotes after error');
             return deduplicateQuotes(cached);
           }
           throw error;
@@ -99,19 +101,18 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
         // Save to IndexedDB if supported and we received data
         if (isIndexedDBSupported() && dedupedResult.length > 0) {
           try {
-            // Clear existing quotes for this user first to avoid duplicates
-            const existingQuotes = await QuoteDB.getAll(userId);
-            for (const existing of existingQuotes) {
-              await QuoteDB.delete(existing.id);
-            }
+            // CRITICAL: Clear existing quotes for this user FIRST to prevent duplicates
+            console.log('[QuoteService] Clearing existing IndexedDB quotes before sync...');
+            await QuoteDB.clear(userId);
             
             // Add fresh quotes from Supabase
+            console.log(`[QuoteService] Adding ${dedupedResult.length} quotes to IndexedDB...`);
             for (const quote of dedupedResult) {
-              await QuoteDB.add({ ...quote, user_id: userId } as never);
+              await QuoteDB.add({ ...quote, userId } as Quote);
             }
-            console.log(`[QuoteService] Synced ${dedupedResult.length} quotes to IndexedDB`);
+            console.log(`[QuoteService] ✓ Synced ${dedupedResult.length} quotes to IndexedDB`);
           } catch (error) {
-            console.warn('[QuoteService] Failed to save to IndexedDB:', error);
+            console.warn('[QuoteService] Failed to sync to IndexedDB:', error);
           }
         }
         
@@ -122,7 +123,7 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
       } catch (error) {
         console.error('Error fetching quotes:', error);
         if (cached) {
-          console.log('[Cache] Returning cached quotes after timeout');
+          console.log('[QuoteService] Returning cached quotes after timeout');
           return deduplicateQuotes(cached);
         }
         return [];
@@ -193,11 +194,18 @@ export async function getQuote(userId: string, id: string): Promise<Quote | null
 
     const result = toCamelCase(data) as Quote;
 
-    // Save to IndexedDB
+    // Save to IndexedDB (upsert logic)
     if (isIndexedDBSupported()) {
       try {
-        await QuoteDB.update({ ...result, user_id: userId } as never);
-        console.log(`[QuoteService] Saved quote ${id} to IndexedDB`);
+        // Check if exists first
+        const existing = await QuoteDB.getById(id);
+        if (existing) {
+          await QuoteDB.update({ ...result, userId } as Quote);
+          console.log(`[QuoteService] Updated quote ${id} in IndexedDB`);
+        } else {
+          await QuoteDB.add({ ...result, userId } as Quote);
+          console.log(`[QuoteService] Added quote ${id} to IndexedDB`);
+        }
       } catch (dbError) {
         console.warn("[QuoteService] Failed to save quote to IndexedDB:", dbError);
       }
@@ -222,13 +230,13 @@ export async function addQuote(
   quote: Quote,
   queueChange?: (change: QueueChange) => void
 ): Promise<Quote> {
-  const quoteWithUser = { ...quote, user_id: userId } as Quote;
+  const quoteWithUser = { ...quote, userId } as Quote;
 
   // Save to IndexedDB first if supported
-  if (isIndexedDBSupported()) {
+  if (isIndexedDBSupported() && userId) {
     try {
-      await QuoteDB.add(quoteWithUser as never);
-      console.log('[QuoteService] Saved quote to IndexedDB');
+      await QuoteDB.add(quoteWithUser);
+      console.log('[QuoteService] Saved new quote to IndexedDB');
     } catch (error) {
       console.warn('[QuoteService] IndexedDB save failed:', error);
     }
@@ -298,9 +306,9 @@ export async function updateQuote(
   const updatedQuote = { ...currentQuote, ...updates } as Quote;
 
   // Update IndexedDB
-  if (isIndexedDBSupported()) {
+  if (isIndexedDBSupported() && userId) {
     try {
-      await QuoteDB.update({ ...updatedQuote, user_id: userId } as never);
+      await QuoteDB.update({ ...updatedQuote, userId } as Quote);
       console.log('[QuoteService] Updated quote in IndexedDB');
     } catch (error) {
       console.warn('[QuoteService] IndexedDB update failed:', error);
