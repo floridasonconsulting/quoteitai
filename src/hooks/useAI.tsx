@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabaseFunctions } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -93,8 +92,13 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
             console.error('[useAI] Edge Function invoke error:', error);
             
             // Check if it's a 404 (Edge Function doesn't exist)
-            if (error.message?.includes('404') || error.message?.includes('FunctionsRelayError')) {
-              throw new Error('AI features require Edge Functions to be deployed. Please contact support or deploy the ai-assist Edge Function to your Supabase project.');
+            if (error.message?.includes('404') || 
+                error.message?.includes('FunctionsRelayError') ||
+                error.message?.includes('FunctionsHttpError')) {
+              // Return graceful error instead of throwing
+              return {
+                error: 'AI features are currently unavailable. The app works without AI assistance - you can still create quotes manually.'
+              };
             }
             
             throw new Error('Failed to connect to AI service. Please try again.');
@@ -125,8 +129,15 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
         };
       }
 
-      // Handle other errors
+      // Handle errors - but show as info toast, not error
       if (data?.error) {
+        // If it's about missing Edge Functions, just log it - don't show error to user during signup
+        if (data.error.includes('Edge Functions') || data.error.includes('unavailable')) {
+          console.info('[useAI] AI features not available:', data.error);
+          options?.onError?.(data.error);
+          return null;
+        }
+        
         toast.error('AI Request Failed', {
           description: data.error,
           duration: 5000,
@@ -155,12 +166,9 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
           description: message,
           duration: 5000,
         });
-      } else if (message.includes('Edge Functions')) {
-        // Edge Function deployment error - user-friendly message
-        toast.error('AI Feature Unavailable', {
-          description: 'AI features require additional setup. The app will work without them, but AI assistance won\'t be available.',
-          duration: 7000,
-        });
+      } else if (message.includes('Edge Functions') || message.includes('unavailable')) {
+        // Edge Function deployment error - just log, don't show toast
+        console.info('[useAI] AI features unavailable:', message);
       } else {
         toast.error('AI Generation Error', {
           description: message,
