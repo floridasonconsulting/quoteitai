@@ -63,18 +63,23 @@ export function CategoryGroupSection({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.1, duration: 0.5 }}
               className={cn(
-                "flex flex-col md:flex-row gap-6 bg-white/80 dark:bg-gray-900/80 p-6 md:p-8 rounded-2xl shadow-lg backdrop-blur-sm",
-                "hover:shadow-xl transition-shadow duration-300"
+                "flex flex-col gap-6 bg-white/80 dark:bg-gray-900/80 p-6 md:p-8 rounded-2xl shadow-lg backdrop-blur-sm",
+                "hover:shadow-xl transition-shadow duration-300",
+                item.imageUrl ? "md:flex-row" : ""
               )}
             >
-              {/* Item Image */}
+              {/* Item Image - Only show if imageUrl exists */}
               {item.imageUrl && (
-                <div className="flex-shrink-0 w-full md:w-64 h-48 md:h-auto">
+                <div className="flex-shrink-0 w-full md:w-80 h-64 md:h-72">
                   <img
                     src={item.imageUrl}
                     alt={item.name}
-                    className="w-full h-full object-cover rounded-xl"
+                    className="w-full h-full object-cover rounded-xl shadow-md"
                     loading="lazy"
+                    onError={(e) => {
+                      // Hide image if it fails to load
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 </div>
               )}
