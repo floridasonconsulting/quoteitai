@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { checkAndMigrateData } from '@/lib/migration-helper';
-import { supabaseFunctions } from '@/integrations/supabase/functions';
 
 interface SubscriptionData {
   subscribed: boolean;
@@ -39,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
-  const [signingIn, setSigningIn] = useState(false); // New state to track sign-in process
+  const [signingIn, setSigningIn] = useState(false);
   const navigate = useNavigate();
   
   const isInitializing = useRef(false);
@@ -66,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     roleCheckInProgress.current = true;
     
     try {
+      // Try to get role via RPC function (direct database call)
       const rolePromise = supabase.rpc('get_user_role', {
         _user_id: activeSession.user.id,
       });
@@ -94,63 +94,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
-      console.log('[AuthContext] Attempting to update user role via Edge Function...');
+      console.log('[AuthContext] Updating user role via direct database access...');
       
-      // Try to call the Edge Function if it exists
-      const { data, error } = await supabaseFunctions.functions.invoke('manage-user-role', {
-        body: { userId, newRole },
-      });
-
-      // Handle Edge Function not existing (404 or network errors)
-      if (error) {
-        console.warn('[AuthContext] Edge Function not available:', error.message);
-        
-        // Try direct database update as fallback
-        console.log('[AuthContext] Attempting direct database role update...');
-        const { error: dbError } = await supabase
-          .from('user_roles')
-          .upsert({ user_id: userId, role: newRole, updated_at: new Date().toISOString() });
-        
-        if (dbError) {
-          console.error('[AuthContext] Direct database update failed:', dbError);
-          throw new Error('Failed to update user role');
-        }
-        
-        console.log('[AuthContext] ✓ Role updated via direct database access');
-        await checkUserRole();
-        return;
+      // Use direct database update instead of Edge Function
+      const { error: dbError } = await supabase
+        .from('user_roles')
+        .upsert({ 
+          user_id: userId, 
+          role: newRole, 
+          updated_at: new Date().toISOString() 
+        }, {
+          onConflict: 'user_id'
+        });
+      
+      if (dbError) {
+        console.error('[AuthContext] Direct database update failed:', dbError);
+        throw new Error('Failed to update user role');
       }
-
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      console.log('[AuthContext] ✓ Role updated via Edge Function');
+      
+      console.log('[AuthContext] ✓ Role updated via direct database access');
       await checkUserRole();
     } catch (error) {
       console.error('[AuthContext] Error updating user role:', error);
-      
-      // Last resort: try direct database update
-      try {
-        console.log('[AuthContext] Final fallback: direct database update...');
-        const { error: dbError } = await supabase
-          .from('user_roles')
-          .upsert({ user_id: userId, role: newRole, updated_at: new Date().toISOString() });
-        
-        if (!dbError) {
-          console.log('[AuthContext] ✓ Role updated via fallback method');
-          await checkUserRole();
-          return;
-        }
-      } catch (fallbackError) {
-        console.error('[AuthContext] All role update methods failed:', fallbackError);
-      }
-      
       throw error;
     }
   };
 
   const loadSubscription = async (userId: string) => {
+    // Subscription checking is optional - don't fail auth if it doesn't work
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
@@ -170,19 +141,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // Try to check subscription via Edge Function, but don't fail if it doesn't exist
       const { data, error } = await supabase.functions.invoke('check-subscription');
       
-      if (error && data?.code === 'SESSION_EXPIRED') {
-        console.error('[AuthContext] Session expired, signing out');
-        toast.error('Your session has expired. Please sign in again.');
-        await signOut();
+      if (error) {
+        console.warn('[AuthContext] Subscription check not available:', error);
+        setSubscription(null);
         return;
       }
       
-      if (error) throw error;
       setSubscription(data);
     } catch (error) {
-      console.error('[AuthContext] Subscription check error:', error);
+      console.warn('[AuthContext] Subscription check error (non-critical):', error);
       setSubscription(null);
     }
   };
@@ -319,17 +289,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl
+        }
+      });
+      
+      if (error) {
+        console.error('[AuthContext] Sign up error:', error);
+        return { error };
       }
-    });
-    
-    if (!error && data.user) {
+      
+      if (!data.user) {
+        return { error: new Error('No user returned from sign up') as AuthError };
+      }
+      
       toast.success('Account created! You can now sign in.');
       
+      // Generate sample data in background (non-blocking)
       setTimeout(async () => {
         try {
           const { generateSampleData } = await import('@/lib/sample-data');
@@ -340,9 +320,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('[AuthContext] Failed to generate sample data:', sampleError);
         }
       }, 2000);
+      
+      return { error: null };
+    } catch (err) {
+      console.error('[AuthContext] Sign up exception:', err);
+      return { error: err as AuthError };
     }
-    
-    return { error };
   };
 
   const signIn = async (email: string, password: string) => {
@@ -412,9 +395,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Update effective loading state to include signingIn
-  const effectiveLoading = loading || signingIn;
-
   return (
     <AuthContext.Provider
       value={{
@@ -422,10 +402,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         subscription,
         userRole,
-        subscriptionTier: userRole, // Alias for backward compatibility
+        subscriptionTier: userRole,
         isAdmin,
         isMaxAITier,
-        loading, // Use original loading, not effectiveLoading
+        loading,
         signUp,
         signIn,
         signOut,
