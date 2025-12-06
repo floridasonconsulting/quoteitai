@@ -121,7 +121,8 @@ export default function QuoteDetail() {
         if (error) throw error;
 
         const token = data.share_token;
-        const url = `${window.location.origin}/quotes/public/${token}`;
+        // CRITICAL: URL-encode the token to handle special characters
+        const url = `${window.location.origin}/quotes/public/${encodeURIComponent(token)}`;
         setShareLink(url);
         setQuote({ ...quote, shareToken: token, sharedAt: new Date().toISOString() });
       }
@@ -210,7 +211,7 @@ export default function QuoteDetail() {
         token = data.share_token;
         
         // Update local state
-        const url = `${window.location.origin}/quotes/public/${token}`;
+        const url = `${window.location.origin}/quotes/public/${encodeURIComponent(token)}`;
         setShareLink(url);
         setQuote({ ...quote, shareToken: token, sharedAt: new Date().toISOString() });
       } catch (error) {
@@ -224,8 +225,8 @@ export default function QuoteDetail() {
       }
     }
     
-    // Open preview in new tab with owner bypass parameter
-    const previewUrl = `${window.location.origin}/quotes/public/${token}?owner=true`;
+    // Open preview in new tab with owner bypass parameter - CRITICAL: URL-encode the token
+    const previewUrl = `${window.location.origin}/quotes/public/${encodeURIComponent(token)}?owner=true`;
     window.open(previewUrl, '_blank');
   };
 

@@ -14,6 +14,9 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function PublicQuoteView() {
   const { id: shareToken } = useParams<{ id: string }>();
   const { user } = useAuth();
+  
+  // CRITICAL: Decode the share token from URL (it was encoded with encodeURIComponent)
+  const decodedShareToken = shareToken ? decodeURIComponent(shareToken) : undefined;
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [expired, setExpired] = useState(false);
@@ -46,9 +49,9 @@ export default function PublicQuoteView() {
       return;
     }
     
-    console.log('[PublicQuoteView] Auth ready, checking session - shareToken:', shareToken, 'user:', user?.id);
+    console.log('[PublicQuoteView] Auth ready, checking session - shareToken:', decodedShareToken, 'user:', user?.id);
     checkSession();
-  }, [shareToken, user?.id, authLoading]);
+  }, [decodedShareToken, user?.id, authLoading]);
 
   const checkSession = async () => {
     console.log('[PublicQuoteView] checkSession - user:', user?.id);
@@ -85,7 +88,7 @@ export default function PublicQuoteView() {
         const session = JSON.parse(sessionData);
         
         // Check if session is valid and matches current share token
-        if (session.shareToken === shareToken && 
+        if (session.shareToken === decodedShareToken && 
             new Date(session.expiresAt) > new Date()) {
           console.log('[PublicQuoteView] Valid session token found');
           setSessionToken(session.token);
@@ -109,20 +112,20 @@ export default function PublicQuoteView() {
   };
 
   const checkOwnership = async (): Promise<boolean> => {
-    if (!shareToken || !user?.id) {
+    if (!decodedShareToken || !user?.id) {
       console.log('[PublicQuoteView] Missing shareToken or user.id');
       setLoading(false);
       return false;
     }
 
     try {
-      console.log('[PublicQuoteView] Fetching quote with shareToken:', shareToken);
+      console.log('[PublicQuoteView] Fetching quote with shareToken:', decodedShareToken);
       
       // Fetch quote to check ownership
       const { data: quoteData, error: quoteError } = await supabase
         .from('quotes')
         .select('user_id, id')
-        .eq('share_token', shareToken)
+        .eq('share_token', decodedShareToken)
         .maybeSingle();
 
       if (quoteError) {
@@ -132,7 +135,7 @@ export default function PublicQuoteView() {
       }
 
       if (!quoteData) {
-        console.error('[PublicQuoteView] Quote not found for shareToken:', shareToken);
+        console.error('[PublicQuoteView] Quote not found for shareToken:', decodedShareToken);
         setLoading(false);
         return false;
       }
@@ -182,20 +185,20 @@ export default function PublicQuoteView() {
 
   // Load quote data after authentication
   const loadQuote = async () => {
-    if (!shareToken) {
+    if (!decodedShareToken) {
       console.error('[PublicQuoteView] No shareToken provided in URL');
       setLoading(false);
       return;
     }
     
-    console.log('[PublicQuoteView] Loading quote with shareToken:', shareToken);
+    console.log('[PublicQuoteView] Loading quote with shareToken:', decodedShareToken);
     setLoading(true);
     try {
       // Fetch quote by share token
       const { data: quoteData, error: quoteError } = await supabase
         .from('quotes')
         .select('*')
-        .eq('share_token', shareToken)
+        .eq('share_token', decodedShareToken)
         .maybeSingle();
 
       if (quoteError) {
@@ -204,7 +207,7 @@ export default function PublicQuoteView() {
       }
 
       if (!quoteData) {
-        console.error('[PublicQuoteView] No quote found with shareToken:', shareToken);
+        console.error('[PublicQuoteView] No quote found with shareToken:', decodedShareToken);
         toast.error('Quote not found or link has expired');
         return;
       }
@@ -307,7 +310,7 @@ export default function PublicQuoteView() {
         await supabase
           .from('quotes')
           .update({ viewed_at: new Date().toISOString() })
-          .eq('share_token', shareToken);
+          .eq('share_token', decodedShareToken);
       }
 
     } catch (error) {
@@ -319,11 +322,11 @@ export default function PublicQuoteView() {
   };
 
   const handleSign = async (signature: string) => {
-    if (!quote || !shareToken) return;
+    if (!quote || !decodedShareToken) return;
 
     try {
       const { error } = await supabase.functions.invoke('update-quote-status', {
-        body: { shareToken, status: 'accepted' }
+        body: { shareToken: decodedShareToken, status: 'accepted' }
       });
 
       if (error) throw error;
@@ -337,11 +340,11 @@ export default function PublicQuoteView() {
   };
 
   const handleAccept = async () => {
-    if (!quote || !shareToken) return;
+    if (!quote || !decodedShareToken) return;
 
     try {
       const { error } = await supabase.functions.invoke('update-quote-status', {
-        body: { shareToken, status: 'accepted' }
+        body: { shareToken: decodedShareToken, status: 'accepted' }
       });
 
       if (error) throw error;
@@ -354,12 +357,12 @@ export default function PublicQuoteView() {
   };
 
   const handleReject = async (reason?: string) => {
-    if (!quote || !shareToken) return;
+    if (!quote || !decodedShareToken) return;
 
     try {
       const { error } = await supabase.functions.invoke('update-quote-status', {
         body: { 
-          shareToken, 
+          shareToken: decodedShareToken, 
           status: 'declined',
           rejectionReason: reason 
         }
@@ -428,11 +431,11 @@ export default function PublicQuoteView() {
   }
 
   // Show OTP wall only if not authenticated and not the owner
-  if (!authenticated && shareToken && !isOwner) {
+  if (!authenticated && decodedShareToken && !isOwner) {
     console.log('[PublicQuoteView] Rendering OTP wall');
     return (
       <OTPSecurityWall
-        shareToken={shareToken}
+        shareToken={decodedShareToken}
         onVerified={handleVerified}
         onExpired={handleExpired}
       />
