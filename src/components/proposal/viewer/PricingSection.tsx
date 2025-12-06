@@ -7,6 +7,13 @@ interface PricingSectionProps {
 }
 
 export function PricingSection({ section }: PricingSectionProps) {
+  console.log('[PricingSection] Rendering with:', {
+    subtotal: section.subtotal,
+    tax: section.tax,
+    total: section.total,
+    hasTerms: !!section.terms
+  });
+
   return (
     <div className="py-12 space-y-8">
       <div className="text-center mb-12">
@@ -44,7 +51,8 @@ export function PricingSection({ section }: PricingSectionProps) {
 
         {section.terms && (
           <div className="mt-8 pt-6 border-t">
-            <p className="text-sm text-gray-600 leading-relaxed">
+            <h3 className="text-lg font-semibold mb-3">Payment Terms</h3>
+            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
               {section.terms}
             </p>
           </div>

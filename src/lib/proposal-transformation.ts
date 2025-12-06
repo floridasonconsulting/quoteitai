@@ -15,9 +15,23 @@ export function transformQuoteToProposal(
   customer?: Customer,
   settings?: CompanySettings
 ): ProposalData {
+  console.log('[transformQuoteToProposal] Input:', {
+    quoteId: quote.id,
+    showPricing: quote.showPricing,
+    itemCount: quote.items?.length,
+    settingsName: settings?.name,
+    settingsTerms: settings?.terms
+  });
+
   // Group items by category
   const categoryGroups = groupItemsByCategory(quote.items);
   
+  console.log('[transformQuoteToProposal] Category groups:', categoryGroups.map(g => ({
+    category: g.category,
+    itemCount: g.items.length,
+    hasImages: g.items.filter(i => i.imageUrl).length
+  })));
+
   // Build sections in presentation order
   const sections: ProposalSection[] = [
     // 1. Hero/Title Page with company info
@@ -27,7 +41,7 @@ export function transformQuoteToProposal(
       title: quote.title,
       subtitle: customer?.name || quote.customerName,
       backgroundImage: settings?.logo,
-      companyName: settings?.name || 'Company', // ✅ FIX: Use actual company name
+      companyName: settings?.name || 'Company',
     },
     
     // 2. Executive Summary (if exists)
@@ -44,11 +58,11 @@ export function transformQuoteToProposal(
       type: 'categoryGroup' as const,
       title: group.displayName,
       categoryGroups: [group],
-      showPricing: quote.showPricing !== false, // ✅ FIX: Use quote setting (default true)
+      showPricing: quote.showPricing === true, // ✅ FIX: Pass through quote's showPricing flag
     })),
     
-    // 4. Pricing Summary
-    {
+    // 4. Pricing Summary - Only if showPricing is true
+    ...(quote.showPricing === true ? [{
       id: 'pricing',
       type: 'pricing' as const,
       title: 'Investment Summary',
@@ -56,16 +70,22 @@ export function transformQuoteToProposal(
       tax: quote.tax,
       total: quote.total,
       terms: settings?.terms || 'Payment terms to be discussed',
-    },
+    }] : []),
     
     // 5. Terms & Conditions
     {
       id: 'legal',
       type: 'legal' as const,
       title: 'Terms & Conditions',
-      content: settings?.terms || 'Standard terms and conditions apply.', // ✅ FIX: Use settings.terms
+      content: settings?.terms || 'Standard terms and conditions apply.',
     },
   ];
+
+  console.log('[transformQuoteToProposal] Generated sections:', sections.map(s => ({
+    id: s.id,
+    type: s.type,
+    showPricing: 'showPricing' in s ? s.showPricing : undefined
+  })));
 
   return {
     id: quote.id,
@@ -81,12 +101,25 @@ export function transformQuoteToProposal(
  * Group quote items by category with sorting
  */
 function groupItemsByCategory(items: QuoteItem[]): CategoryGroup[] {
+  console.log('[groupItemsByCategory] Processing items:', items?.length);
+  
+  if (!items || items.length === 0) {
+    console.warn('[groupItemsByCategory] No items provided');
+    return [];
+  }
+
   // Create a map of category -> items
   const categoryMap = new Map<string, ProposalItem[]>();
   
-  items.forEach(item => {
-    // CRITICAL FIX: QuoteItem might not have category, default to 'Uncategorized'
+  items.forEach((item, index) => {
     const category = item.category || 'Uncategorized';
+    
+    console.log(`[groupItemsByCategory] Item ${index}:`, {
+      name: item.name,
+      category,
+      hasImage: !!item.imageUrl,
+      imageUrl: item.imageUrl
+    });
     
     if (!categoryMap.has(category)) {
       categoryMap.set(category, []);
@@ -100,8 +133,8 @@ function groupItemsByCategory(items: QuoteItem[]): CategoryGroup[] {
       price: item.price,
       total: item.total,
       units: item.units,
-      imageUrl: item.imageUrl, // Pass through image URL
-      category: category, // Include category
+      imageUrl: item.imageUrl, // ✅ Pass through image URL
+      category: category,
     });
   });
   
@@ -116,7 +149,7 @@ function groupItemsByCategory(items: QuoteItem[]): CategoryGroup[] {
     return {
       category,
       displayName: config?.displayName || category,
-      description: config?.description, // Add category description
+      description: config?.description,
       items,
       subtotal: items.reduce((sum, item) => sum + item.total, 0),
     };
