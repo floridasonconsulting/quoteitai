@@ -1,4 +1,5 @@
 import { ProposalSection } from '@/types/proposal';
+import { Building2, Mail, Phone, Globe } from 'lucide-react';
 
 interface HeroSectionProps {
   section: ProposalSection;
@@ -8,6 +9,9 @@ export function HeroSection({ section }: HeroSectionProps) {
   console.log('[HeroSection] Rendering with data:', {
     hasLogo: !!section.backgroundImage,
     companyName: section.companyName,
+    companyEmail: section.companyEmail,
+    companyPhone: section.companyPhone,
+    companyAddress: section.companyAddress,
     title: section.title,
     subtitle: section.subtitle
   });
@@ -27,14 +31,52 @@ export function HeroSection({ section }: HeroSectionProps) {
         </div>
       )}
       
-      <div className="space-y-4">
-        {/* Company Name */}
-        {section.companyName && (
-          <p className="text-xl font-medium text-muted-foreground uppercase tracking-wide">
+      {/* Company Information */}
+      {section.companyName && (
+        <div className="space-y-4 mb-8">
+          <h2 className="text-2xl font-bold text-primary uppercase tracking-wide flex items-center justify-center gap-2">
+            <Building2 className="h-6 w-6" />
             {section.companyName}
-          </p>
-        )}
-        
+          </h2>
+          
+          {/* Company Contact Details */}
+          <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
+            {section.companyAddress && (
+              <p>
+                {section.companyAddress}
+                {section.companyCity && `, ${section.companyCity}`}
+                {section.companyState && `, ${section.companyState}`}
+                {section.companyZip && ` ${section.companyZip}`}
+              </p>
+            )}
+            
+            <div className="flex flex-wrap gap-4 justify-center">
+              {section.companyPhone && (
+                <p className="flex items-center gap-1">
+                  <Phone className="h-4 w-4" />
+                  {section.companyPhone}
+                </p>
+              )}
+              
+              {section.companyEmail && (
+                <p className="flex items-center gap-1">
+                  <Mail className="h-4 w-4" />
+                  {section.companyEmail}
+                </p>
+              )}
+              
+              {section.companyWebsite && (
+                <p className="flex items-center gap-1">
+                  <Globe className="h-4 w-4" />
+                  {section.companyWebsite}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div className="space-y-4">
         {/* Quote Title */}
         <h1 className="text-6xl font-bold tracking-tight">
           {section.title}
@@ -43,7 +85,7 @@ export function HeroSection({ section }: HeroSectionProps) {
         {/* Customer Name */}
         {section.subtitle && (
           <p className="text-2xl text-muted-foreground">
-            Prepared for: {section.subtitle}
+            Prepared for: <span className="font-semibold">{section.subtitle}</span>
           </p>
         )}
         

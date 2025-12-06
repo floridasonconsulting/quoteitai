@@ -22,9 +22,18 @@ export function CategoryGroupSection({ section, theme }: CategoryGroupSectionPro
   }
 
   const categoryGroup = section.categoryGroups[0];
-  const showPricing = section.showPricing === true; // ✅ FIX: Explicit check for true (default false)
+  const showPricing = section.showPricing === true;
 
-  console.log('[CategoryGroupSection] showPricing:', showPricing, 'section.showPricing:', section.showPricing);
+  console.log('[CategoryGroupSection] Rendering:', {
+    category: categoryGroup.category,
+    showPricing,
+    itemCount: categoryGroup.items.length,
+    items: categoryGroup.items.map(i => ({
+      name: i.name,
+      hasImage: !!i.imageUrl,
+      imageUrl: i.imageUrl
+    }))
+  });
 
   return (
     <div className="w-full space-y-8 py-8">
@@ -48,18 +57,16 @@ export function CategoryGroupSection({ section, theme }: CategoryGroupSectionPro
         
         <p className="text-lg" style={{ color: theme.colors.text.secondary }}>
           {categoryGroup.items.length} {categoryGroup.items.length === 1 ? 'Item' : 'Items'}
-          {showPricing && (
-            <> • Total: {formatCurrency(categoryGroup.subtotal)}</>
-          )}
         </p>
       </div>
 
       {/* Magazine-Style Item Grid */}
       <div className="grid gap-6">
         {categoryGroup.items.map((item, index) => {
-          console.log(`[CategoryGroupSection] Item ${item.name}:`, {
+          console.log(`[CategoryGroupSection] Rendering item "${item.name}":`, {
             hasImageUrl: !!item.imageUrl,
-            imageUrl: item.imageUrl
+            imageUrl: item.imageUrl,
+            showPricing
           });
           
           return (
@@ -74,11 +81,10 @@ export function CategoryGroupSection({ section, theme }: CategoryGroupSectionPro
                     src={item.imageUrl} 
                     alt={item.name}
                     className="w-full h-full object-cover"
-                    onLoad={() => console.log(`[CategoryGroupSection] ✅ Image loaded: ${item.name}`)}
+                    onLoad={() => console.log(`[CategoryGroupSection] ✅ Image loaded successfully: ${item.name}`)}
                     onError={(e) => {
-                      console.error(`[CategoryGroupSection] ❌ Image failed: ${item.name}`, item.imageUrl);
+                      console.error(`[CategoryGroupSection] ❌ Image failed to load: ${item.name}`, item.imageUrl);
                       const target = e.currentTarget;
-                      target.style.display = 'none';
                       const parent = target.parentElement;
                       if (parent) {
                         parent.innerHTML = `
@@ -104,6 +110,7 @@ export function CategoryGroupSection({ section, theme }: CategoryGroupSectionPro
                   <h3 className="text-xl font-semibold text-gray-900">
                     {item.name}
                   </h3>
+                  {/* Only show pricing if enabled */}
                   {showPricing && (
                     <div className="text-right ml-4">
                       <p className="text-sm text-gray-500">

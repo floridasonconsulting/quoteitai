@@ -20,7 +20,9 @@ export function transformQuoteToProposal(
     showPricing: quote.showPricing,
     itemCount: quote.items?.length,
     settingsName: settings?.name,
-    settingsTerms: settings?.terms
+    settingsEmail: settings?.email,
+    settingsTerms: settings?.terms?.substring(0, 50),
+    hasLogo: !!settings?.logo
   });
 
   // Group items by category
@@ -42,6 +44,13 @@ export function transformQuoteToProposal(
       subtitle: customer?.name || quote.customerName,
       backgroundImage: settings?.logo,
       companyName: settings?.name || 'Company',
+      companyAddress: settings?.address,
+      companyCity: settings?.city,
+      companyState: settings?.state,
+      companyZip: settings?.zip,
+      companyPhone: settings?.phone,
+      companyEmail: settings?.email,
+      companyWebsite: settings?.website,
     },
     
     // 2. Executive Summary (if exists)
@@ -58,11 +67,11 @@ export function transformQuoteToProposal(
       type: 'categoryGroup' as const,
       title: group.displayName,
       categoryGroups: [group],
-      showPricing: quote.showPricing === true, // ✅ FIX: Pass through quote's showPricing flag
+      showPricing: quote.showPricing === true,
     })),
     
-    // 4. Pricing Summary - Only if showPricing is true
-    ...(quote.showPricing === true ? [{
+    // 4. Pricing Summary - ALWAYS SHOW (even when line item pricing is hidden)
+    {
       id: 'pricing',
       type: 'pricing' as const,
       title: 'Investment Summary',
@@ -70,7 +79,7 @@ export function transformQuoteToProposal(
       tax: quote.tax,
       total: quote.total,
       terms: settings?.terms || 'Payment terms to be discussed',
-    }] : []),
+    },
     
     // 5. Terms & Conditions
     {
@@ -84,7 +93,12 @@ export function transformQuoteToProposal(
   console.log('[transformQuoteToProposal] Generated sections:', sections.map(s => ({
     id: s.id,
     type: s.type,
-    showPricing: 'showPricing' in s ? s.showPricing : undefined
+    showPricing: 'showPricing' in s ? s.showPricing : undefined,
+    hasCompanyInfo: s.type === 'hero' ? {
+      name: s.companyName,
+      email: s.companyEmail,
+      phone: s.companyPhone
+    } : undefined
   })));
 
   return {
@@ -133,7 +147,7 @@ function groupItemsByCategory(items: QuoteItem[]): CategoryGroup[] {
       price: item.price,
       total: item.total,
       units: item.units,
-      imageUrl: item.imageUrl, // ✅ Pass through image URL
+      imageUrl: item.imageUrl,
       category: category,
     });
   });
