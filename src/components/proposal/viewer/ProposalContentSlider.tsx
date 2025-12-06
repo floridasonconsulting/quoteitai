@@ -4,6 +4,7 @@ import { Navigation, Pagination, Keyboard, Mousewheel } from "swiper/modules";
 import { motion } from "framer-motion";
 import type { Swiper as SwiperType } from "swiper";
 import type { ProposalSection, CategoryGroup } from "@/types/proposal";
+import { CategoryGroupSection } from "./CategoryGroupSection";
 
 // Import Swiper styles
 import "swiper/css";
@@ -156,82 +157,11 @@ function CategorySlide({ section }: { section: ProposalSection }) {
   if (!categoryGroup) return null;
 
   return (
-    <div 
-      className="h-full p-8 md:p-16 overflow-y-auto"
-      style={{
-        backgroundImage: section.backgroundImage 
-          ? `linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.95)), url(${section.backgroundImage})`
-          : undefined,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
-      <div className="max-w-6xl mx-auto">
-        {/* Category Header */}
-        <div className="mb-8">
-          <h2 className="text-3xl md:text-5xl font-bold mb-3">{categoryGroup.displayName}</h2>
-          {categoryGroup.description && (
-            <p className="text-lg text-muted-foreground">{categoryGroup.description}</p>
-          )}
-          <div className="mt-4 h-1 w-24 bg-primary rounded-full" />
-        </div>
-
-        {/* Items Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {categoryGroup.items.map((item, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              className="flex gap-6 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-sm"
-            >
-              {/* Item Image */}
-              {item.imageUrl && (
-                <div className="flex-shrink-0">
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    className="w-24 h-24 object-cover rounded-lg"
-                  />
-                </div>
-              )}
-
-              {/* Item Details */}
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-semibold mb-2">{item.name}</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {item.enhancedDescription || item.description}
-                </p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    {item.quantity} {item.units || "units"}
-                  </span>
-                  {section.showPricing !== false && (
-                    <>
-                      <span className="text-xs text-muted-foreground">×</span>
-                      <span className="text-sm font-medium">
-                        ${item.price.toLocaleString()}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Category Subtotal */}
-        {section.showPricing !== false && (
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
-            <div className="flex justify-between items-center text-xl font-semibold">
-              <span>Category Subtotal</span>
-              <span>${categoryGroup.subtotal.toLocaleString()}</span>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+    <CategoryGroupSection 
+      categoryGroup={categoryGroup}
+      showPricing={section.showPricing}
+      backgroundImage={section.backgroundImage}
+    />
   );
 }
 

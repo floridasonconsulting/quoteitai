@@ -1,157 +1,143 @@
-import { ProposalSection } from '@/types/proposal';
-import { formatCurrency } from '@/lib/utils';
-import { Package } from 'lucide-react';
+import { motion } from "framer-motion";
+import { CategoryGroup } from "@/types/proposal";
+import { cn } from "@/lib/utils";
 
 interface CategoryGroupSectionProps {
-  section: ProposalSection;
-  theme: {
-    colors: {
-      primary: string;
-      accent: string;
-      text: { primary: string; secondary: string };
-    };
-    typography: {
-      fontFamily: { heading: string };
-    };
-  };
+  categoryGroup: CategoryGroup;
+  showPricing?: boolean;
+  backgroundImage?: string;
 }
 
-export function CategoryGroupSection({ section, theme }: CategoryGroupSectionProps) {
-  if (!section.categoryGroups || section.categoryGroups.length === 0) {
-    return null;
-  }
-
-  const categoryGroup = section.categoryGroups[0];
-  const showPricing = section.showPricing === true;
-
-  console.log('[CategoryGroupSection] Rendering:', {
-    category: categoryGroup.category,
-    displayName: categoryGroup.displayName,
-    showPricing,
-    itemCount: categoryGroup.items.length,
-    items: categoryGroup.items.map(i => ({
-      name: i.name,
-      hasImage: !!i.imageUrl,
-      imageUrl: i.imageUrl ? i.imageUrl.substring(0, 80) + '...' : 'none'
-    }))
-  });
+/**
+ * Magazine-Style Category Section
+ * Displays items in a category with rich visuals and enhanced descriptions
+ */
+export function CategoryGroupSection({
+  categoryGroup,
+  showPricing = true,
+  backgroundImage,
+}: CategoryGroupSectionProps) {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
 
   return (
-    <div className="w-full space-y-8 py-8">
-      {/* Category Header */}
-      <div 
-        className="border-l-4 pl-6 py-4"
-        style={{ 
-          borderColor: theme.colors.primary,
-          fontFamily: theme.typography.fontFamily.heading 
-        }}
-      >
-        <h2 className="text-4xl font-bold mb-4" style={{ color: theme.colors.primary }}>
-          {categoryGroup.displayName}
-        </h2>
-        
-        {categoryGroup.description && (
-          <p className="text-lg leading-relaxed mb-4" style={{ color: theme.colors.text.secondary }}>
-            {categoryGroup.description}
-          </p>
-        )}
-        
-        <p className="text-lg" style={{ color: theme.colors.text.secondary }}>
-          {categoryGroup.items.length} {categoryGroup.items.length === 1 ? 'Item' : 'Items'}
-        </p>
-      </div>
+    <div 
+      className="min-h-screen p-8 md:p-16"
+      style={{
+        backgroundImage: backgroundImage 
+          ? `linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.95)), url(${backgroundImage})`
+          : undefined,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      <div className="max-w-6xl mx-auto">
+        {/* Category Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-12"
+        >
+          <h2 className="text-4xl md:text-6xl font-bold mb-4 text-gray-900 dark:text-white">
+            {categoryGroup.displayName}
+          </h2>
+          {categoryGroup.description && (
+            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl">
+              {categoryGroup.description}
+            </p>
+          )}
+          <div className="mt-6 h-1 w-32 bg-primary rounded-full" />
+        </motion.div>
 
-      {/* Magazine-Style Item Grid */}
-      <div className="grid gap-6">
-        {categoryGroup.items.map((item, index) => {
-          const hasImage = !!(item.imageUrl && item.imageUrl.trim().length > 0);
-          
-          console.log(`[CategoryGroupSection] Rendering item "${item.name}":`, {
-            index,
-            hasImageUrl: hasImage,
-            imageUrl: hasImage ? item.imageUrl : 'none',
-            showPricing
-          });
-          
-          return (
-            <div 
-              key={item.itemId || index}
-              className="flex gap-6 p-6 bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+        {/* Items Grid */}
+        <div className="space-y-8 mb-12">
+          {categoryGroup.items.map((item, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1, duration: 0.5 }}
+              className={cn(
+                "flex flex-col md:flex-row gap-6 bg-white/80 dark:bg-gray-900/80 p-6 md:p-8 rounded-2xl shadow-lg backdrop-blur-sm",
+                "hover:shadow-xl transition-shadow duration-300"
+              )}
             >
               {/* Item Image */}
-              {hasImage ? (
-                <div className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
-                  <img 
-                    src={item.imageUrl} 
+              {item.imageUrl && (
+                <div className="flex-shrink-0 w-full md:w-64 h-48 md:h-auto">
+                  <img
+                    src={item.imageUrl}
                     alt={item.name}
-                    className="w-full h-full object-cover"
-                    onLoad={() => console.log(`[CategoryGroupSection] ✅ Image loaded: ${item.name}`)}
-                    onError={(e) => {
-                      console.error(`[CategoryGroupSection] ❌ Image failed: ${item.name}`, item.imageUrl);
-                      const target = e.currentTarget;
-                      const parent = target.parentElement;
-                      if (parent) {
-                        parent.innerHTML = `
-                          <div class="w-full h-full flex items-center justify-center bg-gray-100">
-                            <svg class="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                            </svg>
-                          </div>
-                        `;
-                      }
-                    }}
+                    className="w-full h-full object-cover rounded-xl"
+                    loading="lazy"
                   />
-                </div>
-              ) : (
-                <div className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <Package className="w-12 h-12 text-gray-400" />
                 </div>
               )}
 
               {/* Item Details */}
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-xl font-semibold text-gray-900">
+              <div className="flex-1 min-w-0 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-2xl md:text-3xl font-semibold mb-3 text-gray-900 dark:text-white">
                     {item.name}
                   </h3>
-                  {/* Only show pricing if enabled */}
+                  <p className="text-base md:text-lg text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">
+                    {item.enhancedDescription || item.description}
+                  </p>
+                </div>
+
+                {/* Pricing Info */}
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-sm text-muted-foreground">
+                      Quantity: {item.quantity} {item.units || "units"}
+                    </span>
+                    {showPricing && (
+                      <>
+                        <span className="text-sm text-muted-foreground">•</span>
+                        <span className="text-sm text-muted-foreground">
+                          Unit Price: {formatCurrency(item.price)}
+                        </span>
+                      </>
+                    )}
+                  </div>
                   {showPricing && (
-                    <div className="text-right ml-4">
-                      <p className="text-sm text-gray-500">
-                        {item.quantity} {item.units || 'unit'}{item.quantity > 1 ? 's' : ''} × {formatCurrency(item.price)}
-                      </p>
-                      <p className="text-xl font-bold" style={{ color: theme.colors.primary }}>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground mb-1">Total</p>
+                      <p className="text-2xl md:text-3xl font-bold text-primary">
                         {formatCurrency(item.total)}
                       </p>
                     </div>
                   )}
                 </div>
-                
-                {item.description && (
-                  <p className="text-gray-600 leading-relaxed">
-                    {item.description}
-                  </p>
-                )}
               </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Category Subtotal - Only show if pricing is enabled */}
-      {showPricing && (
-        <div 
-          className="flex justify-between items-center pt-6 border-t-2"
-          style={{ borderColor: theme.colors.primary }}
-        >
-          <span className="text-lg font-semibold text-gray-700">
-            {categoryGroup.displayName} Subtotal
-          </span>
-          <span className="text-2xl font-bold" style={{ color: theme.colors.primary }}>
-            {formatCurrency(categoryGroup.subtotal)}
-          </span>
+            </motion.div>
+          ))}
         </div>
-      )}
+
+        {/* Category Subtotal */}
+        {showPricing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="pt-8 border-t-2 border-gray-300 dark:border-gray-700"
+          >
+            <div className="flex justify-between items-center">
+              <span className="text-2xl md:text-3xl font-semibold text-gray-700 dark:text-gray-300">
+                {categoryGroup.displayName} Subtotal
+              </span>
+              <span className="text-3xl md:text-4xl font-bold text-primary">
+                {formatCurrency(categoryGroup.subtotal)}
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 }
