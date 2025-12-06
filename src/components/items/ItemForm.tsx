@@ -15,6 +15,7 @@ interface ItemFormProps {
   editingItem: Item | null;
   onSubmit: (formData: FormData) => Promise<void>;
   existingCategories?: string[];
+  existingUnits?: string[];
 }
 
 export interface FormData {
@@ -29,7 +30,7 @@ export interface FormData {
   imageUrl: string; // NEW: Image URL field
 }
 
-export function ItemForm({ open, onOpenChange, editingItem, onSubmit, existingCategories = [] }: ItemFormProps) {
+export function ItemForm({ open, onOpenChange, editingItem, onSubmit, existingCategories = [], existingUnits = [] }: ItemFormProps) {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
@@ -143,20 +144,19 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit, existingCa
             </div>
             <div className="space-y-2">
               <Label htmlFor="units">Units *</Label>
-              <Select value={formData.units} onValueChange={(value) => setFormData({ ...formData, units: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Each">Each</SelectItem>
-                  <SelectItem value="Per SF">Per SF</SelectItem>
-                  <SelectItem value="Per LF">Per LF</SelectItem>
-                  <SelectItem value="Hour">Hour</SelectItem>
-                  <SelectItem value="Day">Day</SelectItem>
-                  <SelectItem value="Set">Set</SelectItem>
-                  <SelectItem value="Box">Box</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="units"
+                list="units"
+                value={formData.units}
+                onChange={(e) => setFormData({ ...formData, units: e.target.value })}
+                placeholder="Enter or select unit"
+                required
+              />
+              <datalist id="units">
+                {existingUnits.map(unit => (
+                  <option key={unit} value={unit} />
+                ))}
+              </datalist>
             </div>
           </div>
 

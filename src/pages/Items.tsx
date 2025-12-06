@@ -37,6 +37,9 @@ export default function Items() {
   // Extract unique categories from items
   const uniqueCategories = Array.from(new Set(items.map(item => item.category))).sort();
 
+  // Extract unique units from items
+  const uniqueUnits = Array.from(new Set(items.map(item => item.units).filter(Boolean))).sort();
+
   const loadItems = async (forceRefresh = false) => {
     if (loadingRef.current) {
       console.log('[Items] Load already in progress, skipping');
@@ -527,6 +530,7 @@ export default function Items() {
         editingItem={editingItem}
         onSubmit={handleFormSubmit}
         existingCategories={uniqueCategories}
+        existingUnits={uniqueUnits}
       />
 
       <ImportOptionsDialog
