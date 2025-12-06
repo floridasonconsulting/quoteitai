@@ -35,7 +35,9 @@ export const generateSampleData = async (
     throw new Error('You must be logged in to generate sample data. Please sign in first.');
   }
   
-  console.log('Starting sample data generation for user:', userId);
+  console.log('🚨 GENERATE SAMPLE DATA TRIGGERED 🚨');
+  console.log('User ID:', userId);
+  console.trace('Sample Data Generation Trace'); // This will show us WHO called it in the console
 
   let customersAddedToDb = 0;
   let customersFailedToDb = 0;

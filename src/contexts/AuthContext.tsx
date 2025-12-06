@@ -309,6 +309,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       toast.success('Account created! You can now sign in.');
       
+      /* 
+      // DISABLED AUTO-SEEDING to prevent ghost data issues
       // Generate sample data in background (non-blocking)
       setTimeout(async () => {
         try {
@@ -320,6 +322,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('[AuthContext] Failed to generate sample data:', sampleError);
         }
       }, 2000);
+      */
       
       return { error: null };
     } catch (err) {
