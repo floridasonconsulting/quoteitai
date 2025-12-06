@@ -1,18 +1,25 @@
 import { ProposalSection } from '@/types/proposal';
+import { CompanySettings } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 
 interface PricingSectionProps {
   section: ProposalSection;
+  companySettings?: CompanySettings;
 }
 
-export function PricingSection({ section }: PricingSectionProps) {
+export function PricingSection({ section, companySettings }: PricingSectionProps) {
   console.log('[PricingSection] Rendering with:', {
     subtotal: section.subtotal,
     tax: section.tax,
     total: section.total,
-    hasTerms: !!section.terms
+    hasTerms: !!section.terms,
+    terms: section.terms?.substring(0, 100),
+    companySettingsTerms: companySettings?.terms?.substring(0, 100)
   });
+
+  // Use terms from section first, fallback to company settings
+  const displayTerms = section.terms || companySettings?.terms;
 
   return (
     <div className="py-12 space-y-8">
@@ -49,11 +56,11 @@ export function PricingSection({ section }: PricingSectionProps) {
           </span>
         </div>
 
-        {section.terms && (
+        {displayTerms && (
           <div className="mt-8 pt-6 border-t">
             <h3 className="text-lg font-semibold mb-3">Payment Terms</h3>
             <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
-              {section.terms}
+              {displayTerms}
             </p>
           </div>
         )}
