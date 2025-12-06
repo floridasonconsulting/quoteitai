@@ -93,6 +93,9 @@ export function transformQuoteToProposal(
   console.log('[transformQuoteToProposal] Generated sections:', sections.map(s => ({
     id: s.id,
     type: s.type,
+    title: s.title,
+    categoryCount: s.type === 'categoryGroup' ? s.categoryGroups?.length : undefined,
+    categories: s.type === 'categoryGroup' ? s.categoryGroups?.map(g => g.category) : undefined,
     showPricing: 'showPricing' in s ? s.showPricing : undefined,
     hasCompanyInfo: s.type === 'hero' ? {
       name: s.companyName,

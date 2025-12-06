@@ -530,7 +530,7 @@ export default function PublicQuoteView() {
       <ProposalViewer 
         quote={quote}
         companySettings={settings || {
-          name: '', // CRITICAL: Empty string, not placeholder
+          name: '', // Empty string instead of placeholder
           address: '',
           city: '',
           state: '',
@@ -538,7 +538,7 @@ export default function PublicQuoteView() {
           phone: '',
           email: '',
           website: '',
-          terms: '', // CRITICAL: Empty string, not placeholder
+          terms: '', // Empty string instead of placeholder
           proposalTemplate: 'classic',
           proposalTheme: 'modern-corporate',
         }}
