@@ -1,5 +1,5 @@
 import { parseCSVLine } from './csv-utils';
-import { addCustomer, addItem, saveSettings } from './db-service';
+import { addCustomer, addItem, addQuote, saveSettings } from './db-service';
 import { Customer, Item, Quote, CompanySettings } from '@/types';
 
 export interface ImportResult {
@@ -17,7 +17,6 @@ export async function importCustomersFromCSV(
   userId: string,
   duplicateStrategy: DuplicateStrategy = 'skip'
 ): Promise<ImportResult> {
-  // Handle all line ending types and filter empty lines
   const lines = csvContent
     .trim()
     .split(/\r?\n|\r/)
@@ -31,7 +30,6 @@ export async function importCustomersFromCSV(
   const headers = parseCSVLine(lines[0]);
   const result: ImportResult = { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: [] };
 
-  // Import customer functions
   const { getCustomers, updateCustomer } = await import('./db-service');
   const existingCustomers = await getCustomers(userId);
 
@@ -39,7 +37,6 @@ export async function importCustomersFromCSV(
     try {
       const values = parseCSVLine(lines[i]);
       
-      // Validate column count
       if (values.length !== headers.length) {
         result.failed++;
         result.errors.push(
@@ -53,7 +50,6 @@ export async function importCustomersFromCSV(
         (customer as Record<string, unknown>)[header.trim()] = values[index] || '';
       });
 
-      // Check for duplicates by name and email
       const existingCustomer = existingCustomers.find(
         existing => existing.name === customer.name && existing.email === customer.email
       );
@@ -73,7 +69,6 @@ export async function importCustomersFromCSV(
         }
       }
 
-      // Don't queue to sync manager - direct DB insert during import
       await addCustomer(userId, customer as Customer);
       result.success++;
     } catch (error) {
@@ -95,7 +90,6 @@ export async function importItemsFromCSV(
   userId: string,
   duplicateStrategy: DuplicateStrategy = 'skip'
 ): Promise<ImportResult> {
-  // Handle all line ending types and filter empty lines
   const lines = csvContent
     .trim()
     .split(/\r?\n|\r/)
@@ -103,13 +97,17 @@ export async function importItemsFromCSV(
     .filter(line => line.length > 0);
     
   if (lines.length < 2) {
+    console.log('[CSV Import] CSV is empty or has no data rows');
     return { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: ['CSV file is empty or has no data rows'] };
   }
   
   const headers = parseCSVLine(lines[0]);
+  console.log('[CSV Import] ========== IMPORT STARTED ==========');
+  console.log('[CSV Import] Headers detected:', headers);
+  console.log('[CSV Import] Total lines to import:', lines.length - 1);
+  
   const result: ImportResult = { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: [] };
 
-  // Import item functions
   const { getItems, updateItem } = await import('./db-service');
   const existingItems = await getItems(userId);
 
@@ -117,12 +115,15 @@ export async function importItemsFromCSV(
     try {
       const values = parseCSVLine(lines[i]);
       
-      // Validate column count
+      console.log(`\n[CSV Import] ========== LINE ${i + 1} ==========`);
+      console.log(`[CSV Import] Raw values:`, values);
+      
       if (values.length !== headers.length) {
         result.failed++;
         result.errors.push(
           `Line ${i + 1}: Column count mismatch. Expected ${headers.length} columns, found ${values.length}`
         );
+        console.error(`[CSV Import] Column count mismatch on line ${i + 1}`);
         continue;
       }
       
@@ -134,17 +135,19 @@ export async function importItemsFromCSV(
         if (['basePrice', 'finalPrice'].includes(headerName)) {
           (item as Record<string, unknown>)[headerName] = parseFloat(value) || 0;
         } else if (headerName === 'minQuantity') {
-          // Parse minQuantity - default to 1 if empty or invalid
           const parsed = parseInt(value, 10);
-          (item as Record<string, unknown>)[headerName] = isNaN(parsed) ? 1 : parsed;
+          const minQty = isNaN(parsed) || parsed < 1 ? 1 : parsed;
+          (item as Record<string, unknown>)[headerName] = minQty;
+          console.log(`[CSV Import] minQuantity parsed: "${value}" -> ${minQty}`);
         } else if (headerName === 'imageUrl') {
-          // Parse imageUrl field (OPTIONAL) - only set if non-empty
           const trimmedUrl = value.trim();
-          if (trimmedUrl) {
+          if (trimmedUrl && trimmedUrl.length > 0) {
             (item as Record<string, unknown>)[headerName] = trimmedUrl;
+            console.log(`[CSV Import] imageUrl set: ${trimmedUrl.substring(0, 50)}...`);
+          } else {
+            console.log(`[CSV Import] imageUrl is empty, skipping`);
           }
         } else if (headerName === 'markup') {
-          // Parse markup and detect type from format
           const markupValue = value.trim();
           if (markupValue.includes('%')) {
             item.markup = parseFloat(markupValue.replace('%', '')) || 0;
@@ -160,7 +163,17 @@ export async function importItemsFromCSV(
         }
       });
 
-      // CRITICAL FIX: Calculate finalPrice if not provided or if it's 0
+      console.log(`[CSV Import] Parsed item data:`, {
+        name: item.name,
+        category: item.category,
+        basePrice: item.basePrice,
+        finalPrice: item.finalPrice,
+        minQuantity: item.minQuantity,
+        hasImageUrl: !!item.imageUrl,
+        imageUrl: item.imageUrl ? item.imageUrl.substring(0, 50) + '...' : undefined
+      });
+
+      // Calculate finalPrice if not provided
       const basePrice = item.basePrice || 0;
       const markup = item.markup || 0;
       const markupType = item.markupType || 'percentage';
@@ -173,16 +186,18 @@ export async function importItemsFromCSV(
         } else {
           item.finalPrice = basePrice;
         }
+        console.log(`[CSV Import] Calculated finalPrice: ${item.finalPrice}`);
       }
 
       // Validate markup_type
       if (item.markupType && !['percentage', 'fixed'].includes(item.markupType)) {
         result.failed++;
         result.errors.push(`Line ${i + 1}: Invalid markupType "${item.markupType}". Must be "percentage" or "fixed"`);
+        console.error(`[CSV Import] Invalid markupType: ${item.markupType}`);
         continue;
       }
 
-      // Check for duplicates by name and category
+      // Check for duplicates
       const existingItem = existingItems.find(
         existing => existing.name === item.name && existing.category === item.category
       );
@@ -190,19 +205,22 @@ export async function importItemsFromCSV(
       if (existingItem) {
         if (duplicateStrategy === 'skip') {
           result.skipped++;
+          console.log(`[CSV Import] Skipping duplicate: ${item.name}`);
           continue;
         } else if (duplicateStrategy === 'error') {
           result.failed++;
           result.errors.push(`Line ${i + 1}: Duplicate item: ${item.name} in ${item.category}`);
+          console.error(`[CSV Import] Duplicate detected: ${item.name}`);
           continue;
         } else if (duplicateStrategy === 'overwrite') {
           await updateItem(userId, existingItem.id, item as Item);
           result.overwritten++;
+          console.log(`[CSV Import] Overwritten: ${item.name}`);
           continue;
         }
       }
 
-      // Create new item with all fields including minQuantity and imageUrl
+      // Create new item with ALL fields
       const newItem: Item = {
         id: crypto.randomUUID(),
         name: item.name as string,
@@ -213,16 +231,24 @@ export async function importItemsFromCSV(
         markupType: item.markupType as 'percentage' | 'fixed',
         finalPrice: item.finalPrice as number,
         units: item.units as string,
-        minQuantity: item.minQuantity as number | undefined, // Will be 1 if not provided
-        imageUrl: item.imageUrl as string | undefined, // Will be undefined if not provided
+        minQuantity: item.minQuantity as number | undefined,
+        imageUrl: item.imageUrl as string | undefined,
         createdAt: new Date().toISOString(),
       };
       
+      console.log(`[CSV Import] Creating item:`, {
+        name: newItem.name,
+        minQuantity: newItem.minQuantity,
+        hasImageUrl: !!newItem.imageUrl
+      });
+      
       await addItem(userId, newItem);
       result.success++;
+      console.log(`[CSV Import] ✓ Successfully imported: ${newItem.name}`);
     } catch (error) {
       result.failed++;
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`[CSV Import] ✗ Error on line ${i + 1}:`, error);
       if (errorMsg.includes('violates') || errorMsg.includes('constraint')) {
         result.errors.push(`Line ${i + 1}: Database constraint violation - ${errorMsg}`);
       } else {
@@ -231,11 +257,12 @@ export async function importItemsFromCSV(
     }
   }
 
+  console.log('[CSV Import] ========== IMPORT COMPLETE ==========');
+  console.log('[CSV Import] Results:', result);
   return result;
 }
 
 export async function importQuotesFromCSV(csvContent: string, userId: string): Promise<ImportResult> {
-  // Handle all line ending types and filter empty lines
   const lines = csvContent
     .trim()
     .split(/\r?\n|\r/)
@@ -252,7 +279,6 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
 
   console.log(`[Import] Starting quote import with ${lines.length - 1} rows`);
 
-  // Import getQuotes, getCustomers and addQuote to check for duplicates
   const { getQuotes, getCustomers } = await import('./db-service');
   const existingQuotes = await getQuotes(userId);
   const existingCustomers = await getCustomers(userId);
@@ -266,7 +292,6 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
     try {
       const values = parseCSVLine(lines[i]);
       
-      // Validate column count
       if (values.length !== headers.length) {
         result.failed++;
         result.errors.push(
@@ -281,7 +306,6 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
         const headerName = header.trim();
         
         if (headerName === 'items') {
-          // Parse JSON for items array
           try {
             (quote as Record<string, unknown>)[headerName] = value ? JSON.parse(value) : [];
           } catch (e) {
@@ -296,7 +320,6 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
         }
       });
 
-      // Check for duplicates by quoteNumber
       const isDuplicate = existingQuotes.some(
         existing => existing.quoteNumber === quote.quoteNumber
       );
@@ -307,7 +330,6 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
         continue;
       }
 
-      // Validate required fields
       if (!quote.quoteNumber || !quote.customerName || !quote.title) {
         result.failed++;
         result.errors.push(`Line ${i + 1}: Missing required fields (quoteNumber, customerName, or title)`);
@@ -315,7 +337,6 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
         continue;
       }
 
-      // Validate status
       if (quote.status && !validStatuses.includes(quote.status)) {
         result.failed++;
         result.errors.push(`Line ${i + 1}: Invalid status "${quote.status}". Must be "draft", "sent", "accepted", or "declined"`);
@@ -323,7 +344,6 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
         continue;
       }
 
-      // Map customerName to actual customer UUID
       if (quote.customerName) {
         const matchingCustomer = existingCustomers.find(
           c => c.name === quote.customerName
@@ -340,20 +360,16 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
         quote.customer_id = null;
       }
 
-      // Remove customerId from CSV if it exists (not a valid UUID)
       delete (quote as Partial<Quote & { customerId: string }>).customerId;
 
-      // Import addQuote dynamically to save the quote
-      const { addQuote } = await import('./db-service');
       console.log(`[Import] Adding quote: ${quote.quoteNumber} - ${quote.title}`);
-      const inserted = await addQuote(userId, quote as Quote);
+      await addQuote(userId, quote as Quote);
       console.log(`[Import] Successfully added quote: ${quote.quoteNumber}`);
       result.success++;
     } catch (error) {
       result.failed++;
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       console.error(`[Import] Quote import error at line ${i + 1}:`, error);
-      // Include specific constraint violations in error message
       if (errorMsg.includes('violates') || errorMsg.includes('constraint')) {
         result.errors.push(`Line ${i + 1}: Database constraint violation - ${errorMsg}`);
       } else {
@@ -382,7 +398,6 @@ export async function importCompanySettingsFromCSV(csvContent: string, userId: s
   await saveSettings(userId, settings as CompanySettings);
 }
 
-// Validation function to pre-check CSV data
 export function validateItemsCSV(csvContent: string): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   const lines = csvContent.trim().split('\n');
@@ -397,17 +412,14 @@ export function validateItemsCSV(csvContent: string): { valid: boolean; errors: 
       item[header.trim()] = values[index] || '';
     });
     
-    // Check markup type
     if (item.markupType && !validMarkupTypes.includes(item.markupType)) {
       errors.push(`Line ${i + 1}: Invalid markupType "${item.markupType}". Must be "percentage" or "fixed"`);
     }
     
-    // Check required fields
     if (!item.name) {
       errors.push(`Line ${i + 1}: Missing required field "name"`);
     }
     
-    // Check numeric fields
     if (item.basePrice && isNaN(parseFloat(item.basePrice))) {
       errors.push(`Line ${i + 1}: Invalid basePrice "${item.basePrice}"`);
     }
@@ -430,7 +442,6 @@ export function validateQuotesCSV(csvContent: string): { valid: boolean; errors:
       quote[header.trim()] = values[index] || '';
     });
     
-    // Check required fields
     if (!quote.quoteNumber) {
       errors.push(`Line ${i + 1}: Missing required field "quoteNumber"`);
     }
@@ -441,12 +452,10 @@ export function validateQuotesCSV(csvContent: string): { valid: boolean; errors:
       errors.push(`Line ${i + 1}: Missing required field "title"`);
     }
     
-    // Check status
     if (quote.status && !validStatuses.includes(quote.status)) {
       errors.push(`Line ${i + 1}: Invalid status "${quote.status}". Must be "draft", "sent", "accepted", or "declined"`);
     }
     
-    // Check items is valid JSON
     if (quote.items) {
       try {
         JSON.parse(quote.items);
@@ -455,7 +464,6 @@ export function validateQuotesCSV(csvContent: string): { valid: boolean; errors:
       }
     }
     
-    // Check numeric fields
     if (quote.subtotal && isNaN(parseFloat(quote.subtotal))) {
       errors.push(`Line ${i + 1}: Invalid subtotal "${quote.subtotal}"`);
     }
@@ -478,22 +486,15 @@ export async function loadSampleDataFile(filename: string): Promise<string> {
   return response.text();
 }
 
-/**
- * Export All Data
- * Exports all customers, items, quotes, and settings to a JSON file
- */
 export async function exportAllData(): Promise<void> {
   try {
-    // Import necessary functions
     const { getCustomers, getItems, getQuotes, getSettings } = await import('./db-service');
     
-    // Get user ID from auth context
     const userId = localStorage.getItem('user_id');
     if (!userId) {
       throw new Error('User not authenticated');
     }
 
-    // Fetch all data
     const [customers, items, quotes, settings] = await Promise.all([
       getCustomers(userId),
       getItems(userId),
@@ -501,7 +502,6 @@ export async function exportAllData(): Promise<void> {
       getSettings(userId),
     ]);
 
-    // Create export object
     const exportData = {
       version: '1.0',
       exportDate: new Date().toISOString(),
@@ -513,7 +513,6 @@ export async function exportAllData(): Promise<void> {
       },
     };
 
-    // Convert to JSON and download
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -529,38 +528,27 @@ export async function exportAllData(): Promise<void> {
   }
 }
 
-/**
- * Import All Data
- * Imports customers, items, quotes, and settings from a JSON backup file
- */
 export async function importAllData(file: File): Promise<void> {
   try {
-    // Read file
     const text = await file.text();
     const importData = JSON.parse(text);
 
-    // Validate import data structure
     if (!importData.version || !importData.data) {
       throw new Error('Invalid backup file format');
     }
 
     const { customers, items, quotes, settings } = importData.data;
 
-    // Get user ID
     const userId = localStorage.getItem('user_id');
     if (!userId) {
       throw new Error('User not authenticated');
     }
 
-    // Import settings first
     if (settings) {
-      const { saveSettings } = await import('./db-service');
       await saveSettings(userId, settings);
     }
 
-    // Import customers
     if (customers && Array.isArray(customers)) {
-      const { addCustomer } = await import('./db-service');
       for (const customer of customers) {
         try {
           await addCustomer(userId, customer);
@@ -570,9 +558,7 @@ export async function importAllData(file: File): Promise<void> {
       }
     }
 
-    // Import items
     if (items && Array.isArray(items)) {
-      const { addItem } = await import('./db-service');
       for (const item of items) {
         try {
           await addItem(userId, item);
@@ -582,9 +568,7 @@ export async function importAllData(file: File): Promise<void> {
       }
     }
 
-    // Import quotes
     if (quotes && Array.isArray(quotes)) {
-      const { addQuote } = await import('./db-service');
       for (const quote of quotes) {
         try {
           await addQuote(userId, quote);
@@ -594,7 +578,6 @@ export async function importAllData(file: File): Promise<void> {
       }
     }
 
-    // Clear caches to force fresh data load
     const { cacheManager } = await import('./cache-manager');
     await cacheManager.clearAll();
   } catch (error) {
@@ -603,38 +586,6 @@ export async function importAllData(file: File): Promise<void> {
   }
 }
 
-// Add minQuantity to item parsing
-const parseItemsCSV = (csvText: string): Item[] => {
-  const lines = csvText.split('\n');
-  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-  
-  return lines.slice(1)
-    .filter(line => line.trim())
-    .map(line => {
-      const values = line.split(',');
-      const row: Record<string, string> = {};
-      headers.forEach((header, index) => {
-        row[header] = values[index]?.trim() || '';
-      });
-      
-      return {
-        id: crypto.randomUUID(),
-        name: row.name || row.item || '',
-        description: row.description || '',
-        category: row.category || 'General',
-        basePrice: parseFloat(row.baseprice || row['base price'] || '0'),
-        markupType: (row.markuptype || row['markup type'] || 'percentage') as 'percentage' | 'fixed',
-        markup: parseFloat(row.markup || '0'),
-        finalPrice: parseFloat(row.finalprice || row['final price'] || '0'),
-        units: row.units || 'unit',
-        minQuantity: parseInt(row.minquantity || row['min quantity'] || row['minimum quantity'] || '1', 10),
-        imageUrl: row.imageurl || row['image url'] || undefined,
-        createdAt: new Date().toISOString(),
-      };
-    });
-};
-
-// Add minQuantity to CSV export headers and data
 export const exportItemsToCSV = (items: Item[]): string => {
   const headers = ['Name', 'Description', 'Category', 'Base Price', 'Markup Type', 'Markup', 'Final Price', 'Units', 'Min Quantity', 'Image URL'];
   const rows = items.map(item => [
