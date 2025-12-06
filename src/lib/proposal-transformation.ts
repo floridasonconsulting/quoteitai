@@ -5,7 +5,8 @@ import {
   Quote, 
   QuoteItem, 
   CompanySettings,
-  CategoryGroup
+  CategoryGroup,
+  ProposalVisuals
 } from "@/types";
 import { 
   CATEGORY_DISPLAY_ORDER, 
@@ -21,7 +22,7 @@ import {
 export function transformQuoteToProposal(
   quote: Quote, 
   settings: CompanySettings,
-  visuals?: any
+  visuals?: ProposalVisuals
 ): ProposalData {
   // 1. Create Base Proposal Data
   const proposalData: ProposalData = {

@@ -55,13 +55,19 @@ export function ProposalViewer({
 
   // Navigation Items Generation
   const navigationItems = useMemo(() => {
-    return proposalData.sections.map((section, index) => ({
-      id: section.id,
-      label: section.title || 'Untitled Section',
-      index: index,
-      type: (section.type === 'lineItems' ? 'summary' : 
-             section.type === 'legal' ? 'terms' : 'category') as any
-    }));
+    return proposalData.sections.map((section, index) => {
+      let type: 'summary' | 'category' | 'terms' = 'category';
+      
+      if (section.type === 'lineItems') type = 'summary';
+      else if (section.type === 'legal') type = 'terms';
+      
+      return {
+        id: section.id,
+        label: section.title || 'Untitled Section',
+        index: index,
+        type
+      };
+    });
   }, [proposalData.sections]);
 
   // Handlers
