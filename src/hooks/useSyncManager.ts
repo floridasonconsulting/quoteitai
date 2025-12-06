@@ -54,6 +54,22 @@ export function useSyncManager() {
    */
   const queueChange = useCallback((change: QueueChange) => {
     const queue = getQueue();
+    
+    // CRITICAL: Deduplicate queue - if we're deleting something that was just created, remove both
+    const existingCreateIndex = queue.findIndex(
+      q => q.type === 'create' && 
+      q.table === change.table && 
+      q.data.id === change.data.id
+    );
+    
+    if (change.type === 'delete' && existingCreateIndex >= 0) {
+      // Remove the create operation instead of adding a delete
+      console.log('[SyncManager] Removing create operation for deleted item:', change.data.id);
+      queue.splice(existingCreateIndex, 1);
+      saveQueue(queue);
+      return;
+    }
+    
     queue.push(change);
     saveQueue(queue);
     
@@ -86,7 +102,14 @@ export function useSyncManager() {
             .from(change.table)
             .insert(dbData as never);
           
-          if (createError) throw createError;
+          if (createError) {
+            // If it's a duplicate key error, consider it successful
+            if (createError.code === '23505') {
+              console.log('[SyncManager] Item already exists, skipping create');
+              return true;
+            }
+            throw createError;
+          }
           break;
         }
         case 'update': {
@@ -116,7 +139,14 @@ export function useSyncManager() {
             .eq('id', change.data.id)
             .eq('user_id', user.id);
           
-          if (deleteError) throw deleteError;
+          if (deleteError) {
+            // If item doesn't exist, consider delete successful
+            if (deleteError.code === 'PGRST116') {
+              console.log('[SyncManager] Item already deleted, skipping');
+              return true;
+            }
+            throw deleteError;
+          }
           break;
         }
         default:
@@ -195,6 +225,18 @@ export function useSyncManager() {
   }, [saveQueue]);
 
   /**
+   * Remove specific items from queue (useful after bulk delete)
+   */
+  const removeFromQueue = useCallback((table: string, ids: string[]) => {
+    const queue = getQueue();
+    const filtered = queue.filter(
+      change => !(change.table === table && ids.includes(change.data.id as string))
+    );
+    saveQueue(filtered);
+    console.log(`[SyncManager] Removed ${queue.length - filtered.length} items from queue`);
+  }, [getQueue, saveQueue]);
+
+  /**
    * Setup auto-sync interval
    */
   useEffect(() => {
@@ -238,5 +280,6 @@ export function useSyncManager() {
     queueChange,
     syncQueue,
     clearQueue,
+    removeFromQueue,
   };
 }
