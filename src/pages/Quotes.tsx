@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Search, FileText, Calendar, Trash2, Bell, X } from 'lucide-react';
+import { Plus, Search, FileText, Calendar, Trash2, Bell, X, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,13 +17,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { supabase } from '@/integrations/supabase/client';
 import { getCustomers } from '@/lib/db-service';
+import { debugQuoteStorage, nuclearClearAllQuotes } from '@/lib/debug-quotes';
 
 export default function Quotes() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { dueFollowUpIds } = useNotifications();
   const { user } = useAuth();
-  const { queueChange } = useSyncManager();
+  const { queueChange, clearQueue } = useSyncManager();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,43 +182,86 @@ export default function Quotes() {
     if (selectedQuotes.length === 0 || !user?.id) return;
     
     const confirmMessage = selectedQuotes.length === quotes.length
-      ? 'Are you sure you want to delete ALL quotes? This will permanently clear all quote data.'
+      ? '⚠️ CRITICAL: This will permanently delete ALL quotes from ALL storage locations (Supabase, IndexedDB, localStorage, cache). This action CANNOT be undone. Are you absolutely sure?'
       : `Are you sure you want to delete ${selectedQuotes.length} quote${selectedQuotes.length > 1 ? 's' : ''}?`;
     
     if (!confirm(confirmMessage)) return;
     
-    console.log(`[Quotes] Bulk deleting ${selectedQuotes.length} quotes`);
+    console.log(`[Quotes] ========== BULK DELETE STARTED ==========`);
+    console.log(`[Quotes] Deleting ${selectedQuotes.length} quotes`);
     
     try {
-      // Optimistic update - clear UI immediately
-      setQuotes([]);
-      setSelectedQuotes([]);
-      
-      // If deleting all quotes, use clearAll for thoroughness
+      // If deleting all quotes, use nuclear clear for complete removal
       if (selectedQuotes.length === quotes.length) {
-        console.log('[Quotes] Deleting ALL quotes - using clearAll');
+        console.log('[Quotes] ☢️ NUCLEAR DELETE: Clearing ALL quotes from ALL sources');
+        
+        // 1. Optimistically clear UI
+        setQuotes([]);
+        setSelectedQuotes([]);
+        
+        // 2. Clear sync queue first to prevent restoration
+        console.log('[Quotes] Step 1: Clearing sync queue...');
+        clearQueue();
+        
+        // 3. Use clearAllQuotes which handles all storage layers
+        console.log('[Quotes] Step 2: Clearing all storage layers...');
         await clearAllQuotes(user.id);
+        
+        // 4. Double-check with debug tool
+        console.log('[Quotes] Step 3: Running debug check...');
+        await debugQuoteStorage(user.id);
+        
         toast.success('All quotes deleted successfully');
       } else {
         // Delete individual quotes
         console.log('[Quotes] Deleting selected quotes individually');
+        
+        // Optimistically remove from UI
+        setQuotes(quotes.filter(q => !selectedQuotes.includes(q.id)));
+        setSelectedQuotes([]);
+        
+        // Delete from all sources
         for (const quoteId of selectedQuotes) {
           await deleteQuote(user.id, quoteId, queueChange);
         }
+        
         toast.success(`Deleted ${selectedQuotes.length} quote${selectedQuotes.length > 1 ? 's' : ''}`);
       }
       
-      // Force reload to ensure clean state
-      console.log('[Quotes] Reloading quotes after delete...');
-      await new Promise(resolve => setTimeout(resolve, 500)); // Small delay to ensure delete propagates
+      // Force reload after a delay to ensure all operations complete
+      console.log('[Quotes] Step 4: Force reloading quotes...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
       await loadQuotes();
       
+      console.log('[Quotes] ========== BULK DELETE COMPLETE ==========');
+      
     } catch (error) {
-      console.error('[Quotes] Error deleting quotes:', error);
+      console.error('[Quotes] ❌ Error during bulk delete:', error);
       toast.error('Failed to delete quotes. Please try again.');
       // Reload on error to ensure consistency
       await loadQuotes();
     }
+  };
+
+  const handleDebugStorage = async () => {
+    if (!user?.id) return;
+    await debugQuoteStorage(user.id);
+    toast.info('Debug report printed to console');
+  };
+
+  const handleNuclearClear = async () => {
+    if (!user?.id) return;
+    
+    if (!confirm('⚠️ NUCLEAR OPTION: This will completely obliterate ALL quote data from EVERY storage location. This is irreversible. Continue?')) {
+      return;
+    }
+    
+    await nuclearClearAllQuotes(user.id);
+    toast.success('Nuclear clear complete. Refreshing page...');
+    
+    setTimeout(() => {
+      window.location.reload();
+    }, 2000);
   };
 
   const getStatusColor = (status: string) => {
@@ -249,10 +293,20 @@ export default function Quotes() {
             Manage and track all your quotes
           </p>
         </div>
-        <Button size="lg" onClick={() => navigate('/quotes/new')}>
-          <Plus className="mr-2 h-5 w-5" />
-          Create Quote
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleDebugStorage}
+            title="Print debug info to console"
+          >
+            <Bug className="h-4 w-4" />
+          </Button>
+          <Button size="lg" onClick={() => navigate('/quotes/new')}>
+            <Plus className="mr-2 h-5 w-5" />
+            Create Quote
+          </Button>
+        </div>
       </div>
 
       {notificationFilter.length > 0 && (
@@ -285,14 +339,26 @@ export default function Quotes() {
               <span className="text-sm font-medium">
                 {selectedQuotes.length} quote{selectedQuotes.length > 1 ? 's' : ''} selected
               </span>
-              <Button 
-                variant="destructive" 
-                size="sm"
-                onClick={handleBulkDelete}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Selected
-              </Button>
+              <div className="flex gap-2">
+                {selectedQuotes.length === quotes.length && (
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={handleNuclearClear}
+                    title="Nuclear option: Clear ALL quote data from ALL sources"
+                  >
+                    ☢️ Nuclear Clear
+                  </Button>
+                )}
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={handleBulkDelete}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Selected
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
