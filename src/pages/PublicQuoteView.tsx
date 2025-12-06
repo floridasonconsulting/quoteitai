@@ -219,6 +219,7 @@ export default function PublicQuoteView() {
       }
       
       console.log('[PublicQuoteView] Quote loaded successfully:', quoteData.id);
+      console.log('[PublicQuoteView] Quote showPricing value:', quoteData.show_pricing);
 
       // Convert database format to app format
       const formattedQuote: Quote = {
@@ -242,11 +243,13 @@ export default function PublicQuoteView() {
         viewedAt: quoteData.viewed_at,
         executiveSummary: quoteData.executive_summary,
         userId: quoteData.user_id,
+        showPricing: quoteData.show_pricing ?? true, // CRITICAL: Default to true if null/undefined
       };
 
+      console.log('[PublicQuoteView] Formatted quote showPricing:', formattedQuote.showPricing);
       setQuote(formattedQuote);
 
-      // Fetch customer data (optional - won't fail if it errors)
+      // Fetch customer data
       if (quoteData.customer_id) {
         try {
           const { data: customerData, error: customerError } = await supabase
@@ -257,7 +260,6 @@ export default function PublicQuoteView() {
 
           if (customerError) {
             console.warn('[PublicQuoteView] Customer fetch error (non-critical):', customerError);
-            // Continue without customer data - it's not critical
           } else if (customerData) {
             setCustomer({
               id: customerData.id,
@@ -270,6 +272,8 @@ export default function PublicQuoteView() {
               state: customerData.state,
               zip: customerData.zip,
               createdAt: customerData.created_at,
+              contactFirstName: customerData.contact_first_name,
+              contactLastName: customerData.contact_last_name,
             });
           }
         } catch (error) {
@@ -277,8 +281,9 @@ export default function PublicQuoteView() {
         }
       }
 
-      // Fetch company settings (optional - won't fail if it errors)
+      // CRITICAL: Fetch company settings from Supabase (don't use defaults)
       try {
+        console.log('[PublicQuoteView] Fetching company settings for user:', quoteData.user_id);
         const { data: settingsData, error: settingsError } = await supabase
           .from('company_settings')
           .select('*')
@@ -286,63 +291,37 @@ export default function PublicQuoteView() {
           .maybeSingle();
 
         if (settingsError) {
-          console.warn('[PublicQuoteView] Settings fetch error (non-critical):', settingsError);
-          // Set minimal defaults so quote can still display
-          setSettings({
-            name: 'Company',
-            email: '',
-            phone: '',
-            address: '',
-            city: '',
-            state: '',
-            zip: '',
-            website: '',
-            terms: '',
-          });
+          console.error('[PublicQuoteView] Settings fetch error:', settingsError);
         } else if (settingsData) {
-          setSettings({
+          console.log('[PublicQuoteView] Settings loaded:', {
             name: settingsData.name,
-            address: settingsData.address,
-            city: settingsData.city,
-            state: settingsData.state,
-            zip: settingsData.zip,
-            phone: settingsData.phone,
             email: settingsData.email,
-            website: settingsData.website,
-            logo: settingsData.logo,
+            hasLogo: !!settingsData.logo,
+            termsLength: settingsData.terms?.length || 0
+          });
+          
+          setSettings({
+            name: settingsData.name || '',
+            address: settingsData.address || '',
+            city: settingsData.city || '',
+            state: settingsData.state || '',
+            zip: settingsData.zip || '',
+            phone: settingsData.phone || '',
+            email: settingsData.email || '',
+            website: settingsData.website || '',
+            logo: settingsData.logo || undefined,
             logoDisplayOption: (settingsData.logo_display_option as 'logo' | 'name' | 'both') || 'both',
-            license: settingsData.license,
-            insurance: settingsData.insurance,
-            terms: settingsData.terms,
+            license: settingsData.license || '',
+            insurance: settingsData.insurance || '',
+            terms: settingsData.terms || '',
             proposalTemplate: (settingsData.proposal_template as 'classic' | 'modern' | 'detailed') || 'classic',
+            proposalTheme: settingsData.proposal_theme || 'modern-corporate',
           });
         } else {
-          // No settings found - use defaults
-          setSettings({
-            name: 'Company',
-            email: '',
-            phone: '',
-            address: '',
-            city: '',
-            state: '',
-            zip: '',
-            website: '',
-            terms: '',
-          });
+          console.warn('[PublicQuoteView] No settings found for user');
         }
       } catch (error) {
-        console.warn('[PublicQuoteView] Settings fetch failed (continuing with defaults):', error);
-        setSettings({
-          name: 'Company',
-          email: '',
-          phone: '',
-          address: '',
-          city: '',
-          state: '',
-          zip: '',
-          website: '',
-          terms: '',
-        });
+        console.error('[PublicQuoteView] Settings fetch failed:', error);
       }
 
       // Check if quote owner is Max AI tier
@@ -493,7 +472,7 @@ export default function PublicQuoteView() {
     );
   }
 
-  // Show not found if no quote OR if data is still loading
+  // Show not found if no quote OR settings
   if (!quote || !settings) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -520,28 +499,10 @@ export default function PublicQuoteView() {
     <div className="min-h-screen bg-slate-50">
       <ProposalViewer 
         quote={quote}
-        companySettings={settings || {
-          name: 'Company',
-          email: '',
-          phone: '',
-          address: '',
-          city: '',
-          state: '',
-          zip: '',
-          website: '',
-          terms: '',
-        }}
+        companySettings={settings}
+        customer={customer || undefined}
         isPreview={isOwner}
-        actionBar={isOwner ? {
-          // ✅ FIX: Show action bar for owner preview (for testing)
-          quoteId: quote.id,
-          total: quote.total,
-          status: quote.status,
-          userEmail: userEmail || 'Owner Preview',
-          userName: 'Owner',
-          onAccept: handleAccept,
-          onReject: handleReject
-        } : !isOwner && customer ? {
+        actionBar={!isOwner && customer ? {
           quoteId: quote.id,
           total: quote.total,
           status: quote.status,

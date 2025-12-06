@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CompanySettings, Quote } from "@/types";
+import { CompanySettings, Quote, Customer } from "@/types";
 import { getTheme, getThemeCSSVars } from "@/lib/proposal-themes";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, EffectCube, Keyboard, Mousewheel } from 'swiper/modules';
@@ -23,6 +23,7 @@ type SuccessStateType = 'accepted' | 'declined' | 'commented' | null;
 interface ProposalViewerProps {
   quote: Quote;
   companySettings: CompanySettings;
+  customer?: Customer;
   isPreview?: boolean;
   actionBar?: {
     quoteId: string;
@@ -35,7 +36,7 @@ interface ProposalViewerProps {
   };
 }
 
-export function ProposalViewer({ quote, companySettings, isPreview = false, actionBar }: ProposalViewerProps) {
+export function ProposalViewer({ quote, companySettings, customer, isPreview = false, actionBar }: ProposalViewerProps) {
   const [successState, setSuccessState] = useState<SuccessStateType>(null);
 
   // Defensive checks
@@ -57,8 +58,18 @@ export function ProposalViewer({ quote, companySettings, isPreview = false, acti
     );
   }
 
+  console.log('[ProposalViewer] Rendering with:', {
+    quoteId: quote.id,
+    showPricing: quote.showPricing,
+    hasCustomer: !!customer,
+    companyName: companySettings.name,
+    termsLength: companySettings.terms?.length || 0,
+    hasActionBar: !!actionBar,
+    isPreview
+  });
+
   // Transform quote to proposal structure with grouped categories
-  const proposalData = transformQuoteToProposal(quote, undefined, companySettings);
+  const proposalData = transformQuoteToProposal(quote, customer, companySettings);
   
   const theme = getTheme(companySettings.proposalTheme || "modern-corporate");
   const themeCSSVars = getThemeCSSVars(theme);
@@ -134,7 +145,12 @@ export function ProposalViewer({ quote, companySettings, isPreview = false, acti
           <SwiperSlide key={section.id} className="overflow-y-auto">
             <div className="container mx-auto px-4 py-8 max-w-5xl">
               <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
-                {section.type === 'hero' && <HeroSection section={section} />}
+                {section.type === 'hero' && (
+                  <HeroSection 
+                    section={section}
+                    companySettings={companySettings}
+                  />
+                )}
                 {section.type === 'text' && <TextSection section={section} />}
                 {section.type === 'categoryGroup' && (
                   <CategoryGroupSection 
@@ -142,8 +158,18 @@ export function ProposalViewer({ quote, companySettings, isPreview = false, acti
                     theme={theme}
                   />
                 )}
-                {section.type === 'pricing' && <PricingSection section={section} />}
-                {section.type === 'legal' && <LegalSection section={section} />}
+                {section.type === 'pricing' && (
+                  <PricingSection 
+                    section={section}
+                    companySettings={companySettings}
+                  />
+                )}
+                {section.type === 'legal' && (
+                  <LegalSection 
+                    section={section}
+                    companySettings={companySettings}
+                  />
+                )}
               </div>
             </div>
           </SwiperSlide>

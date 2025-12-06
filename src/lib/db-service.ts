@@ -53,8 +53,6 @@ export const getSettings = async (userId: string): Promise<CompanySettings> => {
       const indexedDBSettings = await SettingsDB.get(userId);
       if (indexedDBSettings && (indexedDBSettings.name || indexedDBSettings.email)) {
         console.log('[db-service] ✓ Retrieved settings from IndexedDB');
-        console.log('[db-service]   - name:', indexedDBSettings.name);
-        console.log('[db-service]   - email:', indexedDBSettings.email);
         return indexedDBSettings;
       }
     } catch (error) {
@@ -75,7 +73,15 @@ export async function saveSettings(
 ): Promise<void> {
   console.log('[DB Service] ========== SAVING SETTINGS ==========');
   console.log('[DB Service] User ID:', userId);
-  console.log('[DB Service] Settings data:', JSON.stringify(settings, null, 2));
+  console.log('[DB Service] Settings data:', {
+    name: settings.name,
+    email: settings.email,
+    phone: settings.phone,
+    address: settings.address,
+    hasLogo: !!settings.logo,
+    terms: settings.terms?.substring(0, 50) + '...',
+    proposalTheme: settings.proposalTheme
+  });
   
   try {
     // Step 1: Store in memory cache first
@@ -104,15 +110,16 @@ export async function saveSettings(
     if (navigator.onLine) {
       console.log('[DB Service] Online - attempting Supabase save...');
       try {
+        // CRITICAL: Build the database object with proper field mapping
         const dbSettings = {
           user_id: userId,
-          name: settings.name,
+          name: settings.name || '',
           address: settings.address || '',
           city: settings.city || '',
           state: settings.state || '',
           zip: settings.zip || '',
           phone: settings.phone || '',
-          email: settings.email,
+          email: settings.email || '',
           website: settings.website || '',
           logo: settings.logo || null,
           logo_display_option: settings.logoDisplayOption || 'both',
@@ -127,21 +134,31 @@ export async function saveSettings(
           updated_at: new Date().toISOString()
         };
 
-        console.log('[DB Service] Upserting to Supabase:', dbSettings);
+        console.log('[DB Service] Upserting to Supabase with data:', {
+          user_id: dbSettings.user_id,
+          name: dbSettings.name,
+          email: dbSettings.email,
+          termsLength: dbSettings.terms.length,
+          hasLogo: !!dbSettings.logo
+        });
 
+        // Use upsert with proper conflict resolution
         const { data, error } = await supabase
           .from('company_settings')
-          .upsert(dbSettings, { onConflict: 'user_id' })
+          .upsert(dbSettings, { 
+            onConflict: 'user_id',
+            ignoreDuplicates: false 
+          })
           .select()
           .single();
 
         if (error) {
-          console.error('[DB Service] ❌ Supabase save error:', error);
+          console.error('[DB Service] ❌ Supabase upsert error:', error);
           throw error;
         }
 
         console.log('[DB Service] ✓ Settings saved to Supabase successfully');
-        console.log('[DB Service] Supabase response:', data);
+        console.log('[DB Service] Supabase returned:', data ? 'data received' : 'no data');
       } catch (supabaseError) {
         console.error('[DB Service] ❌ Supabase save failed:', supabaseError);
         
@@ -157,6 +174,9 @@ export async function saveSettings(
           });
           console.log('[DB Service] ✓ Settings queued for sync');
         }
+        
+        // Don't throw - we've saved locally
+        console.log('[DB Service] Settings saved locally, will sync later');
       }
     } else {
       console.log('[DB Service] Offline - queueing for sync');
