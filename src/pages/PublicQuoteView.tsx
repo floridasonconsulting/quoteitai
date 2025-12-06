@@ -247,13 +247,16 @@ export default function PublicQuoteView() {
 
       // Fetch customer data
       if (quoteData.customer_id) {
-        const { data: customerData } = await supabase
+        const { data: customerData, error: customerError } = await supabase
           .from('customers')
           .select('*')
           .eq('id', quoteData.customer_id)
-          .single();
+          .maybeSingle();
 
-        if (customerData) {
+        if (customerError) {
+          console.warn('[PublicQuoteView] Customer fetch error (non-critical):', customerError);
+          // Continue without customer data - it's not critical
+        } else if (customerData) {
           setCustomer({
             id: customerData.id,
             name: customerData.name,
@@ -269,13 +272,16 @@ export default function PublicQuoteView() {
       }
 
       // Fetch company settings
-      const { data: settingsData } = await supabase
+      const { data: settingsData, error: settingsError } = await supabase
         .from('company_settings')
         .select('*')
         .eq('user_id', quoteData.user_id)
-        .single();
+        .maybeSingle();
 
-      if (settingsData) {
+      if (settingsError) {
+        console.warn('[PublicQuoteView] Settings fetch error (non-critical):', settingsError);
+        // Continue without settings - use defaults
+      } else if (settingsData) {
         setSettings({
           name: settingsData.name,
           address: settingsData.address,
