@@ -74,13 +74,7 @@ export async function importCustomersFromCSV(
       }
 
       // Don't queue to sync manager - direct DB insert during import
-      const inserted = await addCustomer(userId, customer as Customer);
-      
-      // Update local cache immediately so data appears without navigation
-      const { getCachedData, setCachedData } = await import('./db-service');
-      const cached = getCachedData<Customer>('customers-cache') || [];
-      setCachedData('customers-cache', [...cached, inserted]);
-      
+      await addCustomer(userId, customer as Customer);
       result.success++;
     } catch (error) {
       result.failed++;
@@ -140,13 +134,15 @@ export async function importItemsFromCSV(
         if (['basePrice', 'finalPrice'].includes(headerName)) {
           (item as Record<string, unknown>)[headerName] = parseFloat(value) || 0;
         } else if (headerName === 'minQuantity') {
-          // Store minQuantity locally (IndexedDB/cache only, not sent to Supabase)
-          (item as Record<string, unknown>)[headerName] = parseInt(value, 10) || 1;
+          // Parse minQuantity - default to 1 if empty or invalid
+          const parsed = parseInt(value, 10);
+          (item as Record<string, unknown>)[headerName] = isNaN(parsed) ? 1 : parsed;
         } else if (headerName === 'imageUrl') {
-          // Parse imageUrl field (COMPLETELY OPTIONAL)
-          // Handle: missing column, empty string, whitespace-only, or valid URL
+          // Parse imageUrl field (OPTIONAL) - only set if non-empty
           const trimmedUrl = value.trim();
-          (item as Record<string, unknown>)[headerName] = trimmedUrl ? trimmedUrl : undefined;
+          if (trimmedUrl) {
+            (item as Record<string, unknown>)[headerName] = trimmedUrl;
+          }
         } else if (headerName === 'markup') {
           // Parse markup and detect type from format
           const markupValue = value.trim();
@@ -206,7 +202,7 @@ export async function importItemsFromCSV(
         }
       }
 
-      // Don't queue to sync manager - direct DB insert during import
+      // Create new item with all fields including minQuantity and imageUrl
       const newItem: Item = {
         id: crypto.randomUUID(),
         name: item.name as string,
@@ -217,17 +213,12 @@ export async function importItemsFromCSV(
         markupType: item.markupType as 'percentage' | 'fixed',
         finalPrice: item.finalPrice as number,
         units: item.units as string,
-        minQuantity: item.minQuantity as number,
-        imageUrl: item.imageUrl as string,
+        minQuantity: item.minQuantity as number | undefined, // Will be 1 if not provided
+        imageUrl: item.imageUrl as string | undefined, // Will be undefined if not provided
         createdAt: new Date().toISOString(),
       };
-      const added = await addItem(userId, newItem);
       
-      // Update local cache immediately so data appears without navigation
-      const { getCachedData, setCachedData } = await import('./db-service');
-      const cached = getCachedData<Item>('items-cache') || [];
-      setCachedData('items-cache', [...cached, added]);
-      
+      await addItem(userId, newItem);
       result.success++;
     } catch (error) {
       result.failed++;
@@ -353,14 +344,9 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
       delete (quote as Partial<Quote & { customerId: string }>).customerId;
 
       // Import addQuote dynamically to save the quote
-      const { addQuote, getCachedData, setCachedData } = await import('./db-service');
+      const { addQuote } = await import('./db-service');
       console.log(`[Import] Adding quote: ${quote.quoteNumber} - ${quote.title}`);
       const inserted = await addQuote(userId, quote as Quote);
-      
-      // Update local cache immediately so data appears without navigation
-      const cached = getCachedData<Quote>('quotes-cache') || [];
-      setCachedData('quotes-cache', [...cached, inserted]);
-      
       console.log(`[Import] Successfully added quote: ${quote.quoteNumber}`);
       result.success++;
     } catch (error) {
@@ -609,8 +595,8 @@ export async function importAllData(file: File): Promise<void> {
     }
 
     // Clear caches to force fresh data load
-    const { clearAllCaches } = await import('./db-service');
-    clearAllCaches();
+    const { cacheManager } = await import('./cache-manager');
+    await cacheManager.clearAll();
   } catch (error) {
     console.error('[Import] Failed to import data:', error);
     throw error;
