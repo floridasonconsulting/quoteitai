@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { getQuotes, deleteQuote, getCustomers } from '@/lib/db-service';
+import { getQuotes, deleteQuote, clearAllQuotes } from '@/lib/db-service';
 import { getQuoteAge } from '@/lib/quote-utils';
 import { Quote, QuoteAge, Customer } from '@/types';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { supabase } from '@/integrations/supabase/client';
+import { getCustomers } from '@/lib/db-service';
 
 export default function Quotes() {
   const navigate = useNavigate();
@@ -33,15 +34,30 @@ export default function Quotes() {
   const [notificationFilter, setNotificationFilter] = useState<string[]>([]);
 
   const loadQuotes = async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
+    
+    console.log('[Quotes] Loading quotes for user:', user.id);
     setLoading(true);
-    const [quotesData, customersData] = await Promise.all([
-      getQuotes(user?.id),
-      getCustomers(user?.id)
-    ]);
-    setQuotes(quotesData);
-    setCustomers(customersData);
-    setSelectedQuotes([]);
-    setLoading(false);
+    
+    try {
+      const [quotesData, customersData] = await Promise.all([
+        getQuotes(user.id),
+        getCustomers(user.id)
+      ]);
+      
+      console.log(`[Quotes] Loaded ${quotesData.length} quotes`);
+      setQuotes(quotesData);
+      setCustomers(customersData);
+      setSelectedQuotes([]);
+    } catch (error) {
+      console.error('[Quotes] Error loading quotes:', error);
+      toast.error('Failed to load quotes');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -162,26 +178,45 @@ export default function Quotes() {
   };
 
   const handleBulkDelete = async () => {
-    if (selectedQuotes.length === 0) return;
+    if (selectedQuotes.length === 0 || !user?.id) return;
     
-    if (confirm(`Are you sure you want to delete ${selectedQuotes.length} quote${selectedQuotes.length > 1 ? 's' : ''}?`)) {
-      try {
-        // Optimistic update
-        const deletedIds = [...selectedQuotes];
-        setQuotes(prev => prev.filter(q => !deletedIds.includes(q.id)));
-        setSelectedQuotes([]);
-        
-        for (const quoteId of deletedIds) {
-          await deleteQuote(user?.id, quoteId, queueChange);
+    const confirmMessage = selectedQuotes.length === quotes.length
+      ? 'Are you sure you want to delete ALL quotes? This will permanently clear all quote data.'
+      : `Are you sure you want to delete ${selectedQuotes.length} quote${selectedQuotes.length > 1 ? 's' : ''}?`;
+    
+    if (!confirm(confirmMessage)) return;
+    
+    console.log(`[Quotes] Bulk deleting ${selectedQuotes.length} quotes`);
+    
+    try {
+      // Optimistic update - clear UI immediately
+      setQuotes([]);
+      setSelectedQuotes([]);
+      
+      // If deleting all quotes, use clearAll for thoroughness
+      if (selectedQuotes.length === quotes.length) {
+        console.log('[Quotes] Deleting ALL quotes - using clearAll');
+        await clearAllQuotes(user.id);
+        toast.success('All quotes deleted successfully');
+      } else {
+        // Delete individual quotes
+        console.log('[Quotes] Deleting selected quotes individually');
+        for (const quoteId of selectedQuotes) {
+          await deleteQuote(user.id, quoteId, queueChange);
         }
-        
-        toast.success(`Deleted ${deletedIds.length} quote${deletedIds.length > 1 ? 's' : ''}`);
-      } catch (error) {
-        console.error('Error deleting quotes:', error);
-        toast.error('Failed to delete quotes. Please try again.');
-        // Reload on error to ensure consistency
-        await loadQuotes();
+        toast.success(`Deleted ${selectedQuotes.length} quote${selectedQuotes.length > 1 ? 's' : ''}`);
       }
+      
+      // Force reload to ensure clean state
+      console.log('[Quotes] Reloading quotes after delete...');
+      await new Promise(resolve => setTimeout(resolve, 500)); // Small delay to ensure delete propagates
+      await loadQuotes();
+      
+    } catch (error) {
+      console.error('[Quotes] Error deleting quotes:', error);
+      toast.error('Failed to delete quotes. Please try again.');
+      // Reload on error to ensure consistency
+      await loadQuotes();
     }
   };
 
@@ -302,7 +337,11 @@ export default function Quotes() {
           </div>
         </CardHeader>
         <CardContent>
-          {filteredQuotes.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <p>Loading quotes...</p>
+            </div>
+          ) : filteredQuotes.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               {searchTerm || statusFilter !== 'all' ? (
                 <p>No quotes found matching your filters</p>
