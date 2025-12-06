@@ -18,14 +18,15 @@ export interface Item {
   userId?: string;
   name: string;
   description: string;
+  enhancedDescription?: string; // NEW: Rich text description for proposals
   category: string;
   basePrice: number;
   markupType: 'percentage' | 'fixed';
   markup: number;
   finalPrice: number;
   units: string;
-  minQuantity?: number; // OPTIONAL: Default minimum quantity (local-only until migration runs)
-  imageUrl?: string; // NEW: URL to product/service image for proposals
+  minQuantity?: number; // Default minimum quantity
+  imageUrl?: string; // NEW: Product/service image for proposals
   createdAt: string;
 }
 
@@ -33,12 +34,13 @@ export interface QuoteItem {
   itemId: string;
   name: string;
   description: string;
-  category?: string; // Added for proposal grouping
+  enhancedDescription?: string; // NEW: Rich text description
+  category?: string; // For proposal grouping
   quantity: number;
   price: number;
   total: number;
   units?: string;
-  imageUrl?: string; // Added for proposal visuals
+  imageUrl?: string; // For proposal visuals
 }
 
 export interface Quote {
@@ -62,7 +64,8 @@ export interface Quote {
   shareToken?: string;
   sharedAt?: string;
   viewedAt?: string;
-  showPricing?: boolean; // ✅ NEW: Control line-item pricing visibility in proposals (default: true)
+  showPricing?: boolean; // Control line-item pricing visibility in proposals
+  projectDescription?: string; // NEW: For AI visual matching
 }
 
 export type QuoteAge = 'fresh' | 'warm' | 'aging' | 'stale';
@@ -89,7 +92,7 @@ export interface CompanySettings {
   insurance?: string;
   terms: string;
   proposalTemplate?: "classic" | "modern" | "detailed";
-  proposalTheme?: "modern-corporate" | "creative-studio" | "minimalist" | "bold-impact" | "elegant-serif" | "tech-future"; // Updated with all 6 themes
+  proposalTheme?: "modern-corporate" | "creative-studio" | "minimalist" | "bold-impact" | "elegant-serif" | "tech-future";
   notifyEmailAccepted?: boolean;
   notifyEmailDeclined?: boolean;
   onboardingCompleted?: boolean;

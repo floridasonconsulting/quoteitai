@@ -144,6 +144,7 @@ export type Database = {
           category: string | null
           created_at: string | null
           description: string | null
+          enhanced_description: string | null
           final_price: number
           id: string
           image_url: string | null
@@ -160,6 +161,7 @@ export type Database = {
           category?: string | null
           created_at?: string | null
           description?: string | null
+          enhanced_description?: string | null
           final_price?: number
           id?: string
           image_url?: string | null
@@ -176,6 +178,7 @@ export type Database = {
           category?: string | null
           created_at?: string | null
           description?: string | null
+          enhanced_description?: string | null
           final_price?: number
           id?: string
           image_url?: string | null
@@ -215,6 +218,50 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      proposal_visuals: {
+        Row: {
+          cover_image: string | null
+          created_at: string | null
+          gallery: Json | null
+          id: string
+          logo_url: string | null
+          quote_id: string
+          section_backgrounds: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cover_image?: string | null
+          created_at?: string | null
+          gallery?: Json | null
+          id?: string
+          logo_url?: string | null
+          quote_id: string
+          section_backgrounds?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cover_image?: string | null
+          created_at?: string | null
+          gallery?: Json | null
+          id?: string
+          logo_url?: string | null
+          quote_id?: string
+          section_backgrounds?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_visuals_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quotes: {
         Row: {
