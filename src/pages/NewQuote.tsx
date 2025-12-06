@@ -35,6 +35,7 @@ export default function NewQuote() {
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [editQuoteId, setEditQuoteId] = useState<string | undefined>(id); // CRITICAL: Track the quote ID being edited
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [quoteTitle, setQuoteTitle] = useState('');
   const [quoteNotes, setQuoteNotes] = useState('');
@@ -108,12 +109,13 @@ export default function NewQuote() {
     if (editQuote) {
       console.log('[NewQuote] Loading quote from navigation state:', editQuote);
       setIsEditMode(true);
+      setEditQuoteId(editQuote.id); // CRITICAL: Store the quote ID
       setSelectedCustomerId(editQuote.customerId);
       setQuoteTitle(editQuote.title);
       setQuoteItems(editQuote.items);
       setQuoteNotes(editQuote.notes || '');
       setExecutiveSummary(editQuote.executiveSummary || '');
-      setShowPricing(editQuote.showPricing !== false); // ✅ NEW: Load pricing setting
+      setShowPricing(editQuote.showPricing !== false);
     }
     // Fallback: Load quote for editing if id is provided (old method)
     else if (id) {
@@ -122,12 +124,13 @@ export default function NewQuote() {
       if (quoteToEdit) {
         console.log('[NewQuote] Loading quote from URL params:', quoteToEdit);
         setIsEditMode(true);
+        setEditQuoteId(quoteToEdit.id); // CRITICAL: Store the quote ID
         setSelectedCustomerId(quoteToEdit.customerId);
         setQuoteTitle(quoteToEdit.title);
         setQuoteItems(quoteToEdit.items);
         setQuoteNotes(quoteToEdit.notes || '');
         setExecutiveSummary(quoteToEdit.executiveSummary || '');
-        setShowPricing(quoteToEdit.showPricing !== false); // ✅ NEW: Load pricing setting
+        setShowPricing(quoteToEdit.showPricing !== false);
       } else {
         toast.error('Quote not found');
         navigate('/quotes');
@@ -199,11 +202,11 @@ export default function NewQuote() {
       return;
     }
 
-    if (isEditMode && id) {
+    if (isEditMode && editQuoteId) { // CRITICAL: Use editQuoteId instead of id
       const quotes = await getQuotes(user?.id);
-      const existingQuote = quotes.find(q => q.id === id);
+      const existingQuote = quotes.find(q => q.id === editQuoteId);
       const updatedQuote: Quote = {
-        id,
+        id: editQuoteId, // CRITICAL: Use stored editQuoteId
         quoteNumber: existingQuote?.quoteNumber || generateQuoteNumber(),
         customerId: selectedCustomerId,
         customerName: selectedCustomer?.name || '',
@@ -215,12 +218,13 @@ export default function NewQuote() {
         status: 'draft',
         notes: quoteNotes,
         executiveSummary,
-        showPricing, // ✅ NEW: Include pricing visibility setting
+        showPricing,
         createdAt: existingQuote?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        userId: user?.id || '',
       };
       
-      await updateQuote(user?.id, id, updatedQuote, queueChange);
+      await updateQuote(user?.id, editQuoteId, updatedQuote, queueChange);
       toast.success('Quote updated');
     } else {
       const quote: Quote = {
@@ -236,9 +240,10 @@ export default function NewQuote() {
         status: 'draft',
         notes: quoteNotes,
         executiveSummary,
-        showPricing, // ✅ NEW: Include pricing visibility setting
+        showPricing,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        userId: user?.id || '',
       };
 
       await addQuote(user?.id, quote, queueChange);
@@ -268,11 +273,11 @@ export default function NewQuote() {
   const handleConfirmSend = async (emailContent: EmailContent) => {
     const finalSummary = emailContent.includeSummary ? emailContent.customSummary : undefined;
 
-    if (isEditMode && id) {
+    if (isEditMode && editQuoteId) { // CRITICAL: Use editQuoteId instead of id
       const quotes = await getQuotes(user?.id);
-      const existingQuote = quotes.find(q => q.id === id);
+      const existingQuote = quotes.find(q => q.id === editQuoteId);
       const updatedQuote: Quote = {
-        id,
+        id: editQuoteId, // CRITICAL: Use stored editQuoteId
         quoteNumber: existingQuote?.quoteNumber || generateQuoteNumber(),
         customerId: selectedCustomerId,
         customerName: selectedCustomer?.name || '',
@@ -284,13 +289,14 @@ export default function NewQuote() {
         status: 'sent',
         notes: quoteNotes,
         executiveSummary: finalSummary,
-        showPricing, // ✅ NEW: Include pricing visibility setting
+        showPricing,
         sentDate: new Date().toISOString(),
         createdAt: existingQuote?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        userId: user?.id || '',
       };
       
-      await updateQuote(user?.id, id, updatedQuote, queueChange);
+      await updateQuote(user?.id, editQuoteId, updatedQuote, queueChange);
       await generatePDF(updatedQuote);
       toast.success('Quote updated and sent');
     } else {
@@ -307,10 +313,11 @@ export default function NewQuote() {
         status: 'sent',
         notes: quoteNotes,
         executiveSummary: finalSummary,
-        showPricing, // ✅ NEW: Include pricing visibility setting
+        showPricing,
         sentDate: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        userId: user?.id || '',
       };
 
       await addQuote(user?.id, quote, queueChange);
@@ -471,7 +478,7 @@ export default function NewQuote() {
           {quoteItems.length > 0 && selectedCustomerId && (
             <QuoteSummaryAI 
               quote={{
-                id: id || '',
+                id: editQuoteId || '', // CRITICAL: Use editQuoteId or empty string
                 quoteNumber: generateQuoteNumber(),
                 customerId: selectedCustomerId,
                 customerName: selectedCustomer?.name || '',
@@ -484,7 +491,8 @@ export default function NewQuote() {
                 notes: quoteNotes,
                 executiveSummary,
                 createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                updatedAt: new Date().toISOString(),
+                userId: user?.id || '',
               }}
               customer={selectedCustomer}
               onSummaryGenerated={(summary) => setExecutiveSummary(summary)}
@@ -526,7 +534,7 @@ export default function NewQuote() {
         open={sendDialogOpen}
         onOpenChange={setSendDialogOpen}
         quote={{
-          id: id || crypto.randomUUID(),
+          id: editQuoteId || crypto.randomUUID(), // CRITICAL: Use editQuoteId if available
           quoteNumber: generateQuoteNumber(),
           customerId: selectedCustomerId,
           customerName: selectedCustomer?.name || '',
@@ -539,7 +547,8 @@ export default function NewQuote() {
           notes: quoteNotes,
           executiveSummary,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
+          userId: user?.id || '',
         }}
         customer={selectedCustomer}
         onConfirm={handleConfirmSend}
