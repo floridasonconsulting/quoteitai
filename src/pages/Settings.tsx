@@ -27,6 +27,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSyncManager } from "@/hooks/useSyncManager";
 import { checkAndMigrateData } from "@/lib/migration-helper";
 import { dispatchDataRefresh } from "@/hooks/useDataRefresh";
+import { supabase } from "@/integrations/supabase/client";
 
 import { CompanyInfoSection } from "@/components/settings/CompanyInfoSection";
 import { BrandingSection } from "@/components/settings/BrandingSection";
@@ -37,9 +38,6 @@ import { AccountSection } from "@/components/settings/AccountSection";
 import { AppearanceSection } from "@/components/settings/AppearanceSection";
 import { IntegrationsSection } from "@/components/settings/IntegrationsSection";
 import { ProposalThemeSelector } from "@/components/settings/ProposalThemeSelector";
-// REMOVED: Performance and Cache sections - moved to Diagnostics for admin use
-// import { PerformanceSection } from "@/components/settings/PerformanceSection";
-// import { CacheDebugPanel } from "@/components/settings/CacheDebugPanel";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -72,11 +70,69 @@ export default function Settings() {
   });
 
   const loadSettings = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('[Settings] No user ID, skipping settings load');
+      return;
+    }
+    
+    console.log('[Settings] ========== LOADING SETTINGS ==========');
+    console.log('[Settings] Loading settings for user:', user.id);
     setLoading(true);
+    
     try {
-      const loadedSettings = await getSettings(user.id);
-      setSettings(loadedSettings);
+      // CRITICAL: Load from Supabase FIRST to get most up-to-date data
+      console.log('[Settings] Fetching from Supabase...');
+      const { data: supabaseSettings, error } = await supabase
+        .from('company_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[Settings] Supabase fetch error:', error);
+        throw error;
+      }
+
+      if (supabaseSettings) {
+        console.log('[Settings] ✓ Loaded settings from Supabase:', {
+          name: supabaseSettings.name,
+          email: supabaseSettings.email,
+          phone: supabaseSettings.phone,
+          address: supabaseSettings.address,
+          termsLength: supabaseSettings.terms?.length || 0,
+          hasLogo: !!supabaseSettings.logo
+        });
+
+        // Convert database format to app format
+        const loadedSettings: CompanySettings = {
+          name: supabaseSettings.name || "",
+          address: supabaseSettings.address || "",
+          city: supabaseSettings.city || "",
+          state: supabaseSettings.state || "",
+          zip: supabaseSettings.zip || "",
+          phone: supabaseSettings.phone || "",
+          email: supabaseSettings.email || "",
+          website: supabaseSettings.website || "",
+          logo: supabaseSettings.logo || undefined,
+          logoDisplayOption: (supabaseSettings.logo_display_option as 'logo' | 'name' | 'both') || 'both',
+          license: supabaseSettings.license || "",
+          insurance: supabaseSettings.insurance || "",
+          terms: supabaseSettings.terms || "",
+          proposalTemplate: (supabaseSettings.proposal_template as 'classic' | 'modern' | 'detailed') || 'classic',
+          proposalTheme: supabaseSettings.proposal_theme || 'modern-corporate',
+          notifyEmailAccepted: supabaseSettings.notify_email_accepted ?? true,
+          notifyEmailDeclined: supabaseSettings.notify_email_declined ?? true,
+          onboardingCompleted: supabaseSettings.onboarding_completed ?? false,
+        };
+
+        setSettings(loadedSettings);
+        console.log('[Settings] ✓ Settings state updated');
+      } else {
+        console.log('[Settings] No settings found in Supabase, using defaults');
+        // Keep default empty settings
+      }
+
+      console.log('[Settings] ========== SETTINGS LOAD COMPLETE ==========');
     } catch (error) {
       console.error("[Settings] Failed to load settings:", error);
       toast.error("Failed to load settings");
@@ -95,11 +151,24 @@ export default function Settings() {
       return;
     }
 
-    console.log('[Settings] Updating settings with:', updates);
+    console.log('[Settings] ========== UPDATING SETTINGS ==========');
+    console.log('[Settings] Update request:', updates);
+    console.log('[Settings] Current settings state:', {
+      name: settings.name,
+      email: settings.email,
+      phone: settings.phone,
+      address: settings.address
+    });
 
     try {
       const updatedSettings = { ...settings, ...updates };
-      console.log('[Settings] Full settings object:', updatedSettings);
+      console.log('[Settings] Merged settings:', {
+        name: updatedSettings.name,
+        email: updatedSettings.email,
+        phone: updatedSettings.phone,
+        address: updatedSettings.address,
+        termsLength: updatedSettings.terms?.length || 0
+      });
       
       // Save settings with sync queue
       await saveSettings(user.id, updatedSettings, queueChange);
@@ -107,16 +176,13 @@ export default function Settings() {
       // Update local state
       setSettings(updatedSettings);
       
-      // REMOVED: localStorage.removeItem("quote-it-settings");
-      // This was causing issues - the cache manager and IndexedDB handle invalidation
-      
       toast.success("Settings updated successfully");
-      console.log('[Settings] Settings updated successfully');
+      console.log('[Settings] ✓ Settings updated successfully');
+      console.log('[Settings] ========== UPDATE COMPLETE ==========');
     } catch (error) {
       console.error("[Settings] Update failed:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to update settings";
       toast.error(errorMessage);
-      // Re-throw to allow caller to handle
       throw error;
     }
   };
@@ -278,7 +344,7 @@ export default function Settings() {
       dispatchDataRefresh("quotes-changed");
 
       const totalSuccess = customersResult.success + itemsResult.success + quotesResult.success;
-      const totalFailed = customersResult.failed + itemsResult.failed + quotesResult.failed;
+      const totalFailed = customersResult.failed + itemsResult.failed + quotatesResult.failed;
 
       if (totalFailed > 0) {
         toast.warning(`Import completed with errors. ${totalSuccess} records imported, ${totalFailed} failed.`);
@@ -370,12 +436,6 @@ export default function Settings() {
         />
 
         <DataManagementSection />
-
-        {/* REMOVED: Performance Monitor - Moved to Diagnostics page for admin use */}
-        {/* <PerformanceSection /> */}
-
-        {/* REMOVED: Cache Management - Moved to Diagnostics page for admin use */}
-        {/* <CacheDebugPanel /> */}
 
         <Card>
           <CardHeader>
