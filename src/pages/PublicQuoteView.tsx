@@ -281,9 +281,10 @@ export default function PublicQuoteView() {
         }
       }
 
-      // CRITICAL: Fetch company settings from Supabase (don't use defaults)
+      // CRITICAL: Fetch company settings from Supabase with detailed logging and fallback
       try {
         console.log('[PublicQuoteView] Fetching company settings for user:', quoteData.user_id);
+        
         const { data: settingsData, error: settingsError } = await supabase
           .from('company_settings')
           .select('*')
@@ -292,10 +293,13 @@ export default function PublicQuoteView() {
 
         if (settingsError) {
           console.error('[PublicQuoteView] Settings fetch error:', settingsError);
+          console.warn('[PublicQuoteView] Using fallback default settings');
         } else if (settingsData) {
-          console.log('[PublicQuoteView] Settings loaded:', {
+          console.log('[PublicQuoteView] ✓ Settings loaded successfully:', {
             name: settingsData.name,
             email: settingsData.email,
+            phone: settingsData.phone,
+            address: settingsData.address,
             hasLogo: !!settingsData.logo,
             termsLength: settingsData.terms?.length || 0
           });
@@ -318,10 +322,42 @@ export default function PublicQuoteView() {
             proposalTheme: settingsData.proposal_theme || 'modern-corporate',
           });
         } else {
-          console.warn('[PublicQuoteView] No settings found for user');
+          console.warn('[PublicQuoteView] No settings found in database for user:', quoteData.user_id);
+          console.warn('[PublicQuoteView] Using fallback default settings');
+          
+          // FALLBACK: Use minimal default settings so proposal can still render
+          setSettings({
+            name: 'Company Name',
+            address: '',
+            city: '',
+            state: '',
+            zip: '',
+            phone: '',
+            email: '',
+            website: '',
+            terms: 'Payment terms to be discussed.',
+            proposalTemplate: 'classic',
+            proposalTheme: 'modern-corporate',
+          });
         }
       } catch (error) {
-        console.error('[PublicQuoteView] Settings fetch failed:', error);
+        console.error('[PublicQuoteView] Critical error fetching settings:', error);
+        console.warn('[PublicQuoteView] Using fallback default settings');
+        
+        // FALLBACK: Use minimal default settings
+        setSettings({
+          name: 'Company Name',
+          address: '',
+          city: '',
+          state: '',
+          zip: '',
+          phone: '',
+          email: '',
+          website: '',
+          terms: 'Payment terms to be discussed.',
+          proposalTemplate: 'classic',
+          proposalTheme: 'modern-corporate',
+        });
       }
 
       // Check if quote owner is Max AI tier
@@ -472,8 +508,8 @@ export default function PublicQuoteView() {
     );
   }
 
-  // Show not found if no quote OR settings
-  if (!quote || !settings) {
+  // Show not found if no quote (but settings can be fallback)
+  if (!quote) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="p-8 text-center">
@@ -493,13 +529,30 @@ export default function PublicQuoteView() {
     );
   }
 
-  console.log('[PublicQuoteView] Rendering viewer - isOwner:', isOwner, 'status:', quote.status);
+  // Show warning if settings are missing but still render with fallback
+  if (!settings) {
+    console.warn('[PublicQuoteView] Rendering without settings - using inline fallback');
+  }
+
+  console.log('[PublicQuoteView] Rendering viewer - isOwner:', isOwner, 'status:', quote.status, 'hasSettings:', !!settings);
 
   return (
     <div className="min-h-screen bg-slate-50">
       <ProposalViewer 
         quote={quote}
-        companySettings={settings}
+        companySettings={settings || {
+          name: 'Company Name',
+          address: '',
+          city: '',
+          state: '',
+          zip: '',
+          phone: '',
+          email: '',
+          website: '',
+          terms: 'Payment terms to be discussed.',
+          proposalTemplate: 'classic',
+          proposalTheme: 'modern-corporate',
+        }}
         customer={customer || undefined}
         isPreview={isOwner}
         actionBar={!isOwner && customer ? {

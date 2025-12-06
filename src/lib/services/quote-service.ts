@@ -13,6 +13,22 @@ import { QuoteDB, isIndexedDBSupported } from '../indexed-db';
 import { apiTracker } from '@/lib/api-performance-tracker';
 
 /**
+ * Deduplicate quotes by ID (keeps the most recent version)
+ */
+function deduplicateQuotes(quotes: Quote[]): Quote[] {
+  const quoteMap = new Map<string, Quote>();
+  
+  for (const quote of quotes) {
+    const existing = quoteMap.get(quote.id);
+    if (!existing || new Date(quote.updatedAt) > new Date(existing.updatedAt)) {
+      quoteMap.set(quote.id, quote);
+    }
+  }
+  
+  return Array.from(quoteMap.values());
+}
+
+/**
  * Fetch all quotes for a user
  * Priority: Cache > IndexedDB > Supabase > Empty
  */
@@ -30,7 +46,7 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
     const cached = await cacheManager.get<Quote[]>('quotes');
     if (cached && cached.length > 0) {
       console.log(`[QuoteService] Retrieved ${cached.length} quotes from cache`);
-      return cached;
+      return deduplicateQuotes(cached);
     }
 
     // Try IndexedDB if cache miss
@@ -39,9 +55,10 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
         const indexedDBData = await QuoteDB.getAll(userId);
         if (indexedDBData && indexedDBData.length > 0) {
           console.log(`[QuoteService] Retrieved ${indexedDBData.length} quotes from IndexedDB`);
+          const dedupedData = deduplicateQuotes(indexedDBData);
           // Update cache
-          await cacheManager.set('quotes', indexedDBData);
-          return indexedDBData;
+          await cacheManager.set('quotes', dedupedData);
+          return dedupedData;
         }
       } catch (error) {
         console.warn('[QuoteService] IndexedDB read failed, falling back to Supabase:', error);
@@ -60,6 +77,7 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
             .from('quotes')
             .select('*')
             .eq('user_id', userId)
+            .order('created_at', { ascending: false })
         );
         
         const { data, error } = await withTimeout(dbQueryPromise, 15000);
@@ -68,36 +86,44 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
           console.error('Error fetching quotes:', error);
           if (cached) {
             console.log('[Cache] Using cached quotes after error');
-            return cached;
+            return deduplicateQuotes(cached);
           }
           throw error;
         }
         
         const result = data ? data.map(item => toCamelCase(item)) as Quote[] : [];
+        const dedupedResult = deduplicateQuotes(result);
+        
+        console.log(`[QuoteService] Fetched ${dedupedResult.length} quotes from Supabase`);
         
         // Save to IndexedDB if supported and we received data
-        if (isIndexedDBSupported() && result.length > 0) {
+        if (isIndexedDBSupported() && dedupedResult.length > 0) {
           try {
-            // Only save the records we received from Supabase
-            // This preserves any offline-created records that haven't synced yet
-            for (const quote of result) {
-              await QuoteDB.update({ ...quote, user_id: userId } as never);
+            // Clear existing quotes for this user first to avoid duplicates
+            const existingQuotes = await QuoteDB.getAll(userId);
+            for (const existing of existingQuotes) {
+              await QuoteDB.delete(existing.id);
             }
-            console.log(`[QuoteService] Saved ${result.length} quotes to IndexedDB`);
+            
+            // Add fresh quotes from Supabase
+            for (const quote of dedupedResult) {
+              await QuoteDB.add({ ...quote, user_id: userId } as never);
+            }
+            console.log(`[QuoteService] Synced ${dedupedResult.length} quotes to IndexedDB`);
           } catch (error) {
             console.warn('[QuoteService] Failed to save to IndexedDB:', error);
           }
         }
         
         // Update cache
-        await cacheManager.set('quotes', result);
+        await cacheManager.set('quotes', dedupedResult);
         
-        return result;
+        return dedupedResult;
       } catch (error) {
         console.error('Error fetching quotes:', error);
         if (cached) {
           console.log('[Cache] Returning cached quotes after timeout');
-          return cached;
+          return deduplicateQuotes(cached);
         }
         return [];
       }
