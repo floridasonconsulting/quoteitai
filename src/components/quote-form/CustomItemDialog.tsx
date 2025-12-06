@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { toast } from "sonner";
 import { QuoteItem } from "@/types";
@@ -18,8 +19,10 @@ export function CustomItemDialog({ isOpen, onOpenChange, onAddItem }: CustomItem
   const [customItem, setCustomItem] = useState({
     name: '',
     description: '',
+    category: 'Accessories',
     quantity: 1,
     price: '',
+    imageUrl: '',
   });
 
   const handleAddItem = () => {
@@ -33,20 +36,22 @@ export function CustomItemDialog({ isOpen, onOpenChange, onAddItem }: CustomItem
       itemId: `custom-${Date.now()}`,
       name: customItem.name,
       description: customItem.description,
+      category: customItem.category,
       quantity: customItem.quantity,
       price,
       total: calculateItemTotal(customItem.quantity, price),
+      imageUrl: customItem.imageUrl || undefined,
     };
 
     onAddItem(newQuoteItem);
-    setCustomItem({ name: '', description: '', quantity: 1, price: '' });
+    setCustomItem({ name: '', description: '', category: 'Accessories', quantity: 1, price: '', imageUrl: '' });
     onOpenChange(false);
     toast.success('Custom item added to quote');
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent data-demo="custom-item-dialog">
+      <DialogContent data-demo="custom-item-dialog" className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Add Custom Item</DialogTitle>
           <DialogDescription>
@@ -71,6 +76,34 @@ export function CustomItemDialog({ isOpen, onOpenChange, onAddItem }: CustomItem
               onChange={(e) => setCustomItem({ ...customItem, description: e.target.value })}
               placeholder="Details about this item..."
               rows={3}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="customCategory">Category *</Label>
+            <Select 
+              value={customItem.category} 
+              onValueChange={(value) => setCustomItem({ ...customItem, category: value })}
+            >
+              <SelectTrigger id="customCategory">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Pool Structure">Pool Structure</SelectItem>
+                <SelectItem value="Coping & Tile">Coping & Tile</SelectItem>
+                <SelectItem value="Decking">Decking</SelectItem>
+                <SelectItem value="Equipment">Equipment</SelectItem>
+                <SelectItem value="Accessories">Accessories</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="customImageUrl">Image URL (Optional)</Label>
+            <Input
+              id="customImageUrl"
+              type="url"
+              value={customItem.imageUrl}
+              onChange={(e) => setCustomItem({ ...customItem, imageUrl: e.target.value })}
+              placeholder="https://example.com/image.jpg"
             />
           </div>
           <div className="grid gap-4 grid-cols-2">

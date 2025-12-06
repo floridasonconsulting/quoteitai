@@ -151,10 +151,12 @@ export default function NewQuote() {
         itemId: item.id,
         name: item.name,
         description: item.description,
-        quantity: defaultQuantity, // NEW: Use minQuantity instead of hardcoded 1
+        category: item.category, // NEW: Copy category from item
+        quantity: defaultQuantity,
         price: item.finalPrice,
-        total: calculateItemTotal(defaultQuantity, item.finalPrice), // NEW: Calculate with minQuantity
+        total: calculateItemTotal(defaultQuantity, item.finalPrice),
         units: item.units,
+        imageUrl: item.imageUrl, // NEW: Copy imageUrl from item
       };
       setQuoteItems([...quoteItems, newQuoteItem]);
     }
