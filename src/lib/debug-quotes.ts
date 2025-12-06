@@ -7,6 +7,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { QuoteDB, isIndexedDBSupported } from './indexed-db';
 import { getQuotes as getStorageQuotes } from './storage';
 import { cacheManager } from './cache-manager';
+import { Quote } from '@/types';
+
+interface SyncQueueItem {
+  type: string;
+  table: string;
+  data: {
+    id: string;
+    quoteNumber?: string;
+    quote_number?: string;
+    [key: string]: unknown;
+  };
+}
 
 export async function debugQuoteStorage(userId: string) {
   console.log('========================================');
@@ -70,10 +82,10 @@ export async function debugQuoteStorage(userId: string) {
   // 4. Check memory cache
   console.log('🧠 MEMORY CACHE:');
   try {
-    const cachedQuotes = await cacheManager.get('quotes');
+    const cachedQuotes = await cacheManager.get<Quote[]>('quotes');
     if (cachedQuotes) {
-      console.log(`✅ Found ${(cachedQuotes as any[]).length} quotes in cache`);
-      (cachedQuotes as any[]).forEach((q, i) => {
+      console.log(`✅ Found ${cachedQuotes.length} quotes in cache`);
+      cachedQuotes.forEach((q, i) => {
         console.log(`  ${i + 1}. [${q.id}] ${q.quoteNumber} - ${q.title} (${q.status})`);
       });
     } else {
@@ -89,10 +101,10 @@ export async function debugQuoteStorage(userId: string) {
   try {
     const queueJSON = localStorage.getItem('offline-changes-queue');
     if (queueJSON) {
-      const queue = JSON.parse(queueJSON);
-      const quoteOperations = queue.filter((item: any) => item.table === 'quotes');
+      const queue = JSON.parse(queueJSON) as SyncQueueItem[];
+      const quoteOperations = queue.filter((item) => item.table === 'quotes');
       console.log(`✅ Found ${quoteOperations.length} quote operations in sync queue`);
-      quoteOperations.forEach((op: any, i: number) => {
+      quoteOperations.forEach((op, i) => {
         console.log(`  ${i + 1}. ${op.type.toUpperCase()} - [${op.data.id}] ${op.data.quoteNumber || op.data.quote_number}`);
       });
     } else {
@@ -211,8 +223,8 @@ export async function nuclearClearAllQuotes(userId: string) {
   try {
     const queueJSON = localStorage.getItem('offline-changes-queue');
     if (queueJSON) {
-      const queue = JSON.parse(queueJSON);
-      const filtered = queue.filter((item: any) => item.table !== 'quotes');
+      const queue = JSON.parse(queueJSON) as SyncQueueItem[];
+      const filtered = queue.filter((item) => item.table !== 'quotes');
       localStorage.setItem('offline-changes-queue', JSON.stringify(filtered));
     }
     console.log('✅ Cleared sync queue');
