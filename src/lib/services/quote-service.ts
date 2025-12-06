@@ -345,27 +345,50 @@ export async function updateQuote(
 
 /**
  * Delete a quote
- * Priority: IndexedDB + Supabase + Cache
+ * Priority: Clear ALL sources (Supabase + IndexedDB + Cache + localStorage)
  */
 export async function deleteQuote(
   userId: string | undefined,
   id: string,
   queueChange?: (change: QueueChange) => void
 ): Promise<void> {
-  // Delete from IndexedDB
+  console.log(`[QuoteService] ========== DELETING QUOTE ${id} ==========`);
+  
+  // 1. Delete from IndexedDB
   if (isIndexedDBSupported()) {
     try {
       await QuoteDB.delete(id);
-      console.log('[QuoteService] Deleted quote from IndexedDB');
+      console.log('[QuoteService] ✓ Deleted quote from IndexedDB');
     } catch (error) {
       console.warn('[QuoteService] IndexedDB delete failed:', error);
     }
   }
 
-  // Invalidate cache
-  await cacheManager.invalidate('quotes');
+  // 2. Clear ALL cache entries for quotes
+  try {
+    // Clear the main quotes cache
+    await cacheManager.invalidate('quotes');
+    
+    // Clear the specific quote cache
+    await cacheManager.invalidate('quotes', id);
+    
+    // CRITICAL: Also clear from localStorage directly
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.includes('quotes:') || key.includes(`quote-${id}`)) {
+        localStorage.removeItem(key);
+        console.log(`[QuoteService] ✓ Removed localStorage key: ${key}`);
+      }
+    });
+    
+    console.log('[QuoteService] ✓ Cleared all quote caches');
+  } catch (error) {
+    console.warn('[QuoteService] Cache clear failed:', error);
+  }
 
+  // 3. Delete from Supabase
   if (!navigator.onLine || !userId) {
+    console.log('[QuoteService] Offline - queueing delete for sync');
     queueChange?.({ type: 'delete', table: 'quotes', data: { id } });
     return;
   }
@@ -377,11 +400,61 @@ export async function deleteQuote(
       .eq('id', id)
       .eq('user_id', userId);
     
-    if (error) throw error;
+    if (error) {
+      console.error('[QuoteService] ❌ Supabase delete failed:', error);
+      throw error;
+    }
+    
+    console.log('[QuoteService] ✓ Deleted quote from Supabase');
+    console.log('[QuoteService] ========== DELETE COMPLETE ==========');
     
     dispatchDataRefresh('quotes-changed');
   } catch (error) {
-    console.error('Error deleting quote:', error);
+    console.error('[QuoteService] Error deleting quote:', error);
     queueChange?.({ type: 'delete', table: 'quotes', data: { id } });
+  }
+}
+
+/**
+ * Clear ALL quotes for a user (for testing/debugging)
+ */
+export async function clearAllQuotes(userId: string): Promise<void> {
+  console.log(`[QuoteService] ========== CLEARING ALL QUOTES ==========`);
+  
+  try {
+    // 1. Clear IndexedDB
+    if (isIndexedDBSupported()) {
+      await QuoteDB.clear(userId);
+      console.log('[QuoteService] ✓ Cleared IndexedDB');
+    }
+    
+    // 2. Clear ALL cache entries
+    await cacheManager.invalidate('quotes');
+    
+    // 3. Clear localStorage
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.includes('quotes') || key.includes('quote-')) {
+        localStorage.removeItem(key);
+      }
+    });
+    console.log('[QuoteService] ✓ Cleared localStorage');
+    
+    // 4. Clear Supabase
+    if (navigator.onLine) {
+      const { error } = await supabase
+        .from('quotes')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (error) throw error;
+      console.log('[QuoteService] ✓ Cleared Supabase');
+    }
+    
+    console.log('[QuoteService] ========== CLEAR COMPLETE ==========');
+    dispatchDataRefresh('quotes-changed');
+  } catch (error) {
+    console.error('[QuoteService] Error clearing quotes:', error);
+    throw error;
   }
 }
