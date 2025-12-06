@@ -532,7 +532,16 @@ export default function PublicQuoteView() {
           terms: '',
         }}
         isPreview={isOwner}
-        actionBar={isOwner ? undefined : {
+        actionBar={isOwner ? {
+          // ✅ FIX: Show action bar for owner preview (for testing)
+          quoteId: quote.id,
+          total: quote.total,
+          status: quote.status,
+          userEmail: userEmail || 'Owner Preview',
+          userName: 'Owner',
+          onAccept: handleAccept,
+          onReject: handleReject
+        } : !isOwner && customer ? {
           quoteId: quote.id,
           total: quote.total,
           status: quote.status,
@@ -542,7 +551,7 @@ export default function PublicQuoteView() {
             : undefined,
           onAccept: handleAccept,
           onReject: handleReject
-        }}
+        } : undefined}
       />
 
       {/* Hidden Payment Dialog */}

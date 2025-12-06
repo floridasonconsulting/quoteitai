@@ -62,6 +62,7 @@ export interface Quote {
   shareToken?: string;
   sharedAt?: string;
   viewedAt?: string;
+  showPricing?: boolean; // ✅ NEW: Control line-item pricing visibility in proposals (default: true)
 }
 
 export type QuoteAge = 'fresh' | 'warm' | 'aging' | 'stale';

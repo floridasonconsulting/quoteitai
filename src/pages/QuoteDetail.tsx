@@ -192,6 +192,12 @@ export default function QuoteDetail() {
   const handlePreview = async () => {
     if (!quote) return;
     
+    // ✅ FIX: Load settings if not already loaded
+    if (!settings && user?.id) {
+      const loadedSettings = await getSettings(user.id);
+      setSettings(loadedSettings);
+    }
+    
     // Check if share token exists
     let token = quote.shareToken;
     

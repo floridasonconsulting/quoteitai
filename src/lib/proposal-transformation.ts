@@ -27,7 +27,7 @@ export function transformQuoteToProposal(
       title: quote.title,
       subtitle: customer?.name || quote.customerName,
       backgroundImage: settings?.logo,
-      companyName: settings?.name, // Add company name
+      companyName: settings?.name || 'Company', // ✅ FIX: Use actual company name
     },
     
     // 2. Executive Summary (if exists)
@@ -44,7 +44,7 @@ export function transformQuoteToProposal(
       type: 'categoryGroup' as const,
       title: group.displayName,
       categoryGroups: [group],
-      showPricing: true, // TODO: Make this configurable per quote
+      showPricing: quote.showPricing !== false, // ✅ FIX: Use quote setting (default true)
     })),
     
     // 4. Pricing Summary
@@ -63,7 +63,7 @@ export function transformQuoteToProposal(
       id: 'legal',
       type: 'legal' as const,
       title: 'Terms & Conditions',
-      content: settings?.terms || 'Standard terms and conditions apply.',
+      content: settings?.terms || 'Standard terms and conditions apply.', // ✅ FIX: Use settings.terms
     },
   ];
 

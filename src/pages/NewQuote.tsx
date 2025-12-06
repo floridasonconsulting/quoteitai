@@ -40,6 +40,7 @@ export default function NewQuote() {
   const [quoteNotes, setQuoteNotes] = useState('');
   const [executiveSummary, setExecutiveSummary] = useState('');
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
+  const [showPricing, setShowPricing] = useState(true);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
 
@@ -112,6 +113,7 @@ export default function NewQuote() {
       setQuoteItems(editQuote.items);
       setQuoteNotes(editQuote.notes || '');
       setExecutiveSummary(editQuote.executiveSummary || '');
+      setShowPricing(editQuote.showPricing !== false); // ✅ NEW: Load pricing setting
     }
     // Fallback: Load quote for editing if id is provided (old method)
     else if (id) {
@@ -125,6 +127,7 @@ export default function NewQuote() {
         setQuoteItems(quoteToEdit.items);
         setQuoteNotes(quoteToEdit.notes || '');
         setExecutiveSummary(quoteToEdit.executiveSummary || '');
+        setShowPricing(quoteToEdit.showPricing !== false); // ✅ NEW: Load pricing setting
       } else {
         toast.error('Quote not found');
         navigate('/quotes');
@@ -212,6 +215,7 @@ export default function NewQuote() {
         status: 'draft',
         notes: quoteNotes,
         executiveSummary,
+        showPricing, // ✅ NEW: Include pricing visibility setting
         createdAt: existingQuote?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -232,6 +236,7 @@ export default function NewQuote() {
         status: 'draft',
         notes: quoteNotes,
         executiveSummary,
+        showPricing, // ✅ NEW: Include pricing visibility setting
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -279,6 +284,7 @@ export default function NewQuote() {
         status: 'sent',
         notes: quoteNotes,
         executiveSummary: finalSummary,
+        showPricing, // ✅ NEW: Include pricing visibility setting
         sentDate: new Date().toISOString(),
         createdAt: existingQuote?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -301,6 +307,7 @@ export default function NewQuote() {
         status: 'sent',
         notes: quoteNotes,
         executiveSummary: finalSummary,
+        showPricing, // ✅ NEW: Include pricing visibility setting
         sentDate: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -452,6 +459,8 @@ export default function NewQuote() {
             subtotal={subtotal}
             total={total}
             settings={settings}
+            showPricing={showPricing}
+            onShowPricingChange={setShowPricing}
             onTitleGenerate={titleAI.generate}
             onNotesGenerate={notesAI.generate}
             titleAILoading={titleAI.isLoading}

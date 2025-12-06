@@ -1,4 +1,3 @@
-
 import { User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,6 +8,7 @@ import { AIButton } from '@/components/AIButton';
 import { Customer, QuoteItem, Settings } from '@/types';
 import { sanitizeForAI, sanitizeNumber } from '@/lib/input-sanitization';
 import { toast } from 'sonner';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface QuoteBasicInfoProps {
   customers: Customer[];
@@ -22,6 +22,8 @@ interface QuoteBasicInfoProps {
   subtotal: number;
   total: number;
   settings: Settings | null;
+  showPricing: boolean;
+  onShowPricingChange: (show: boolean) => void;
   onTitleGenerate: (prompt: string, context: Record<string, string>) => void;
   onNotesGenerate: (prompt: string) => Promise<void>;
   titleAILoading: boolean;
@@ -40,6 +42,8 @@ export function QuoteBasicInfo({
   subtotal,
   total,
   settings,
+  showPricing,
+  onShowPricingChange,
   onTitleGenerate,
   onNotesGenerate,
   titleAILoading,
@@ -175,6 +179,20 @@ Format as clear, professional terms and conditions.`;
             rows={3}
             data-demo="notes-textarea"
           />
+        </div>
+
+        <div className="flex items-center space-x-2 pt-2 border-t">
+          <Checkbox
+            id="showPricing"
+            checked={showPricing}
+            onCheckedChange={onShowPricingChange}
+          />
+          <Label
+            htmlFor="showPricing"
+            className="text-sm font-normal cursor-pointer"
+          >
+            Show individual item pricing in proposal
+          </Label>
         </div>
       </CardContent>
     </Card>

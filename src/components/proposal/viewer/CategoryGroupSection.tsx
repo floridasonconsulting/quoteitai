@@ -24,6 +24,14 @@ export function CategoryGroupSection({ section, theme }: CategoryGroupSectionPro
   const categoryGroup = section.categoryGroups[0]; // Each slide shows one category
   const showPricing = section.showPricing !== false; // Default to true
 
+  // Debug log to verify data
+  console.log('[CategoryGroupSection] Rendering category:', categoryGroup.displayName);
+  console.log('[CategoryGroupSection] Items with images:', categoryGroup.items.map(item => ({
+    name: item.name,
+    hasImage: !!item.imageUrl,
+    imageUrl: item.imageUrl
+  })));
+
   return (
     <div className="w-full space-y-8 py-8">
       {/* Category Header */}
@@ -55,67 +63,76 @@ export function CategoryGroupSection({ section, theme }: CategoryGroupSectionPro
 
       {/* Magazine-Style Item Grid */}
       <div className="grid gap-6">
-        {categoryGroup.items.map((item, index) => (
-          <div 
-            key={item.itemId || index}
-            className="flex gap-6 p-6 bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-          >
-            {/* Item Image */}
-            {item.imageUrl ? (
-              <div className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
-                <img 
-                  src={item.imageUrl} 
-                  alt={item.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    // Fallback to icon if image fails to load
-                    const target = e.currentTarget;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      parent.innerHTML = `
-                        <div class="w-full h-full flex items-center justify-center bg-gray-100">
-                          <svg class="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                          </svg>
-                        </div>
-                      `;
-                    }
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-                <Package className="w-12 h-12 text-gray-400" />
-              </div>
-            )}
+        {categoryGroup.items.map((item, index) => {
+          console.log(`[CategoryGroupSection] Rendering item ${item.name}:`, {
+            hasImageUrl: !!item.imageUrl,
+            imageUrl: item.imageUrl
+          });
+          
+          return (
+            <div 
+              key={item.itemId || index}
+              className="flex gap-6 p-6 bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+            >
+              {/* Item Image */}
+              {item.imageUrl ? (
+                <div className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
+                  <img 
+                    src={item.imageUrl} 
+                    alt={item.name}
+                    className="w-full h-full object-cover"
+                    onLoad={() => console.log(`[CategoryGroupSection] Image loaded successfully: ${item.name}`)}
+                    onError={(e) => {
+                      console.error(`[CategoryGroupSection] Image failed to load for ${item.name}:`, item.imageUrl);
+                      // Fallback to icon if image fails to load
+                      const target = e.currentTarget;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        parent.innerHTML = `
+                          <div class="w-full h-full flex items-center justify-center bg-gray-100">
+                            <svg class="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                          </div>
+                        `;
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <Package className="w-12 h-12 text-gray-400" />
+                </div>
+              )}
 
-            {/* Item Details */}
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-start mb-3">
-                <h3 className="text-xl font-semibold text-gray-900">
-                  {item.name}
-                </h3>
-                {showPricing && (
-                  <div className="text-right ml-4">
-                    <p className="text-sm text-gray-500">
-                      {item.quantity} {item.units || 'unit'}{item.quantity > 1 ? 's' : ''} × {formatCurrency(item.price)}
-                    </p>
-                    <p className="text-xl font-bold" style={{ color: theme.colors.primary }}>
-                      {formatCurrency(item.total)}
-                    </p>
-                  </div>
+              {/* Item Details */}
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    {item.name}
+                  </h3>
+                  {showPricing && (
+                    <div className="text-right ml-4">
+                      <p className="text-sm text-gray-500">
+                        {item.quantity} {item.units || 'unit'}{item.quantity > 1 ? 's' : ''} × {formatCurrency(item.price)}
+                      </p>
+                      <p className="text-xl font-bold" style={{ color: theme.colors.primary }}>
+                        {formatCurrency(item.total)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
+                {item.description && (
+                  <p className="text-gray-600 leading-relaxed">
+                    {item.description}
+                  </p>
                 )}
               </div>
-              
-              {item.description && (
-                <p className="text-gray-600 leading-relaxed">
-                  {item.description}
-                </p>
-              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Category Subtotal */}
