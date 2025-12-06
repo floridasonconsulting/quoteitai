@@ -7,7 +7,11 @@ export function ScrollTopButton() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 400);
+      if (window.scrollY > 400) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
     };
 
     window.addEventListener("scroll", handleScroll);
@@ -18,13 +22,13 @@ export function ScrollTopButton() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  if (!showScrollTop) return null;
+
   return (
     <Button
       onClick={scrollToTop}
       size="icon"
-      className={`fixed bottom-6 right-6 rounded-full shadow-lg transition-all duration-300 z-40 ${
-        showScrollTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-16 pointer-events-none"
-      }`}
+      className="fixed bottom-6 right-6 rounded-full shadow-lg z-50 animate-in fade-in slide-in-from-bottom-4 duration-300"
       aria-label="Scroll to top"
     >
       <ChevronUp className="h-5 w-5" />

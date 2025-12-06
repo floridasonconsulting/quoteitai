@@ -1,186 +1,148 @@
-/**
- * Proposal Transformation Layer
- * Transforms Quote data into structured ProposalData with category grouping
- */
+import { 
+  ProposalData, 
+  ProposalSection, 
+  ProposalItem, 
+  Quote, 
+  QuoteItem, 
+  CompanySettings,
+  CategoryGroup
+} from "@/types";
+import { 
+  CATEGORY_DISPLAY_ORDER, 
+  normalizeCategory, 
+  getCategoryMetadata,
+  sortCategoriesByOrder
+} from "./proposal-categories";
 
-import { Quote, Customer, CompanySettings, QuoteItem } from '@/types';
-import { ProposalData, ProposalSection, CategoryGroup, ProposalItem } from '@/types/proposal';
-import { CATEGORY_DISPLAY_ORDER, sortCategoriesByOrder, getCategoryConfig } from './proposal-config';
-
 /**
- * Transform quote to proposal with intelligent category grouping
+ * Transforms a raw Quote object into the new ProposalData structure
+ * suitable for the "Better Proposals" viewer experience
  */
 export function transformQuoteToProposal(
-  quote: Quote,
-  customer?: Customer,
-  settings?: CompanySettings
+  quote: Quote, 
+  settings: CompanySettings,
+  visuals?: any
 ): ProposalData {
-  console.log('[transformQuoteToProposal] Input:', {
-    quoteId: quote.id,
-    showPricing: quote.showPricing,
-    itemCount: quote.items?.length,
-    settingsName: settings?.name,
-    settingsEmail: settings?.email,
-    settingsTerms: settings?.terms?.substring(0, 50),
-    hasLogo: !!settings?.logo
-  });
-
-  // Group items by category
-  const categoryGroups = groupItemsByCategory(quote.items);
-  
-  console.log('[transformQuoteToProposal] Category groups:', categoryGroups.map(g => ({
-    category: g.category,
-    itemCount: g.items.length,
-    hasImages: g.items.filter(i => i.imageUrl).length
-  })));
-
-  // Build sections in presentation order
-  const sections: ProposalSection[] = [
-    // 1. Hero/Title Page with company info
-    {
-      id: 'hero',
-      type: 'hero',
-      title: quote.title,
-      subtitle: customer?.name || quote.customerName,
-      backgroundImage: settings?.logo,
-      companyName: settings?.name || 'Company',
-      companyAddress: settings?.address,
-      companyCity: settings?.city,
-      companyState: settings?.state,
-      companyZip: settings?.zip,
-      companyPhone: settings?.phone,
-      companyEmail: settings?.email,
-      companyWebsite: settings?.website,
-    },
-    
-    // 2. Executive Summary (if exists)
-    ...(quote.executiveSummary ? [{
-      id: 'executive-summary',
-      type: 'text' as const,
-      title: 'Executive Summary',
-      content: quote.executiveSummary,
-    }] : []),
-    
-    // 3. Category Groups (dynamic, sorted by display order)
-    ...categoryGroups.map((group, index) => ({
-      id: `category-${index}`,
-      type: 'categoryGroup' as const,
-      title: group.displayName,
-      categoryGroups: [group],
-      showPricing: quote.showPricing === true,
-    })),
-    
-    // 4. Pricing Summary - ALWAYS SHOW (even when line item pricing is hidden)
-    {
-      id: 'pricing',
-      type: 'pricing' as const,
-      title: 'Investment Summary',
-      subtotal: quote.subtotal,
-      tax: quote.tax,
-      total: quote.total,
-      terms: settings?.terms || 'Payment terms to be discussed',
-    },
-    
-    // 5. Terms & Conditions
-    {
-      id: 'legal',
-      type: 'legal' as const,
-      title: 'Terms & Conditions',
-      content: settings?.terms || 'Standard terms and conditions apply.',
-    },
-  ];
-
-  console.log('[transformQuoteToProposal] Generated sections:', sections.map(s => ({
-    id: s.id,
-    type: s.type,
-    title: s.title,
-    categoryCount: s.type === 'categoryGroup' ? s.categoryGroups?.length : undefined,
-    categories: s.type === 'categoryGroup' ? s.categoryGroups?.map(g => g.category) : undefined,
-    showPricing: 'showPricing' in s ? s.showPricing : undefined,
-    hasCompanyInfo: s.type === 'hero' ? {
-      name: s.companyName,
-      email: s.companyEmail,
-      phone: s.companyPhone
-    } : undefined
-  })));
-
-  return {
+  // 1. Create Base Proposal Data
+  const proposalData: ProposalData = {
     id: quote.id,
-    quoteId: quote.id,
-    theme: settings?.proposalTheme || 'modern-corporate',
-    sections,
+    status: quote.status,
+    settings: {
+      theme: 'modern_scroll', // Default to modern scroll
+      mode: 'light',
+      primaryColor: '#000000', // Should come from settings
+      currency: 'USD',
+    },
+    client: {
+      name: quote.customerName,
+      email: '', // Would need customer details fetch
+      company: '',
+    },
+    sender: {
+      name: settings.name,
+      company: settings.name,
+      logoUrl: settings.logo,
+    },
+    sections: [],
+    visuals: visuals || {},
     createdAt: quote.createdAt,
     updatedAt: quote.updatedAt,
   };
-}
 
-/**
- * Group quote items by category with sorting
- */
-function groupItemsByCategory(items: QuoteItem[]): CategoryGroup[] {
-  console.log('[groupItemsByCategory] Processing items:', items?.length);
-  
-  if (!items || items.length === 0) {
-    console.warn('[groupItemsByCategory] No items provided');
-    return [];
-  }
+  // 2. Generate Sections
+  const sections: ProposalSection[] = [];
 
-  // Create a map of category -> items
-  const categoryMap = new Map<string, ProposalItem[]>();
+  // --- Section A: Hero / Cover ---
+  // (Handled by ProposalCover component state, but we can have a hero section content too)
+  sections.push({
+    id: 'hero',
+    type: 'hero',
+    title: quote.title,
+    subtitle: `Prepared for ${quote.customerName}`,
+    content: quote.executiveSummary || "Thank you for the opportunity to present this proposal. We have carefully reviewed your requirements and crafted a solution that meets your specific needs.",
+    backgroundImage: visuals?.coverImage,
+  });
+
+  // --- Section B: Category Groups (The Meat) ---
+  // Group items by normalized category
+  const groupedItems = new Map<string, ProposalItem[]>();
   
-  items.forEach((item, index) => {
-    // CRITICAL: Normalize category by trimming whitespace and standardizing case for grouping
-    const rawCategory = item.category || 'Uncategorized';
-    const normalizedCategory = rawCategory.trim();
+  quote.items.forEach(item => {
+    const normalizedCat = normalizeCategory(item.category);
+    const currentGroup = groupedItems.get(normalizedCat) || [];
     
-    console.log(`[groupItemsByCategory] Item ${index}:`, {
-      name: item.name,
-      rawCategory,
-      normalizedCategory,
-      hasImage: !!item.imageUrl,
-      imageUrl: item.imageUrl
-    });
-    
-    if (!categoryMap.has(normalizedCategory)) {
-      categoryMap.set(normalizedCategory, []);
-    }
-    
-    categoryMap.get(normalizedCategory)!.push({
+    currentGroup.push({
       itemId: item.itemId,
       name: item.name,
       description: item.description,
+      enhancedDescription: item.enhancedDescription,
       quantity: item.quantity,
       price: item.price,
       total: item.total,
       units: item.units,
       imageUrl: item.imageUrl,
-      category: normalizedCategory,
+      category: normalizedCat,
     });
+    
+    groupedItems.set(normalizedCat, currentGroup);
   });
-  
-  // Log the category map for debugging
-  console.log('[groupItemsByCategory] Category map keys:', Array.from(categoryMap.keys()));
-  
-  // Convert map to sorted array of CategoryGroups
-  const categories = Array.from(categoryMap.keys());
-  const sortedCategories = sortCategoriesByOrder(categories);
-  
-  return sortedCategories.map(category => {
-    const items = categoryMap.get(category)!;
-    const config = getCategoryConfig(category);
-    
-    console.log(`[groupItemsByCategory] Creating group for "${category}":`, {
-      itemCount: items.length,
-      displayName: config?.displayName || category,
-      itemsWithImages: items.filter(i => i.imageUrl).length
-    });
-    
-    return {
+
+  // Sort categories based on standard display order
+  const sortedCategories = sortCategoriesByOrder(Array.from(groupedItems.keys()));
+
+  // Create a section for each category group
+  sortedCategories.forEach(category => {
+    const items = groupedItems.get(category) || [];
+    const metadata = getCategoryMetadata(category);
+    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+
+    // Get category-specific background if available
+    const bgImage = visuals?.sectionBackgrounds?.[category];
+
+    const categoryGroup: CategoryGroup = {
       category,
-      displayName: config?.displayName || category,
-      description: config?.description,
+      displayName: metadata?.displayName || category,
+      description: metadata?.description,
       items,
-      subtotal: items.reduce((sum, item) => sum + item.total, 0),
+      subtotal,
+      backgroundImage: bgImage
     };
+
+    sections.push({
+      id: `cat-${category.toLowerCase().replace(/\s+/g, '-')}`,
+      type: 'categoryGroup',
+      title: metadata?.displayName,
+      categoryGroups: [categoryGroup],
+      backgroundImage: bgImage,
+      showPricing: quote.showPricing // Inherit visibility setting
+    });
   });
+
+  // --- Section C: Financial Summary ---
+  sections.push({
+    id: 'financials',
+    type: 'lineItems',
+    title: 'Investment Summary',
+    items: quote.items.map(i => ({
+      ...i, 
+      category: normalizeCategory(i.category)
+    })),
+    subtotal: quote.subtotal,
+    tax: quote.tax,
+    total: quote.total,
+    showPricing: true // Summary always shows pricing unless globally hidden (logic can be refined)
+  });
+
+  // --- Section D: Terms & Conditions ---
+  if (settings.terms) {
+    sections.push({
+      id: 'terms',
+      type: 'legal',
+      title: 'Terms & Conditions',
+      content: settings.terms,
+    });
+  }
+
+  proposalData.sections = sections;
+  return proposalData;
 }

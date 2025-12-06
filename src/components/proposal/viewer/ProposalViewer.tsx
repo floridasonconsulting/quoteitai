@@ -1,195 +1,200 @@
-import { useState } from 'react';
-import { CompanySettings, Quote, Customer } from "@/types";
-import { getTheme, getThemeCSSVars } from "@/lib/proposal-themes";
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Pagination, EffectCube, Keyboard, Mousewheel } from 'swiper/modules';
-import { ProposalSuccessState } from './ProposalSuccessStates';
-import { transformQuoteToProposal } from '@/lib/proposal-transformation';
-import { HeroSection } from './HeroSection';
-import { TextSection } from './TextSection';
-import { CategoryGroupSection } from './CategoryGroupSection';
-import { PricingSection } from './PricingSection';
-import { LegalSection } from './LegalSection';
-import { ProposalActionBar } from './ProposalActionBar';
-
-// Import Swiper styles
-import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
-import 'swiper/css/effect-cube';
-
-type SuccessStateType = 'accepted' | 'declined' | 'commented' | null;
+import { useState, useEffect, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "next-themes";
+import { Quote, CompanySettings } from "@/types";
+import { transformQuoteToProposal } from "@/lib/proposal-transformation";
+import { ProposalCover } from "./ProposalCover";
+import { ProposalNavigation } from "./ProposalNavigation";
+import { ProposalContentSlider } from "./ProposalContentSlider";
+import { ProposalActionBar } from "./ProposalActionBar";
+import { ProposalSuccessStates, SuccessType } from "./ProposalSuccessStates";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
 
 interface ProposalViewerProps {
   quote: Quote;
-  companySettings: CompanySettings;
-  customer?: Customer;
-  isPreview?: boolean;
-  actionBar?: {
-    quoteId: string;
-    total: number;
-    status: 'draft' | 'sent' | 'accepted' | 'declined';
-    userEmail: string;
-    userName?: string;
-    onAccept: () => Promise<void>;
-    onReject: (reason?: string) => Promise<void>;
-  };
+  settings: CompanySettings;
+  onAccept: () => Promise<void>;
+  onDecline: () => Promise<void>;
+  onComment: (comment: string) => Promise<void>;
+  isReadOnly?: boolean;
 }
 
-export function ProposalViewer({ quote, companySettings, customer, isPreview = false, actionBar }: ProposalViewerProps) {
-  const [successState, setSuccessState] = useState<SuccessStateType>(null);
-
-  // Defensive checks
-  if (!quote) {
-    console.error('[ProposalViewer] No quote data provided');
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Error: Quote data is missing</p>
-      </div>
-    );
-  }
-
-  if (!companySettings) {
-    console.error('[ProposalViewer] No company settings provided');
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Error: Company settings are missing</p>
-      </div>
-    );
-  }
-
-  console.log('[ProposalViewer] Rendering with:', {
-    quoteId: quote.id,
-    showPricing: quote.showPricing,
-    hasCustomer: !!customer,
-    companyName: companySettings.name,
-    termsLength: companySettings.terms?.length || 0,
-    hasActionBar: !!actionBar,
-    isPreview
-  });
-
-  // Transform quote to proposal structure with grouped categories
-  const proposalData = transformQuoteToProposal(quote, customer, companySettings);
+export function ProposalViewer({
+  quote,
+  settings,
+  onAccept,
+  onDecline,
+  onComment,
+  isReadOnly = false
+}: ProposalViewerProps) {
+  // State
+  const [stage, setStage] = useState<'cover' | 'content'>('cover');
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const [successState, setSuccessState] = useState<SuccessType | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   
-  const theme = getTheme(companySettings.proposalTheme || "modern-corporate");
-  const themeCSSVars = getThemeCSSVars(theme);
+  // Data Transformation
+  const proposalData = useMemo(() => {
+    // Mock visuals for now - in real app this would come from DB
+    const mockVisuals = {
+      coverImage: quote.items.find(i => i.imageUrl)?.imageUrl, // Use first item image as fallback
+      logo: settings.logo,
+    };
+    return transformQuoteToProposal(quote, settings, mockVisuals);
+  }, [quote, settings]);
 
-  // Handle action bar events
+  // Theme handling
+  const { setTheme } = useTheme();
+  
+  useEffect(() => {
+    // Enforce light mode for proposal viewer by default unless specified
+    setTheme('light');
+  }, [setTheme]);
+
+  // Navigation Items Generation
+  const navigationItems = useMemo(() => {
+    return proposalData.sections.map((section, index) => ({
+      id: section.id,
+      label: section.title || 'Untitled Section',
+      index: index,
+      type: (section.type === 'lineItems' ? 'summary' : 
+             section.type === 'legal' ? 'terms' : 'category') as any
+    }));
+  }, [proposalData.sections]);
+
+  // Handlers
   const handleAccept = async () => {
-    if (!actionBar) return;
-    await actionBar.onAccept();
-    setSuccessState('accepted');
+    setIsProcessing(true);
+    try {
+      await onAccept();
+      setSuccessState('accepted');
+    } catch (error) {
+      console.error("Failed to accept:", error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleReject = async (reason?: string) => {
-    if (!actionBar) return;
-    await actionBar.onReject(reason);
-    setSuccessState('declined');
+  const handleDecline = async () => {
+    setIsProcessing(true);
+    try {
+      await onDecline();
+      setSuccessState('declined');
+    } catch (error) {
+      console.error("Failed to decline:", error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleComment = () => {
-    setSuccessState('commented');
+  const handleComment = async () => {
+    // Simple prompt for MVP - replace with proper dialog later
+    const comment = window.prompt("Please enter your feedback:");
+    if (!comment) return;
+
+    setIsProcessing(true);
+    try {
+      await onComment(comment);
+      setSuccessState('commented');
+    } catch (error) {
+      console.error("Failed to send comment:", error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  // Show success state if action completed
-  if (successState) {
-    return (
-      <ProposalSuccessState
-        type={successState}
-        salesRepName={companySettings.name}
-        onClose={() => window.close()}
-      />
-    );
-  }
-
+  // Render
   return (
-    <div 
-      className="min-h-screen"
-      style={{
-        ...themeCSSVars,
-        background: theme.colors.background,
-        color: theme.colors.text.primary,
-        fontFamily: theme.typography.fontFamily.body
-      }}
-    >
-      <Swiper
-        modules={[Navigation, Pagination, EffectCube, Keyboard, Mousewheel]}
-        spaceBetween={0}
-        slidesPerView={1}
-        navigation
-        pagination={{
-          clickable: true,
-          dynamicBullets: true,
-        }}
-        keyboard={{
-          enabled: true,
-        }}
-        mousewheel={{
-          forceToAxis: true,
-          sensitivity: 1,
-        }}
-        effect="cube"
-        cubeEffect={{
-          shadow: true,
-          slideShadows: true,
-          shadowOffset: 20,
-          shadowScale: 0.94,
-        }}
-        className="h-screen"
-        style={{
-          '--swiper-pagination-color': theme.swiper.paginationColor,
-          '--swiper-navigation-color': theme.swiper.navigationColor,
-        } as React.CSSProperties}
-      >
-        {proposalData.sections.map((section) => (
-          <SwiperSlide key={section.id} className="overflow-y-auto">
-            <div className="container mx-auto px-4 py-8 max-w-5xl">
-              <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center">
-                {section.type === 'hero' && (
-                  <HeroSection 
-                    section={section}
-                    companySettings={companySettings}
+    <div className="h-screen w-full bg-background overflow-hidden font-sans">
+      <AnimatePresence mode="wait">
+        {/* STAGE 1: COVER */}
+        {stage === 'cover' && (
+          <ProposalCover 
+            key="cover"
+            companyName={proposalData.sender?.company || "Company Name"}
+            projectTitle={proposalData.sections.find(s => s.type === 'hero')?.title || "Project Proposal"}
+            clientName={proposalData.client.name}
+            coverImage={proposalData.visuals?.coverImage}
+            onEnter={() => setStage('content')}
+          />
+        )}
+
+        {/* STAGE 2: MAIN CONTENT */}
+        {stage === 'content' && !successState && (
+          <motion.div 
+            key="content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="h-full flex flex-col md:flex-row relative"
+          >
+            {/* Mobile Navigation (Drawer) */}
+            <div className="md:hidden absolute top-4 left-4 z-40">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon" className="bg-white/80 backdrop-blur">
+                    <Menu className="w-5 h-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-64 p-0">
+                  <ProposalNavigation 
+                    sections={navigationItems}
+                    activeIndex={activeSlideIndex}
+                    onNavigate={setActiveSlideIndex}
+                    className="h-full"
                   />
-                )}
-                {section.type === 'text' && <TextSection section={section} />}
-                {section.type === 'categoryGroup' && (
-                  <CategoryGroupSection 
-                    section={section}
-                    theme={theme}
-                  />
-                )}
-                {section.type === 'pricing' && (
-                  <PricingSection 
-                    section={section}
-                    companySettings={companySettings}
-                  />
-                )}
-                {section.type === 'legal' && (
-                  <LegalSection 
-                    section={section}
-                    companySettings={companySettings}
-                  />
+                </SheetContent>
+              </Sheet>
+            </div>
+
+            {/* Desktop Navigation (Sidebar) */}
+            <div className="hidden md:block w-64 h-full border-r border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+              <div className="p-6">
+                {settings.logo && (
+                  <img src={settings.logo} alt="Logo" className="h-8 w-auto mb-8" />
                 )}
               </div>
+              <ProposalNavigation 
+                sections={navigationItems}
+                activeIndex={activeSlideIndex}
+                onNavigate={setActiveSlideIndex}
+              />
             </div>
-          </SwiperSlide>
-        ))}
-      </Swiper>
 
-      {/* Interactive Action Bar - Only show if not preview and actionBar provided */}
-      {!isPreview && actionBar && (
-        <ProposalActionBar
-          quoteId={actionBar.quoteId}
-          total={actionBar.total}
-          status={actionBar.status}
-          userEmail={actionBar.userEmail}
-          userName={actionBar.userName}
-          onAccept={handleAccept}
-          onReject={handleReject}
-          onComment={handleComment}
-          className="z-[60]"
-        />
-      )}
+            {/* Main Content Slider */}
+            <div className="flex-1 h-full relative">
+              <ProposalContentSlider 
+                sections={proposalData.sections}
+                activeIndex={activeSlideIndex}
+                onSlideChange={setActiveSlideIndex}
+              />
+            </div>
+
+            {/* Sticky Action Bar */}
+            {!isReadOnly && (
+              <ProposalActionBar 
+                totalAmount={quote.total}
+                currency={settings.currency || 'USD'}
+                onAccept={handleAccept}
+                onDecline={handleDecline}
+                onComment={handleComment}
+                isProcessing={isProcessing}
+              />
+            )}
+          </motion.div>
+        )}
+
+        {/* STAGE 3: SUCCESS STATES */}
+        {successState && (
+          <ProposalSuccessStates 
+            key="success"
+            type={successState}
+            salesRepName={settings.name}
+            onReturn={() => setSuccessState(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
