@@ -203,11 +203,10 @@ export async function addItem(
   }
 
   try {
-    // Remove new fields until migrations are run
-    const { minQuantity, imageUrl, ...itemForDB } = itemWithUser;
-    const dbItem = toSnakeCase(itemForDB);
+    // ✅ FIXED: Include ALL fields including minQuantity and imageUrl (migrations already exist)
+    const dbItem = toSnakeCase(itemWithUser);
     
-    console.log('[ItemService] Syncing to Supabase (without minQuantity/imageUrl until migrations run)');
+    console.log('[ItemService] Syncing to Supabase with minQuantity and imageUrl');
     
     const startTime = performance.now();
     const { error } = await supabase.from('items').insert(dbItem as unknown);
@@ -296,11 +295,10 @@ export async function updateItem(
   }
 
   try {
-    // Remove new fields until migrations are run
-    const { minQuantity, imageUrl, ...updatesForDB } = updates;
-    const dbUpdates = toSnakeCase(updatesForDB);
+    // ✅ FIXED: Include ALL fields including minQuantity and imageUrl (migrations already exist)
+    const dbUpdates = toSnakeCase(updates);
     
-    console.log('[ItemService] Syncing update to Supabase (without minQuantity/imageUrl until migrations run)');
+    console.log('[ItemService] Syncing update to Supabase with minQuantity and imageUrl');
     
     const startTime = performance.now();
     const { error } = await supabase
