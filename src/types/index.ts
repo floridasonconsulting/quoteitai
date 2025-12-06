@@ -33,10 +33,12 @@ export interface QuoteItem {
   itemId: string;
   name: string;
   description: string;
+  category?: string; // Added for proposal grouping
   quantity: number;
   price: number;
   total: number;
   units?: string;
+  imageUrl?: string; // Added for proposal visuals
 }
 
 export interface Quote {

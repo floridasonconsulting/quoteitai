@@ -86,7 +86,7 @@ function groupItemsByCategory(items: QuoteItem[]): CategoryGroup[] {
   
   items.forEach(item => {
     // CRITICAL FIX: QuoteItem might not have category, default to 'Uncategorized'
-    const category = (item as any).category || 'Uncategorized';
+    const category = item.category || 'Uncategorized';
     
     if (!categoryMap.has(category)) {
       categoryMap.set(category, []);
@@ -100,7 +100,7 @@ function groupItemsByCategory(items: QuoteItem[]): CategoryGroup[] {
       price: item.price,
       total: item.total,
       units: item.units,
-      imageUrl: (item as any).imageUrl, // Pass through image URL
+      imageUrl: item.imageUrl, // Pass through image URL
       category: category, // Include category
     });
   });
