@@ -21,9 +21,25 @@ import {
  */
 export function transformQuoteToProposal(
   quote: Quote, 
-  settings: CompanySettings,
+  settings?: CompanySettings,
   visuals?: ProposalVisuals
 ): ProposalData {
+  // Default settings if not provided
+  const defaultSettings: CompanySettings = {
+    name: 'Company Name',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+    phone: '',
+    email: '',
+    website: '',
+    terms: 'Payment terms and conditions to be discussed.',
+    currency: 'USD'
+  };
+
+  const activeSettings = settings || defaultSettings;
+
   // 1. Create Base Proposal Data
   const proposalData: ProposalData = {
     id: quote.id,
@@ -32,7 +48,7 @@ export function transformQuoteToProposal(
       theme: 'modern_scroll', // Default to modern scroll
       mode: 'light',
       primaryColor: '#000000', // Should come from settings
-      currency: 'USD',
+      currency: activeSettings.currency || 'USD',
     },
     client: {
       name: quote.customerName,
@@ -40,9 +56,9 @@ export function transformQuoteToProposal(
       company: '',
     },
     sender: {
-      name: settings.name,
-      company: settings.name,
-      logoUrl: settings.logo,
+      name: activeSettings.name,
+      company: activeSettings.name,
+      logoUrl: activeSettings.logo,
     },
     sections: [],
     visuals: visuals || {},
@@ -135,12 +151,12 @@ export function transformQuoteToProposal(
   });
 
   // --- Section D: Terms & Conditions ---
-  if (settings.terms) {
+  if (activeSettings.terms) {
     sections.push({
       id: 'terms',
       type: 'legal',
       title: 'Terms & Conditions',
-      content: settings.terms,
+      content: activeSettings.terms,
     });
   }
 

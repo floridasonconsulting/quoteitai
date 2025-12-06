@@ -35,12 +35,12 @@ export function ProposalViewer({
   const [successState, setSuccessState] = useState<SuccessType | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Data Transformation
+  // Data Transformation with null checks
   const proposalData = useMemo(() => {
     // Mock visuals for now - in real app this would come from DB
     const mockVisuals = {
-      coverImage: quote.items.find(i => i.imageUrl)?.imageUrl, // Use first item image as fallback
-      logo: settings.logo,
+      coverImage: quote.items.find(i => i.imageUrl)?.imageUrl,
+      logo: settings?.logo,
     };
     return transformQuoteToProposal(quote, settings, mockVisuals);
   }, [quote, settings]);
@@ -157,7 +157,7 @@ export function ProposalViewer({
             {/* Desktop Navigation (Sidebar) */}
             <div className="hidden md:block w-64 h-full border-r border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
               <div className="p-6">
-                {settings.logo && (
+                {settings?.logo && (
                   <img src={settings.logo} alt="Logo" className="h-8 w-auto mb-8" />
                 )}
               </div>
@@ -181,7 +181,7 @@ export function ProposalViewer({
             {!isReadOnly && (
               <ProposalActionBar 
                 totalAmount={quote.total}
-                currency={settings.currency || 'USD'}
+                currency={settings?.currency || 'USD'}
                 onAccept={handleAccept}
                 onDecline={handleDecline}
                 onComment={handleComment}
@@ -196,7 +196,7 @@ export function ProposalViewer({
           <ProposalSuccessStates 
             key="success"
             type={successState}
-            salesRepName={settings.name}
+            salesRepName={settings?.name || "Your Sales Representative"}
             onReturn={() => setSuccessState(null)}
           />
         )}
