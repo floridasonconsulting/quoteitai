@@ -236,10 +236,12 @@ export async function importItemsFromCSV(
         createdAt: new Date().toISOString(),
       };
       
-      console.log(`[CSV Import] Creating item:`, {
+      console.log(`[CSV Import] Creating item with complete data:`, {
         name: newItem.name,
         minQuantity: newItem.minQuantity,
-        hasImageUrl: !!newItem.imageUrl
+        hasImageUrl: !!newItem.imageUrl,
+        imageUrlLength: newItem.imageUrl?.length,
+        allFields: Object.keys(newItem)
       });
       
       await addItem(userId, newItem);
