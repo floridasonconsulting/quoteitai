@@ -238,6 +238,8 @@ export async function nuclearClearAllQuotes(userId: string) {
 
 // Export to window for easy console access
 if (typeof window !== 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).debugQuoteStorage = debugQuoteStorage;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).nuclearClearAllQuotes = nuclearClearAllQuotes;
 }
