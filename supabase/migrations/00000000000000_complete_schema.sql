@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS quotes (
     shared_at TIMESTAMPTZ,
     viewed_at TIMESTAMPTZ,
     expires_at TIMESTAMPTZ,
+    show_pricing BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(user_id, quote_number)
@@ -389,6 +390,7 @@ COMMENT ON COLUMN items.min_quantity IS 'Minimum quantity that must be ordered f
 COMMENT ON COLUMN items.image_url IS 'URL to product/service image for proposal presentations';
 COMMENT ON COLUMN quotes.share_token IS 'Secure token for public quote viewing';
 COMMENT ON COLUMN quotes.expires_at IS 'Optional expiration date for shared quotes';
+COMMENT ON COLUMN quotes.show_pricing IS 'Controls visibility of individual line-item pricing in proposals (true = show prices, false = hide prices, show only category totals)';
 
 -- ============================================================================
 -- GRANT PERMISSIONS
