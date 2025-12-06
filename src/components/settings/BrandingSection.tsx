@@ -5,41 +5,31 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Palette, Upload, X, Crown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { CompanySettings } from "@/types";
 
 interface BrandingSectionProps {
-  settings: {
-    primaryColor?: string;
-    secondaryColor?: string;
-    logo?: string;
-  };
-  onUpdate: (updates: Partial<BrandingSectionProps["settings"]>) => Promise<void>;
+  settings: CompanySettings;
+  onUpdate: (updates: Partial<CompanySettings>) => Promise<void>;
 }
 
 export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
   const { user, isMaxAITier } = useAuth();
-  const [primaryColor, setPrimaryColor] = useState(settings.primaryColor || "#3b82f6");
-  const [secondaryColor, setSecondaryColor] = useState(settings.secondaryColor || "#8b5cf6");
-  const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleSave = async () => {
+  const handleLogoDisplayChange = async (value: 'logo' | 'name' | 'both') => {
     try {
-      setIsSaving(true);
-      await onUpdate({
-        primaryColor,
-        secondaryColor,
-      });
-      toast.success("Branding updated successfully");
+      console.log('[BrandingSection] Updating logoDisplayOption to:', value);
+      await onUpdate({ logoDisplayOption: value });
+      toast.success("Logo display preference updated");
     } catch (error) {
-      console.error("Failed to update branding:", error);
-      toast.error("Failed to update branding");
-    } finally {
-      setIsSaving(false);
+      console.error("Failed to update logo display:", error);
+      toast.error("Failed to update logo display");
     }
   };
 
@@ -81,6 +71,8 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
         .from('company-logos')
         .getPublicUrl(filePath);
 
+      console.log('[BrandingSection] Logo uploaded, URL:', publicUrl);
+
       // Update company settings
       await onUpdate({ logo: publicUrl });
       toast.success("Logo uploaded successfully");
@@ -112,8 +104,10 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
         }
       }
 
+      console.log('[BrandingSection] Logo removed');
+
       // Update company settings
-      await onUpdate({ logo: '' });
+      await onUpdate({ logo: undefined });
       toast.success("Logo removed successfully");
     } catch (error) {
       console.error("Failed to remove logo:", error);
@@ -131,19 +125,40 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
           Branding
         </CardTitle>
         <CardDescription>
-          Customize your brand colors and logo
+          Customize your company logo and display preferences
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* White-Label Logo Upload (Max AI Tier Only) */}
+        {/* Logo Display Option */}
         <div className="space-y-3">
-          <Label htmlFor="logo-upload">Company Logo for Branding</Label>
+          <Label htmlFor="logoDisplayOption">Logo Display on Proposals</Label>
+          <Select 
+            value={settings.logoDisplayOption || 'both'} 
+            onValueChange={handleLogoDisplayChange}
+          >
+            <SelectTrigger id="logoDisplayOption">
+              <SelectValue placeholder="Select display option" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="logo">Logo Only</SelectItem>
+              <SelectItem value="name">Company Name Only</SelectItem>
+              <SelectItem value="both">Both Logo and Name</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground">
+            Choose how your company branding appears on proposals
+          </p>
+        </div>
+
+        {/* White-Label Logo Upload (Max AI Tier Only) */}
+        <div className="space-y-3 pt-4 border-t">
+          <Label htmlFor="logo-upload">Company Logo</Label>
           
           {!isMaxAITier && (
             <Alert>
               <Crown className="h-4 w-4" />
               <AlertDescription>
-                White-label branding is available exclusively for Max AI tier subscribers. 
+                Custom logo upload is available exclusively for Max AI tier subscribers. 
                 <Button variant="link" className="p-0 h-auto ml-1" onClick={() => window.location.href = '/subscription'}>
                   Upgrade to Max AI
                 </Button>
@@ -158,7 +173,7 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
                   <img
                     src={settings.logo}
                     alt="Company logo"
-                    className="h-16 w-auto object-contain"
+                    className="h-16 w-auto object-contain border rounded p-2"
                   />
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -191,7 +206,7 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
                   onChange={handleLogoUpload}
                   className="hidden"
                   id="logo-upload"
-                  aria-label="Company Logo for Branding"
+                  aria-label="Company Logo Upload"
                 />
                 <label htmlFor="logo-upload">
                   <Button variant="outline" asChild disabled={isUploading}>
@@ -208,55 +223,6 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
             </>
           )}
         </div>
-
-        {/* Color Pickers */}
-        <div className="space-y-4 pt-4 border-t">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="primaryColor">Primary Color</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="primaryColor"
-                  type="color"
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="w-20 h-10 cursor-pointer"
-                />
-                <Input
-                  type="text"
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  placeholder="#3b82f6"
-                  className="flex-1"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="secondaryColor">Secondary Color</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="secondaryColor"
-                  type="color"
-                  value={secondaryColor}
-                  onChange={(e) => setSecondaryColor(e.target.value)}
-                  className="w-20 h-10 cursor-pointer"
-                />
-                <Input
-                  type="text"
-                  value={secondaryColor}
-                  onChange={(e) => setSecondaryColor(e.target.value)}
-                  placeholder="#8b5cf6"
-                  className="flex-1"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? "Saving..." : "Save Branding"}
-        </Button>
       </CardContent>
     </Card>
   );

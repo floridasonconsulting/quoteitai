@@ -2,31 +2,28 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2 } from "lucide-react";
 import { toast } from "sonner";
+import { CompanySettings } from "@/types";
 
 interface CompanyInfoSectionProps {
-  settings: {
-    companyName?: string;
-    companyAddress?: string;
-    companyPhone?: string;
-    companyEmail?: string;
-    companyWebsite?: string;
-    taxId?: string;
-  };
-  onUpdate: (updates: Partial<CompanyInfoSectionProps["settings"]>) => Promise<void>;
+  settings: CompanySettings;
+  onUpdate: (updates: Partial<CompanySettings>) => Promise<void>;
 }
 
 export function CompanyInfoSection({ settings, onUpdate }: CompanyInfoSectionProps) {
   const [formData, setFormData] = useState({
-    companyName: settings.companyName || "",
-    companyAddress: settings.companyAddress || "",
-    companyPhone: settings.companyPhone || "",
-    companyEmail: settings.companyEmail || "",
-    companyWebsite: settings.companyWebsite || "",
-    taxId: settings.taxId || "",
+    name: settings.name || "",
+    address: settings.address || "",
+    city: settings.city || "",
+    state: settings.state || "",
+    zip: settings.zip || "",
+    phone: settings.phone || "",
+    email: settings.email || "",
+    website: settings.website || "",
+    license: settings.license || "",
+    insurance: settings.insurance || "",
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -37,10 +34,11 @@ export function CompanyInfoSection({ settings, onUpdate }: CompanyInfoSectionPro
   const handleSave = async () => {
     try {
       setIsSaving(true);
+      console.log('[CompanyInfoSection] Saving data:', formData);
       await onUpdate(formData);
       toast.success("Company information updated successfully");
     } catch (error) {
-      console.error("Failed to update company info:", error);
+      console.error("[CompanyInfoSection] Failed to update company info:", error);
       toast.error("Failed to update company information");
     } finally {
       setIsSaving(false);
@@ -61,68 +59,107 @@ export function CompanyInfoSection({ settings, onUpdate }: CompanyInfoSectionPro
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="companyName">Company Name *</Label>
+            <Label htmlFor="name">Company Name *</Label>
             <Input
-              id="companyName"
-              value={formData.companyName}
-              onChange={(e) => handleChange("companyName", e.target.value)}
+              id="name"
+              value={formData.name}
+              onChange={(e) => handleChange("name", e.target.value)}
               placeholder="Acme Corporation"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="companyEmail">Email Address *</Label>
+            <Label htmlFor="email">Email Address *</Label>
             <Input
-              id="companyEmail"
+              id="email"
               type="email"
-              value={formData.companyEmail}
-              onChange={(e) => handleChange("companyEmail", e.target.value)}
+              value={formData.email}
+              onChange={(e) => handleChange("email", e.target.value)}
               placeholder="contact@acme.com"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="companyPhone">Phone Number</Label>
+            <Label htmlFor="phone">Phone Number</Label>
             <Input
-              id="companyPhone"
+              id="phone"
               type="tel"
-              value={formData.companyPhone}
-              onChange={(e) => handleChange("companyPhone", e.target.value)}
+              value={formData.phone}
+              onChange={(e) => handleChange("phone", e.target.value)}
               placeholder="+1 (555) 123-4567"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="companyWebsite">Website</Label>
+            <Label htmlFor="website">Website</Label>
             <Input
-              id="companyWebsite"
+              id="website"
               type="url"
-              value={formData.companyWebsite}
-              onChange={(e) => handleChange("companyWebsite", e.target.value)}
+              value={formData.website}
+              onChange={(e) => handleChange("website", e.target.value)}
               placeholder="https://acme.com"
             />
           </div>
-        </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="companyAddress">Address</Label>
-          <Textarea
-            id="companyAddress"
-            value={formData.companyAddress}
-            onChange={(e) => handleChange("companyAddress", e.target.value)}
-            placeholder="123 Business St, Suite 100&#10;City, State 12345"
-            rows={3}
-          />
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="address">Street Address</Label>
+            <Input
+              id="address"
+              value={formData.address}
+              onChange={(e) => handleChange("address", e.target.value)}
+              placeholder="123 Business St, Suite 100"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="taxId">Tax ID / EIN (Optional)</Label>
-          <Input
-            id="taxId"
-            value={formData.taxId}
-            onChange={(e) => handleChange("taxId", e.target.value)}
-            placeholder="12-3456789"
-          />
+          <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input
+              id="city"
+              value={formData.city}
+              onChange={(e) => handleChange("city", e.target.value)}
+              placeholder="New York"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="state">State</Label>
+            <Input
+              id="state"
+              value={formData.state}
+              onChange={(e) => handleChange("state", e.target.value)}
+              placeholder="NY"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="zip">ZIP Code</Label>
+            <Input
+              id="zip"
+              value={formData.zip}
+              onChange={(e) => handleChange("zip", e.target.value)}
+              placeholder="10001"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="license">License Number</Label>
+            <Input
+              id="license"
+              value={formData.license}
+              onChange={(e) => handleChange("license", e.target.value)}
+              placeholder="Optional"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="insurance">Insurance Info</Label>
+            <Input
+              id="insurance"
+              value={formData.insurance}
+              onChange={(e) => handleChange("insurance", e.target.value)}
+              placeholder="Optional"
+            />
+          </div>
         </div>
 
         <Button onClick={handleSave} disabled={isSaving}>
