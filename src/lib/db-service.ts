@@ -106,80 +106,84 @@ export async function saveSettings(
       console.log('[DB Service] ✓ Settings saved to localStorage');
     }
 
-    // Step 3: Attempt immediate Supabase save if online
+    // Step 3: ALWAYS attempt Supabase save (even if offline, we'll queue it)
+    console.log('[DB Service] Attempting Supabase save...');
+    
+    // CRITICAL: Build the database object with proper field mapping
+    const dbSettings = {
+      user_id: userId,
+      name: settings.name || '',
+      address: settings.address || '',
+      city: settings.city || '',
+      state: settings.state || '',
+      zip: settings.zip || '',
+      phone: settings.phone || '',
+      email: settings.email || '',
+      website: settings.website || '',
+      logo: settings.logo || null,
+      logo_display_option: settings.logoDisplayOption || 'both',
+      license: settings.license || '',
+      insurance: settings.insurance || '',
+      terms: settings.terms || '',
+      proposal_template: settings.proposalTemplate || 'classic',
+      proposal_theme: settings.proposalTheme || 'modern-corporate',
+      notify_email_accepted: settings.notifyEmailAccepted ?? true,
+      notify_email_declined: settings.notifyEmailDeclined ?? true,
+      onboarding_completed: settings.onboardingCompleted ?? false,
+      updated_at: new Date().toISOString()
+    };
+
+    console.log('[DB Service] Upserting to Supabase with data:', {
+      user_id: dbSettings.user_id,
+      name: dbSettings.name,
+      email: dbSettings.email,
+      termsLength: dbSettings.terms.length,
+      hasLogo: !!dbSettings.logo
+    });
+
     if (navigator.onLine) {
-      console.log('[DB Service] Online - attempting Supabase save...');
-      try {
-        // CRITICAL: Build the database object with proper field mapping
-        const dbSettings = {
-          user_id: userId,
-          name: settings.name || '',
-          address: settings.address || '',
-          city: settings.city || '',
-          state: settings.state || '',
-          zip: settings.zip || '',
-          phone: settings.phone || '',
-          email: settings.email || '',
-          website: settings.website || '',
-          logo: settings.logo || null,
-          logo_display_option: settings.logoDisplayOption || 'both',
-          license: settings.license || '',
-          insurance: settings.insurance || '',
-          terms: settings.terms || '',
-          proposal_template: settings.proposalTemplate || 'classic',
-          proposal_theme: settings.proposalTheme || 'modern-corporate',
-          notify_email_accepted: settings.notifyEmailAccepted ?? true,
-          notify_email_declined: settings.notifyEmailDeclined ?? true,
-          onboarding_completed: settings.onboardingCompleted ?? false,
-          updated_at: new Date().toISOString()
-        };
+      // Use upsert with proper conflict resolution
+      const { data, error } = await supabase
+        .from('company_settings')
+        .upsert(dbSettings, { 
+          onConflict: 'user_id',
+          ignoreDuplicates: false 
+        })
+        .select()
+        .single();
 
-        console.log('[DB Service] Upserting to Supabase with data:', {
-          user_id: dbSettings.user_id,
-          name: dbSettings.name,
-          email: dbSettings.email,
-          termsLength: dbSettings.terms.length,
-          hasLogo: !!dbSettings.logo
+      if (error) {
+        console.error('[DB Service] ❌ Supabase upsert error:', error);
+        console.error('[DB Service] Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
         });
+        throw error;
+      }
 
-        // Use upsert with proper conflict resolution
-        const { data, error } = await supabase
-          .from('company_settings')
-          .upsert(dbSettings, { 
-            onConflict: 'user_id',
-            ignoreDuplicates: false 
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('[DB Service] ❌ Supabase upsert error:', error);
-          throw error;
-        }
-
-        console.log('[DB Service] ✓ Settings saved to Supabase successfully');
-        console.log('[DB Service] Supabase returned:', data ? 'data received' : 'no data');
-      } catch (supabaseError) {
-        console.error('[DB Service] ❌ Supabase save failed:', supabaseError);
-        
-        // Queue for later sync if queueChange provided
-        if (queueChange) {
-          console.log('[DB Service] Queueing settings for sync...');
-          queueChange({
-            id: `settings-${userId}`,
-            type: 'settings',
-            action: 'update',
-            data: settings,
-            timestamp: Date.now()
-          });
-          console.log('[DB Service] ✓ Settings queued for sync');
-        }
-        
-        // Don't throw - we've saved locally
-        console.log('[DB Service] Settings saved locally, will sync later');
+      console.log('[DB Service] ✓ Settings saved to Supabase successfully');
+      console.log('[DB Service] Supabase returned data:', data ? 'data received' : 'no data');
+      
+      // Verify the save by reading back
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('company_settings')
+        .select('name, email, terms')
+        .eq('user_id', userId)
+        .single();
+      
+      if (verifyError) {
+        console.error('[DB Service] ❌ Verification failed:', verifyError);
+      } else {
+        console.log('[DB Service] ✓ Verified save:', {
+          name: verifyData.name,
+          email: verifyData.email,
+          termsLength: verifyData.terms?.length || 0
+        });
       }
     } else {
-      console.log('[DB Service] Offline - queueing for sync');
+      console.log('[DB Service] Offline - queuing for sync');
       // Offline: queue for sync
       if (queueChange) {
         queueChange({
@@ -197,7 +201,20 @@ export async function saveSettings(
   } catch (error) {
     console.error('[DB Service] ========== CRITICAL ERROR SAVING SETTINGS ==========');
     console.error('[DB Service] Error:', error);
-    throw new Error('Failed to save settings: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    
+    // Even if Supabase fails, settings are saved locally, so don't throw
+    console.log('[DB Service] Settings saved locally, will retry Supabase sync');
+    
+    // Queue for sync if handler provided
+    if (queueChange) {
+      queueChange({
+        id: `settings-${userId}`,
+        type: 'settings',
+        action: 'update',
+        data: settings,
+        timestamp: Date.now()
+      });
+    }
   }
 }
 

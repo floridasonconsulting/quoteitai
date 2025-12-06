@@ -25,27 +25,33 @@ export const CATEGORY_DISPLAY_ORDER: CategoryConfig[] = [
     description: "The foundation of your pool project. This includes the shell construction, excavation, rebar installation, and gunite/shotcrete application. We use premium materials and proven techniques to ensure your pool's structural integrity for decades to come."
   },
   {
-    id: "coping-tile",
-    displayName: "Coping & Tile",
+    id: "coping",
+    displayName: "Coping",
     order: 2,
-    description: "The finishing touches that define your pool's aesthetic. Our selection includes premium coping materials and waterline tile options that combine beauty with durability. These elements protect your pool edge while creating a polished, professional appearance."
+    description: "Premium coping materials that protect your pool edge while creating a polished, professional appearance. Our coping options combine beauty with durability and safety."
+  },
+  {
+    id: "tile",
+    displayName: "Tile",
+    order: 3,
+    description: "Waterline tile options that add style and protect your pool finish. Choose from various colors, patterns, and materials to complement your design vision."
   },
   {
     id: "decking",
     displayName: "Decking",
-    order: 3,
+    order: 4,
     description: "The surrounding area that completes your backyard oasis. Choose from various decking materials including concrete, pavers, travertine, and natural stone. We design and install pool decks that enhance both functionality and visual appeal while providing safe, comfortable surfaces."
   },
   {
     id: "equipment",
     displayName: "Equipment",
-    order: 4,
+    order: 5,
     description: "High-quality mechanical systems that keep your pool running efficiently. This includes pumps, filters, heaters, automation systems, and sanitization equipment. We install energy-efficient, reliable equipment backed by industry-leading warranties."
   },
   {
     id: "accessories",
     displayName: "Accessories",
-    order: 5,
+    order: 6,
     description: "Additional features and enhancements to customize your pool experience. From lighting and water features to cleaning systems and safety equipment, these additions elevate your pool from functional to extraordinary."
   }
 ];
@@ -69,21 +75,24 @@ export function getCategoryConfig(categoryName: string): CategoryConfig | undefi
   );
   if (directMatch) return directMatch;
   
-  // Fuzzy matches for common variations
+  // Fuzzy matches for common variations - NOW SEPARATE!
   if (normalized.includes("pool") || normalized.includes("structure")) {
-    return CATEGORY_DISPLAY_ORDER[0];
+    return CATEGORY_DISPLAY_ORDER[0]; // Pool Structure
   }
-  if (normalized.includes("coping") || normalized.includes("tile")) {
-    return CATEGORY_DISPLAY_ORDER[1];
+  if (normalized.includes("coping") && !normalized.includes("tile")) {
+    return CATEGORY_DISPLAY_ORDER[1]; // Coping only
+  }
+  if (normalized.includes("tile") && !normalized.includes("coping")) {
+    return CATEGORY_DISPLAY_ORDER[2]; // Tile only
   }
   if (normalized.includes("deck")) {
-    return CATEGORY_DISPLAY_ORDER[2];
+    return CATEGORY_DISPLAY_ORDER[3]; // Decking
   }
   if (normalized.includes("equipment") || normalized.includes("pump") || normalized.includes("filter")) {
-    return CATEGORY_DISPLAY_ORDER[3];
+    return CATEGORY_DISPLAY_ORDER[4]; // Equipment
   }
   if (normalized.includes("accessor") || normalized.includes("add-on") || normalized.includes("feature")) {
-    return CATEGORY_DISPLAY_ORDER[4];
+    return CATEGORY_DISPLAY_ORDER[5]; // Accessories
   }
   
   return undefined;
