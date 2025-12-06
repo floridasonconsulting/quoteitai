@@ -20,13 +20,14 @@ export function transformQuoteToProposal(
   
   // Build sections in presentation order
   const sections: ProposalSection[] = [
-    // 1. Hero/Title Page
+    // 1. Hero/Title Page with company info
     {
       id: 'hero',
       type: 'hero',
       title: quote.title,
       subtitle: customer?.name || quote.customerName,
       backgroundImage: settings?.logo,
+      companyName: settings?.name, // Add company name
     },
     
     // 2. Executive Summary (if exists)
@@ -43,6 +44,7 @@ export function transformQuoteToProposal(
       type: 'categoryGroup' as const,
       title: group.displayName,
       categoryGroups: [group],
+      showPricing: true, // TODO: Make this configurable per quote
     })),
     
     // 4. Pricing Summary
@@ -83,7 +85,8 @@ function groupItemsByCategory(items: QuoteItem[]): CategoryGroup[] {
   const categoryMap = new Map<string, ProposalItem[]>();
   
   items.forEach(item => {
-    const category = item.category || 'Uncategorized';
+    // CRITICAL FIX: QuoteItem might not have category, default to 'Uncategorized'
+    const category = (item as any).category || 'Uncategorized';
     
     if (!categoryMap.has(category)) {
       categoryMap.set(category, []);
@@ -97,7 +100,8 @@ function groupItemsByCategory(items: QuoteItem[]): CategoryGroup[] {
       price: item.price,
       total: item.total,
       units: item.units,
-      imageUrl: item.imageUrl,
+      imageUrl: (item as any).imageUrl, // Pass through image URL
+      category: category, // Include category
     });
   });
   
@@ -112,6 +116,7 @@ function groupItemsByCategory(items: QuoteItem[]): CategoryGroup[] {
     return {
       category,
       displayName: config?.displayName || category,
+      description: config?.description, // Add category description
       items,
       subtotal: items.reduce((sum, item) => sum + item.total, 0),
     };

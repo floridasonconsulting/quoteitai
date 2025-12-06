@@ -22,9 +22,10 @@ export function CategoryGroupSection({ section, theme }: CategoryGroupSectionPro
   }
 
   const categoryGroup = section.categoryGroups[0]; // Each slide shows one category
+  const showPricing = section.showPricing !== false; // Default to true
 
   return (
-    <div className="w-full space-y-6 py-8">
+    <div className="w-full space-y-8 py-8">
       {/* Category Header */}
       <div 
         className="border-l-4 pl-6 py-4"
@@ -33,12 +34,22 @@ export function CategoryGroupSection({ section, theme }: CategoryGroupSectionPro
           fontFamily: theme.typography.fontFamily.heading 
         }}
       >
-        <h2 className="text-4xl font-bold mb-2" style={{ color: theme.colors.primary }}>
+        <h2 className="text-4xl font-bold mb-4" style={{ color: theme.colors.primary }}>
           {categoryGroup.displayName}
         </h2>
+        
+        {/* Category Description Paragraph */}
+        {categoryGroup.description && (
+          <p className="text-lg leading-relaxed mb-4" style={{ color: theme.colors.text.secondary }}>
+            {categoryGroup.description}
+          </p>
+        )}
+        
         <p className="text-lg" style={{ color: theme.colors.text.secondary }}>
-          {categoryGroup.items.length} {categoryGroup.items.length === 1 ? 'Item' : 'Items'} • 
-          Total: {formatCurrency(categoryGroup.subtotal)}
+          {categoryGroup.items.length} {categoryGroup.items.length === 1 ? 'Item' : 'Items'}
+          {showPricing && (
+            <> • Total: {formatCurrency(categoryGroup.subtotal)}</>
+          )}
         </p>
       </div>
 
@@ -58,14 +69,18 @@ export function CategoryGroupSection({ section, theme }: CategoryGroupSectionPro
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     // Fallback to icon if image fails to load
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement!.innerHTML = `
-                      <div class="w-full h-full flex items-center justify-center bg-gray-100">
-                        <svg class="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                      </div>
-                    `;
+                    const target = e.currentTarget;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.innerHTML = `
+                        <div class="w-full h-full flex items-center justify-center bg-gray-100">
+                          <svg class="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                          </svg>
+                        </div>
+                      `;
+                    }
                   }}
                 />
               </div>
@@ -81,14 +96,16 @@ export function CategoryGroupSection({ section, theme }: CategoryGroupSectionPro
                 <h3 className="text-xl font-semibold text-gray-900">
                   {item.name}
                 </h3>
-                <div className="text-right ml-4">
-                  <p className="text-sm text-gray-500">
-                    {item.quantity} {item.units || 'unit'}{item.quantity > 1 ? 's' : ''} × {formatCurrency(item.price)}
-                  </p>
-                  <p className="text-xl font-bold" style={{ color: theme.colors.primary }}>
-                    {formatCurrency(item.total)}
-                  </p>
-                </div>
+                {showPricing && (
+                  <div className="text-right ml-4">
+                    <p className="text-sm text-gray-500">
+                      {item.quantity} {item.units || 'unit'}{item.quantity > 1 ? 's' : ''} × {formatCurrency(item.price)}
+                    </p>
+                    <p className="text-xl font-bold" style={{ color: theme.colors.primary }}>
+                      {formatCurrency(item.total)}
+                    </p>
+                  </div>
+                )}
               </div>
               
               {item.description && (
@@ -102,17 +119,19 @@ export function CategoryGroupSection({ section, theme }: CategoryGroupSectionPro
       </div>
 
       {/* Category Subtotal */}
-      <div 
-        className="flex justify-between items-center pt-6 border-t-2"
-        style={{ borderColor: theme.colors.primary }}
-      >
-        <span className="text-lg font-semibold text-gray-700">
-          {categoryGroup.displayName} Subtotal
-        </span>
-        <span className="text-2xl font-bold" style={{ color: theme.colors.primary }}>
-          {formatCurrency(categoryGroup.subtotal)}
-        </span>
-      </div>
+      {showPricing && (
+        <div 
+          className="flex justify-between items-center pt-6 border-t-2"
+          style={{ borderColor: theme.colors.primary }}
+        >
+          <span className="text-lg font-semibold text-gray-700">
+            {categoryGroup.displayName} Subtotal
+          </span>
+          <span className="text-2xl font-bold" style={{ color: theme.colors.primary }}>
+            {formatCurrency(categoryGroup.subtotal)}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

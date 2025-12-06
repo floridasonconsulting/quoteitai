@@ -22,31 +22,31 @@ export const CATEGORY_DISPLAY_ORDER: CategoryConfig[] = [
     id: "pool-structure",
     displayName: "Pool Structure",
     order: 1,
-    description: "Foundation and structural components"
+    description: "The foundation of your pool project. This includes the shell construction, excavation, rebar installation, and gunite/shotcrete application. We use premium materials and proven techniques to ensure your pool's structural integrity for decades to come."
   },
   {
     id: "coping-tile",
     displayName: "Coping & Tile",
     order: 2,
-    description: "Finishing touches and waterline details"
+    description: "The finishing touches that define your pool's aesthetic. Our selection includes premium coping materials and waterline tile options that combine beauty with durability. These elements protect your pool edge while creating a polished, professional appearance."
   },
   {
     id: "decking",
     displayName: "Decking",
     order: 3,
-    description: "Surrounding surface and patio areas"
+    description: "The surrounding area that completes your backyard oasis. Choose from various decking materials including concrete, pavers, travertine, and natural stone. We design and install pool decks that enhance both functionality and visual appeal while providing safe, comfortable surfaces."
   },
   {
     id: "equipment",
     displayName: "Equipment",
     order: 4,
-    description: "Pumps, filters, and mechanical systems"
+    description: "High-quality mechanical systems that keep your pool running efficiently. This includes pumps, filters, heaters, automation systems, and sanitization equipment. We install energy-efficient, reliable equipment backed by industry-leading warranties."
   },
   {
     id: "accessories",
     displayName: "Accessories",
     order: 5,
-    description: "Additional features and enhancements"
+    description: "Additional features and enhancements to customize your pool experience. From lighting and water features to cleaning systems and safety equipment, these additions elevate your pool from functional to extraordinary."
   }
 ];
 

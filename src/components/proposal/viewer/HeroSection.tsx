@@ -18,6 +18,13 @@ export function HeroSection({ section }: HeroSectionProps) {
       )}
       
       <div className="space-y-4">
+        {/* Company Name */}
+        {section.companyName && (
+          <p className="text-xl font-medium text-muted-foreground uppercase tracking-wide">
+            {section.companyName}
+          </p>
+        )}
+        
         <h1 className="text-6xl font-bold tracking-tight">
           {section.title}
         </h1>
