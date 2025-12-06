@@ -126,20 +126,23 @@ function groupItemsByCategory(items: QuoteItem[]): CategoryGroup[] {
   const categoryMap = new Map<string, ProposalItem[]>();
   
   items.forEach((item, index) => {
-    const category = item.category || 'Uncategorized';
+    // CRITICAL: Normalize category by trimming whitespace and standardizing case for grouping
+    const rawCategory = item.category || 'Uncategorized';
+    const normalizedCategory = rawCategory.trim();
     
     console.log(`[groupItemsByCategory] Item ${index}:`, {
       name: item.name,
-      category,
+      rawCategory,
+      normalizedCategory,
       hasImage: !!item.imageUrl,
       imageUrl: item.imageUrl
     });
     
-    if (!categoryMap.has(category)) {
-      categoryMap.set(category, []);
+    if (!categoryMap.has(normalizedCategory)) {
+      categoryMap.set(normalizedCategory, []);
     }
     
-    categoryMap.get(category)!.push({
+    categoryMap.get(normalizedCategory)!.push({
       itemId: item.itemId,
       name: item.name,
       description: item.description,
@@ -148,9 +151,12 @@ function groupItemsByCategory(items: QuoteItem[]): CategoryGroup[] {
       total: item.total,
       units: item.units,
       imageUrl: item.imageUrl,
-      category: category,
+      category: normalizedCategory,
     });
   });
+  
+  // Log the category map for debugging
+  console.log('[groupItemsByCategory] Category map keys:', Array.from(categoryMap.keys()));
   
   // Convert map to sorted array of CategoryGroups
   const categories = Array.from(categoryMap.keys());
@@ -159,6 +165,12 @@ function groupItemsByCategory(items: QuoteItem[]): CategoryGroup[] {
   return sortedCategories.map(category => {
     const items = categoryMap.get(category)!;
     const config = getCategoryConfig(category);
+    
+    console.log(`[groupItemsByCategory] Creating group for "${category}":`, {
+      itemCount: items.length,
+      displayName: config?.displayName || category,
+      itemsWithImages: items.filter(i => i.imageUrl).length
+    });
     
     return {
       category,

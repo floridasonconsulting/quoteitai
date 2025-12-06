@@ -294,6 +294,7 @@ export default function PublicQuoteView() {
         if (settingsError) {
           console.error('[PublicQuoteView] Settings fetch error:', settingsError);
           console.warn('[PublicQuoteView] Using fallback default settings');
+          // Don't throw - use fallback below
         } else if (settingsData) {
           console.log('[PublicQuoteView] ✓ Settings loaded successfully:', {
             name: settingsData.name,
@@ -321,32 +322,20 @@ export default function PublicQuoteView() {
             proposalTemplate: (settingsData.proposal_template as 'classic' | 'modern' | 'detailed') || 'classic',
             proposalTheme: settingsData.proposal_theme || 'modern-corporate',
           });
+          console.log('[PublicQuoteView] ✓ Settings state updated successfully');
         } else {
           console.warn('[PublicQuoteView] No settings found in database for user:', quoteData.user_id);
-          console.warn('[PublicQuoteView] Using fallback default settings');
-          
-          // FALLBACK: Use minimal default settings so proposal can still render
-          setSettings({
-            name: 'Company Name',
-            address: '',
-            city: '',
-            state: '',
-            zip: '',
-            phone: '',
-            email: '',
-            website: '',
-            terms: 'Payment terms to be discussed.',
-            proposalTemplate: 'classic',
-            proposalTheme: 'modern-corporate',
-          });
         }
       } catch (error) {
         console.error('[PublicQuoteView] Critical error fetching settings:', error);
-        console.warn('[PublicQuoteView] Using fallback default settings');
-        
-        // FALLBACK: Use minimal default settings
+      }
+      
+      // CRITICAL: Always ensure settings object exists (even if empty)
+      // This prevents "Company Name" placeholder from showing
+      if (!settings) {
+        console.warn('[PublicQuoteView] Settings is null, creating minimal fallback');
         setSettings({
-          name: 'Company Name',
+          name: '', // Empty string instead of placeholder
           address: '',
           city: '',
           state: '',
@@ -354,7 +343,7 @@ export default function PublicQuoteView() {
           phone: '',
           email: '',
           website: '',
-          terms: 'Payment terms to be discussed.',
+          terms: '', // Empty string instead of placeholder
           proposalTemplate: 'classic',
           proposalTheme: 'modern-corporate',
         });
@@ -541,7 +530,7 @@ export default function PublicQuoteView() {
       <ProposalViewer 
         quote={quote}
         companySettings={settings || {
-          name: 'Company Name',
+          name: '', // CRITICAL: Empty string, not placeholder
           address: '',
           city: '',
           state: '',
@@ -549,7 +538,7 @@ export default function PublicQuoteView() {
           phone: '',
           email: '',
           website: '',
-          terms: 'Payment terms to be discussed.',
+          terms: '', // CRITICAL: Empty string, not placeholder
           proposalTemplate: 'classic',
           proposalTheme: 'modern-corporate',
         }}

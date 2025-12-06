@@ -26,12 +26,13 @@ export function CategoryGroupSection({ section, theme }: CategoryGroupSectionPro
 
   console.log('[CategoryGroupSection] Rendering:', {
     category: categoryGroup.category,
+    displayName: categoryGroup.displayName,
     showPricing,
     itemCount: categoryGroup.items.length,
     items: categoryGroup.items.map(i => ({
       name: i.name,
       hasImage: !!i.imageUrl,
-      imageUrl: i.imageUrl
+      imageUrl: i.imageUrl ? i.imageUrl.substring(0, 80) + '...' : 'none'
     }))
   });
 
@@ -63,9 +64,12 @@ export function CategoryGroupSection({ section, theme }: CategoryGroupSectionPro
       {/* Magazine-Style Item Grid */}
       <div className="grid gap-6">
         {categoryGroup.items.map((item, index) => {
+          const hasImage = !!(item.imageUrl && item.imageUrl.trim().length > 0);
+          
           console.log(`[CategoryGroupSection] Rendering item "${item.name}":`, {
-            hasImageUrl: !!item.imageUrl,
-            imageUrl: item.imageUrl,
+            index,
+            hasImageUrl: hasImage,
+            imageUrl: hasImage ? item.imageUrl : 'none',
             showPricing
           });
           
@@ -75,15 +79,15 @@ export function CategoryGroupSection({ section, theme }: CategoryGroupSectionPro
               className="flex gap-6 p-6 bg-white rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
             >
               {/* Item Image */}
-              {item.imageUrl ? (
+              {hasImage ? (
                 <div className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
                   <img 
                     src={item.imageUrl} 
                     alt={item.name}
                     className="w-full h-full object-cover"
-                    onLoad={() => console.log(`[CategoryGroupSection] ✅ Image loaded successfully: ${item.name}`)}
+                    onLoad={() => console.log(`[CategoryGroupSection] ✅ Image loaded: ${item.name}`)}
                     onError={(e) => {
-                      console.error(`[CategoryGroupSection] ❌ Image failed to load: ${item.name}`, item.imageUrl);
+                      console.error(`[CategoryGroupSection] ❌ Image failed: ${item.name}`, item.imageUrl);
                       const target = e.currentTarget;
                       const parent = target.parentElement;
                       if (parent) {
