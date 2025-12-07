@@ -14,6 +14,7 @@ import {
   getCategoryMetadata,
   sortCategoriesByOrder
 } from "./proposal-categories";
+import { getSmartCoverImage, getCategoryImage } from "./proposal-image-library";
 
 /**
  * Transforms a raw Quote object into the new ProposalData structure
@@ -47,6 +48,18 @@ export function transformQuoteToProposal(
 
   const activeSettings = settings || defaultSettings;
 
+  // Extract unique categories for smart image selection
+  const uniqueCategories = Array.from(new Set(quote.items.map(item => normalizeCategory(item.category))));
+  
+  // Smart cover image selection
+  const smartCoverImage = getSmartCoverImage(
+    quote.title,
+    uniqueCategories,
+    visuals?.coverImage
+  );
+  
+  console.log('[Transformation] Smart cover image selected:', smartCoverImage);
+
   // 1. Create Base Proposal Data
   const proposalData: ProposalData = {
     id: quote.id,
@@ -68,7 +81,10 @@ export function transformQuoteToProposal(
       logoUrl: activeSettings.logo,
     },
     sections: [],
-    visuals: visuals || {},
+    visuals: {
+      ...visuals,
+      coverImage: smartCoverImage
+    },
     createdAt: quote.createdAt,
     updatedAt: quote.updatedAt,
   };
@@ -77,9 +93,7 @@ export function transformQuoteToProposal(
   const sections: ProposalSection[] = [];
 
   // --- Section A: Hero / Executive Summary ---
-  const coverImage = visuals?.coverImage || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80';
-  
-  console.log('[Transformation] Hero section - coverImage:', coverImage);
+  console.log('[Transformation] Hero section - coverImage:', smartCoverImage);
   
   sections.push({
     id: 'hero',
@@ -87,7 +101,7 @@ export function transformQuoteToProposal(
     title: quote.title,
     subtitle: `Prepared for ${quote.customerName}`,
     content: quote.executiveSummary || "Thank you for the opportunity to present this proposal. We have carefully reviewed your requirements and crafted a solution that meets your specific needs.",
-    backgroundImage: coverImage,
+    backgroundImage: smartCoverImage,
     companyName: activeSettings.name || '',
   });
 
@@ -123,10 +137,11 @@ export function transformQuoteToProposal(
     const metadata = getCategoryMetadata(category);
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
 
-    // Priority for background images:
-    // 1. User-uploaded category-specific background
-    // 2. Default hero image from category metadata
-    const bgImage = visuals?.sectionBackgrounds?.[category] || metadata?.heroImage;
+    // Smart category image selection
+    const categoryImage = getCategoryImage(
+      category,
+      visuals?.sectionBackgrounds
+    );
 
     const categoryGroup: CategoryGroup = {
       category,
@@ -134,7 +149,7 @@ export function transformQuoteToProposal(
       description: metadata?.description,
       items,
       subtotal,
-      backgroundImage: bgImage
+      backgroundImage: categoryImage
     };
 
     sections.push({
@@ -142,7 +157,7 @@ export function transformQuoteToProposal(
       type: 'categoryGroup',
       title: metadata?.displayName,
       categoryGroups: [categoryGroup],
-      backgroundImage: bgImage,
+      backgroundImage: categoryImage,
       showPricing: quote.showPricing
     });
   });
