@@ -35,6 +35,27 @@ export function ProposalViewer({
   const [successState, setSuccessState] = useState<SuccessType | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
+  // Debug logging for company info
+  console.log('[ProposalViewer] Settings received:', {
+    hasSettings: !!settings,
+    settingsName: settings?.name,
+    settingsLogo: settings?.logo,
+    settingsEmail: settings?.email,
+    settingsPhone: settings?.phone,
+    settingsAddress: settings?.address
+  });
+  
+  console.log('[ProposalViewer] Quote data:', {
+    quoteId: quote.id,
+    itemCount: quote.items.length,
+    firstItemHasImage: quote.items[0]?.imageUrl,
+    sampleItem: quote.items[0] ? {
+      name: quote.items[0].name,
+      imageUrl: quote.items[0].imageUrl,
+      enhancedDescription: quote.items[0].enhancedDescription
+    } : null
+  });
+  
   // Data Transformation with null checks
   const proposalData = useMemo(() => {
     // Improved Visuals Logic with Fallback

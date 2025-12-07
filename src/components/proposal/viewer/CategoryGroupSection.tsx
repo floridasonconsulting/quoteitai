@@ -24,6 +24,14 @@ export function CategoryGroupSection({
       currency: 'USD',
     }).format(amount);
   };
+  
+  console.log('[CategoryGroupSection] Rendering:', {
+    category: categoryGroup.category,
+    itemCount: categoryGroup.items.length,
+    backgroundImage,
+    firstItemImage: categoryGroup.items[0]?.imageUrl,
+    sampleItem: categoryGroup.items[0]
+  });
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
