@@ -34,11 +34,11 @@ export function CategoryGroupSection({
   });
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-950">
       {/* Hero Title Banner - NEW LAYOUT */}
       {backgroundImage && (
         <div 
-          className="relative w-full h-64 md:h-80 overflow-hidden"
+          className="relative w-full h-64 md:h-80 flex-shrink-0 overflow-hidden"
           style={{
             backgroundImage: `url(${backgroundImage})`,
             backgroundSize: "cover",
@@ -74,100 +74,104 @@ export function CategoryGroupSection({
         </div>
       )}
 
-      {/* Content Area - Clean white background */}
-      <div className="max-w-6xl mx-auto p-8 md:p-16">
-        {/* Category Header - Only show if no background image */}
-        {!backgroundImage && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="mb-12"
-          >
-            <h2 className="text-4xl md:text-6xl font-bold mb-4 text-gray-900 dark:text-white">
-              {categoryGroup.displayName}
-            </h2>
-            {categoryGroup.description && (
-              <p className="text-lg md:text-xl text-muted-foreground max-w-3xl">
-                {categoryGroup.description}
-              </p>
-            )}
-            <div className="mt-6 h-1 w-32 bg-primary rounded-full" />
-          </motion.div>
-        )}
-
-        {/* Items Grid */}
-        <div className="space-y-8 mb-12">
-          {categoryGroup.items.map((item, idx) => (
+      {/* Content Area - Scrollable with proper spacing */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto p-8 md:p-16 pb-32">
+          {/* Category Header - Only show if no background image */}
+          {!backgroundImage && (
             <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1, duration: 0.5 }}
-              className={cn(
-                "flex flex-col gap-6 bg-gray-50 dark:bg-gray-900 p-6 md:p-8 rounded-2xl shadow-lg",
-                "hover:shadow-xl transition-shadow duration-300 border border-gray-200 dark:border-gray-800",
-                item.imageUrl ? "md:flex-row" : ""
-              )}
+              transition={{ duration: 0.6 }}
+              className="mb-12"
             >
-              {/* Item Image - Only show if imageUrl exists */}
-              {item.imageUrl && (
-                <div className="flex-shrink-0 w-full md:w-80 h-64 md:h-72">
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    className="w-full h-full object-cover rounded-xl shadow-md"
-                    loading="lazy"
-                    onError={(e) => {
-                      // Hide image if it fails to load
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                </div>
+              <h2 className="text-4xl md:text-6xl font-bold mb-4 text-gray-900 dark:text-white">
+                {categoryGroup.displayName}
+              </h2>
+              {categoryGroup.description && (
+                <p className="text-lg md:text-xl text-muted-foreground max-w-3xl">
+                  {categoryGroup.description}
+                </p>
               )}
+              <div className="mt-6 h-1 w-32 bg-primary rounded-full" />
+            </motion.div>
+          )}
 
-              {/* Item Details */}
-              <div className="flex-1 min-w-0 flex flex-col justify-between">
-                <div>
-                  <h3 className="text-2xl md:text-3xl font-semibold mb-3 text-gray-900 dark:text-white">
-                    {item.name}
-                  </h3>
-                  <p className="text-base md:text-lg text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">
-                    {item.enhancedDescription || item.description}
-                  </p>
-                </div>
+          {/* Items Grid */}
+          <div className="space-y-8 mb-12">
+            {categoryGroup.items.map((item, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1, duration: 0.5 }}
+                className={cn(
+                  "flex flex-col gap-6 bg-gray-50 dark:bg-gray-900 p-6 md:p-8 rounded-2xl shadow-lg",
+                  "hover:shadow-xl transition-shadow duration-300 border border-gray-200 dark:border-gray-800",
+                  item.imageUrl ? "md:flex-row" : ""
+                )}
+              >
+                {/* Item Image - Only show if imageUrl exists */}
+                {item.imageUrl && (
+                  <div className="flex-shrink-0 w-full md:w-80 h-64 md:h-72">
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="w-full h-full object-cover rounded-xl shadow-md"
+                      loading="lazy"
+                      onError={(e) => {
+                        // Hide image if it fails to load
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
 
-                {/* Pricing Info */}
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-sm text-muted-foreground">
-                      Quantity: {item.quantity} {item.units || "units"}
-                    </span>
-                    {showPricing && (
+                {/* Item Details */}
+                <div className="flex-1 min-w-0 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-2xl md:text-3xl font-semibold mb-3 text-gray-900 dark:text-white">
+                      {item.name}
+                    </h3>
+                    <p className="text-base md:text-lg text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">
+                      {item.enhancedDescription || item.description}
+                    </p>
+                  </div>
+
+                  {/* Pricing Info */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                    {showPricing ? (
                       <>
-                        <span className="text-sm text-muted-foreground">•</span>
-                        <span className="text-sm text-muted-foreground">
-                          Unit Price: {formatCurrency(item.price)}
-                        </span>
+                        <div className="flex items-baseline gap-3">
+                          <span className="text-sm text-muted-foreground">
+                            Quantity: {item.quantity} {item.units || "units"}
+                          </span>
+                          <span className="text-sm text-muted-foreground">•</span>
+                          <span className="text-sm text-muted-foreground">
+                            Unit Price: {formatCurrency(item.price)}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground mb-1">Total</p>
+                          <p className="text-2xl md:text-3xl font-bold text-primary">
+                            {formatCurrency(item.total)}
+                          </p>
+                        </div>
                       </>
+                    ) : (
+                      <div className="flex items-baseline gap-3 text-muted-foreground">
+                        <span className="text-sm">
+                          Quantity: {item.quantity} {item.units || "units"}
+                        </span>
+                      </div>
                     )}
                   </div>
-                  {showPricing && (
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground mb-1">Total</p>
-                      <p className="text-2xl md:text-3xl font-bold text-primary">
-                        {formatCurrency(item.total)}
-                      </p>
-                    </div>
-                  )}
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+              </motion.div>
+            ))}
+          </div>
 
-        {/* Category Subtotal */}
-        {showPricing && (
+          {/* Category Subtotal - ALWAYS SHOW (even when pricing is hidden) */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -183,7 +187,7 @@ export function CategoryGroupSection({
               </span>
             </div>
           </motion.div>
-        )}
+        </div>
       </div>
     </div>
   );

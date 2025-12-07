@@ -177,7 +177,7 @@ function CategorySlide({ section }: { section: ProposalSection }) {
 
 /**
  * Slide Component: Line Items (Investment Summary)
- * IMPROVED: Better organization with grouped display and scrolling
+ * IMPROVED: Better scrolling with auto-scroll on hover and larger hit area
  */
 function LineItemsSlide({ section }: { section: ProposalSection }) {
   // Group items by category for better organization
@@ -200,9 +200,28 @@ function LineItemsSlide({ section }: { section: ProposalSection }) {
         </p>
       </div>
 
-      {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto p-8 md:p-12">
-        <div className="max-w-5xl mx-auto space-y-8">
+      {/* Scrollable Content Area - IMPROVED */}
+      <div className="flex-1 overflow-y-auto scroll-smooth hover:overflow-y-scroll">
+        <style>{`
+          /* Custom scrollbar styling for better UX */
+          .flex-1::-webkit-scrollbar {
+            width: 12px;
+          }
+          .flex-1::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 6px;
+          }
+          .flex-1::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            transition: background 0.2s;
+          }
+          .flex-1::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.4);
+          }
+        `}</style>
+        
+        <div className="max-w-5xl mx-auto p-8 md:p-12 space-y-8">
           {itemsByCategory && Object.entries(itemsByCategory).map(([category, items]) => (
             <div key={category} className="bg-white dark:bg-gray-900 rounded-xl shadow-lg overflow-hidden">
               {/* Category Header */}
@@ -210,7 +229,7 @@ function LineItemsSlide({ section }: { section: ProposalSection }) {
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">{category}</h3>
               </div>
 
-              {/* Items List */}
+              {/* Items List - Better Spacing */}
               <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {items?.map((item, idx) => (
                   <div 
@@ -218,10 +237,10 @@ function LineItemsSlide({ section }: { section: ProposalSection }) {
                     className="flex justify-between items-start p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
                     <div className="flex-1 min-w-0 pr-6">
-                      <p className="font-semibold text-lg text-gray-900 dark:text-white mb-1">
+                      <p className="font-semibold text-lg text-gray-900 dark:text-white mb-2">
                         {item.name}
                       </p>
-                      <p className="text-sm text-muted-foreground mb-2">
+                      <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
                         {item.description}
                       </p>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">

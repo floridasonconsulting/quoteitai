@@ -33,6 +33,14 @@ export function transformQuoteToProposal(
     settingsLogo: settings?.logo
   });
 
+  // CRITICAL: Log item data to debug image issues
+  console.log('[Transformation] Quote items:', quote.items.map(item => ({
+    name: item.name,
+    category: item.category,
+    imageUrl: item.imageUrl,
+    enhancedDescription: item.enhancedDescription
+  })));
+
   // Default settings if not provided - with empty strings to avoid placeholders
   const defaultSettings: CompanySettings = {
     name: '',
