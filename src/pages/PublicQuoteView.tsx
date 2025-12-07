@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -543,6 +543,21 @@ export default function PublicQuoteView() {
   if (!settings) {
     console.warn('[PublicQuoteView] Rendering without settings - using inline fallback');
   }
+
+  // Data Transformation with null checks
+  const proposalData = useMemo(() => {
+    // Mock visuals for now - in real app this would come from DB
+    const mockVisuals = {
+      coverImage: quote.items.find(i => i.imageUrl)?.imageUrl || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80',
+      logo: settings?.logo,
+    };
+    
+    console.log('[PublicQuoteView] Creating proposal with visuals:', mockVisuals);
+    console.log('[PublicQuoteView] Settings:', settings);
+    console.log('[PublicQuoteView] Quote items with images:', quote.items.filter(i => i.imageUrl));
+    
+    return transformQuoteToProposal(quote, settings, mockVisuals);
+  }, [quote, settings]);
 
   console.log('[PublicQuoteView] Rendering viewer - isOwner:', isOwner, 'status:', quote.status, 'hasSettings:', !!settings);
 

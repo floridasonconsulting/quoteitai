@@ -24,6 +24,14 @@ export function transformQuoteToProposal(
   settings?: CompanySettings,
   visuals?: ProposalVisuals
 ): ProposalData {
+  console.log('[Transformation] Starting with:', { 
+    quoteId: quote.id, 
+    hasSettings: !!settings,
+    hasVisuals: !!visuals,
+    visualsCoverImage: visuals?.coverImage,
+    settingsLogo: settings?.logo
+  });
+
   // Default settings if not provided - with empty strings to avoid placeholders
   const defaultSettings: CompanySettings = {
     name: '',
@@ -69,13 +77,18 @@ export function transformQuoteToProposal(
   const sections: ProposalSection[] = [];
 
   // --- Section A: Hero / Executive Summary ---
+  const coverImage = visuals?.coverImage || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80';
+  
+  console.log('[Transformation] Hero section - coverImage:', coverImage);
+  
   sections.push({
     id: 'hero',
     type: 'hero',
     title: quote.title,
     subtitle: `Prepared for ${quote.customerName}`,
     content: quote.executiveSummary || "Thank you for the opportunity to present this proposal. We have carefully reviewed your requirements and crafted a solution that meets your specific needs.",
-    backgroundImage: visuals?.coverImage,
+    backgroundImage: coverImage,
+    companyName: activeSettings.name || '',
   });
 
   // --- Section B: Category Groups (The Meat) ---
