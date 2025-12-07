@@ -183,6 +183,27 @@ export default function PublicQuoteView() {
     setLoading(false);
   };
 
+  const handleComment = async (comment: string) => {
+    if (!quote || !decodedShareToken) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('update-quote-status', {
+        body: { 
+          shareToken: decodedShareToken, 
+          status: 'commented',
+          comment: comment 
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success('Comment sent successfully!');
+    } catch (error) {
+      console.error('[PublicQuoteView] Error sending comment:', error);
+      throw error;
+    }
+  };
+
   // Load quote data after authentication
   const loadQuote = async () => {
     if (!decodedShareToken) {
