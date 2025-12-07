@@ -37,11 +37,16 @@ export function ProposalViewer({
   
   // Data Transformation with null checks
   const proposalData = useMemo(() => {
-    // Mock visuals for now - in real app this would come from DB
+    // Improved Visuals Logic with Fallback
     const mockVisuals = {
-      coverImage: quote.items.find(i => i.imageUrl)?.imageUrl,
+      coverImage: quote.items.find(i => i.imageUrl)?.imageUrl || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80',
       logo: settings?.logo,
     };
+    
+    console.log('[ProposalViewer] Transforming quote:', quote.id);
+    console.log('[ProposalViewer] Using visuals:', mockVisuals);
+    console.log('[ProposalViewer] Using settings:', settings);
+
     return transformQuoteToProposal(quote, settings, mockVisuals);
   }, [quote, settings]);
 
