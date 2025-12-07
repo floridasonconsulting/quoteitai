@@ -358,6 +358,8 @@ PublicQuoteView.tsx
 Look for these in browser console:
 ```
 [ProposalViewer] Settings received: { hasSettings: true, settingsName: "ABC Pools", ... }
+[Transformation] Starting with: { quoteId: "...", hasSettings: true, ... }
+[Transformation] Quote items: [{ name: "...", imageUrl: "...", ... }]
 [Transformation] Smart cover image selected: https://...
 [CategoryGroupSection] Rendering: { category: "Pool Structure", firstItemImage: "https://...", ... }
 ```
