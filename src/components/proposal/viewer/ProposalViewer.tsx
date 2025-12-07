@@ -188,6 +188,11 @@ export function ProposalViewer({
                 {settings?.logo && (
                   <img src={settings.logo} alt="Logo" className="h-8 w-auto mb-8" />
                 )}
+                {!settings?.logo && settings?.name && (
+                  <h3 className="text-lg font-semibold mb-8 text-gray-900 dark:text-white">
+                    {settings.name}
+                  </h3>
+                )}
               </div>
               <ProposalNavigation 
                 sections={navigationItems}
