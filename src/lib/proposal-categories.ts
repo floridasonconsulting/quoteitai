@@ -6,6 +6,7 @@
 // Standard category display order (enforced in proposals)
 export const CATEGORY_DISPLAY_ORDER = [
   'Pool Structure',
+  'Interior Surface',  // NEW: Added for pool finishes
   'Coping',
   'Tile',
   'Decking',
@@ -22,12 +23,17 @@ export const CATEGORY_METADATA: Record<string, {
   displayName: string; 
   description: string;
   icon?: string;
-  heroImage?: string; // NEW: Default hero image for category
+  heroImage?: string;
 }> = {
   'Pool Structure': {
     displayName: 'Pool Structure',
     description: 'Foundation and structural elements of your pool',
     heroImage: 'https://images.unsplash.com/photo-1576013551627-0cc20b468848?w=1920&q=80'
+  },
+  'Interior Surface': {
+    displayName: 'Interior Surface',
+    description: 'Pool finish materials and surface treatments',
+    heroImage: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1920&q=80'
   },
   'Coping': {
     displayName: 'Coping',
@@ -83,10 +89,10 @@ export const normalizeCategory = (category?: string): StandardCategory => {
   const lowerCategory = normalized.toLowerCase();
   
   if (lowerCategory.includes('pool') && lowerCategory.includes('structure')) return 'Pool Structure';
+  if (lowerCategory.includes('interior') || lowerCategory.includes('finish') || lowerCategory.includes('plaster')) return 'Interior Surface';
   if (lowerCategory.includes('coping') && !lowerCategory.includes('tile')) return 'Coping';
   if (lowerCategory.includes('tile') && !lowerCategory.includes('coping')) return 'Tile';
   if (lowerCategory.includes('coping') && lowerCategory.includes('tile')) {
-    // If both mentioned, prioritize based on order in string
     return lowerCategory.indexOf('coping') < lowerCategory.indexOf('tile') ? 'Coping' : 'Tile';
   }
   if (lowerCategory.includes('deck')) return 'Decking';

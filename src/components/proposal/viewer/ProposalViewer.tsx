@@ -48,7 +48,9 @@ export function ProposalViewer({
   console.log('[ProposalViewer] Quote data:', {
     quoteId: quote.id,
     itemCount: quote.items.length,
-    firstItemHasImage: quote.items[0]?.imageUrl,
+    firstItemHasImage: !!quote.items[0]?.imageUrl,
+    firstItemImageUrl: quote.items[0]?.imageUrl,
+    allItemImages: quote.items.map(i => ({ name: i.name, imageUrl: i.imageUrl, hasImage: !!i.imageUrl })),
     sampleItem: quote.items[0] ? {
       name: quote.items[0].name,
       imageUrl: quote.items[0].imageUrl,

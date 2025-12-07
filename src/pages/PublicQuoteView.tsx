@@ -268,6 +268,16 @@ export default function PublicQuoteView() {
       };
 
       console.log('[PublicQuoteView] Formatted quote showPricing:', formattedQuote.showPricing);
+      
+      // CRITICAL: Log item data to debug image issues
+      console.log('[PublicQuoteView] Quote items detail:', formattedQuote.items.map(item => ({
+        name: item.name,
+        category: item.category,
+        imageUrl: item.imageUrl,
+        hasImage: !!item.imageUrl,
+        enhancedDescription: item.enhancedDescription
+      })));
+      
       setQuote(formattedQuote);
 
       // Fetch customer data

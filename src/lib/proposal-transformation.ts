@@ -59,11 +59,15 @@ export function transformQuoteToProposal(
   // Extract unique categories for smart image selection
   const uniqueCategories = Array.from(new Set(quote.items.map(item => normalizeCategory(item.category))));
   
-  // Smart cover image selection
+  // Extract item names for even smarter image selection
+  const itemNames = quote.items.map(item => item.name);
+  
+  // Smart cover image selection (now uses quote title + categories + item names)
   const smartCoverImage = getSmartCoverImage(
     quote.title,
     uniqueCategories,
-    visuals?.coverImage
+    visuals?.coverImage,
+    itemNames // NEW: Pass item names for deeper analysis
   );
   
   console.log('[Transformation] Smart cover image selected:', smartCoverImage);

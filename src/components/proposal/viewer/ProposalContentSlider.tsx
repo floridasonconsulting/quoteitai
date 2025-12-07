@@ -221,7 +221,7 @@ function CategorySlide({ section }: { section: ProposalSection }) {
 
 /**
  * Slide Component: Investment Summary (Professional Format)
- * NEW DESIGN: Category subtotals only, single page, print-ready
+ * UPDATED: Tighter spacing, smaller text to minimize scrolling
  */
 function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
   const formatCurrency = (amount: number) => {
@@ -248,64 +248,64 @@ function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-y-auto">
-      <div className="max-w-4xl mx-auto w-full p-8 md:p-12">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+      <div className="max-w-4xl mx-auto w-full p-6 md:p-8">
+        {/* Header - Reduced spacing */}
+        <div className="mb-4 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">
             {section.title || "Investment Summary"}
           </h2>
-          <div className="h-1 w-24 bg-primary mx-auto rounded-full" />
+          <div className="h-0.5 w-20 bg-primary mx-auto rounded-full" />
         </div>
 
-        {/* Professional Line Item Format */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-8 space-y-6">
+        {/* Professional Line Item Format - TIGHTER SPACING */}
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 md:p-6 space-y-3">
           {categorySubtotals.map(({ category, items, subtotal }, idx) => (
-            <div key={idx} className="space-y-2">
-              {/* Category Header */}
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+            <div key={idx} className="space-y-1.5">
+              {/* Category Header - Smaller text */}
+              <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white mb-1.5">
                 {category}
               </h3>
 
-              {/* Items (no pricing) */}
-              <div className="space-y-1 pl-4">
+              {/* Items (no pricing) - Smaller text, tighter spacing */}
+              <div className="space-y-0.5 pl-3">
                 {items.map((item, itemIdx) => (
-                  <div key={itemIdx} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
-                    <span className="text-primary mt-1">•</span>
-                    <span>{item.name}</span>
+                  <div key={itemIdx} className="flex items-start gap-1.5 text-xs md:text-sm text-gray-700 dark:text-gray-300">
+                    <span className="text-primary mt-0.5 text-xs">•</span>
+                    <span className="leading-tight">{item.name}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Category Subtotal with Dotted Leader */}
-              <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              {/* Category Subtotal with Dotted Leader - Reduced spacing */}
+              <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-700">
+                <span className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">
                   Subtotal
                 </span>
-                <div className="flex-1 mx-4 border-b border-dotted border-gray-300 dark:border-gray-600" />
-                <span className="text-base font-bold text-gray-900 dark:text-white">
+                <div className="flex-1 mx-3 border-b border-dotted border-gray-300 dark:border-gray-600" />
+                <span className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
                   {formatCurrency(subtotal)}
                 </span>
               </div>
             </div>
           ))}
 
-          {/* Total Investment */}
-          <div className="pt-6 mt-6 border-t-2 border-gray-900 dark:border-white">
+          {/* Total Investment - Reduced top spacing */}
+          <div className="pt-4 mt-4 border-t-2 border-gray-900 dark:border-white">
             <div className="flex items-center justify-between">
-              <span className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+              <span className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
                 Total Investment
               </span>
-              <div className="flex-1 mx-6 border-b-2 border-dotted border-gray-400 dark:border-gray-500" />
-              <span className="text-2xl md:text-3xl font-bold text-primary">
+              <div className="flex-1 mx-4 border-b-2 border-dotted border-gray-400 dark:border-gray-500" />
+              <span className="text-xl md:text-2xl font-bold text-primary">
                 {formatCurrency(section.total || 0)}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Footer Note */}
-        <div className="mt-8 text-center">
-          <p className="text-xs text-muted-foreground">
+        {/* Footer Note - Smaller */}
+        <div className="mt-4 text-center">
+          <p className="text-[10px] md:text-xs text-muted-foreground">
             All pricing subject to terms and conditions outlined in this proposal
           </p>
         </div>

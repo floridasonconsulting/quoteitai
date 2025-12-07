@@ -131,50 +131,76 @@ export const CATEGORY_IMAGES = {
 // ============================================================================
 
 /**
- * Get the best cover image based on quote title and categories
- * ENHANCED: Better keyword matching and elegant gradient fallback
+ * Get the best cover image based on quote title, categories, AND item names
+ * ENHANCED: Now analyzes all available text for better matching
  */
 export function getSmartCoverImage(
   quoteTitle: string,
   categories: string[],
-  userCoverImage?: string
+  userCoverImage?: string,
+  itemNames?: string[] // NEW: Analyze item names too
 ): string {
   // Priority 1: User-uploaded image
   if (userCoverImage) return userCoverImage;
   
-  // Priority 2: Match quote title keywords (more aggressive matching)
-  const titleLower = quoteTitle.toLowerCase();
+  // Combine all text for analysis
+  const allText = [
+    quoteTitle,
+    ...categories,
+    ...(itemNames || [])
+  ].join(' ').toLowerCase();
+  
+  console.log('[SmartImage] Analyzing text:', { quoteTitle, categories, itemNames, allText });
+  
+  // Priority 2: Score each image by keyword relevance
+  const scores: Record<string, number> = {};
   
   for (const [keyword, imageUrl] of Object.entries(DEFAULT_COVER_IMAGES)) {
-    // Check if title contains the keyword
-    if (titleLower.includes(keyword)) {
-      return imageUrl;
+    let score = 0;
+    const keywordLower = keyword.toLowerCase();
+    
+    // Title match (highest weight)
+    if (quoteTitle.toLowerCase().includes(keywordLower)) score += 10;
+    
+    // Category match (medium weight)
+    for (const category of categories) {
+      if (category.toLowerCase().includes(keywordLower)) score += 5;
     }
     
-    // Check partial matches (e.g., "pool" matches "pools", "pooling")
-    if (keyword.length > 4 && titleLower.includes(keyword.slice(0, -1))) {
-      return imageUrl;
-    }
-  }
-  
-  // Priority 3: Match categories (check ALL categories, not just first)
-  for (const category of categories) {
-    const categoryLower = category.toLowerCase();
-    
-    for (const [keyword, imageUrl] of Object.entries(DEFAULT_COVER_IMAGES)) {
-      if (categoryLower.includes(keyword) || keyword.includes(categoryLower)) {
-        return imageUrl;
+    // Item name match (lower weight but still valuable)
+    if (itemNames) {
+      for (const itemName of itemNames) {
+        if (itemName.toLowerCase().includes(keywordLower)) score += 2;
       }
     }
+    
+    // General text match
+    if (allText.includes(keywordLower)) score += 1;
+    
+    if (score > 0) {
+      scores[keyword] = score;
+      console.log(`[SmartImage] Keyword "${keyword}" scored ${score}`);
+    }
   }
   
-  // Priority 4: Detect industry from combined text
+  // Return highest scoring image
+  if (Object.keys(scores).length > 0) {
+    const bestKeyword = Object.entries(scores)
+      .sort(([, a], [, b]) => b - a)[0][0];
+    
+    console.log(`[SmartImage] Best match: "${bestKeyword}" (score: ${scores[bestKeyword]})`);
+    return DEFAULT_COVER_IMAGES[bestKeyword as keyof typeof DEFAULT_COVER_IMAGES];
+  }
+  
+  // Priority 3: Detect industry from combined text
   const industry = detectIndustry(quoteTitle, categories);
   if (industry && industry in DEFAULT_COVER_IMAGES) {
+    console.log(`[SmartImage] Industry detected: ${industry}`);
     return DEFAULT_COVER_IMAGES[industry as keyof typeof DEFAULT_COVER_IMAGES];
   }
   
-  // Priority 5: Elegant gradient fallback (professional, brand-neutral)
+  // Priority 4: Elegant gradient fallback (professional, brand-neutral)
+  console.log('[SmartImage] No match found, using elegant gradient fallback');
   return getGradientFallback();
 }
 
