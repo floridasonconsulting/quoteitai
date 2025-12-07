@@ -31,7 +31,13 @@ export function CategoryGroupSection({
     backgroundImage,
     showPricing,
     firstItemImage: categoryGroup.items[0]?.imageUrl,
-    sampleItem: categoryGroup.items[0]
+    allItemsWithImages: categoryGroup.items.filter(i => i.imageUrl).length,
+    itemsDebug: categoryGroup.items.map(item => ({
+      name: item.name,
+      hasImageUrl: !!item.imageUrl,
+      imageUrl: item.imageUrl,
+      imageUrlValid: item.imageUrl && item.imageUrl.startsWith('http')
+    }))
   });
 
   return (

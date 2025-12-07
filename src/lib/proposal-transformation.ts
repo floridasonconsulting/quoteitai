@@ -129,6 +129,9 @@ export function transformQuoteToProposal(
       originalCategory: item.category,
       normalizedCategory: normalizedCat,
       imageUrl: item.imageUrl,
+      hasImage: !!item.imageUrl,
+      imageUrlType: typeof item.imageUrl,
+      imageUrlLength: item.imageUrl?.length || 0,
       enhancedDescription: item.enhancedDescription
     });
     

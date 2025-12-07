@@ -271,6 +271,16 @@ export default function PublicQuoteView() {
 
       console.log('[PublicQuoteView] ✅ Quote formatted. Item count:', formattedQuote.items.length);
       
+      // ENHANCED DEBUGGING: Check each item's image URL
+      console.log('[PublicQuoteView] 📸 Item image status:', formattedQuote.items.map((item, idx) => ({
+        index: idx,
+        name: item.name,
+        hasImageUrl: !!item.imageUrl,
+        imageUrl: item.imageUrl,
+        imageUrlType: typeof item.imageUrl,
+        isValidUrl: item.imageUrl && (item.imageUrl.startsWith('http://') || item.imageUrl.startsWith('https://'))
+      })));
+      
       setQuote(formattedQuote);
 
       // Fetch company settings - CRITICAL for proposal display
