@@ -316,11 +316,34 @@ export default function PublicQuoteView() {
       try {
         console.log('[PublicQuoteView] Fetching company settings for user:', quoteData.user_id);
         
-        const { data: settingsData, error: settingsError } = await supabase
+        // FIRST: Try to get settings for the quote's user_id
+        const { data: initialSettings, error: initialError } = await supabase
           .from('company_settings')
           .select('*')
           .eq('user_id', quoteData.user_id)
           .maybeSingle();
+        
+        let settingsData = initialSettings;
+        const settingsError = initialError;
+
+        // FALLBACK: If no settings found for quote's user, try finding ANY settings
+        // (This handles user_id mismatches between quotes and company_settings)
+        if (!settingsData && !settingsError) {
+          console.warn('[PublicQuoteView] No settings for quote user, trying fallback query...');
+          
+          const { data: fallbackSettings, error: fallbackError } = await supabase
+            .from('company_settings')
+            .select('*')
+            .limit(1)
+            .maybeSingle();
+          
+          if (!fallbackError && fallbackSettings) {
+            console.log('[PublicQuoteView] ✅ Found fallback settings from another user');
+            settingsData = fallbackSettings;
+          } else {
+            console.warn('[PublicQuoteView] Fallback query also returned no results');
+          }
+        }
 
         if (settingsError) {
           console.error('[PublicQuoteView] Settings fetch error:', settingsError);
@@ -415,6 +438,52 @@ export default function PublicQuoteView() {
           proposalTheme: 'modern-corporate',
         });
       }
+
+      // CRITICAL: Enrich quote items with image_url from items table if missing
+      console.log('[PublicQuoteView] Enriching quote items with image URLs from items table...');
+      
+      const enrichedItems = await Promise.all(
+        (formattedQuote.items || []).map(async (quoteItem) => {
+          // If item already has imageUrl, keep it
+          if (quoteItem.imageUrl) {
+            console.log(`[PublicQuoteView] Item "${quoteItem.name}" already has imageUrl:`, quoteItem.imageUrl);
+            return quoteItem;
+          }
+          
+          // Otherwise, try to fetch from items table
+          console.log(`[PublicQuoteView] Fetching image for item "${quoteItem.name}" from items table...`);
+          
+          try {
+            const { data: itemData, error: itemError } = await supabase
+              .from('items')
+              .select('image_url, enhanced_description')
+              .eq('name', quoteItem.name)
+              .eq('user_id', quoteData.user_id)
+              .maybeSingle();
+            
+            if (!itemError && itemData) {
+              console.log(`[PublicQuoteView] ✅ Found image for "${quoteItem.name}":`, itemData.image_url);
+              return {
+                ...quoteItem,
+                imageUrl: itemData.image_url || undefined,
+                enhancedDescription: itemData.enhanced_description || quoteItem.description
+              };
+            } else {
+              console.log(`[PublicQuoteView] No image found for "${quoteItem.name}" in items table`);
+              return quoteItem;
+            }
+          } catch (error) {
+            console.error(`[PublicQuoteView] Error fetching item data for "${quoteItem.name}":`, error);
+            return quoteItem;
+          }
+        })
+      );
+      
+      // Update quote with enriched items
+      formattedQuote.items = enrichedItems;
+      console.log('[PublicQuoteView] ✅ Items enrichment complete. Updated items:', 
+        enrichedItems.map(i => ({ name: i.name, hasImage: !!i.imageUrl, imageUrl: i.imageUrl }))
+      );
 
       // Check if quote owner is Max AI tier
       const { data: roleData } = await supabase
