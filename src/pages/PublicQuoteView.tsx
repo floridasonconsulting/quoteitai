@@ -529,8 +529,8 @@ export default function PublicQuoteView() {
     <div className="min-h-screen bg-slate-50">
       <ProposalViewer 
         quote={quote}
-        companySettings={settings || {
-          name: '', // Empty string instead of placeholder
+        settings={settings || {
+          name: '',
           address: '',
           city: '',
           state: '',
@@ -538,23 +538,14 @@ export default function PublicQuoteView() {
           phone: '',
           email: '',
           website: '',
-          terms: '', // Empty string instead of placeholder
+          terms: '',
           proposalTemplate: 'classic',
           proposalTheme: 'modern-corporate',
         }}
-        customer={customer || undefined}
-        isPreview={isOwner}
-        actionBar={!isOwner && customer ? {
-          quoteId: quote.id,
-          total: quote.total,
-          status: quote.status,
-          userEmail,
-          userName: customer?.contactFirstName 
-            ? `${customer.contactFirstName}${customer.contactLastName ? ' ' + customer.contactLastName : ''}`
-            : undefined,
-          onAccept: handleAccept,
-          onReject: handleReject
-        } : undefined}
+        onAccept={handleAccept}
+        onDecline={handleReject}
+        onComment={handleComment}
+        isReadOnly={isOwner}
       />
 
       {/* Hidden Payment Dialog */}

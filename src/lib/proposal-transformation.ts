@@ -24,9 +24,9 @@ export function transformQuoteToProposal(
   settings?: CompanySettings,
   visuals?: ProposalVisuals
 ): ProposalData {
-  // Default settings if not provided
+  // Default settings if not provided - with empty strings to avoid placeholders
   const defaultSettings: CompanySettings = {
-    name: 'Company Name',
+    name: '',
     address: '',
     city: '',
     state: '',
@@ -34,8 +34,7 @@ export function transformQuoteToProposal(
     phone: '',
     email: '',
     website: '',
-    terms: 'Payment terms and conditions to be discussed.',
-    currency: 'USD'
+    terms: '',
   };
 
   const activeSettings = settings || defaultSettings;
@@ -45,19 +44,19 @@ export function transformQuoteToProposal(
     id: quote.id,
     status: quote.status,
     settings: {
-      theme: 'modern_scroll', // Default to modern scroll
+      theme: 'modern_scroll',
       mode: 'light',
-      primaryColor: '#000000', // Should come from settings
-      currency: activeSettings.currency || 'USD',
+      primaryColor: '#000000',
+      currency: 'USD',
     },
     client: {
       name: quote.customerName,
-      email: '', // Would need customer details fetch
+      email: '',
       company: '',
     },
     sender: {
-      name: activeSettings.name,
-      company: activeSettings.name,
+      name: activeSettings.name || '',
+      company: activeSettings.name || '',
       logoUrl: activeSettings.logo,
     },
     sections: [],
@@ -69,8 +68,7 @@ export function transformQuoteToProposal(
   // 2. Generate Sections
   const sections: ProposalSection[] = [];
 
-  // --- Section A: Hero / Cover ---
-  // (Handled by ProposalCover component state, but we can have a hero section content too)
+  // --- Section A: Hero / Executive Summary ---
   sections.push({
     id: 'hero',
     type: 'hero',
@@ -81,7 +79,6 @@ export function transformQuoteToProposal(
   });
 
   // --- Section B: Category Groups (The Meat) ---
-  // Group items by normalized category
   const groupedItems = new Map<string, ProposalItem[]>();
   
   quote.items.forEach(item => {
@@ -113,8 +110,10 @@ export function transformQuoteToProposal(
     const metadata = getCategoryMetadata(category);
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
 
-    // Get category-specific background if available
-    const bgImage = visuals?.sectionBackgrounds?.[category];
+    // Priority for background images:
+    // 1. User-uploaded category-specific background
+    // 2. Default hero image from category metadata
+    const bgImage = visuals?.sectionBackgrounds?.[category] || metadata?.heroImage;
 
     const categoryGroup: CategoryGroup = {
       category,
@@ -131,7 +130,7 @@ export function transformQuoteToProposal(
       title: metadata?.displayName,
       categoryGroups: [categoryGroup],
       backgroundImage: bgImage,
-      showPricing: quote.showPricing // Inherit visibility setting
+      showPricing: quote.showPricing
     });
   });
 
@@ -147,11 +146,11 @@ export function transformQuoteToProposal(
     subtotal: quote.subtotal,
     tax: quote.tax,
     total: quote.total,
-    showPricing: true // Summary always shows pricing unless globally hidden (logic can be refined)
+    showPricing: true
   });
 
   // --- Section D: Terms & Conditions ---
-  if (activeSettings.terms) {
+  if (activeSettings.terms && activeSettings.terms.trim()) {
     sections.push({
       id: 'terms',
       type: 'legal',
