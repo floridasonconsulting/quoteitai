@@ -450,30 +450,63 @@ export default function PublicQuoteView() {
             return quoteItem;
           }
           
-          // Otherwise, try to fetch from items table
+          // Try to fetch from items table - use itemId first, then fallback to name
           console.log(`[PublicQuoteView] Fetching image for item "${quoteItem.name}" from items table...`);
           
-          try {
-            const { data: itemData, error: itemError } = await supabase
+          let itemData = null;
+          
+          // Strategy 1: Match by item_id (most reliable)
+          if (quoteItem.itemId) {
+            const { data, error } = await supabase
+              .from('items')
+              .select('image_url, enhanced_description')
+              .eq('id', quoteItem.itemId)
+              .maybeSingle();
+            
+            if (!error && data) {
+              itemData = data;
+              console.log(`[PublicQuoteView] ✅ Found by item_id for "${quoteItem.name}":`, data.image_url);
+            }
+          }
+          
+          // Strategy 2: Match by name + user_id (fallback)
+          if (!itemData) {
+            const { data, error } = await supabase
               .from('items')
               .select('image_url, enhanced_description')
               .eq('name', quoteItem.name)
               .eq('user_id', quoteData.user_id)
               .maybeSingle();
             
-            if (!itemError && itemData) {
-              console.log(`[PublicQuoteView] ✅ Found image for "${quoteItem.name}":`, itemData.image_url);
-              return {
-                ...quoteItem,
-                imageUrl: itemData.image_url || undefined,
-                enhancedDescription: itemData.enhanced_description || quoteItem.description
-              };
-            } else {
-              console.log(`[PublicQuoteView] No image found for "${quoteItem.name}" in items table`);
-              return quoteItem;
+            if (!error && data) {
+              itemData = data;
+              console.log(`[PublicQuoteView] ✅ Found by name for "${quoteItem.name}":`, data.image_url);
             }
-          } catch (error) {
-            console.error(`[PublicQuoteView] Error fetching item data for "${quoteItem.name}":`, error);
+          }
+          
+          // Strategy 3: Match by name only (ignore user_id - for shared items)
+          if (!itemData) {
+            const { data, error } = await supabase
+              .from('items')
+              .select('image_url, enhanced_description')
+              .eq('name', quoteItem.name)
+              .limit(1)
+              .maybeSingle();
+            
+            if (!error && data) {
+              itemData = data;
+              console.log(`[PublicQuoteView] ✅ Found by name (any user) for "${quoteItem.name}":`, data.image_url);
+            }
+          }
+          
+          if (itemData) {
+            return {
+              ...quoteItem,
+              imageUrl: itemData.image_url || undefined,
+              enhancedDescription: itemData.enhanced_description || quoteItem.description
+            };
+          } else {
+            console.log(`[PublicQuoteView] ❌ No image found for "${quoteItem.name}" in items table`);
             return quoteItem;
           }
         })
