@@ -150,14 +150,25 @@ export function transformQuoteToProposal(
   });
 
   // --- Section D: Terms & Conditions ---
-  if (activeSettings.terms && activeSettings.terms.trim()) {
-    sections.push({
-      id: 'terms',
-      type: 'legal',
-      title: 'Terms & Conditions',
-      content: activeSettings.terms,
-    });
-  }
+  // CRITICAL FIX: Always add terms section, use default if not provided
+  const termsContent = activeSettings.terms && activeSettings.terms.trim() 
+    ? activeSettings.terms 
+    : `Payment Terms: Net 30 days from invoice date.
+
+Warranty: All work is guaranteed for one year from completion date.
+
+Cancellation: 48 hours notice required for cancellation without penalty.
+
+Changes: Any changes to the scope of work must be approved in writing and may result in additional charges.
+
+Liability: We maintain full insurance coverage for all work performed.`;
+
+  sections.push({
+    id: 'terms',
+    type: 'legal',
+    title: 'Terms & Conditions',
+    content: termsContent,
+  });
 
   proposalData.sections = sections;
   return proposalData;

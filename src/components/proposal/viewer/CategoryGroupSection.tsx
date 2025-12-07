@@ -11,6 +11,7 @@ interface CategoryGroupSectionProps {
 /**
  * Magazine-Style Category Section
  * Displays items in a category with rich visuals and enhanced descriptions
+ * Hero image now displays as a title banner at the top
  */
 export function CategoryGroupSection({
   categoryGroup,
@@ -25,34 +26,67 @@ export function CategoryGroupSection({
   };
 
   return (
-    <div 
-      className="min-h-screen p-8 md:p-16"
-      style={{
-        backgroundImage: backgroundImage 
-          ? `linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.95)), url(${backgroundImage})`
-          : undefined,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
-      <div className="max-w-6xl mx-auto">
-        {/* Category Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-12"
+    <div className="min-h-screen bg-white dark:bg-gray-950">
+      {/* Hero Title Banner - NEW LAYOUT */}
+      {backgroundImage && (
+        <div 
+          className="relative w-full h-64 md:h-80 overflow-hidden"
+          style={{
+            backgroundImage: `url(${backgroundImage})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
         >
-          <h2 className="text-4xl md:text-6xl font-bold mb-4 text-gray-900 dark:text-white">
-            {categoryGroup.displayName}
-          </h2>
-          {categoryGroup.description && (
-            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl">
-              {categoryGroup.description}
-            </p>
-          )}
-          <div className="mt-6 h-1 w-32 bg-primary rounded-full" />
-        </motion.div>
+          {/* Dark overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70" />
+          
+          {/* Category Title Overlay */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center px-6">
+              <motion.h2
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="text-4xl md:text-6xl font-bold text-white mb-4"
+              >
+                {categoryGroup.displayName}
+              </motion.h2>
+              {categoryGroup.description && (
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="text-lg md:text-xl text-white/90 max-w-3xl mx-auto"
+                >
+                  {categoryGroup.description}
+                </motion.p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Content Area - Clean white background */}
+      <div className="max-w-6xl mx-auto p-8 md:p-16">
+        {/* Category Header - Only show if no background image */}
+        {!backgroundImage && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="mb-12"
+          >
+            <h2 className="text-4xl md:text-6xl font-bold mb-4 text-gray-900 dark:text-white">
+              {categoryGroup.displayName}
+            </h2>
+            {categoryGroup.description && (
+              <p className="text-lg md:text-xl text-muted-foreground max-w-3xl">
+                {categoryGroup.description}
+              </p>
+            )}
+            <div className="mt-6 h-1 w-32 bg-primary rounded-full" />
+          </motion.div>
+        )}
 
         {/* Items Grid */}
         <div className="space-y-8 mb-12">
@@ -63,8 +97,8 @@ export function CategoryGroupSection({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.1, duration: 0.5 }}
               className={cn(
-                "flex flex-col gap-6 bg-white/80 dark:bg-gray-900/80 p-6 md:p-8 rounded-2xl shadow-lg backdrop-blur-sm",
-                "hover:shadow-xl transition-shadow duration-300",
+                "flex flex-col gap-6 bg-gray-50 dark:bg-gray-900 p-6 md:p-8 rounded-2xl shadow-lg",
+                "hover:shadow-xl transition-shadow duration-300 border border-gray-200 dark:border-gray-800",
                 item.imageUrl ? "md:flex-row" : ""
               )}
             >
