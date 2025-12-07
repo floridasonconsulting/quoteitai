@@ -19,7 +19,7 @@ interface ProposalContentSliderProps {
 
 /**
  * Dynamic Swiper-based Content Slider
- * FIXED: All viewport handling issues, proper scrolling, no content hanging off
+ * UPDATED: Professional investment summary with category subtotals only
  */
 export function ProposalContentSlider({
   sections,
@@ -41,6 +41,9 @@ export function ProposalContentSlider({
     onSlideChange(newIndex);
   };
 
+  // Auto-paginate categories with >10 items
+  const processedSections = processSectionsForPagination(sections);
+
   return (
     <div className="h-full w-full">
       <Swiper
@@ -56,14 +59,56 @@ export function ProposalContentSlider({
         onSlideChange={handleSlideChange}
         className="h-full w-full proposal-swiper"
       >
-        {sections.map((section, index) => (
-          <SwiperSlide key={section.id}>
+        {processedSections.map((section, index) => (
+          <SwiperSlide key={`${section.id}-${index}`}>
             <SlideContent section={section} isActive={index === currentIndex} />
           </SwiperSlide>
         ))}
       </Swiper>
     </div>
   );
+}
+
+/**
+ * Process sections to auto-paginate categories with >10 items
+ */
+function processSectionsForPagination(sections: ProposalSection[]): ProposalSection[] {
+  const processed: ProposalSection[] = [];
+  
+  sections.forEach((section) => {
+    if (section.type === 'categoryGroup' && section.categoryGroups?.[0]) {
+      const categoryGroup = section.categoryGroups[0];
+      const items = categoryGroup.items;
+      
+      // If category has >10 items, split into multiple slides
+      if (items.length > 10) {
+        const itemsPerPage = 10;
+        const pageCount = Math.ceil(items.length / itemsPerPage);
+        
+        for (let i = 0; i < pageCount; i++) {
+          const pageItems = items.slice(i * itemsPerPage, (i + 1) * itemsPerPage);
+          const pageSubtotal = pageItems.reduce((sum, item) => sum + item.total, 0);
+          
+          processed.push({
+            ...section,
+            id: `${section.id}-page-${i + 1}`,
+            title: `${section.title} (${i + 1} of ${pageCount})`,
+            categoryGroups: [{
+              ...categoryGroup,
+              items: pageItems,
+              subtotal: pageSubtotal
+            }]
+          });
+        }
+      } else {
+        processed.push(section);
+      }
+    } else {
+      processed.push(section);
+    }
+  });
+  
+  return processed;
 }
 
 /**
@@ -79,7 +124,7 @@ function SlideContent({ section, isActive }: { section: ProposalSection; isActiv
       case 'categoryGroup':
         return <CategorySlide section={section} />;
       case 'lineItems':
-        return <LineItemsSlide section={section} />;
+        return <InvestmentSummarySlide section={section} />;
       case 'legal':
         return <LegalSlide section={section} />;
       default:
@@ -175,53 +220,16 @@ function CategorySlide({ section }: { section: ProposalSection }) {
 }
 
 /**
- * Slide Component: Investment Summary (Fancy Line Item Price Sheet)
- * FIXED: Large scrollbar, auto-scroll on hover, simple format with project total only
+ * Slide Component: Investment Summary (Professional Format)
+ * NEW DESIGN: Category subtotals only, single page, print-ready
  */
-function LineItemsSlide({ section }: { section: ProposalSection }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [isScrolling, setIsScrolling] = useState(false);
-  
-  // Auto-scroll effect when hovering in the scrollable area
-  useEffect(() => {
-    const scrollContainer = scrollRef.current;
-    if (!scrollContainer || !isScrolling) return;
-
-    let animationFrameId: number;
-    let scrollSpeed = 0;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = scrollContainer.getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const containerHeight = rect.height;
-      
-      // Calculate scroll speed based on cursor position
-      if (y < containerHeight * 0.2) {
-        // Near top - scroll up
-        scrollSpeed = -2;
-      } else if (y > containerHeight * 0.8) {
-        // Near bottom - scroll down
-        scrollSpeed = 2;
-      } else {
-        scrollSpeed = 0;
-      }
-    };
-
-    const animate = () => {
-      if (scrollSpeed !== 0 && scrollContainer) {
-        scrollContainer.scrollTop += scrollSpeed;
-      }
-      animationFrameId = requestAnimationFrame(animate);
-    };
-
-    scrollContainer.addEventListener('mousemove', handleMouseMove);
-    animate();
-
-    return () => {
-      scrollContainer.removeEventListener('mousemove', handleMouseMove);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, [isScrolling]);
+function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
 
   // Group items by category
   const itemsByCategory = section.items?.reduce((acc, item) => {
@@ -231,84 +239,75 @@ function LineItemsSlide({ section }: { section: ProposalSection }) {
     return acc;
   }, {} as Record<string, typeof section.items>);
 
+  // Calculate category subtotals
+  const categorySubtotals = Object.entries(itemsByCategory || {}).map(([category, items]) => ({
+    category,
+    items: items || [],
+    subtotal: (items || []).reduce((sum, item) => sum + item.total, 0)
+  }));
+
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-950">
-      {/* Header - Fixed */}
-      <div className="flex-shrink-0 p-6 md:p-8 bg-white dark:bg-gray-900 border-b-2 border-gray-300 dark:border-gray-700">
-        <h2 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
-          {section.title || "Investment Summary"}
-        </h2>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Complete project overview
-        </p>
-      </div>
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-y-auto">
+      <div className="max-w-4xl mx-auto w-full p-8 md:p-12">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            {section.title || "Investment Summary"}
+          </h2>
+          <div className="h-1 w-24 bg-primary mx-auto rounded-full" />
+        </div>
 
-      {/* FIXED: Large Scrollbar + Auto-Scroll on Hover */}
-      <div 
-        ref={scrollRef}
-        className="flex-1 overflow-y-scroll relative scroll-smooth"
-        style={{ maxHeight: 'calc(100vh - 300px)' }}
-        onMouseEnter={() => setIsScrolling(true)}
-        onMouseLeave={() => setIsScrolling(false)}
-      >
-        {/* Custom LARGE scrollbar styling */}
-        <style>{`
-          .flex-1.overflow-y-scroll::-webkit-scrollbar {
-            width: 20px;
-          }
-          .flex-1.overflow-y-scroll::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-            margin: 8px;
-          }
-          .flex-1.overflow-y-scroll::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            border: 3px solid rgba(255, 255, 255, 0.2);
-          }
-          .flex-1.overflow-y-scroll::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 0, 0, 0.5);
-          }
-        `}</style>
-        
-        <div className="max-w-4xl mx-auto p-6 md:p-8 space-y-4">
-          {itemsByCategory && Object.entries(itemsByCategory).map(([category, items]) => (
-            <div key={category} className="bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-800">
+        {/* Professional Line Item Format */}
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-8 space-y-6">
+          {categorySubtotals.map(({ category, items, subtotal }, idx) => (
+            <div key={idx} className="space-y-2">
               {/* Category Header */}
-              <div className="bg-gray-100 dark:bg-gray-800 px-5 py-3 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white">{category}</h3>
-              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+                {category}
+              </h3>
 
-              {/* Simple Line Items - NO PRICING (just names) */}
-              <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                {items?.map((item, idx) => (
-                  <div 
-                    key={idx} 
-                    className="px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                  >
-                    <p className="font-medium text-sm md:text-base text-gray-900 dark:text-white">
-                      {item.name}
-                    </p>
-                    <p className="text-xs md:text-sm text-muted-foreground mt-1 leading-relaxed">
-                      {item.description}
-                    </p>
+              {/* Items (no pricing) */}
+              <div className="space-y-1 pl-4">
+                {items.map((item, itemIdx) => (
+                  <div key={itemIdx} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                    <span className="text-primary mt-1">•</span>
+                    <span>{item.name}</span>
                   </div>
                 ))}
               </div>
+
+              {/* Category Subtotal with Dotted Leader */}
+              <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  Subtotal
+                </span>
+                <div className="flex-1 mx-4 border-b border-dotted border-gray-300 dark:border-gray-600" />
+                <span className="text-base font-bold text-gray-900 dark:text-white">
+                  {formatCurrency(subtotal)}
+                </span>
+              </div>
             </div>
           ))}
-        </div>
-      </div>
 
-      {/* Totals Footer - Fixed - ONLY PROJECT TOTAL */}
-      <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-t-2 border-gray-300 dark:border-gray-700 p-6 md:p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center text-2xl md:text-3xl">
-            <span className="font-bold text-gray-900 dark:text-white">Total Project Investment</span>
-            <span className="font-bold text-primary">
-              ${section.total?.toLocaleString()}
-            </span>
+          {/* Total Investment */}
+          <div className="pt-6 mt-6 border-t-2 border-gray-900 dark:border-white">
+            <div className="flex items-center justify-between">
+              <span className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+                Total Investment
+              </span>
+              <div className="flex-1 mx-6 border-b-2 border-dotted border-gray-400 dark:border-gray-500" />
+              <span className="text-2xl md:text-3xl font-bold text-primary">
+                {formatCurrency(section.total || 0)}
+              </span>
+            </div>
           </div>
+        </div>
+
+        {/* Footer Note */}
+        <div className="mt-8 text-center">
+          <p className="text-xs text-muted-foreground">
+            All pricing subject to terms and conditions outlined in this proposal
+          </p>
         </div>
       </div>
     </div>

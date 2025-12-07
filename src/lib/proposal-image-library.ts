@@ -2,8 +2,20 @@
  * Proposal Image Library
  * Curated high-quality images for various industries and categories
  * 
- * Strategy: Smart Defaults → User Overrides → AI Suggestions (optional)
+ * Strategy: Smart Defaults → User Overrides → Elegant Gradient Fallback
  */
+
+// ============================================================================
+// ELEGANT GRADIENT FALLBACK (Professional, Brand-Neutral)
+// ============================================================================
+
+export const ELEGANT_GRADIENT_FALLBACK = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+
+// Convert CSS gradient to data URL for use as background image
+export const getGradientFallback = (): string => {
+  // Return a high-quality abstract gradient that works for any industry
+  return 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1920&q=80'; // Modern abstract gradient
+};
 
 // ============================================================================
 // COVER IMAGES (Hero Backgrounds for Quote Title Pages)
@@ -17,24 +29,31 @@ export const DEFAULT_COVER_IMAGES = {
   
   // Pool & Water
   pool: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80',
+  pools: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80',
   spa: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=1920&q=80',
   fountain: 'https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=1920&q=80',
+  swimming: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80',
   
   // Landscaping
   landscaping: 'https://images.unsplash.com/photo-1558904541-efa843a96f01?w=1920&q=80',
+  landscape: 'https://images.unsplash.com/photo-1558904541-efa843a96f01?w=1920&q=80',
   gardening: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1920&q=80',
+  garden: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1920&q=80',
   lawn: 'https://images.unsplash.com/photo-1592307277589-68b9b7c17c27?w=1920&q=80',
   
   // Home Services
   plumbing: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1920&q=80',
   electrical: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1920&q=80',
   hvac: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=1920&q=80',
+  heating: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=1920&q=80',
+  cooling: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=1920&q=80',
   roofing: 'https://images.unsplash.com/photo-1632778149955-e80f8ceca2e8?w=1920&q=80',
   painting: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=1920&q=80',
   flooring: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=1920&q=80',
   
   // Outdoor & Exterior
   decking: 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=1920&q=80',
+  deck: 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=1920&q=80',
   fencing: 'https://images.unsplash.com/photo-1610224705310-ec48f5d2dde1?w=1920&q=80',
   patio: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=1920&q=80',
   driveway: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920&q=80',
@@ -50,10 +69,10 @@ export const DEFAULT_COVER_IMAGES = {
   consulting: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=1920&q=80',
   architecture: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=1920&q=80',
   
-  // Generic Fallbacks
+  // Generic Fallbacks (before gradient)
   generic_home: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1920&q=80',
   generic_commercial: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80',
-  generic_modern: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80',
+  generic_modern: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1920&q=80', // Abstract gradient
 } as const;
 
 // ============================================================================
@@ -113,6 +132,7 @@ export const CATEGORY_IMAGES = {
 
 /**
  * Get the best cover image based on quote title and categories
+ * ENHANCED: Better keyword matching and elegant gradient fallback
  */
 export function getSmartCoverImage(
   quoteTitle: string,
@@ -122,28 +142,40 @@ export function getSmartCoverImage(
   // Priority 1: User-uploaded image
   if (userCoverImage) return userCoverImage;
   
-  // Priority 2: Match quote title keywords
+  // Priority 2: Match quote title keywords (more aggressive matching)
   const titleLower = quoteTitle.toLowerCase();
   
   for (const [keyword, imageUrl] of Object.entries(DEFAULT_COVER_IMAGES)) {
+    // Check if title contains the keyword
     if (titleLower.includes(keyword)) {
+      return imageUrl;
+    }
+    
+    // Check partial matches (e.g., "pool" matches "pools", "pooling")
+    if (keyword.length > 4 && titleLower.includes(keyword.slice(0, -1))) {
       return imageUrl;
     }
   }
   
-  // Priority 3: Match primary category
-  if (categories.length > 0) {
-    const primaryCategory = categories[0].toLowerCase();
+  // Priority 3: Match categories (check ALL categories, not just first)
+  for (const category of categories) {
+    const categoryLower = category.toLowerCase();
     
     for (const [keyword, imageUrl] of Object.entries(DEFAULT_COVER_IMAGES)) {
-      if (primaryCategory.includes(keyword)) {
+      if (categoryLower.includes(keyword) || keyword.includes(categoryLower)) {
         return imageUrl;
       }
     }
   }
   
-  // Priority 4: Generic fallback
-  return DEFAULT_COVER_IMAGES.generic_modern;
+  // Priority 4: Detect industry from combined text
+  const industry = detectIndustry(quoteTitle, categories);
+  if (industry && industry in DEFAULT_COVER_IMAGES) {
+    return DEFAULT_COVER_IMAGES[industry as keyof typeof DEFAULT_COVER_IMAGES];
+  }
+  
+  // Priority 5: Elegant gradient fallback (professional, brand-neutral)
+  return getGradientFallback();
 }
 
 /**
@@ -194,21 +226,37 @@ export function mapCategoriesToImages(
 
 /**
  * Industry detection from quote data
+ * ENHANCED: More comprehensive keyword matching
  */
 export function detectIndustry(quoteTitle: string, categories: string[]): string {
   const allText = `${quoteTitle} ${categories.join(' ')}`.toLowerCase();
   
-  if (allText.includes('pool') || allText.includes('spa')) return 'pool';
-  if (allText.includes('landscape') || allText.includes('garden')) return 'landscaping';
+  // Pool & Spa (most specific first)
+  if (allText.includes('pool') || allText.includes('spa') || allText.includes('swimming')) return 'pool';
+  
+  // Landscaping
+  if (allText.includes('landscape') || allText.includes('garden') || allText.includes('lawn')) return 'landscaping';
+  
+  // Home Services
   if (allText.includes('roof')) return 'roofing';
   if (allText.includes('plumb')) return 'plumbing';
   if (allText.includes('electric')) return 'electrical';
-  if (allText.includes('hvac') || allText.includes('heating') || allText.includes('cooling')) return 'hvac';
+  if (allText.includes('hvac') || allText.includes('heating') || allText.includes('cooling') || allText.includes('air condition')) return 'hvac';
+  
+  // Interior
   if (allText.includes('kitchen')) return 'kitchen';
-  if (allText.includes('bathroom')) return 'bathroom';
+  if (allText.includes('bathroom') || allText.includes('bath')) return 'bathroom';
+  
+  // Exterior
   if (allText.includes('paint')) return 'painting';
   if (allText.includes('floor')) return 'flooring';
   if (allText.includes('deck')) return 'decking';
+  if (allText.includes('patio')) return 'patio';
+  if (allText.includes('fence')) return 'fencing';
   
-  return 'construction'; // Default
+  // Construction
+  if (allText.includes('construct') || allText.includes('build') || allText.includes('renovat') || allText.includes('remodel')) return 'construction';
+  
+  // Fallback to elegant gradient
+  return 'generic_modern';
 }
