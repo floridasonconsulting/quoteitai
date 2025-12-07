@@ -31,7 +31,7 @@ export function ProposalCover({
       transition={{ duration: 0.6 }}
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.4)), url(${coverImage || defaultCoverImage})`,
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.75)), url(${coverImage || defaultCoverImage})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
