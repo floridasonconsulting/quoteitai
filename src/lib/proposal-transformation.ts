@@ -120,6 +120,14 @@ export function transformQuoteToProposal(
     const normalizedCat = normalizeCategory(item.category);
     const currentGroup = groupedItems.get(normalizedCat) || [];
     
+    console.log('[Transformation] Processing item:', {
+      itemName: item.name,
+      originalCategory: item.category,
+      normalizedCategory: normalizedCat,
+      imageUrl: item.imageUrl,
+      enhancedDescription: item.enhancedDescription
+    });
+    
     currentGroup.push({
       itemId: item.itemId,
       name: item.name,
@@ -136,10 +144,16 @@ export function transformQuoteToProposal(
     groupedItems.set(normalizedCat, currentGroup);
   });
 
-  // Sort categories based on standard display order
+  // CRITICAL FIX: Sort categories based on standard display order
   const sortedCategories = sortCategoriesByOrder(Array.from(groupedItems.keys()));
+  
+  console.log('[Transformation] Category sort order:', {
+    unsortedCategories: Array.from(groupedItems.keys()),
+    sortedCategories: sortedCategories,
+    standardOrder: CATEGORY_DISPLAY_ORDER
+  });
 
-  // Create a section for each category group
+  // Create a section for each category group (in sorted order)
   sortedCategories.forEach(category => {
     const items = groupedItems.get(category) || [];
     const metadata = getCategoryMetadata(category);
@@ -159,6 +173,14 @@ export function transformQuoteToProposal(
       subtotal,
       backgroundImage: categoryImage
     };
+
+    console.log('[Transformation] Creating category section:', {
+      category,
+      displayName: metadata?.displayName,
+      itemCount: items.length,
+      subtotal,
+      backgroundImage: categoryImage
+    });
 
     sections.push({
       id: `cat-${category.toLowerCase().replace(/\s+/g, '-')}`,

@@ -177,7 +177,7 @@ function CategorySlide({ section }: { section: ProposalSection }) {
 
 /**
  * Slide Component: Line Items (Investment Summary)
- * IMPROVED: Better scrolling with auto-scroll on hover and larger hit area
+ * CRITICAL FIX: Proper scrolling with explicit overflow-y-scroll
  */
 function LineItemsSlide({ section }: { section: ProposalSection }) {
   // Group items by category for better organization
@@ -191,59 +191,60 @@ function LineItemsSlide({ section }: { section: ProposalSection }) {
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-950">
       {/* Header - Fixed */}
-      <div className="flex-shrink-0 p-8 md:p-12 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        <h2 className="text-3xl md:text-5xl font-bold text-gray-900 dark:text-white">
+      <div className="flex-shrink-0 p-6 md:p-8 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+        <h2 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white">
           {section.title || "Investment Summary"}
         </h2>
-        <p className="text-lg text-muted-foreground mt-2">
+        <p className="text-base text-muted-foreground mt-2">
           Complete breakdown of all items and services
         </p>
       </div>
 
-      {/* Scrollable Content Area - IMPROVED */}
-      <div className="flex-1 overflow-y-auto scroll-smooth hover:overflow-y-scroll">
+      {/* Scrollable Content Area - CRITICAL FIX */}
+      <div className="flex-1 overflow-y-scroll relative" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+        {/* Custom scrollbar styling */}
         <style>{`
-          /* Custom scrollbar styling for better UX */
-          .flex-1::-webkit-scrollbar {
-            width: 12px;
+          .flex-1.overflow-y-scroll::-webkit-scrollbar {
+            width: 14px;
           }
-          .flex-1::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.05);
-            border-radius: 6px;
+          .flex-1.overflow-y-scroll::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            margin: 8px;
           }
-          .flex-1::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 6px;
-            transition: background 0.2s;
+          .flex-1.overflow-y-scroll::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
           }
-          .flex-1::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 0, 0, 0.4);
+          .flex-1.overflow-y-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.5);
           }
         `}</style>
         
-        <div className="max-w-5xl mx-auto p-8 md:p-12 space-y-8">
+        <div className="max-w-5xl mx-auto p-6 md:p-8 space-y-6">
           {itemsByCategory && Object.entries(itemsByCategory).map(([category, items]) => (
-            <div key={category} className="bg-white dark:bg-gray-900 rounded-xl shadow-lg overflow-hidden">
+            <div key={category} className="bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden">
               {/* Category Header */}
-              <div className="bg-gray-100 dark:bg-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">{category}</h3>
+              <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{category}</h3>
               </div>
 
-              {/* Items List - Better Spacing */}
+              {/* Items List - Compact Spacing */}
               <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {items?.map((item, idx) => (
                   <div 
                     key={idx} 
-                    className="flex justify-between items-start p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    className="flex justify-between items-start p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
-                    <div className="flex-1 min-w-0 pr-6">
-                      <p className="font-semibold text-lg text-gray-900 dark:text-white mb-2">
+                    <div className="flex-1 min-w-0 pr-4">
+                      <p className="font-semibold text-base text-gray-900 dark:text-white mb-1">
                         {item.name}
                       </p>
-                      <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+                      <p className="text-sm text-muted-foreground mb-2 leading-relaxed">
                         {item.description}
                       </p>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
                         <span>Qty: {item.quantity} {item.units || 'units'}</span>
                         {section.showPricing !== false && (
                           <>
@@ -255,7 +256,7 @@ function LineItemsSlide({ section }: { section: ProposalSection }) {
                     </div>
                     {section.showPricing !== false && (
                       <div className="flex-shrink-0 text-right">
-                        <p className="text-2xl font-bold text-primary">
+                        <p className="text-xl font-bold text-primary">
                           ${item.total.toLocaleString()}
                         </p>
                       </div>
@@ -270,23 +271,23 @@ function LineItemsSlide({ section }: { section: ProposalSection }) {
 
       {/* Totals Footer - Fixed */}
       {section.showPricing !== false && (
-        <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-t-2 border-gray-300 dark:border-gray-700 p-8 md:p-12">
-          <div className="max-w-5xl mx-auto space-y-4">
-            <div className="flex justify-between text-xl">
+        <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-t-2 border-gray-300 dark:border-gray-700 p-6 md:p-8">
+          <div className="max-w-5xl mx-auto space-y-3">
+            <div className="flex justify-between text-lg">
               <span className="font-medium text-gray-700 dark:text-gray-300">Subtotal</span>
               <span className="font-semibold text-gray-900 dark:text-white">
                 ${section.subtotal?.toLocaleString()}
               </span>
             </div>
             {section.tax && section.tax > 0 && (
-              <div className="flex justify-between text-xl">
+              <div className="flex justify-between text-lg">
                 <span className="font-medium text-gray-700 dark:text-gray-300">Tax</span>
                 <span className="font-semibold text-gray-900 dark:text-white">
                   ${section.tax.toLocaleString()}
                 </span>
               </div>
             )}
-            <div className="flex justify-between text-3xl pt-4 border-t-2 border-gray-200 dark:border-gray-800">
+            <div className="flex justify-between text-2xl pt-3 border-t-2 border-gray-200 dark:border-gray-800">
               <span className="font-bold text-gray-900 dark:text-white">Total Investment</span>
               <span className="font-bold text-primary">
                 ${section.total?.toLocaleString()}

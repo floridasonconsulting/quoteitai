@@ -183,17 +183,39 @@ export function ProposalViewer({
             </div>
 
             {/* Desktop Navigation (Sidebar) */}
-            <div className="hidden md:block w-64 h-full border-r border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
-              <div className="p-6">
-                {settings?.logo && (
-                  <img src={settings.logo} alt="Logo" className="h-8 w-auto mb-8" />
-                )}
-                {!settings?.logo && settings?.name && (
-                  <h3 className="text-lg font-semibold mb-8 text-gray-900 dark:text-white">
+            <div className="hidden md:block w-64 h-full border-r border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 overflow-y-auto">
+              {/* Company Info Header */}
+              <div className="p-6 border-b border-gray-200 dark:border-gray-800">
+                {settings?.logo ? (
+                  <div className="mb-4">
+                    <img 
+                      src={settings.logo} 
+                      alt={settings.name || "Company Logo"} 
+                      className="h-12 w-auto object-contain"
+                      onError={(e) => {
+                        console.error('[ProposalViewer] Logo failed to load:', settings.logo);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                ) : null}
+                {settings?.name ? (
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     {settings.name}
                   </h3>
+                ) : (
+                  <h3 className="text-lg font-semibold text-gray-500 dark:text-gray-400 italic">
+                    Company Name Not Set
+                  </h3>
+                )}
+                {isReadOnly && (
+                  <div className="mt-3 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 rounded text-xs text-blue-700 dark:text-blue-300 text-center">
+                    Owner Preview Mode
+                  </div>
                 )}
               </div>
+              
+              {/* Navigation Links */}
               <ProposalNavigation 
                 sections={navigationItems}
                 activeIndex={activeSlideIndex}

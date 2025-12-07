@@ -315,18 +315,22 @@ export default function PublicQuoteView() {
         if (settingsError) {
           console.error('[PublicQuoteView] Settings fetch error:', settingsError);
           console.warn('[PublicQuoteView] Using fallback default settings');
-          // Don't throw - use fallback below
         } else if (settingsData) {
-          console.log('[PublicQuoteView] ✓ Settings loaded successfully:', {
+          console.log('[PublicQuoteView] ✅ Settings loaded successfully:', {
             name: settingsData.name,
             email: settingsData.email,
             phone: settingsData.phone,
             address: settingsData.address,
+            city: settingsData.city,
+            state: settingsData.state,
+            zip: settingsData.zip,
+            website: settingsData.website,
             hasLogo: !!settingsData.logo,
+            logoUrl: settingsData.logo,
             termsLength: settingsData.terms?.length || 0
           });
           
-          setSettings({
+          const loadedSettings: CompanySettings = {
             name: settingsData.name || '',
             address: settingsData.address || '',
             city: settingsData.city || '',
@@ -342,13 +346,45 @@ export default function PublicQuoteView() {
             terms: settingsData.terms || '',
             proposalTemplate: (settingsData.proposal_template as 'classic' | 'modern' | 'detailed') || 'classic',
             proposalTheme: settingsData.proposal_theme || 'modern-corporate',
-          });
-          console.log('[PublicQuoteView] ✓ Settings state updated successfully');
+          };
+          
+          console.log('[PublicQuoteView] ✅ Settings object constructed:', loadedSettings);
+          setSettings(loadedSettings);
         } else {
           console.warn('[PublicQuoteView] No settings found in database for user:', quoteData.user_id);
+          console.log('[PublicQuoteView] Creating minimal fallback settings');
+          
+          setSettings({
+            name: '',
+            address: '',
+            city: '',
+            state: '',
+            zip: '',
+            phone: '',
+            email: '',
+            website: '',
+            terms: '',
+            proposalTemplate: 'classic',
+            proposalTheme: 'modern-corporate',
+          });
         }
       } catch (error) {
         console.error('[PublicQuoteView] Critical error fetching settings:', error);
+        console.log('[PublicQuoteView] Setting fallback minimal settings');
+        
+        setSettings({
+          name: '',
+          address: '',
+          city: '',
+          state: '',
+          zip: '',
+          phone: '',
+          email: '',
+          website: '',
+          terms: '',
+          proposalTemplate: 'classic',
+          proposalTheme: 'modern-corporate',
+        });
       }
       
       // CRITICAL: Always ensure settings object exists (even if empty)
