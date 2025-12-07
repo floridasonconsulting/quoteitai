@@ -212,7 +212,7 @@ export default function PublicQuoteView() {
       return;
     }
     
-    console.log('[PublicQuoteView] Loading quote with shareToken:', decodedShareToken);
+    console.log('[PublicQuoteView] 🚀 Loading quote with shareToken:', decodedShareToken);
     setLoading(true);
     try {
       // Fetch quote by share token
@@ -223,24 +223,26 @@ export default function PublicQuoteView() {
         .maybeSingle();
 
       if (quoteError) {
-        console.error('[PublicQuoteView] Supabase error:', quoteError);
+        console.error('[PublicQuoteView] ❌ Supabase error:', quoteError);
         throw quoteError;
       }
 
       if (!quoteData) {
-        console.error('[PublicQuoteView] No quote found with shareToken:', decodedShareToken);
+        console.error('[PublicQuoteView] ❌ No quote found with shareToken:', decodedShareToken);
         toast.error('Quote not found or link has expired');
+        setLoading(false);
         return;
       }
 
       // Check if quote has expired
       if (quoteData.expires_at && new Date(quoteData.expires_at) < new Date()) {
         setExpired(true);
+        setLoading(false);
         return;
       }
       
-      console.log('[PublicQuoteView] Quote loaded successfully:', quoteData.id);
-      console.log('[PublicQuoteView] Quote showPricing value:', quoteData.show_pricing);
+      console.log('[PublicQuoteView] ✅ Quote loaded successfully:', quoteData.id);
+      console.log('[PublicQuoteView] Quote user_id:', quoteData.user_id);
 
       // Convert database format to app format
       const formattedQuote: Quote = {
@@ -264,147 +266,52 @@ export default function PublicQuoteView() {
         viewedAt: quoteData.viewed_at,
         executiveSummary: quoteData.executive_summary,
         userId: quoteData.user_id,
-        showPricing: quoteData.show_pricing ?? true, // CRITICAL: Default to true if null/undefined
+        showPricing: quoteData.show_pricing ?? true,
       };
 
-      console.log('[PublicQuoteView] Formatted quote showPricing:', formattedQuote.showPricing);
-      
-      // CRITICAL: Log item data to debug image issues
-      console.log('[PublicQuoteView] Quote items detail:', formattedQuote.items.map(item => ({
-        name: item.name,
-        category: item.category,
-        imageUrl: item.imageUrl,
-        hasImage: !!item.imageUrl,
-        enhancedDescription: item.enhancedDescription
-      })));
+      console.log('[PublicQuoteView] ✅ Quote formatted. Item count:', formattedQuote.items.length);
       
       setQuote(formattedQuote);
 
-      // Fetch customer data
-      if (quoteData.customer_id) {
-        try {
-          const { data: customerData, error: customerError } = await supabase
-            .from('customers')
-            .select('*')
-            .eq('id', quoteData.customer_id)
-            .maybeSingle();
+      // Fetch company settings - CRITICAL for proposal display
+      console.log('[PublicQuoteView] 🔍 Fetching company settings for user:', quoteData.user_id);
+      
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('company_settings')
+        .select('*')
+        .eq('user_id', quoteData.user_id)
+        .maybeSingle();
 
-          if (customerError) {
-            console.warn('[PublicQuoteView] Customer fetch error (non-critical):', customerError);
-          } else if (customerData) {
-            setCustomer({
-              id: customerData.id,
-              userId: customerData.user_id,
-              name: customerData.name,
-              email: customerData.email,
-              phone: customerData.phone,
-              address: customerData.address,
-              city: customerData.city,
-              state: customerData.state,
-              zip: customerData.zip,
-              createdAt: customerData.created_at,
-              contactFirstName: customerData.contact_first_name,
-              contactLastName: customerData.contact_last_name,
-            });
-          }
-        } catch (error) {
-          console.warn('[PublicQuoteView] Customer fetch failed (continuing anyway):', error);
-        }
-      }
-
-      // CRITICAL: Fetch company settings from Supabase with detailed logging and fallback
-      try {
-        console.log('[PublicQuoteView] Fetching company settings for user:', quoteData.user_id);
+      if (settingsError) {
+        console.error('[PublicQuoteView] ⚠️ Settings fetch error:', settingsError);
+        console.log('[PublicQuoteView] Creating fallback settings');
+      } else if (settingsData) {
+        console.log('[PublicQuoteView] ✅ Settings loaded:', {
+          name: settingsData.name,
+          hasLogo: !!settingsData.logo,
+          email: settingsData.email,
+          phone: settingsData.phone
+        });
         
-        // FIRST: Try to get settings for the quote's user_id
-        const { data: initialSettings, error: initialError } = await supabase
-          .from('company_settings')
-          .select('*')
-          .eq('user_id', quoteData.user_id)
-          .maybeSingle();
-        
-        let settingsData = initialSettings;
-        const settingsError = initialError;
-
-        // FALLBACK: If no settings found for quote's user, try finding ANY settings
-        // (This handles user_id mismatches between quotes and company_settings)
-        if (!settingsData && !settingsError) {
-          console.warn('[PublicQuoteView] No settings for quote user, trying fallback query...');
-          
-          const { data: fallbackSettings, error: fallbackError } = await supabase
-            .from('company_settings')
-            .select('*')
-            .limit(1)
-            .maybeSingle();
-          
-          if (!fallbackError && fallbackSettings) {
-            console.log('[PublicQuoteView] ✅ Found fallback settings from another user');
-            settingsData = fallbackSettings;
-          } else {
-            console.warn('[PublicQuoteView] Fallback query also returned no results');
-          }
-        }
-
-        if (settingsError) {
-          console.error('[PublicQuoteView] Settings fetch error:', settingsError);
-          console.warn('[PublicQuoteView] Using fallback default settings');
-        } else if (settingsData) {
-          console.log('[PublicQuoteView] ✅ Settings loaded successfully:', {
-            name: settingsData.name,
-            email: settingsData.email,
-            phone: settingsData.phone,
-            address: settingsData.address,
-            city: settingsData.city,
-            state: settingsData.state,
-            zip: settingsData.zip,
-            website: settingsData.website,
-            hasLogo: !!settingsData.logo,
-            logoUrl: settingsData.logo,
-            termsLength: settingsData.terms?.length || 0
-          });
-          
-          const loadedSettings: CompanySettings = {
-            name: settingsData.name || '',
-            address: settingsData.address || '',
-            city: settingsData.city || '',
-            state: settingsData.state || '',
-            zip: settingsData.zip || '',
-            phone: settingsData.phone || '',
-            email: settingsData.email || '',
-            website: settingsData.website || '',
-            logo: settingsData.logo || undefined,
-            logoDisplayOption: (settingsData.logo_display_option as 'logo' | 'name' | 'both') || 'both',
-            license: settingsData.license || '',
-            insurance: settingsData.insurance || '',
-            terms: settingsData.terms || '',
-            proposalTemplate: (settingsData.proposal_template as 'classic' | 'modern' | 'detailed') || 'classic',
-            proposalTheme: settingsData.proposal_theme || 'modern-corporate',
-          };
-          
-          console.log('[PublicQuoteView] ✅ Settings object constructed:', loadedSettings);
-          setSettings(loadedSettings);
-        } else {
-          console.warn('[PublicQuoteView] No settings found in database for user:', quoteData.user_id);
-          console.log('[PublicQuoteView] Creating minimal fallback settings');
-          
-          setSettings({
-            name: '',
-            address: '',
-            city: '',
-            state: '',
-            zip: '',
-            phone: '',
-            email: '',
-            website: '',
-            terms: '',
-            proposalTemplate: 'classic',
-            proposalTheme: 'modern-corporate',
-          });
-        }
-      } catch (error) {
-        console.error('[PublicQuoteView] Critical error fetching settings:', error);
-        console.log('[PublicQuoteView] Setting fallback minimal settings');
-        
+        setSettings({
+          name: settingsData.name || '',
+          address: settingsData.address || '',
+          city: settingsData.city || '',
+          state: settingsData.state || '',
+          zip: settingsData.zip || '',
+          phone: settingsData.phone || '',
+          email: settingsData.email || '',
+          website: settingsData.website || '',
+          logo: settingsData.logo || undefined,
+          logoDisplayOption: (settingsData.logo_display_option as 'logo' | 'name' | 'both') || 'both',
+          license: settingsData.license || '',
+          insurance: settingsData.insurance || '',
+          terms: settingsData.terms || '',
+          proposalTemplate: (settingsData.proposal_template as 'classic' | 'modern' | 'detailed') || 'classic',
+          proposalTheme: settingsData.proposal_theme || 'modern-corporate',
+        });
+      } else {
+        console.warn('[PublicQuoteView] ⚠️ No settings found, using fallback');
         setSettings({
           name: '',
           address: '',
@@ -419,147 +326,14 @@ export default function PublicQuoteView() {
           proposalTheme: 'modern-corporate',
         });
       }
-      
-      // CRITICAL: Always ensure settings object exists (even if empty)
-      // This prevents "Company Name" placeholder from showing
-      if (!settings) {
-        console.warn('[PublicQuoteView] Settings is null, creating minimal fallback');
-        setSettings({
-          name: '', // Empty string instead of placeholder
-          address: '',
-          city: '',
-          state: '',
-          zip: '',
-          phone: '',
-          email: '',
-          website: '',
-          terms: '', // Empty string instead of placeholder
-          proposalTemplate: 'classic',
-          proposalTheme: 'modern-corporate',
-        });
-      }
 
-      // CRITICAL: Enrich quote items with image_url from items table if missing
-      console.log('[PublicQuoteView] Enriching quote items with image URLs from items table...');
-      
-      const enrichedItems = await Promise.all(
-        (formattedQuote.items || []).map(async (quoteItem) => {
-          // If item already has imageUrl, keep it
-          if (quoteItem.imageUrl) {
-            console.log(`[PublicQuoteView] Item "${quoteItem.name}" already has imageUrl:`, quoteItem.imageUrl);
-            return quoteItem;
-          }
-          
-          // Try to fetch from items table - use itemId first, then fallback to name
-          console.log(`[PublicQuoteView] Fetching image for item "${quoteItem.name}" from items table...`);
-          
-          let itemData = null;
-          
-          // Strategy 1: Match by item_id (most reliable)
-          if (quoteItem.itemId) {
-            const { data, error } = await supabase
-              .from('items')
-              .select('image_url, enhanced_description')
-              .eq('id', quoteItem.itemId)
-              .maybeSingle();
-            
-            if (!error && data) {
-              itemData = data;
-              console.log(`[PublicQuoteView] ✅ Found by item_id for "${quoteItem.name}":`, data.image_url);
-            }
-          }
-          
-          // Strategy 2: Match by name + user_id (fallback)
-          if (!itemData) {
-            const { data, error } = await supabase
-              .from('items')
-              .select('image_url, enhanced_description')
-              .eq('name', quoteItem.name)
-              .eq('user_id', quoteData.user_id)
-              .maybeSingle();
-            
-            if (!error && data) {
-              itemData = data;
-              console.log(`[PublicQuoteView] ✅ Found by name for "${quoteItem.name}":`, data.image_url);
-            }
-          }
-          
-          // Strategy 3: Match by name only (ignore user_id - for shared items)
-          if (!itemData) {
-            const { data, error } = await supabase
-              .from('items')
-              .select('image_url, enhanced_description')
-              .eq('name', quoteItem.name)
-              .limit(1)
-              .maybeSingle();
-            
-            if (!error && data) {
-              itemData = data;
-              console.log(`[PublicQuoteView] ✅ Found by name (any user) for "${quoteItem.name}":`, data.image_url);
-            }
-          }
-          
-          if (itemData) {
-            return {
-              ...quoteItem,
-              imageUrl: itemData.image_url || undefined,
-              enhancedDescription: itemData.enhanced_description || quoteItem.description
-            };
-          } else {
-            console.log(`[PublicQuoteView] ❌ No image found for "${quoteItem.name}" in items table`);
-            return quoteItem;
-          }
-        })
-      );
-      
-      // Update quote with enriched items
-      formattedQuote.items = enrichedItems;
-      console.log('[PublicQuoteView] ✅ Items enrichment complete. Updated items:', 
-        enrichedItems.map(i => ({ name: i.name, hasImage: !!i.imageUrl, imageUrl: i.imageUrl }))
-      );
-
-      // Check if quote owner is Max AI tier
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', quoteData.user_id)
-        .single();
-
-      if (roleData && (roleData.role === 'max' || roleData.role === 'admin')) {
-        setIsMaxAITier(true);
-      }
-
-      // Only update viewed_at if not the owner
-      if (!isOwner) {
-        await supabase
-          .from('quotes')
-          .update({ viewed_at: new Date().toISOString() })
-          .eq('share_token', decodedShareToken);
-      }
+      console.log('[PublicQuoteView] ✅ Data loading complete!');
 
     } catch (error) {
-      console.error('[PublicQuoteView] Failed to load quote:', error);
+      console.error('[PublicQuoteView] ❌ Fatal error:', error);
       toast.error('Failed to load quote');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSign = async (signature: string) => {
-    if (!quote || !decodedShareToken) return;
-
-    try {
-      const { error } = await supabase.functions.invoke('update-quote-status', {
-        body: { shareToken: decodedShareToken, status: 'accepted' }
-      });
-
-      if (error) throw error;
-
-      setQuote({ ...quote, status: 'accepted' });
-      toast.success('Quote accepted successfully!');
-    } catch (error) {
-      console.error('[PublicQuoteView] Error accepting quote:', error);
-      toast.error('Failed to accept quote');
     }
   };
 
@@ -601,41 +375,14 @@ export default function PublicQuoteView() {
     }
   };
 
-  const handleConfirmPayment = async (
-    paymentType: 'full' | 'deposit',
-    depositPercentage?: number
-  ) => {
-    if (!quote) return;
-
-    try {
-      const amount = paymentType === 'full' 
-        ? quote.total 
-        : Math.round(quote.total * ((depositPercentage || 30) / 100));
-
-      const { url } = await createPaymentIntent({
-        quoteId: quote.id,
-        amount,
-        currency: 'usd',
-        paymentType,
-        depositPercentage,
-      });
-
-      if (url) {
-        window.location.href = url;
-      } else {
-        throw new Error('No checkout URL returned');
-      }
-    } catch (error) {
-      console.error('[PublicQuoteView] Payment error:', error);
-      toast.error('Payment initialization failed. Please try again.');
-    }
-  };
-
   // Show loading state
   if (loading || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-lg text-muted-foreground">Loading proposal...</p>
+        </div>
       </div>
     );
   }
@@ -666,33 +413,22 @@ export default function PublicQuoteView() {
     );
   }
 
-  // Show not found if no quote (but settings can be fallback)
+  // Show not found if no quote
   if (!quote) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="p-8 text-center">
-          {loading ? (
-            <>
-              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-              <p className="text-muted-foreground">Loading quote...</p>
-            </>
-          ) : (
-            <>
-              <h1 className="text-2xl font-bold mb-2">Quote Not Found</h1>
-              <p className="text-muted-foreground">This link may be invalid or expired.</p>
-            </>
-          )}
+          <h1 className="text-2xl font-bold mb-2">Quote Not Found</h1>
+          <p className="text-muted-foreground">This link may be invalid or expired.</p>
         </div>
       </div>
     );
   }
 
-  // Show warning if settings are missing but still render with fallback
-  if (!settings) {
-    console.warn('[PublicQuoteView] Rendering without settings - using inline fallback');
-  }
-
-  console.log('[PublicQuoteView] Rendering viewer - isOwner:', isOwner, 'status:', quote.status, 'hasSettings:', !!settings);
+  // Render the new ProposalViewer
+  console.log('[PublicQuoteView] 🎨 Rendering ProposalViewer');
+  console.log('[PublicQuoteView] Settings:', settings);
+  console.log('[PublicQuoteView] Quote:', { id: quote.id, itemCount: quote.items.length });
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -722,7 +458,7 @@ export default function PublicQuoteView() {
         open={paymentDialogOpen}
         onOpenChange={setPaymentDialogOpen}
         quoteTotal={quote.total}
-        onConfirmPayment={handleConfirmPayment}
+        onConfirmPayment={async () => {}}
       />
     </div>
   );
