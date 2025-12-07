@@ -46,6 +46,8 @@ export function ProposalViewer({
     console.log('[ProposalViewer] Transforming quote:', quote.id);
     console.log('[ProposalViewer] Using visuals:', mockVisuals);
     console.log('[ProposalViewer] Using settings:', settings);
+    console.log('[ProposalViewer] Settings name:', settings?.name);
+    console.log('[ProposalViewer] Settings logo:', settings?.logo);
 
     return transformQuoteToProposal(quote, settings, mockVisuals);
   }, [quote, settings]);
