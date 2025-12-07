@@ -3,7 +3,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Keyboard, Mousewheel } from "swiper/modules";
 import { motion } from "framer-motion";
 import type { Swiper as SwiperType } from "swiper";
-import type { ProposalSection, CategoryGroup } from "@/types/proposal";
+import type { ProposalSection } from "@/types/proposal";
 import { CategoryGroupSection } from "./CategoryGroupSection";
 
 // Import Swiper styles
@@ -118,7 +118,7 @@ function HeroSlide({ section }: { section: ProposalSection }) {
           )}
           {section.content && (
             <div className="prose prose-lg dark:prose-invert max-w-none">
-              <p className="text-lg leading-relaxed">{section.content}</p>
+              <p className="text-lg leading-relaxed whitespace-pre-wrap">{section.content}</p>
             </div>
           )}
         </motion.div>
@@ -160,7 +160,7 @@ function CategorySlide({ section }: { section: ProposalSection }) {
     <CategoryGroupSection 
       categoryGroup={categoryGroup}
       showPricing={section.showPricing}
-      backgroundImage={section.backgroundImage}
+      backgroundImage={categoryGroup.backgroundImage}
     />
   );
 }
