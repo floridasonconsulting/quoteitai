@@ -19,7 +19,7 @@ interface ProposalContentSliderProps {
 
 /**
  * Dynamic Swiper-based Content Slider
- * Maps proposal sections to slides with auto-generated category slides
+ * FIXED: All viewport handling issues, proper scrolling, no content hanging off
  */
 export function ProposalContentSlider({
   sections,
@@ -29,7 +29,6 @@ export function ProposalContentSlider({
   const swiperRef = useRef<SwiperType | null>(null);
   const [currentIndex, setCurrentIndex] = useState(activeIndex);
 
-  // Sync external navigation to swiper
   useEffect(() => {
     if (swiperRef.current && activeIndex !== currentIndex) {
       swiperRef.current.slideTo(activeIndex);
@@ -93,7 +92,7 @@ function SlideContent({ section, isActive }: { section: ProposalSection; isActiv
       initial={{ opacity: 0 }}
       animate={{ opacity: isActive ? 1 : 0.7 }}
       transition={{ duration: 0.4 }}
-      className="h-full w-full overflow-y-auto"
+      className="h-full w-full"
     >
       {getSlideComponent()}
     </motion.div>
@@ -106,7 +105,7 @@ function SlideContent({ section, isActive }: { section: ProposalSection; isActiv
 function HeroSlide({ section }: { section: ProposalSection }) {
   return (
     <div 
-      className="h-full flex items-center justify-center p-8 md:p-16 relative"
+      className="h-full flex items-center justify-center p-8 md:p-16 relative overflow-y-auto"
       style={{
         backgroundImage: section.backgroundImage 
           ? `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.6)), url(${section.backgroundImage})`
@@ -143,7 +142,7 @@ function HeroSlide({ section }: { section: ProposalSection }) {
 function TextSlide({ section }: { section: ProposalSection }) {
   return (
     <div className="h-full p-8 md:p-16 overflow-y-auto">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto pb-24">
         <h2 className="text-3xl md:text-4xl font-bold mb-6">{section.title}</h2>
         {section.subtitle && (
           <p className="text-lg text-muted-foreground mb-8">{section.subtitle}</p>
@@ -176,11 +175,55 @@ function CategorySlide({ section }: { section: ProposalSection }) {
 }
 
 /**
- * Slide Component: Line Items (Investment Summary)
- * CRITICAL FIX: Proper scrolling with explicit overflow-y-scroll
+ * Slide Component: Investment Summary (Fancy Line Item Price Sheet)
+ * FIXED: Large scrollbar, auto-scroll on hover, simple format with project total only
  */
 function LineItemsSlide({ section }: { section: ProposalSection }) {
-  // Group items by category for better organization
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isScrolling, setIsScrolling] = useState(false);
+  
+  // Auto-scroll effect when hovering in the scrollable area
+  useEffect(() => {
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer || !isScrolling) return;
+
+    let animationFrameId: number;
+    let scrollSpeed = 0;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = scrollContainer.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const containerHeight = rect.height;
+      
+      // Calculate scroll speed based on cursor position
+      if (y < containerHeight * 0.2) {
+        // Near top - scroll up
+        scrollSpeed = -2;
+      } else if (y > containerHeight * 0.8) {
+        // Near bottom - scroll down
+        scrollSpeed = 2;
+      } else {
+        scrollSpeed = 0;
+      }
+    };
+
+    const animate = () => {
+      if (scrollSpeed !== 0 && scrollContainer) {
+        scrollContainer.scrollTop += scrollSpeed;
+      }
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    scrollContainer.addEventListener('mousemove', handleMouseMove);
+    animate();
+
+    return () => {
+      scrollContainer.removeEventListener('mousemove', handleMouseMove);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [isScrolling]);
+
+  // Group items by category
   const itemsByCategory = section.items?.reduce((acc, item) => {
     const cat = item.category || 'Other';
     if (!acc[cat]) acc[cat] = [];
@@ -191,76 +234,64 @@ function LineItemsSlide({ section }: { section: ProposalSection }) {
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-950">
       {/* Header - Fixed */}
-      <div className="flex-shrink-0 p-6 md:p-8 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        <h2 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white">
+      <div className="flex-shrink-0 p-6 md:p-8 bg-white dark:bg-gray-900 border-b-2 border-gray-300 dark:border-gray-700">
+        <h2 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
           {section.title || "Investment Summary"}
         </h2>
-        <p className="text-base text-muted-foreground mt-2">
-          Complete breakdown of all items and services
+        <p className="text-sm md:text-base text-muted-foreground">
+          Complete project overview
         </p>
       </div>
 
-      {/* Scrollable Content Area - CRITICAL FIX */}
-      <div className="flex-1 overflow-y-scroll relative" style={{ maxHeight: 'calc(100vh - 280px)' }}>
-        {/* Custom scrollbar styling */}
+      {/* FIXED: Large Scrollbar + Auto-Scroll on Hover */}
+      <div 
+        ref={scrollRef}
+        className="flex-1 overflow-y-scroll relative scroll-smooth"
+        style={{ maxHeight: 'calc(100vh - 300px)' }}
+        onMouseEnter={() => setIsScrolling(true)}
+        onMouseLeave={() => setIsScrolling(false)}
+      >
+        {/* Custom LARGE scrollbar styling */}
         <style>{`
           .flex-1.overflow-y-scroll::-webkit-scrollbar {
-            width: 14px;
+            width: 20px;
           }
           .flex-1.overflow-y-scroll::-webkit-scrollbar-track {
             background: rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
+            border-radius: 10px;
             margin: 8px;
           }
           .flex-1.overflow-y-scroll::-webkit-scrollbar-thumb {
             background: rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
           }
           .flex-1.overflow-y-scroll::-webkit-scrollbar-thumb:hover {
             background: rgba(0, 0, 0, 0.5);
           }
         `}</style>
         
-        <div className="max-w-5xl mx-auto p-6 md:p-8 space-y-6">
+        <div className="max-w-4xl mx-auto p-6 md:p-8 space-y-4">
           {itemsByCategory && Object.entries(itemsByCategory).map(([category, items]) => (
-            <div key={category} className="bg-white dark:bg-gray-900 rounded-lg shadow-md overflow-hidden">
+            <div key={category} className="bg-white dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-800">
               {/* Category Header */}
-              <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{category}</h3>
+              <div className="bg-gray-100 dark:bg-gray-800 px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white">{category}</h3>
               </div>
 
-              {/* Items List - Compact Spacing */}
-              <div className="divide-y divide-gray-200 dark:divide-gray-800">
+              {/* Simple Line Items - NO PRICING (just names) */}
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {items?.map((item, idx) => (
                   <div 
                     key={idx} 
-                    className="flex justify-between items-start p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    className="px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
-                    <div className="flex-1 min-w-0 pr-4">
-                      <p className="font-semibold text-base text-gray-900 dark:text-white mb-1">
-                        {item.name}
-                      </p>
-                      <p className="text-sm text-muted-foreground mb-2 leading-relaxed">
-                        {item.description}
-                      </p>
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                        <span>Qty: {item.quantity} {item.units || 'units'}</span>
-                        {section.showPricing !== false && (
-                          <>
-                            <span>•</span>
-                            <span>Unit: ${item.price.toLocaleString()}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    {section.showPricing !== false && (
-                      <div className="flex-shrink-0 text-right">
-                        <p className="text-xl font-bold text-primary">
-                          ${item.total.toLocaleString()}
-                        </p>
-                      </div>
-                    )}
+                    <p className="font-medium text-sm md:text-base text-gray-900 dark:text-white">
+                      {item.name}
+                    </p>
+                    <p className="text-xs md:text-sm text-muted-foreground mt-1 leading-relaxed">
+                      {item.description}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -269,46 +300,28 @@ function LineItemsSlide({ section }: { section: ProposalSection }) {
         </div>
       </div>
 
-      {/* Totals Footer - Fixed */}
-      {section.showPricing !== false && (
-        <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-t-2 border-gray-300 dark:border-gray-700 p-6 md:p-8">
-          <div className="max-w-5xl mx-auto space-y-3">
-            <div className="flex justify-between text-lg">
-              <span className="font-medium text-gray-700 dark:text-gray-300">Subtotal</span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                ${section.subtotal?.toLocaleString()}
-              </span>
-            </div>
-            {section.tax && section.tax > 0 && (
-              <div className="flex justify-between text-lg">
-                <span className="font-medium text-gray-700 dark:text-gray-300">Tax</span>
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  ${section.tax.toLocaleString()}
-                </span>
-              </div>
-            )}
-            <div className="flex justify-between text-2xl pt-3 border-t-2 border-gray-200 dark:border-gray-800">
-              <span className="font-bold text-gray-900 dark:text-white">Total Investment</span>
-              <span className="font-bold text-primary">
-                ${section.total?.toLocaleString()}
-              </span>
-            </div>
+      {/* Totals Footer - Fixed - ONLY PROJECT TOTAL */}
+      <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-t-2 border-gray-300 dark:border-gray-700 p-6 md:p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex justify-between items-center text-2xl md:text-3xl">
+            <span className="font-bold text-gray-900 dark:text-white">Total Project Investment</span>
+            <span className="font-bold text-primary">
+              ${section.total?.toLocaleString()}
+            </span>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
 /**
  * Slide Component: Legal/Terms
- * IMPROVED: Better typography and readability
  */
 function LegalSlide({ section }: { section: ProposalSection }) {
   return (
     <div className="h-full overflow-y-auto bg-gray-50 dark:bg-gray-950">
-      <div className="max-w-4xl mx-auto p-8 md:p-16">
-        {/* Header */}
+      <div className="max-w-4xl mx-auto p-8 md:p-16 pb-24">
         <div className="mb-8">
           <h2 className="text-3xl md:text-5xl font-bold mb-4 text-gray-900 dark:text-white">
             {section.title || "Terms & Conditions"}
@@ -316,7 +329,6 @@ function LegalSlide({ section }: { section: ProposalSection }) {
           <div className="h-1 w-32 bg-primary rounded-full" />
         </div>
 
-        {/* Content */}
         <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-8 md:p-12">
           <div className="prose prose-base dark:prose-invert max-w-none">
             <p className="whitespace-pre-wrap text-base leading-relaxed text-gray-700 dark:text-gray-300">
