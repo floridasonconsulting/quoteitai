@@ -288,7 +288,7 @@ export default function PublicQuoteView() {
         return quoteItem;
       });
 
-      // Convert database format to app format
+      // Convert database format to app format with ENRICHED items
       const formattedQuote: Quote = {
         id: quoteData.id,
         quoteNumber: quoteData.quote_number,
