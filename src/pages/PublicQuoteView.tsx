@@ -275,8 +275,15 @@ export default function PublicQuoteView() {
         // but our TypeScript types expect camelCase (imageUrl, enhancedDescription)
         // We need to transform BOTH the JSONB fields AND the fresh data
         
-        const jsonbImageUrl = (quoteItem as any).image_url || quoteItem.imageUrl;
-        const jsonbEnhancedDesc = (quoteItem as any).enhanced_description || quoteItem.enhancedDescription;
+        // Type-safe access to snake_case fields from JSONB
+        type QuoteItemWithSnakeCase = QuoteItem & { 
+          image_url?: string; 
+          enhanced_description?: string; 
+        };
+        const itemWithSnakeCase = quoteItem as QuoteItemWithSnakeCase;
+        
+        const jsonbImageUrl = itemWithSnakeCase.image_url || quoteItem.imageUrl;
+        const jsonbEnhancedDesc = itemWithSnakeCase.enhanced_description || quoteItem.enhancedDescription;
         
         if (freshData) {
           console.log(`[PublicQuoteView] ✅ Enriching "${quoteItem.name}" with:`, {
