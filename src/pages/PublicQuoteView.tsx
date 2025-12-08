@@ -271,6 +271,13 @@ export default function PublicQuoteView() {
       const enrichedItems = (quoteData.items as unknown as QuoteItem[]).map(quoteItem => {
         const freshData = itemsLookup.get(quoteItem.name);
         
+        // CRITICAL FIX: The quote JSONB uses snake_case (image_url, enhanced_description)
+        // but our TypeScript types expect camelCase (imageUrl, enhancedDescription)
+        // We need to transform BOTH the JSONB fields AND the fresh data
+        
+        const jsonbImageUrl = (quoteItem as any).image_url || quoteItem.imageUrl;
+        const jsonbEnhancedDesc = (quoteItem as any).enhanced_description || quoteItem.enhancedDescription;
+        
         if (freshData) {
           console.log(`[PublicQuoteView] ✅ Enriching "${quoteItem.name}" with:`, {
             imageUrl: freshData.imageUrl ? '✅ YES' : '❌ NO',
@@ -279,13 +286,22 @@ export default function PublicQuoteView() {
           
           return {
             ...quoteItem,
-            imageUrl: freshData.imageUrl || quoteItem.imageUrl,
-            enhancedDescription: freshData.enhancedDescription || quoteItem.enhancedDescription
+            imageUrl: freshData.imageUrl || jsonbImageUrl || quoteItem.imageUrl,
+            enhancedDescription: freshData.enhancedDescription || jsonbEnhancedDesc || quoteItem.enhancedDescription
           };
         }
         
-        console.log(`[PublicQuoteView] ⚠️ No fresh data found for "${quoteItem.name}"`);
-        return quoteItem;
+        // If no fresh data, still transform snake_case to camelCase
+        console.log(`[PublicQuoteView] ⚠️ No fresh data for "${quoteItem.name}", using JSONB:`, {
+          hasJsonbImageUrl: !!jsonbImageUrl,
+          hasJsonbEnhancedDesc: !!jsonbEnhancedDesc
+        });
+        
+        return {
+          ...quoteItem,
+          imageUrl: jsonbImageUrl || quoteItem.imageUrl,
+          enhancedDescription: jsonbEnhancedDesc || quoteItem.enhancedDescription
+        };
       });
 
       // Convert database format to app format with ENRICHED items
