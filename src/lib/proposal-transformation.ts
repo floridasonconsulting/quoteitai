@@ -33,8 +33,11 @@ import { getSmartCoverImage, getCategoryImage } from "./proposal-image-library";
 function getSmartItemImage(itemName: string, category: string, existingUrl?: string): string | undefined {
   // Priority 1: Use existing URL if present and valid
   if (existingUrl && existingUrl.trim() && existingUrl.startsWith('http')) {
+    console.log(`[SmartImage] ✅ Using database URL for "${itemName}":`, existingUrl);
     return existingUrl;
   }
+  
+  console.log(`[SmartImage] ⚠️ No valid database URL for "${itemName}", using smart fallback`);
   
   // Priority 2: Smart matching based on item name keywords (universal)
   const nameLower = itemName.toLowerCase();
@@ -44,7 +47,7 @@ function getSmartItemImage(itemName: string, category: string, existingUrl?: str
   if (nameLower.includes('filter')) return 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=800&q=80';
   if (nameLower.includes('heater') || nameLower.includes('heat pump')) return 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=800&q=80';
   if (nameLower.includes('salt') || nameLower.includes('ozone')) return 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80';
-  if (nameLower.includes('skimmer')) return 'https://images.unsplash.com/photo-1576013551627-0cc20b468848?w=800&q=80';
+  if (nameLower.includes('skimmer')) return 'https://images.unsplash.com/photo-1576013551627-0cc20b468848?w=800&q=80'; // NEW: Added skimmer
   if (nameLower.includes('pebble') || nameLower.includes('plaster') || nameLower.includes('quartz')) return 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80';
   
   // DECKING & PAVING
@@ -77,6 +80,8 @@ function getSmartItemImage(itemName: string, category: string, existingUrl?: str
   
   // ROOFING
   if (nameLower.includes('roof') || nameLower.includes('shingle')) return 'https://images.unsplash.com/photo-1632778149955-e80f8ceca2e8?w=800&q=80';
+  
+  console.log(`[SmartImage] ⚠️ No keyword match for "${itemName}", using category fallback`);
   
   // Priority 3: Fall back to category-based image
   const categoryNormalized = normalizeCategory(category);
@@ -195,7 +200,7 @@ export function transformQuoteToProposal(
     const normalizedCat = normalizeCategory(item.category);
     const currentGroup = groupedItems.get(normalizedCat) || [];
     
-    // UNIVERSAL IMAGE RESOLUTION: Works for any industry
+    // UNIVERSAL IMAGE RESOLUTION: Check database FIRST, then smart fallback
     const smartItemImage = getSmartItemImage(item.name, normalizedCat, item.imageUrl);
     
     console.log('[Transformation] Processing item with SMART RESOLUTION:', {
@@ -205,10 +210,10 @@ export function transformQuoteToProposal(
       originalImageUrl: item.imageUrl,
       resolvedImageUrl: smartItemImage,
       resolutionMethod: item.imageUrl && item.imageUrl.startsWith('http') 
-        ? 'JSONB (original)' 
+        ? '✅ DATABASE (original)' 
         : smartItemImage 
-          ? 'Smart Fallback' 
-          : 'None',
+          ? '⚠️ Smart Fallback (keyword or category)' 
+          : '❌ None',
       enhancedDescription: item.enhancedDescription
     });
     
@@ -262,13 +267,16 @@ export function transformQuoteToProposal(
       category,
       displayName: metadata?.displayName,
       itemCount: items.length,
-      itemsWithImages: items.filter(i => i.imageUrl).length,
+      itemsWithDatabaseImages: items.filter(i => i.imageUrl && quote.items.find(qi => qi.name === i.name)?.imageUrl).length,
+      itemsWithFallbackImages: items.filter(i => i.imageUrl && !quote.items.find(qi => qi.name === i.name)?.imageUrl).length,
+      itemsWithNoImages: items.filter(i => !i.imageUrl).length,
       subtotal,
       backgroundImage: categoryImage,
       sampleItem: items[0] ? {
         name: items[0].name,
         hasImage: !!items[0].imageUrl,
-        imageUrl: items[0].imageUrl
+        imageUrl: items[0].imageUrl,
+        imageSource: quote.items.find(qi => qi.name === items[0].name)?.imageUrl ? 'DATABASE' : 'FALLBACK'
       } : null
     });
 
@@ -319,12 +327,12 @@ Liability: We maintain full insurance coverage for all work performed.`;
 
   proposalData.sections = sections;
   
-  console.log('[Transformation] ✅ COMPLETE - Sections created:', {
+  console.log('[Transformation] ✅ COMPLETE - Image Resolution Summary:', {
     totalSections: sections.length,
     categoryCount: sortedCategories.length,
-    totalItemsWithImages: sections
-      .filter(s => s.type === 'categoryGroup')
-      .reduce((sum, s) => sum + (s.categoryGroups?.[0]?.items.filter(i => i.imageUrl).length || 0), 0)
+    totalItems: quote.items.length,
+    itemsWithDatabaseImages: quote.items.filter(i => i.imageUrl && i.imageUrl.startsWith('http')).length,
+    itemsUsingFallbacks: quote.items.filter(i => !i.imageUrl || !i.imageUrl.startsWith('http')).length,
   });
   
   return proposalData;
