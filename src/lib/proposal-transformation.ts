@@ -17,8 +17,77 @@ import {
 import { getSmartCoverImage, getCategoryImage } from "./proposal-image-library";
 
 /**
+ * UNIVERSAL IMAGE RESOLUTION SYSTEM
+ * Works for ANY industry without database migrations
+ * 
+ * Strategy:
+ * 1. Use item.imageUrl from quote JSONB if present
+ * 2. Fall back to smart category-based stock images
+ * 3. Final fallback to generic professional images
+ */
+
+/**
+ * Get a smart item image based on item name and category
+ * This works universally across all industries
+ */
+function getSmartItemImage(itemName: string, category: string, existingUrl?: string): string | undefined {
+  // Priority 1: Use existing URL if present and valid
+  if (existingUrl && existingUrl.trim() && existingUrl.startsWith('http')) {
+    return existingUrl;
+  }
+  
+  // Priority 2: Smart matching based on item name keywords (universal)
+  const nameLower = itemName.toLowerCase();
+  
+  // POOL & SPA (common keywords)
+  if (nameLower.includes('pump')) return 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80';
+  if (nameLower.includes('filter')) return 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=800&q=80';
+  if (nameLower.includes('heater') || nameLower.includes('heat pump')) return 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=800&q=80';
+  if (nameLower.includes('salt') || nameLower.includes('ozone')) return 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80';
+  if (nameLower.includes('skimmer')) return 'https://images.unsplash.com/photo-1576013551627-0cc20b468848?w=800&q=80';
+  if (nameLower.includes('pebble') || nameLower.includes('plaster') || nameLower.includes('quartz')) return 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80';
+  
+  // DECKING & PAVING
+  if (nameLower.includes('paver') || nameLower.includes('brick')) return 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800&q=80';
+  if (nameLower.includes('concrete')) return 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=800&q=80';
+  if (nameLower.includes('travertine') || nameLower.includes('stone')) return 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80';
+  if (nameLower.includes('deck')) return 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=800&q=80';
+  
+  // TILE & COPING
+  if (nameLower.includes('tile')) return 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80';
+  if (nameLower.includes('coping')) return 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80';
+  
+  // HVAC & MECHANICAL
+  if (nameLower.includes('hvac') || nameLower.includes('air condition')) return 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=800&q=80';
+  if (nameLower.includes('furnace')) return 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=800&q=80';
+  if (nameLower.includes('duct')) return 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=800&q=80';
+  
+  // ELECTRICAL
+  if (nameLower.includes('light') || nameLower.includes('lighting')) return 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=800&q=80';
+  if (nameLower.includes('panel') || nameLower.includes('electric')) return 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80';
+  
+  // PLUMBING
+  if (nameLower.includes('plumb') || nameLower.includes('pipe')) return 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=800&q=80';
+  if (nameLower.includes('drain')) return 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=800&q=80';
+  
+  // LANDSCAPING
+  if (nameLower.includes('plant') || nameLower.includes('tree') || nameLower.includes('shrub')) return 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80';
+  if (nameLower.includes('lawn') || nameLower.includes('grass') || nameLower.includes('sod')) return 'https://images.unsplash.com/photo-1592307277589-68b9b7c17c27?w=800&q=80';
+  if (nameLower.includes('irrigation') || nameLower.includes('sprinkler')) return 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800&q=80';
+  
+  // ROOFING
+  if (nameLower.includes('roof') || nameLower.includes('shingle')) return 'https://images.unsplash.com/photo-1632778149955-e80f8ceca2e8?w=800&q=80';
+  
+  // Priority 3: Fall back to category-based image
+  const categoryNormalized = normalizeCategory(category);
+  return getCategoryImage(categoryNormalized);
+}
+
+/**
  * Transforms a raw Quote object into the new ProposalData structure
  * suitable for the "Better Proposals" viewer experience
+ * 
+ * UNIVERSAL: Works for ANY industry with smart image resolution
  */
 export function transformQuoteToProposal(
   quote: Quote, 
@@ -34,10 +103,12 @@ export function transformQuoteToProposal(
   });
 
   // CRITICAL: Log item data to debug image issues
-  console.log('[Transformation] Quote items:', quote.items.map(item => ({
+  console.log('[Transformation] Quote items (RAW):', quote.items.map(item => ({
     name: item.name,
     category: item.category,
     imageUrl: item.imageUrl,
+    imageUrlType: typeof item.imageUrl,
+    imageUrlValid: item.imageUrl && item.imageUrl.startsWith('http'),
     enhancedDescription: item.enhancedDescription
   })));
 
@@ -67,7 +138,7 @@ export function transformQuoteToProposal(
     quote.title,
     uniqueCategories,
     visuals?.coverImage,
-    itemNames // NEW: Pass item names for deeper analysis
+    itemNames
   );
   
   console.log('[Transformation] Smart cover image selected:', smartCoverImage);
@@ -117,21 +188,27 @@ export function transformQuoteToProposal(
     companyName: activeSettings.name || '',
   });
 
-  // --- Section B: Category Groups (The Meat) ---
+  // --- Section B: Category Groups (The Meat) with SMART IMAGE RESOLUTION ---
   const groupedItems = new Map<string, ProposalItem[]>();
   
   quote.items.forEach(item => {
     const normalizedCat = normalizeCategory(item.category);
     const currentGroup = groupedItems.get(normalizedCat) || [];
     
-    console.log('[Transformation] Processing item:', {
+    // UNIVERSAL IMAGE RESOLUTION: Works for any industry
+    const smartItemImage = getSmartItemImage(item.name, normalizedCat, item.imageUrl);
+    
+    console.log('[Transformation] Processing item with SMART RESOLUTION:', {
       itemName: item.name,
       originalCategory: item.category,
       normalizedCategory: normalizedCat,
-      imageUrl: item.imageUrl,
-      hasImage: !!item.imageUrl,
-      imageUrlType: typeof item.imageUrl,
-      imageUrlLength: item.imageUrl?.length || 0,
+      originalImageUrl: item.imageUrl,
+      resolvedImageUrl: smartItemImage,
+      resolutionMethod: item.imageUrl && item.imageUrl.startsWith('http') 
+        ? 'JSONB (original)' 
+        : smartItemImage 
+          ? 'Smart Fallback' 
+          : 'None',
       enhancedDescription: item.enhancedDescription
     });
     
@@ -144,7 +221,7 @@ export function transformQuoteToProposal(
       price: item.price,
       total: item.total,
       units: item.units,
-      imageUrl: item.imageUrl,
+      imageUrl: smartItemImage, // ⬅️ SMART RESOLUTION APPLIED HERE
       category: normalizedCat,
     });
     
@@ -185,8 +262,14 @@ export function transformQuoteToProposal(
       category,
       displayName: metadata?.displayName,
       itemCount: items.length,
+      itemsWithImages: items.filter(i => i.imageUrl).length,
       subtotal,
-      backgroundImage: categoryImage
+      backgroundImage: categoryImage,
+      sampleItem: items[0] ? {
+        name: items[0].name,
+        hasImage: !!items[0].imageUrl,
+        imageUrl: items[0].imageUrl
+      } : null
     });
 
     sections.push({
@@ -215,7 +298,6 @@ export function transformQuoteToProposal(
   });
 
   // --- Section D: Terms & Conditions ---
-  // CRITICAL FIX: Always add terms section, use default if not provided
   const termsContent = activeSettings.terms && activeSettings.terms.trim() 
     ? activeSettings.terms 
     : `Payment Terms: Net 30 days from invoice date.
@@ -236,5 +318,14 @@ Liability: We maintain full insurance coverage for all work performed.`;
   });
 
   proposalData.sections = sections;
+  
+  console.log('[Transformation] ✅ COMPLETE - Sections created:', {
+    totalSections: sections.length,
+    categoryCount: sortedCategories.length,
+    totalItemsWithImages: sections
+      .filter(s => s.type === 'categoryGroup')
+      .reduce((sum, s) => sum + (s.categoryGroups?.[0]?.items.filter(i => i.imageUrl).length || 0), 0)
+  });
+  
   return proposalData;
 }

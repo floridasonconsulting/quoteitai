@@ -10,8 +10,9 @@ interface CategoryGroupSectionProps {
 
 /**
  * Magazine-Style Category Section
+ * UNIVERSAL: Works for ANY industry with smart image fallbacks
  * FIXED: Proper viewport handling, no content hanging off
- * FIXED: Correct pricing visibility logic (hides qty + unit price when showPricing=false)
+ * FIXED: Correct pricing visibility logic
  */
 export function CategoryGroupSection({
   categoryGroup,
@@ -30,8 +31,7 @@ export function CategoryGroupSection({
     itemCount: categoryGroup.items.length,
     backgroundImage,
     showPricing,
-    firstItemImage: categoryGroup.items[0]?.imageUrl,
-    allItemsWithImages: categoryGroup.items.filter(i => i.imageUrl).length,
+    itemsWithImages: categoryGroup.items.filter(i => i.imageUrl).length,
     itemsDebug: categoryGroup.items.map(item => ({
       name: item.name,
       hasImageUrl: !!item.imageUrl,
@@ -115,8 +115,8 @@ export function CategoryGroupSection({
                   item.imageUrl ? "md:flex-row" : ""
                 )}
               >
-                {/* Item Image - Only show if imageUrl exists */}
-                {item.imageUrl && (
+                {/* Item Image - UNIVERSAL: Only show if imageUrl exists and is valid */}
+                {item.imageUrl && item.imageUrl.startsWith('http') && (
                   <div className="flex-shrink-0 w-full md:w-64 h-48 md:h-56">
                     <img
                       src={item.imageUrl}
@@ -124,7 +124,12 @@ export function CategoryGroupSection({
                       className="w-full h-full object-cover rounded-lg shadow-sm"
                       loading="lazy"
                       onError={(e) => {
-                        console.error('[CategoryGroupSection] Image failed to load:', item.imageUrl);
+                        console.error('[CategoryGroupSection] Image failed to load:', {
+                          itemName: item.name,
+                          imageUrl: item.imageUrl,
+                          error: 'Load failed'
+                        });
+                        // Hide broken image gracefully
                         e.currentTarget.style.display = 'none';
                       }}
                     />
