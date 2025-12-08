@@ -244,6 +244,50 @@ export default function PublicQuoteView() {
       console.log('[PublicQuoteView] ✅ Quote loaded successfully:', quoteData.id);
       console.log('[PublicQuoteView] Quote user_id:', quoteData.user_id);
 
+      // 🚀 NEW: Fetch current items table data to enrich quote JSONB
+      console.log('[PublicQuoteView] 🔄 Fetching fresh items table data for enrichment...');
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('items')
+        .select('name, image_url, enhanced_description')
+        .eq('user_id', quoteData.user_id);
+
+      if (itemsError) {
+        console.warn('[PublicQuoteView] ⚠️ Could not fetch items table:', itemsError);
+      }
+
+      // Create lookup map for fast item enrichment
+      const itemsLookup = new Map();
+      if (itemsData) {
+        itemsData.forEach(item => {
+          itemsLookup.set(item.name, {
+            imageUrl: item.image_url,
+            enhancedDescription: item.enhanced_description
+          });
+        });
+        console.log('[PublicQuoteView] ✅ Items lookup created:', itemsLookup.size, 'items');
+      }
+
+      // Enrich quote items with fresh data from items table
+      const enrichedItems = (quoteData.items as unknown as QuoteItem[]).map(quoteItem => {
+        const freshData = itemsLookup.get(quoteItem.name);
+        
+        if (freshData) {
+          console.log(`[PublicQuoteView] ✅ Enriching "${quoteItem.name}" with:`, {
+            imageUrl: freshData.imageUrl ? '✅ YES' : '❌ NO',
+            enhancedDescription: freshData.enhancedDescription ? '✅ YES' : '❌ NO'
+          });
+          
+          return {
+            ...quoteItem,
+            imageUrl: freshData.imageUrl || quoteItem.imageUrl,
+            enhancedDescription: freshData.enhancedDescription || quoteItem.enhancedDescription
+          };
+        }
+        
+        console.log(`[PublicQuoteView] ⚠️ No fresh data found for "${quoteItem.name}"`);
+        return quoteItem;
+      });
+
       // Convert database format to app format
       const formattedQuote: Quote = {
         id: quoteData.id,
@@ -251,7 +295,7 @@ export default function PublicQuoteView() {
         customerId: quoteData.customer_id,
         customerName: quoteData.customer_name,
         title: quoteData.title,
-        items: (quoteData.items as unknown as QuoteItem[]) || [],
+        items: enrichedItems, // 🚀 USE ENRICHED ITEMS
         subtotal: Number(quoteData.subtotal),
         tax: Number(quoteData.tax),
         total: Number(quoteData.total),
@@ -271,14 +315,15 @@ export default function PublicQuoteView() {
 
       console.log('[PublicQuoteView] ✅ Quote formatted. Item count:', formattedQuote.items.length);
       
-      // ENHANCED DEBUGGING: Check each item's image URL
-      console.log('[PublicQuoteView] 📸 Item image status:', formattedQuote.items.map((item, idx) => ({
+      // ENHANCED DEBUGGING: Check each item's image URL AFTER ENRICHMENT
+      console.log('[PublicQuoteView] 📸 ENRICHED Item image status:', formattedQuote.items.map((item, idx) => ({
         index: idx,
         name: item.name,
         hasImageUrl: !!item.imageUrl,
         imageUrl: item.imageUrl,
         imageUrlType: typeof item.imageUrl,
-        isValidUrl: item.imageUrl && (item.imageUrl.startsWith('http://') || item.imageUrl.startsWith('https://'))
+        isValidUrl: item.imageUrl && (item.imageUrl.startsWith('http://') || item.imageUrl.startsWith('https://')),
+        hasEnhancedDescription: !!item.enhancedDescription
       })));
       
       setQuote(formattedQuote);
