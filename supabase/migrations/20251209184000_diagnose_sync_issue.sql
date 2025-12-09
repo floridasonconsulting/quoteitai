@@ -44,9 +44,8 @@ SELECT
     SELECT i.name 
     FROM items i 
     WHERE i.user_id = qi.user_id
-    ORDER BY similarity(i.name, qi.item_name) DESC
     LIMIT 1
-  ) as closest_item_name
+  ) as sample_item_from_table
 FROM quote_items qi;
 
 -- Query 4: Show actual data side-by-side
