@@ -66,38 +66,42 @@ END $$;
 -- 3. Check if item names match between tables
 DO $$
 DECLARE
-  quote_items TEXT[];
-  items_table TEXT[];
+  quote_record RECORD;
+  item_element JSONB;
+  item_name TEXT;
   matched INTEGER := 0;
   unmatched INTEGER := 0;
 BEGIN
   RAISE NOTICE '=== ITEM NAME MATCHING ===';
   
-  -- Get item names from most recent quote
-  SELECT ARRAY_AGG(item->>'name')
-  INTO quote_items
-  FROM quotes,
-  LATERAL jsonb_array_elements(items) AS item
+  -- Get most recent quote
+  SELECT id, title, items, user_id
+  INTO quote_record
+  FROM quotes
   WHERE items IS NOT NULL
   ORDER BY created_at DESC
   LIMIT 1;
   
-  -- Get item names from items table
-  SELECT ARRAY_AGG(name)
-  INTO items_table
-  FROM items;
-  
-  IF quote_items IS NOT NULL THEN
-    RAISE NOTICE 'Checking % items from quote...', array_length(quote_items, 1);
+  IF FOUND THEN
+    RAISE NOTICE 'Checking items from quote: %', quote_record.title;
     
     -- Check each quote item
-    FOR i IN 1..array_length(quote_items, 1) LOOP
-      IF quote_items[i] = ANY(items_table) THEN
+    FOR item_element IN 
+      SELECT * FROM jsonb_array_elements(quote_record.items)
+    LOOP
+      item_name := item_element->>'name';
+      
+      -- Try to find matching item in items table
+      IF EXISTS (
+        SELECT 1 FROM items 
+        WHERE name = item_name 
+        AND user_id = quote_record.user_id
+      ) THEN
         matched := matched + 1;
-        RAISE NOTICE '✅ MATCH: %', quote_items[i];
+        RAISE NOTICE '✅ MATCH: %', item_name;
       ELSE
         unmatched := unmatched + 1;
-        RAISE NOTICE '❌ NO MATCH: %', quote_items[i];
+        RAISE NOTICE '❌ NO MATCH: %', item_name;
       END IF;
     END LOOP;
     
