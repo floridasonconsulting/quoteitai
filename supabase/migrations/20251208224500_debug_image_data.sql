@@ -3,15 +3,6 @@
 
 -- Query 1: Check items table - which items have images?
 SELECT 
-  '=== ITEMS TABLE ===' as section,
-  NULL as name,
-  NULL as category,
-  NULL as user_id,
-  NULL as image_status,
-  NULL as image_preview
-UNION ALL
-SELECT 
-  'data' as section,
   name, 
   category,
   LEFT(user_id::text, 8) as user_id,
@@ -21,12 +12,11 @@ SELECT
   END as image_status,
   LEFT(COALESCE(image_url, 'NULL'), 60) as image_preview
 FROM items
-ORDER BY section DESC, category, name
-LIMIT 21;
+ORDER BY category, name
+LIMIT 20;
 
 -- Query 2: Check quote items JSONB
 SELECT 
-  '=== QUOTE ITEMS (JSONB) ===' as section,
   q.title as quote_title,
   LEFT(q.user_id::text, 8) as user_id,
   jsonb_array_length(q.items) as item_count
@@ -89,10 +79,12 @@ SELECT
 FROM quotes
 WHERE items IS NOT NULL
 ORDER BY created_at DESC
-LIMIT 1
-UNION ALL
+LIMIT 1;
+
+-- Query 6: Items user IDs
 SELECT 
-  'Items user_id(s)' as source,
-  LEFT(DISTINCT user_id::text, 12) as user_id
+  'Items user_id' as source,
+  LEFT(user_id::text, 12) as user_id
 FROM items
+GROUP BY user_id
 LIMIT 5;
