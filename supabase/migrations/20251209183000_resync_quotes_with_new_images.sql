@@ -10,8 +10,6 @@ DECLARE
   total_quotes INTEGER := 0;
   total_items_updated INTEGER := 0;
 BEGIN
-  RAISE NOTICE '🔄 Re-syncing quotes with new item images...';
-  
   -- Loop through ALL quotes
   FOR quote_record IN 
     SELECT id, items, user_id 
@@ -79,7 +77,5 @@ BEGIN
     
   END LOOP;
   
-  RAISE NOTICE '✅ Sync complete!';
-  RAISE NOTICE '  Processed: % quotes', total_quotes;
-  RAISE NOTICE '  Updated: % items', total_items_updated;
+  RAISE NOTICE 'Processed % quotes and updated % items', total_quotes, total_items_updated;
 END $$;
