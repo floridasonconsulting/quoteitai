@@ -1,140 +1,98 @@
 -- Debug Script: Investigate why items aren't showing images
--- Run this to see what's actually in your database
+-- Returns actual data tables instead of RAISE NOTICE
 
--- 1. Check items table - which items have images?
-DO $$
-DECLARE
-  item_record RECORD;
-BEGIN
-  RAISE NOTICE '=== ITEMS TABLE (with user_id) ===';
-  
-  FOR item_record IN (
-    SELECT 
-      name, 
-      category,
-      user_id,
-      CASE 
-        WHEN image_url IS NOT NULL AND image_url != '' THEN '✅ HAS IMAGE'
-        ELSE '❌ NO IMAGE'
-      END as image_status,
-      LEFT(COALESCE(image_url, 'NULL'), 60) as image_preview
-    FROM items
-    ORDER BY category, name
-    LIMIT 20
-  ) LOOP
-    RAISE NOTICE '% | % | user: % | % | %', 
-      item_record.name, 
-      item_record.category, 
-      item_record.user_id,
-      item_record.image_status,
-      item_record.image_preview;
-  END LOOP;
-END $$;
+-- Query 1: Check items table - which items have images?
+SELECT 
+  '=== ITEMS TABLE ===' as section,
+  NULL as name,
+  NULL as category,
+  NULL as user_id,
+  NULL as image_status,
+  NULL as image_preview
+UNION ALL
+SELECT 
+  'data' as section,
+  name, 
+  category,
+  LEFT(user_id::text, 8) as user_id,
+  CASE 
+    WHEN image_url IS NOT NULL AND image_url != '' THEN '✅ HAS IMAGE'
+    ELSE '❌ NO IMAGE'
+  END as image_status,
+  LEFT(COALESCE(image_url, 'NULL'), 60) as image_preview
+FROM items
+ORDER BY section DESC, category, name
+LIMIT 21;
 
--- 2. Check a sample quote's items JSONB
-DO $$
-DECLARE
-  quote_record RECORD;
-  item_element JSONB;
-BEGIN
-  RAISE NOTICE '=== QUOTE ITEMS (from JSONB) ===';
-  
-  -- Get the most recent quote
+-- Query 2: Check quote items JSONB
+SELECT 
+  '=== QUOTE ITEMS (JSONB) ===' as section,
+  q.title as quote_title,
+  LEFT(q.user_id::text, 8) as user_id,
+  jsonb_array_length(q.items) as item_count
+FROM quotes q
+WHERE q.items IS NOT NULL
+ORDER BY q.created_at DESC
+LIMIT 1;
+
+-- Query 3: Detailed quote items
+WITH latest_quote AS (
   SELECT id, title, items, user_id
-  INTO quote_record
   FROM quotes
   WHERE items IS NOT NULL
   ORDER BY created_at DESC
-  LIMIT 1;
-  
-  IF FOUND THEN
-    RAISE NOTICE 'Quote: % (user: %)', quote_record.title, quote_record.user_id;
-    RAISE NOTICE '---';
-    
-    -- Loop through items
-    FOR item_element IN 
-      SELECT * FROM jsonb_array_elements(quote_record.items)
-    LOOP
-      RAISE NOTICE 'Item: % | imageUrl (camelCase): % | image_url (snake): %',
-        item_element->>'name',
-        COALESCE(item_element->>'imageUrl', 'NULL'),
-        COALESCE(item_element->>'image_url', 'NULL');
-    END LOOP;
-  END IF;
-END $$;
+  LIMIT 1
+)
+SELECT 
+  item->>'name' as item_name,
+  item->>'category' as category,
+  COALESCE(item->>'imageUrl', 'NULL') as imageUrl_camelCase,
+  COALESCE(item->>'image_url', 'NULL') as image_url_snake,
+  COALESCE(item->>'enhancedDescription', 'NULL') as enhanced_desc
+FROM latest_quote,
+LATERAL jsonb_array_elements(items) AS item
+LIMIT 20;
 
--- 3. Check if item names match between tables
-DO $$
-DECLARE
-  quote_record RECORD;
-  item_element JSONB;
-  item_name TEXT;
-  matched INTEGER := 0;
-  unmatched INTEGER := 0;
-BEGIN
-  RAISE NOTICE '=== ITEM NAME MATCHING ===';
-  
-  -- Get most recent quote
+-- Query 4: Check item name matching
+WITH latest_quote AS (
   SELECT id, title, items, user_id
-  INTO quote_record
   FROM quotes
   WHERE items IS NOT NULL
   ORDER BY created_at DESC
-  LIMIT 1;
-  
-  IF FOUND THEN
-    RAISE NOTICE 'Checking items from quote: %', quote_record.title;
-    
-    -- Check each quote item
-    FOR item_element IN 
-      SELECT * FROM jsonb_array_elements(quote_record.items)
-    LOOP
-      item_name := item_element->>'name';
-      
-      -- Try to find matching item in items table
-      IF EXISTS (
-        SELECT 1 FROM items 
-        WHERE name = item_name 
-        AND user_id = quote_record.user_id
-      ) THEN
-        matched := matched + 1;
-        RAISE NOTICE '✅ MATCH: %', item_name;
-      ELSE
-        unmatched := unmatched + 1;
-        RAISE NOTICE '❌ NO MATCH: %', item_name;
-      END IF;
-    END LOOP;
-    
-    RAISE NOTICE '---';
-    RAISE NOTICE 'Matched: % | Unmatched: %', matched, unmatched;
-  END IF;
-END $$;
+  LIMIT 1
+)
+SELECT 
+  item->>'name' as quote_item_name,
+  CASE 
+    WHEN EXISTS (
+      SELECT 1 FROM items i 
+      WHERE i.name = item->>'name' 
+      AND i.user_id = lq.user_id
+    ) THEN '✅ MATCH'
+    ELSE '❌ NO MATCH'
+  END as match_status,
+  (
+    SELECT LEFT(i.image_url, 40)
+    FROM items i 
+    WHERE i.name = item->>'name' 
+    AND i.user_id = lq.user_id
+    LIMIT 1
+  ) as items_table_image
+FROM latest_quote lq,
+LATERAL jsonb_array_elements(items) AS item
+LIMIT 20;
 
--- 4. Show actual user_id from quotes vs items
-DO $$
-DECLARE
-  quote_user UUID;
-  items_users UUID[];
-BEGIN
-  RAISE NOTICE '=== USER ID COMPARISON ===';
-  
-  -- Get user_id from most recent quote
-  SELECT user_id INTO quote_user
-  FROM quotes
-  ORDER BY created_at DESC
-  LIMIT 1;
-  
-  -- Get all unique user_ids from items
-  SELECT ARRAY_AGG(DISTINCT user_id)
-  INTO items_users
-  FROM items;
-  
-  RAISE NOTICE 'Quote user_id: %', quote_user;
-  RAISE NOTICE 'Items user_ids: %', items_users;
-  
-  IF quote_user = ANY(items_users) THEN
-    RAISE NOTICE '✅ User IDs MATCH';
-  ELSE
-    RAISE NOTICE '❌ User IDs DO NOT MATCH - This is the problem!';
-  END IF;
-END $$;
+-- Query 5: User ID comparison
+SELECT 
+  'Quote user_id' as source,
+  LEFT(user_id::text, 12) as user_id
+FROM quotes
+WHERE items IS NOT NULL
+ORDER BY created_at DESC
+LIMIT 1
+UNION ALL
+SELECT 
+  'Items user_id(s)' as source,
+  LEFT(DISTINCT user_id::text, 12) as user_id
+FROM items
+LIMIT 5;
