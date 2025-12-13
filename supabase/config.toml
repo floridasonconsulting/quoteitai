@@ -1,0 +1,25 @@
+project_id = "onxyqhixydadpnkvdtvm"
+
+[functions.analytics]
+verify_jwt = false
+
+[functions.ai-assist]
+verify_jwt = true
+
+[functions.check-subscription]
+verify_jwt = true
+
+[functions.create-checkout]
+verify_jwt = true
+
+[functions.customer-portal]
+verify_jwt = true
+
+[functions.manage-user-role]
+verify_jwt = true
+
+[functions.send-quote-notification]
+verify_jwt = true
+
+[functions.update-quote-status]
+verify_jwt = false
