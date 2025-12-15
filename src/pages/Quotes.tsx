@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { getQuotes, deleteQuote, clearAllQuotes } from '@/lib/db-service';
+import { getQuotes, deleteQuote, clearAllQuotes, updateQuote } from '@/lib/db-service';
 import { getCustomers } from '@/lib/db-service';
 import { getQuoteAge } from '@/lib/quote-utils';
 import { Quote, QuoteAge, Customer } from '@/types';
@@ -47,6 +47,7 @@ export default function Quotes() {
   const [ageFilter, setAgeFilter] = useState<string>('all');
   const [selectedQuotes, setSelectedQuotes] = useState<string[]>([]);
   const [notificationFilter, setNotificationFilter] = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus] = useState<string>('');
 
   const loadQuotes = useCallback(async (forceRefresh = false) => {
     if (!user?.id) {
@@ -195,6 +196,33 @@ export default function Quotes() {
     }
   };
 
+  const handleBulkStatusUpdate = async () => {
+    if (!bulkStatus || selectedQuotes.length === 0) return;
+
+    try {
+      const idsToUpdate = [...selectedQuotes];
+      const newStatus = bulkStatus as Quote['status'];
+
+      // 1. Optimistic Update
+      setQuotes(prev => prev.map(q =>
+        idsToUpdate.includes(q.id) ? { ...q, status: newStatus } : q
+      ));
+
+      setSelectedQuotes([]); // Clear selection
+      setBulkStatus(''); // Reset dropdown
+
+      // 2. Perform updates
+      const promises = idsToUpdate.map(id => updateQuote(user?.id, id, { status: newStatus }, queueChange));
+      await Promise.all(promises);
+
+      toast.success(`Updated status to ${newStatus} for ${idsToUpdate.length} quote${idsToUpdate.length > 1 ? 's' : ''}`);
+    } catch (error) {
+      console.error('Error updating bulk status:', error);
+      toast.error('Failed to update status. Please try again.');
+      await loadQuotes();
+    }
+  };
+
   const handleBulkDelete = async () => {
     if (selectedQuotes.length === 0 || !user?.id) return;
 
@@ -230,9 +258,8 @@ export default function Quotes() {
         const idsToDelete = [...selectedQuotes];
         setSelectedQuotes([]); // Clear selection immediately
 
-        // Use optimisticDelete for each one (or just bulk update state manually if too many)
-        // If there are many, individually calling optimisticDelete might be slow due to multiple re-renders?
-        // Actually optimisticDelete updates state.
+        // 234: // If there are many, individually calling optimisticDelete might be slow due to multiple re-renders?
+        // 235: // Actually optimisticDelete updates state.
 
         // Better: Manual optimistic update for bulk, then execute promises
         setQuotes(prev => prev.filter(q => !idsToDelete.includes(q.id)));
@@ -350,7 +377,29 @@ export default function Quotes() {
                 <span className="text-sm font-medium">
                   {selectedQuotes.length} quote{selectedQuotes.length > 1 ? 's' : ''} selected
                 </span>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <div className="flex items-center gap-2 mr-2">
+                    <Select value={bulkStatus} onValueChange={setBulkStatus}>
+                      <SelectTrigger className="w-[140px] h-8">
+                        <SelectValue placeholder="Set Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="sent">Sent</SelectItem>
+                        <SelectItem value="accepted">Accepted</SelectItem>
+                        <SelectItem value="declined">Declined</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      onClick={handleBulkStatusUpdate}
+                      disabled={!bulkStatus}
+                      variant="secondary"
+                    >
+                      Update
+                    </Button>
+                  </div>
+                  <div className="h-6 w-px bg-border mx-1" />
                   {selectedQuotes.length === quotes.length && (
                     <Button
                       variant="destructive"
