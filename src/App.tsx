@@ -14,6 +14,7 @@ import { LoadingFallback } from "./components/LoadingFallback";
 import { useGlobalKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { OnboardingWizard } from "@/components/OnboardingWizard";
+import { useCacheWarmup } from "@/hooks/useCacheWarmup";
 
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -40,6 +41,9 @@ function AppRoutes() {
   // Initialize global keyboard shortcuts
   useGlobalKeyboardShortcuts();
 
+  // Warm up cache with fresh data
+  useCacheWarmup();
+
   useEffect(() => {
     // Log app initialization
     console.log('Quote.it AI initialized');
@@ -53,8 +57,8 @@ function AppRoutes() {
     <>
       <Routes>
         {/* Root route - show Landing if not authenticated, redirect to Dashboard if authenticated */}
-        <Route 
-          path="/" 
+        <Route
+          path="/"
           element={
             loading ? (
               <LoadingFallback />
@@ -63,13 +67,13 @@ function AppRoutes() {
             ) : (
               <Landing />
             )
-          } 
+          }
         />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/quotes/public/:id" element={<PublicQuoteView />} />
-        
+
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Dashboard /></Suspense></ProtectedRoute>} />
           <Route path="/quotes" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Quotes /></Suspense></ProtectedRoute>} />
@@ -83,10 +87,10 @@ function AppRoutes() {
           <Route path="/diagnostics" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Diagnostics /></Suspense></ProtectedRoute>} />
           <Route path="/subscription" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Subscription /></Suspense></ProtectedRoute>} />
         </Route>
-        
+
         <Route path="*" element={<NotFound />} />
       </Routes>
-      
+
       {/* Global Components */}
       <OnboardingWizard />
       <MobileBottomNav />

@@ -9,13 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getSettings, saveSettings, clearDatabaseData, clearSampleData } from "@/lib/db-service";
+import { saveSettings, clearDatabaseData, clearSampleData } from "@/lib/db-service";
 import { clearAllData } from "@/lib/storage";
-import { 
-  importCustomersFromCSV, 
-  importItemsFromCSV, 
+import {
+  importCustomersFromCSV,
+  importItemsFromCSV,
   importQuotesFromCSV,
-  importCompanySettingsFromCSV, 
+  importCompanySettingsFromCSV,
   loadSampleDataFile,
   validateItemsCSV,
   validateQuotesCSV,
@@ -38,19 +38,21 @@ import { AccountSection } from "@/components/settings/AccountSection";
 import { AppearanceSection } from "@/components/settings/AppearanceSection";
 import { IntegrationsSection } from "@/components/settings/IntegrationsSection";
 import { ProposalThemeSelector } from "@/components/settings/ProposalThemeSelector";
+import { CacheManagementSection } from '@/components/settings/CacheManagementSection';
+import { PerformanceDashboard } from '@/components/PerformanceDashboard';
 
 export default function Settings() {
   const navigate = useNavigate();
   const { themeMode } = useTheme();
   const { user, userRole, isAdmin, isMaxAITier, updateUserRole, checkUserRole, subscription, refreshSubscription } = useAuth();
   const { queueChange, pauseSync, resumeSync, isOnline, isSyncing, pendingCount, failedCount } = useSyncManager();
-  
+
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [clearingSampleData, setClearingSampleData] = useState(false);
   const [dangerZoneOpen, setDangerZoneOpen] = useState(false);
-  
+
   const [settings, setSettings] = useState<CompanySettings>({
     name: "",
     address: "",
@@ -74,11 +76,11 @@ export default function Settings() {
       console.log('[Settings] No user ID, skipping settings load');
       return;
     }
-    
+
     console.log('[Settings] ========== LOADING SETTINGS ==========');
     console.log('[Settings] Loading settings for user:', user.id);
     setLoading(true);
-    
+
     try {
       // CRITICAL: Load from Supabase FIRST to get most up-to-date data
       console.log('[Settings] Fetching from Supabase...');
@@ -169,13 +171,13 @@ export default function Settings() {
         address: updatedSettings.address,
         termsLength: updatedSettings.terms?.length || 0
       });
-      
+
       // Save settings with sync queue
       await saveSettings(user.id, updatedSettings, queueChange);
-      
+
       // Update local state
       setSettings(updatedSettings);
-      
+
       toast.success("Settings updated successfully");
       console.log('[Settings] ✓ Settings updated successfully');
       console.log('[Settings] ========== UPDATE COMPLETE ==========');
@@ -207,13 +209,13 @@ export default function Settings() {
 
   const handleClearSampleData = async () => {
     if (!user) return;
-    
+
     setClearingSampleData(true);
-    
+
     try {
       await clearSampleData(user.id);
       toast.success("Sample data cleared successfully! Your company settings remain intact.");
-      
+
       dispatchDataRefresh("customers-changed");
       dispatchDataRefresh("items-changed");
       dispatchDataRefresh("quotes-changed");
@@ -248,7 +250,7 @@ export default function Settings() {
 
       const itemsValidation = validateItemsCSV(itemsCSV);
       const quotesValidation = validateQuotesCSV(quotesCSV);
-      
+
       if (!itemsValidation.valid || !quotesValidation.valid) {
         const allErrors = [...itemsValidation.errors, ...quotesValidation.errors];
         toast.error(`Validation failed: ${allErrors[0]}`);
@@ -257,13 +259,13 @@ export default function Settings() {
 
       toast.loading("Importing customers...");
       const customersResult = await importCustomersFromCSV(customersCSV, user.id);
-      
+
       toast.loading("Importing items...");
       const itemsResult = await importItemsFromCSV(itemsCSV, user.id);
-      
+
       toast.loading("Importing quotes...");
       const quotesResult = await importQuotesFromCSV(quotesCSV, user.id);
-      
+
       toast.loading("Importing company settings...");
       await importCompanySettingsFromCSV(settingsCSV, user.id);
 
@@ -318,7 +320,7 @@ export default function Settings() {
 
       const itemsValidation = validateItemsCSV(itemsCSV);
       const quotesValidation = validateQuotesCSV(quotesCSV);
-      
+
       if (!itemsValidation.valid || !quotesValidation.valid) {
         const allErrors = [...itemsValidation.errors, ...quotesValidation.errors];
         toast.error(`Validation failed: ${allErrors[0]}`);
@@ -327,13 +329,13 @@ export default function Settings() {
 
       toast.loading("Importing customers...");
       const customersResult = await importCustomersFromCSV(customersCSV, user.id);
-      
+
       toast.loading("Importing items...");
       const itemsResult = await importItemsFromCSV(itemsCSV, user.id);
-      
+
       toast.loading("Importing quotes...");
       const quotesResult = await importQuotesFromCSV(quotesCSV, user.id);
-      
+
       toast.loading("Importing company settings...");
       await importCompanySettingsFromCSV(settingsCSV, user.id);
 
@@ -344,7 +346,7 @@ export default function Settings() {
       dispatchDataRefresh("quotes-changed");
 
       const totalSuccess = customersResult.success + itemsResult.success + quotesResult.success;
-      const totalFailed = customersResult.failed + itemsResult.failed + quotatesResult.failed;
+      const totalFailed = customersResult.failed + itemsResult.failed + quotesResult.failed;
 
       if (totalFailed > 0) {
         toast.warning(`Import completed with errors. ${totalSuccess} records imported, ${totalFailed} failed.`);
@@ -365,7 +367,7 @@ export default function Settings() {
 
   const handleRoleChange = async (newRole: string) => {
     if (!user?.id) return;
-    
+
     try {
       await updateUserRole(user.id, newRole);
       await checkUserRole();
@@ -397,14 +399,14 @@ export default function Settings() {
       </div>
 
       <div className="space-y-6">
-        <BrandingSection 
-          settings={settings} 
-          onUpdate={handleUpdateSettings} 
+        <BrandingSection
+          settings={settings}
+          onUpdate={handleUpdateSettings}
         />
 
-        <CompanyInfoSection 
-          settings={settings} 
-          onUpdate={handleUpdateSettings} 
+        <CompanyInfoSection
+          settings={settings}
+          onUpdate={handleUpdateSettings}
         />
 
         <Card>
@@ -421,21 +423,25 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        <NotificationPreferencesSection 
-          settings={settings} 
-          onUpdate={handleUpdateSettings} 
+        <NotificationPreferencesSection
+          settings={settings}
+          onUpdate={handleUpdateSettings}
         />
 
         <AppearanceSection />
 
         <AccountSection />
 
-        <IntegrationsSection 
-          settings={settings} 
-          onUpdate={handleUpdateSettings} 
+        <IntegrationsSection
+          settings={settings}
+          onUpdate={handleUpdateSettings}
         />
 
         <DataManagementSection />
+
+        <CacheManagementSection />
+
+        <PerformanceDashboard />
 
         <Card>
           <CardHeader>
@@ -452,8 +458,8 @@ export default function Settings() {
               <p className="text-sm text-muted-foreground">
                 Force sync all local data to the database for cross-device access.
               </p>
-              <Button 
-                onClick={handleManualSync} 
+              <Button
+                onClick={handleManualSync}
                 disabled={syncing || !user}
                 variant="outline"
                 className="w-full"
@@ -526,8 +532,8 @@ export default function Settings() {
               <div className="space-y-3">
                 <Label>Sample Data Management</Label>
                 <div className="flex gap-2">
-                  <Button 
-                    onClick={handleImportSampleData} 
+                  <Button
+                    onClick={handleImportSampleData}
                     disabled={importing || !user}
                     variant="outline"
                     className="flex-1"
@@ -535,8 +541,8 @@ export default function Settings() {
                     {importing ? "Importing..." : "Import Sample Data"}
                   </Button>
 
-                  <Button 
-                    onClick={handleClearSampleData} 
+                  <Button
+                    onClick={handleClearSampleData}
                     disabled={clearingSampleData || !user}
                     variant="outline"
                     className="flex-1"
@@ -550,7 +556,7 @@ export default function Settings() {
 
               <div className="space-y-3">
                 <Label>Clear Database & Import</Label>
-                <Button 
+                <Button
                   onClick={handleClearAndImport}
                   disabled={importing || !user}
                   variant="secondary"

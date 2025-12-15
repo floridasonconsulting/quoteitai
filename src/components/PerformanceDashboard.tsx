@@ -1,22 +1,36 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { performanceMonitor } from "@/lib/performance-monitor";
+import { apiTracker } from "@/lib/api-performance-tracker";
 
 export function PerformanceDashboard() {
   const [metrics, setMetrics] = useState(performanceMonitor.getMetrics());
-  
+  const [apiStats, setApiStats] = useState(apiTracker.getStats());
+
   useEffect(() => {
-    const unsubscribe = performanceMonitor.subscribe(setMetrics);
-    return unsubscribe;
+    const unsubMetrics = performanceMonitor.subscribe(setMetrics);
+
+    // Create a wrapper for apiTracker subscription since it passes the raw metrics array
+    // but we want the stats object
+    const handleApiUpdate = () => {
+      setApiStats(apiTracker.getStats());
+    };
+
+    const unsubApi = apiTracker.subscribe(handleApiUpdate);
+
+    return () => {
+      unsubMetrics();
+      unsubApi();
+    };
   }, []);
-  
+
   const getScoreClass = (value: number | null, thresholds: [number, number]) => {
     if (value === null) return "text-gray-400";
     if (value <= thresholds[0]) return "text-green-600";
     if (value <= thresholds[1]) return "text-yellow-600";
     return "text-red-600";
   };
-  
+
   return (
     <Card>
       <CardHeader>
@@ -31,15 +45,9 @@ export function PerformanceDashboard() {
             </p>
             <p className="text-xs text-muted-foreground mt-1">Good: &lt;2.5s | Needs Improvement: 2.5-4s</p>
           </div>
-          
-          <div className="p-4 border rounded-lg">
-            <p className="text-sm font-medium text-muted-foreground">First Input Delay (FID)</p>
-            <p className={`text-2xl font-bold ${getScoreClass(metrics.fid, [100, 300])}`}>
-              {metrics.fid ? `${metrics.fid.toFixed(0)}ms` : 'Measuring...'}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">Good: &lt;100ms | Needs Improvement: 100-300ms</p>
-          </div>
-          
+
+
+
           <div className="p-4 border rounded-lg">
             <p className="text-sm font-medium text-muted-foreground">Cumulative Layout Shift (CLS)</p>
             <p className={`text-2xl font-bold ${getScoreClass(metrics.cls, [0.1, 0.25])}`}>
@@ -47,7 +55,7 @@ export function PerformanceDashboard() {
             </p>
             <p className="text-xs text-muted-foreground mt-1">Good: &lt;0.1 | Needs Improvement: 0.1-0.25</p>
           </div>
-          
+
           <div className="p-4 border rounded-lg">
             <p className="text-sm font-medium text-muted-foreground">Time to First Byte (TTFB)</p>
             <p className={`text-2xl font-bold ${getScoreClass(metrics.ttfb, [800, 1800])}`}>
@@ -55,13 +63,38 @@ export function PerformanceDashboard() {
             </p>
             <p className="text-xs text-muted-foreground mt-1">Good: &lt;800ms | Needs Improvement: 800-1800ms</p>
           </div>
-          
+
           <div className="p-4 border rounded-lg">
             <p className="text-sm font-medium text-muted-foreground">Interaction to Next Paint (INP)</p>
             <p className={`text-2xl font-bold ${getScoreClass(metrics.inp, [200, 500])}`}>
               {metrics.inp ? `${metrics.inp.toFixed(0)}ms` : 'Measuring...'}
             </p>
             <p className="text-xs text-muted-foreground mt-1">Good: &lt;200ms | Needs Improvement: 200-500ms</p>
+          </div>
+
+          {/* API Metrics */}
+          <div className="p-4 border rounded-lg">
+            <p className="text-sm font-medium text-muted-foreground">Avg API Latency</p>
+            <p className={`text-2xl font-bold ${getScoreClass(apiStats.avg, [200, 500])}`}>
+              {apiStats.avg.toFixed(0)}ms
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Based on last {apiStats.count} requests</p>
+          </div>
+
+          <div className="p-4 border rounded-lg">
+            <p className="text-sm font-medium text-muted-foreground">API Error Rate</p>
+            <p className={`text-2xl font-bold ${getScoreClass(apiStats.errorRate, [1, 5])}`}>
+              {apiStats.errorRate.toFixed(1)}%
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Good: &lt;1% | Needs Improvement: 1-5%</p>
+          </div>
+
+          <div className="p-4 border rounded-lg">
+            <p className="text-sm font-medium text-muted-foreground">95th Percentile Latency</p>
+            <p className={`text-2xl font-bold ${getScoreClass(apiStats.p95, [500, 1000])}`}>
+              {apiStats.p95.toFixed(0)}ms
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Slower user experiences</p>
           </div>
         </div>
       </CardContent>

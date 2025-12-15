@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Plus, Search, Download, Upload, RefreshCw, AlertCircle, FileText, Trash2 } from 'lucide-react';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -24,7 +25,7 @@ export default function Customers() {
   const { user } = useAuth();
   const { queueChange, pauseSync, resumeSync } = useSyncManager();
   const { startLoading, stopLoading } = useLoadingState();
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -46,7 +47,7 @@ export default function Customers() {
     contactLastName: '',
   });
   const loadingRef = useRef(false);
-  
+
   // Memoize the options for useOptimisticList to prevent re-initialization
   const optimisticOptions = useMemo(() => ({
     entityName: 'Customer',
@@ -79,7 +80,7 @@ export default function Customers() {
 
     console.log('[Customers] ========== LOAD CUSTOMERS START ==========');
     console.log('[Customers] User ID:', user.id);
-    
+
     loadingRef.current = true;
     setLoading(true);
     setError(null);
@@ -94,32 +95,32 @@ export default function Customers() {
         setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
       );
 
-      const dataPromise = getCustomers(user.id);
+      const dataPromise = getCustomers(user.id, { forceRefresh });
       const data = await Promise.race([dataPromise, timeoutPromise]);
 
       console.log('[Customers] ✓ Received data from getCustomers');
       console.log('[Customers]   - Count:', data.length);
-      
+
       // CRITICAL: Update the displayed list
       setCustomers(data);
-      
+
       // Force component re-render by incrementing key
       setDataKey(prev => prev + 1);
-      
+
       setSelectedCustomers([]);
       setError(null);
       setRetryCount(0);
-      
+
       console.log('[Customers] ========== LOAD CUSTOMERS COMPLETE ==========');
     } catch (err: unknown) {
       console.error('[Customers] ========== LOAD CUSTOMERS FAILED ==========');
       console.error('[Customers] Error:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
-      const errorMsg = errorMessage === 'Request timeout' 
+      const errorMsg = errorMessage === 'Request timeout'
         ? 'Loading is taking longer than expected. Try clearing cache or check your connection.'
         : 'Failed to load customers. Please try again.';
       setError(errorMsg);
-      
+
       if (retryCount < 3) {
         toast.error(`${errorMsg} Retry ${retryCount + 1}/3`);
       }
@@ -137,16 +138,16 @@ export default function Customers() {
       console.log('[Customers] Effect: No user ID, skipping load');
       return;
     }
-    
+
     console.log('[Customers] Effect: User ready, loading customers');
-    
+
     // Just call loadCustomers - dataKey increment now happens inside it
     loadCustomers();
   }, [user?.id, loadCustomers]); // Removed customers.length - it causes circular updates
 
   useEffect(() => {
     let lastFocusTime = Date.now();
-    
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && user) {
         const timeSinceFocus = Date.now() - lastFocusTime;
@@ -156,7 +157,7 @@ export default function Customers() {
         lastFocusTime = Date.now();
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user]);
@@ -185,20 +186,20 @@ export default function Customers() {
 
   const handleBulkDelete = async () => {
     if (selectedCustomers.length === 0) return;
-    
+
     if (confirm(`Are you sure you want to delete ${selectedCustomers.length} customer${selectedCustomers.length > 1 ? 's' : ''}?`)) {
       try {
         const deletedIds = [...selectedCustomers];
-        
+
         // Optimistically update UI first
         const remainingCustomers = customers.filter(c => !deletedIds.includes(c.id));
         setCustomers(remainingCustomers);
         setSelectedCustomers([]);
-        
+
         // Perform deletions
         const promises = deletedIds.map(id => deleteCustomer(user?.id, id, queueChange));
         await Promise.all(promises);
-        
+
         toast.success(`Deleted ${deletedIds.length} customer${deletedIds.length > 1 ? 's' : ''}`);
       } catch (error) {
         console.error('Error deleting customers:', error);
@@ -210,7 +211,7 @@ export default function Customers() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.email) {
       toast.error('Name and email are required');
       return;
@@ -223,6 +224,7 @@ export default function Customers() {
       } else {
         const newCustomer: Customer = {
           id: crypto.randomUUID(),
+          userId: user?.id || '',
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
@@ -262,7 +264,7 @@ export default function Customers() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this customer?')) return;
-    
+
     try {
       await optimisticDelete(id);
     } catch (error) {
@@ -322,7 +324,7 @@ export default function Customers() {
       customer.contactFirstName || '',
       customer.contactLastName || ''
     ]);
-    
+
     const csvContent = [headers, ...rows].map(row => formatCSVLine(row)).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -346,24 +348,24 @@ export default function Customers() {
 
   const processImport = async (strategy: DuplicateStrategy) => {
     if (!importFile || !user?.id) return;
-    
+
     const reader = new FileReader();
     reader.onload = async (e) => {
       const text = e.target?.result as string;
       const result = await importCustomersFromCSV(text, user.id, strategy);
-      
+
       const messages = [];
       if (result.success > 0) messages.push(`✅ Imported: ${result.success}`);
       if (result.skipped > 0) messages.push(`⏭️ Skipped: ${result.skipped}`);
       if (result.overwritten > 0) messages.push(`🔄 Overwritten: ${result.overwritten}`);
       if (result.failed > 0) messages.push(`❌ Failed: ${result.failed}`);
-      
+
       if (result.errors.length > 0) {
         toast.error(`Import completed with errors:\n${result.errors.slice(0, 3).join('\n')}`);
       } else {
         toast.success(messages.join(' | '));
       }
-      
+
       await loadCustomers(true);
     };
     reader.readAsText(importFile);
@@ -378,275 +380,277 @@ export default function Customers() {
   };
 
   return (
-    <div className="space-y-6 overflow-x-hidden max-w-full" key={dataKey}>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
-          <p className="text-muted-foreground">
-            Manage your customer database
-          </p>
+    <PullToRefresh onRefresh={() => loadCustomers(true)}>
+      <div className="space-y-6 overflow-x-hidden max-w-full min-h-[calc(100vh-100px)]" key={dataKey}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
+            <p className="text-muted-foreground">
+              Manage your customer database
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
+              <FileText className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Template</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportToCSV}>
+              <Download className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Export</span>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <label className="cursor-pointer">
+                <Upload className="h-4 w-4" />
+                <span className="ml-2 hidden sm:inline">Import</span>
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+              </label>
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="h-4 w-4" />
+                  <span className="ml-2 hidden sm:inline">Add Customer</span>
+                  <span className="ml-2 sm:hidden">Add</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingCustomer ? 'Edit Customer' : 'Add New Customer'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    Fill in the customer information below
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Business/Company Name *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Acme Corporation"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="contactFirstName">Contact First Name</Label>
+                      <Input
+                        id="contactFirstName"
+                        value={formData.contactFirstName}
+                        onChange={(e) => setFormData({ ...formData, contactFirstName: e.target.value })}
+                        placeholder="John"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contactLastName">Contact Last Name</Label>
+                      <Input
+                        id="contactLastName"
+                        value={formData.contactLastName}
+                        onChange={(e) => setFormData({ ...formData, contactLastName: e.target.value })}
+                        placeholder="Doe"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="john@example.com"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="(555) 123-4567"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Street Address</Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="123 Main St"
+                    />
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City</Label>
+                      <Input
+                        id="city"
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        placeholder="New York"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="state">State</Label>
+                      <Input
+                        id="state"
+                        value={formData.state}
+                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                        placeholder="NY"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="zip">ZIP Code</Label>
+                      <Input
+                        id="zip"
+                        value={formData.zip}
+                        onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
+                        placeholder="10001"
+                      />
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">
+                      {editingCustomer ? 'Update' : 'Add'} Customer
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
-            <FileText className="h-4 w-4" />
-            <span className="ml-2 hidden sm:inline">Template</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportToCSV}>
-            <Download className="h-4 w-4" />
-            <span className="ml-2 hidden sm:inline">Export</span>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <label className="cursor-pointer">
-              <Upload className="h-4 w-4" />
-              <span className="ml-2 hidden sm:inline">Import</span>
-              <input
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={handleFileSelect}
-              />
-            </label>
-          </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4" />
-                <span className="ml-2 hidden sm:inline">Add Customer</span>
-                <span className="ml-2 sm:hidden">Add</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingCustomer ? 'Edit Customer' : 'Add New Customer'}
-                </DialogTitle>
-                <DialogDescription>
-                  Fill in the customer information below
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Business/Company Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Acme Corporation"
-                    required
-                  />
-                </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="contactFirstName">Contact First Name</Label>
-                    <Input
-                      id="contactFirstName"
-                      value={formData.contactFirstName}
-                      onChange={(e) => setFormData({ ...formData, contactFirstName: e.target.value })}
-                      placeholder="John"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="contactLastName">Contact Last Name</Label>
-                    <Input
-                      id="contactLastName"
-                      value={formData.contactLastName}
-                      onChange={(e) => setFormData({ ...formData, contactLastName: e.target.value })}
-                      placeholder="Doe"
-                    />
-                  </div>
-                </div>
+        {selectedCustomers.length > 0 && (
+          <Card className="border-primary/50 bg-primary/5">
+            <CardContent className="py-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">
+                  {selectedCustomers.length} customer{selectedCustomers.length > 1 ? 's' : ''} selected
+                </span>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Selected
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="john@example.com"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="(555) 123-4567"
-                  />
-                </div>
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>{error}</span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={handleRetry}>
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Retry {retryCount > 0 && `(${retryCount}/3)`}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleClearCacheAndRetry}>
+                  Clear Cache & Retry
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="address">Street Address</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="123 Main St"
-                  />
-                </div>
+        {loadStartTime && Date.now() - loadStartTime > 10000 && loading && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Loading is taking longer than expected. If this continues, try clearing the cache.
+            </AlertDescription>
+          </Alert>
+        )}
 
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
-                    <Input
-                      id="city"
-                      value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      placeholder="New York"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="state">State</Label>
-                    <Input
-                      id="state"
-                      value={formData.state}
-                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                      placeholder="NY"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="zip">ZIP Code</Label>
-                    <Input
-                      id="zip"
-                      value={formData.zip}
-                      onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
-                      placeholder="10001"
-                    />
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">
-                    {editingCustomer ? 'Update' : 'Add'} Customer
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      {selectedCustomers.length > 0 && (
-        <Card className="border-primary/50 bg-primary/5">
-          <CardContent className="py-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">
-                {selectedCustomers.length} customer{selectedCustomers.length > 1 ? 's' : ''} selected
-              </span>
-              <Button 
-                variant="destructive" 
-                size="sm"
-                onClick={handleBulkDelete}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Selected
-              </Button>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search customers..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
+            {filteredCustomers.length > 0 && (
+              <div className="flex items-center gap-2 pt-2">
+                <Checkbox
+                  checked={selectedCustomers.length === filteredCustomers.length}
+                  onCheckedChange={handleSelectAll}
+                />
+                <span className="text-sm text-muted-foreground">Select All</span>
+              </div>
+            )}
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>Loading customers...</p>
+              </div>
+            ) : filteredCustomers.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                {searchTerm ? (
+                  <>
+                    <p>No customers found matching "{searchTerm}"</p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Total customers: {customers.length} | Filtered: {filteredCustomers.length}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="mb-4">No customers yet. Add your first customer to get started!</p>
+                    <Button onClick={() => setIsDialogOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Customer
+                    </Button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <CustomersTable
+                customers={filteredCustomers}
+                selectedCustomers={selectedCustomers}
+                onSelectCustomer={handleSelectCustomer}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            )}
           </CardContent>
         </Card>
-      )}
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="flex items-center justify-between">
-            <span>{error}</span>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={handleRetry}>
-                <RefreshCw className="h-3 w-3 mr-1" />
-                Retry {retryCount > 0 && `(${retryCount}/3)`}
-              </Button>
-              <Button size="sm" variant="outline" onClick={handleClearCacheAndRetry}>
-                Clear Cache & Retry
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {loadStartTime && Date.now() - loadStartTime > 10000 && loading && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Loading is taking longer than expected. If this continues, try clearing the cache.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search customers..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-          {filteredCustomers.length > 0 && (
-            <div className="flex items-center gap-2 pt-2">
-              <Checkbox
-                checked={selectedCustomers.length === filteredCustomers.length}
-                onCheckedChange={handleSelectAll}
-              />
-              <span className="text-sm text-muted-foreground">Select All</span>
-            </div>
-          )}
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>Loading customers...</p>
-            </div>
-          ) : filteredCustomers.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              {searchTerm ? (
-                <>
-                  <p>No customers found matching "{searchTerm}"</p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Total customers: {customers.length} | Filtered: {filteredCustomers.length}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="mb-4">No customers yet. Add your first customer to get started!</p>
-                  <Button onClick={() => setIsDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Customer
-                  </Button>
-                </>
-              )}
-            </div>
-          ) : (
-            <CustomersTable
-              customers={filteredCustomers}
-              selectedCustomers={selectedCustomers}
-              onSelectCustomer={handleSelectCustomer}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      <ImportOptionsDialog
-        open={showImportDialog}
-        onOpenChange={setShowImportDialog}
-        onConfirm={processImport}
-        fileName={importFile?.name || ''}
-        entityType="customers"
-      />
-    </div>
+        <ImportOptionsDialog
+          open={showImportDialog}
+          onOpenChange={setShowImportDialog}
+          onConfirm={processImport}
+          fileName={importFile?.name || ''}
+          entityType="customers"
+        />
+      </div>
+    </PullToRefresh>
   );
 }

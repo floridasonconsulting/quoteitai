@@ -16,38 +16,50 @@ import { apiTracker } from '@/lib/api-performance-tracker';
  * Fetch all items for a user
  * Priority: Cache > IndexedDB > Supabase > Empty
  */
-export async function getItems(userId: string | undefined): Promise<Item[]> {
+export async function getItems(
+  userId: string | undefined,
+  options?: { forceRefresh?: boolean }
+): Promise<Item[]> {
   if (!userId) {
     console.warn('⚠️ No user ID - using cache for items.');
     const cached = await cacheManager.get<Item[]>('items');
     return cached || [];
   }
 
+  const forceRefresh = options?.forceRefresh;
   const dedupKey = `fetch-items-${userId}`;
 
   return dedupedRequest(dedupKey, async () => {
+    let cached: Item[] | null = null;
+
     // Check cache first (CacheManager handles memory cache)
-    const cached = await cacheManager.get<Item[]>('items');
-    if (cached && cached.length > 0) {
-      console.log(`[ItemService] Retrieved ${cached.length} items from cache`);
-      return cached;
+    if (!forceRefresh) {
+      cached = await cacheManager.get<Item[]>('items');
+      if (cached && cached.length > 0) {
+        console.log(`[ItemService] Retrieved ${cached.length} items from cache`);
+        return cached;
+      }
     }
 
-    // Try IndexedDB if cache miss
+    // Try IndexedDB if cache miss or forceRefresh is enabled (but we won't return early if forceRefresh)
     if (isIndexedDBSupported()) {
       try {
         const indexedDBData = await ItemDB.getAll(userId);
         if (indexedDBData && indexedDBData.length > 0) {
-          console.log(`[ItemService] Retrieved ${indexedDBData.length} items from IndexedDB`);
-          // Update cache
-          await cacheManager.set('items', indexedDBData);
-          
-          // If offline, return IndexedDB data immediately
-          if (!navigator.onLine) {
-            return indexedDBData;
+
+          if (!forceRefresh) {
+            console.log(`[ItemService] Retrieved ${indexedDBData.length} items from IndexedDB`);
+            // Update cache
+            await cacheManager.set('items', indexedDBData);
+            cached = indexedDBData;
+
+            // If offline, return IndexedDB data immediately
+            if (!navigator.onLine) {
+              return indexedDBData;
+            }
+          } else {
+            console.log(`[ItemService] IndexedDB has ${indexedDBData.length} items but FORCE REFRESH is on - proceeding to Supabase`);
           }
-          
-          // If online, we'll fetch from Supabase to sync, but keep IndexedDB data as fallback
         }
       } catch (error) {
         console.warn('[ItemService] IndexedDB read failed, falling back to Supabase:', error);
@@ -55,6 +67,15 @@ export async function getItems(userId: string | undefined): Promise<Item[]> {
     }
 
     if (!navigator.onLine) {
+      // If offline and forceRefresh, we should fallback to DB/Cache
+      if (isIndexedDBSupported()) {
+        try {
+          const indexedDBData = await ItemDB.getAll(userId);
+          if (indexedDBData && indexedDBData.length > 0) return indexedDBData;
+        } catch (e) { /* ignore */ }
+      }
+      // If no DB data, try older cache?
+      const cached = await cacheManager.get<Item[]>('items');
       return cached || [];
     }
 
@@ -90,9 +111,9 @@ export async function getItems(userId: string | undefined): Promise<Item[]> {
           }
           throw error;
         }
-        
+
         const result = data ? data.map(item => toCamelCase(item)) as Item[] : [];
-        
+
         // Only update IndexedDB if we received data from Supabase
         // If Supabase returns empty but IndexedDB has data, keep IndexedDB data (offline-created records)
         if (isIndexedDBSupported()) {
@@ -117,10 +138,10 @@ export async function getItems(userId: string | undefined): Promise<Item[]> {
             console.warn('[ItemService] Failed to save to IndexedDB:', error);
           }
         }
-        
+
         // Update cache
         await cacheManager.set('items', result);
-        
+
         return result;
       } catch (error) {
         console.error('Error fetching items:', error);
@@ -154,7 +175,7 @@ export async function addItem(
   const basePrice = item.basePrice || 0;
   const markup = item.markup || 0;
   const markupType = item.markupType || 'percentage';
-  
+
   let finalPrice = item.finalPrice;
   if (!finalPrice || finalPrice === 0) {
     if (markupType === 'percentage') {
@@ -166,8 +187,8 @@ export async function addItem(
     }
   }
 
-  const itemWithUser = { 
-    ...item, 
+  const itemWithUser = {
+    ...item,
     user_id: userId,
     finalPrice
   } as Item;
@@ -187,7 +208,7 @@ export async function addItem(
 
   // Check if Supabase is actually connected before attempting sync
   const isSupabaseConnected = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
-  
+
   if (!navigator.onLine || !userId || !isSupabaseConnected) {
     if (!userId) {
       console.warn('[ItemService] ⚠️ No user ID - item saved to IndexedDB only.');
@@ -205,12 +226,12 @@ export async function addItem(
   try {
     // ✅ FIXED: Include ALL fields including minQuantity and imageUrl (migrations already exist)
     const dbItem = toSnakeCase(itemWithUser);
-    
+
     console.log('[ItemService] Syncing to Supabase with minQuantity and imageUrl');
-    
+
     const startTime = performance.now();
     const { error } = await supabase.from('items').insert(dbItem as unknown);
-    
+
     apiTracker.track(
       'items.insert',
       'POST',
@@ -222,11 +243,11 @@ export async function addItem(
       console.error('[ItemService] ❌ Database insert failed:', error);
       throw error;
     }
-    
+
     console.log('[ItemService] ✅ Successfully synced to Supabase');
-    
+
     dispatchDataRefresh('items-changed');
-    
+
     return itemWithUser;
   } catch (error) {
     console.error('[ItemService] ⚠️ Error syncing to Supabase, item saved locally:', error);
@@ -248,7 +269,7 @@ export async function updateItem(
 ): Promise<Item> {
   // Get current item data
   let currentItem: Item | undefined;
-  
+
   if (isIndexedDBSupported()) {
     try {
       const indexedItem = await ItemDB.getById(id);
@@ -259,7 +280,7 @@ export async function updateItem(
       console.warn('[ItemService] IndexedDB read failed:', error);
     }
   }
-  
+
   if (!currentItem) {
     const cached = await cacheManager.get<Item[]>('items');
     currentItem = cached?.find(i => i.id === id);
@@ -297,9 +318,9 @@ export async function updateItem(
   try {
     // ✅ FIXED: Include ALL fields including minQuantity and imageUrl (migrations already exist)
     const dbUpdates = toSnakeCase(updates);
-    
+
     console.log('[ItemService] Syncing update to Supabase with minQuantity and imageUrl');
-    
+
     const startTime = performance.now();
     const { error } = await supabase
       .from('items')
@@ -308,7 +329,7 @@ export async function updateItem(
       .eq('user_id', userId)
       .select()
       .single();
-    
+
     apiTracker.track(
       'items.update',
       'PUT',
@@ -317,11 +338,11 @@ export async function updateItem(
     );
 
     if (error) throw error;
-    
+
     console.log('[ItemService] ✅ Successfully synced update to Supabase');
-    
+
     dispatchDataRefresh('items-changed');
-    
+
     return updatedItem;
   } catch (error) {
     console.error('[ItemService] ⚠️ Error syncing update to Supabase, item updated locally:', error);
@@ -373,7 +394,7 @@ export async function deleteItem(
       .delete()
       .eq('id', id)
       .eq('user_id', userId);
-    
+
     apiTracker.track(
       'items.delete',
       'DELETE',
@@ -382,9 +403,9 @@ export async function deleteItem(
     );
 
     if (error) throw error;
-    
+
     console.log('[ItemService] ✅ Successfully synced delete to Supabase');
-    
+
     dispatchDataRefresh('items-changed');
   } catch (error) {
     console.error('[ItemService] ⚠️ Error syncing delete to Supabase, item deleted locally:', error);

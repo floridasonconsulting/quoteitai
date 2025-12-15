@@ -19,18 +19,23 @@ const firstLoadMap = new Map<string, boolean>();
  * Fetch all customers for a user
  * Priority: Cache > IndexedDB > Supabase > Empty
  */
-export async function getCustomers(userId: string | undefined): Promise<Customer[]> {
+export async function getCustomers(
+  userId: string | undefined,
+  options?: { forceRefresh?: boolean }
+): Promise<Customer[]> {
   if (!userId) {
     console.warn('⚠️ No user ID - returning empty array.');
     return [];
   }
 
-  console.log(`[CustomerService] getCustomers called for user: ${userId}`);
-  
+  const forceRefresh = options?.forceRefresh;
+
+  console.log(`[CustomerService] getCustomers called for user: ${userId} ${forceRefresh ? '(FORCE REFRESH)' : ''}`);
+
   // Check if this is the first load for this user
   const isFirstLoad = !firstLoadMap.has(userId);
-  if (isFirstLoad) {
-    console.log(`[CustomerService] First load for user ${userId} - bypassing cache`);
+  if (isFirstLoad || forceRefresh) {
+    console.log(`[CustomerService] First load or force refresh for user ${userId} - bypassing cache`);
     // Clear any stale cache on first load
     await cacheManager.invalidate('customers');
   }
@@ -39,11 +44,11 @@ export async function getCustomers(userId: string | undefined): Promise<Customer
 
   return dedupedRequest(dedupKey, async () => {
     try {
-      // On first load, skip cache and go straight to IndexedDB/Supabase
-      if (!isFirstLoad) {
+      // On first load or force refresh, skip cache and go straight to IndexedDB/Supabase
+      if (!isFirstLoad && !forceRefresh) {
         const cached = await cacheManager.get<Customer[]>('customers');
         const hasCache = cached && Array.isArray(cached);
-        
+
         if (hasCache && cached.length > 0) {
           console.log(`[CustomerService] ✓ Retrieved ${cached.length} customers from cache`);
           return cached;
@@ -53,30 +58,48 @@ export async function getCustomers(userId: string | undefined): Promise<Customer
       // Try IndexedDB
       if (isIndexedDBSupported()) {
         try {
+          // If forceRefresh is TRUE, we still read from IndexedDB but we WON'T return early
+          // We'll use it only if offline
           const indexedDBData = await CustomerDB.getAll(userId);
           console.log(`[CustomerService] IndexedDB check: found ${indexedDBData?.length || 0} customers`);
-          
+
           if (indexedDBData && indexedDBData.length > 0) {
-            console.log(`[CustomerService] ✓ Retrieved ${indexedDBData.length} customers from IndexedDB`);
-            // Update cache for future reads
-            await cacheManager.set('customers', indexedDBData);
-            
-            // Mark first load as complete
-            if (isFirstLoad) {
-              firstLoadMap.set(userId, true);
-              console.log(`[CustomerService] First load complete - found ${indexedDBData.length} customers in IndexedDB`);
+            if (!forceRefresh) {
+              console.log(`[CustomerService] ✓ Retrieved ${indexedDBData.length} customers from IndexedDB`);
+              // Update cache for future reads
+              await cacheManager.set('customers', indexedDBData);
+
+              // Mark first load as complete
+              if (isFirstLoad) {
+                firstLoadMap.set(userId, true);
+                console.log(`[CustomerService] First load complete - found ${indexedDBData.length} customers in IndexedDB`);
+              }
+
+              // Return IndexedDB data (will sync with Supabase in background if online)
+              return indexedDBData;
+            } else {
+              console.log(`[CustomerService] IndexedDB has data but FORCE REFRESH is on - proceeding to Supabase`);
             }
-            
-            // Return IndexedDB data (will sync with Supabase in background if online)
-            return indexedDBData;
           }
         } catch (error) {
           console.warn('[CustomerService] IndexedDB read failed:', error);
         }
       }
 
-      // If we're offline and have no local data, return empty and mark first load complete
+      // If we're offline and have no local data, return empty
       if (!navigator.onLine) {
+        // If force refresh was requested but we are offline, we should return whatever we have in IndexedDB
+        // (which we might have skipped returning above)
+        if (isIndexedDBSupported()) {
+          try {
+            const indexedDBData = await CustomerDB.getAll(userId);
+            if (indexedDBData && indexedDBData.length > 0) {
+              console.log('[CustomerService] Offline with Force Refresh - returning IndexedDB fallback');
+              return indexedDBData;
+            }
+          } catch (e) { /* ignore */ }
+        }
+
         console.log('[CustomerService] Offline and no local data - returning empty array');
         if (isFirstLoad) {
           firstLoadMap.set(userId, true);
@@ -95,9 +118,9 @@ export async function getCustomers(userId: string | undefined): Promise<Customer
               .select('*')
               .eq('user_id', userId)
           );
-          
+
           const { data, error } = await withTimeout(dbQueryPromise, 15000);
-          
+
           if (error) {
             console.error('[CustomerService] Supabase error:', error);
             // Return IndexedDB data as fallback
@@ -119,29 +142,46 @@ export async function getCustomers(userId: string | undefined): Promise<Customer
             }
             throw error;
           }
-          
+
           const result = data ? data.map(item => toCamelCase(item)) as Customer[] : [];
           console.log(`[CustomerService] ✓ Supabase returned ${result.length} customers`);
-          
+
           // Sync to IndexedDB if we got data
           if (isIndexedDBSupported()) {
             try {
               if (result.length > 0) {
+                // If force refresh, we might want to clear old data first? 
+                // IndexedDB.add/update overwrites by ID, so it's fine.
+                // But deleted items won't be removed unless we clear first or sync deletes.
+                // For now, let's assume overwriting is sufficient, or use clear logic if we want perfect sync.
+                // To match other service logic, we iterate updates.
                 console.log(`[CustomerService] Syncing ${result.length} customers to IndexedDB`);
+
+                // OPTIONAL: If forceRefresh, maybe clear DB first to remove deleted items?
+                // But that risks losing offline changes if implementation is naive.
+                // Safest to just upsert for now.
+
                 for (const customer of result) {
                   await CustomerDB.update({ ...customer, user_id: userId } as never);
                 }
                 console.log(`[CustomerService] ✓ Synced to IndexedDB`);
               } else {
-                // Supabase is empty - check if IndexedDB has local data
+                // Supabase is empty
+                if (forceRefresh) {
+                  // If forced refresh and server is empty, maybe we should trust server?
+                  // No, be careful about wiping local data.
+                }
+
+                // Check if IndexedDB has local data
                 const indexedDBData = await CustomerDB.getAll(userId);
                 if (indexedDBData && indexedDBData.length > 0) {
+                  // If we forced refresh, we prioritize server (empty) vs local (stale?).
+                  // But usually empty server means truly empty.
+                  // Let's keep existing logic: preserve local data if server is empty,
+                  // UNLESS we are confident it should be empty.
+                  // For MVP, safer to preserve.
                   console.log(`[CustomerService] ⚠️ Supabase empty but IndexedDB has ${indexedDBData.length} customers - preserving local data`);
                   await cacheManager.set('customers', indexedDBData);
-                  if (isFirstLoad) {
-                    firstLoadMap.set(userId, true);
-                    console.log('[CustomerService] First load complete - preserving local data over empty Supabase');
-                  }
                   return indexedDBData;
                 }
               }
@@ -149,17 +189,17 @@ export async function getCustomers(userId: string | undefined): Promise<Customer
               console.warn('[CustomerService] IndexedDB sync failed:', syncError);
             }
           }
-          
+
           // Update cache and return
           await cacheManager.set('customers', result);
           console.log(`[CustomerService] ✓ Returning ${result.length} customers from Supabase`);
-          
+
           // Mark first load as complete
           if (isFirstLoad) {
             firstLoadMap.set(userId, true);
             console.log(`[CustomerService] First load complete - found ${result.length} customers in Supabase`);
           }
-          
+
           return result;
         } catch (error) {
           console.error('[CustomerService] Error:', error);
@@ -168,20 +208,10 @@ export async function getCustomers(userId: string | undefined): Promise<Customer
             const indexedDBData = await CustomerDB.getAll(userId);
             if (indexedDBData && indexedDBData.length > 0) {
               console.log(`[CustomerService] Returning ${indexedDBData.length} customers from IndexedDB (error fallback)`);
-              if (isFirstLoad) {
-                firstLoadMap.set(userId, true);
-                console.log('[CustomerService] First load complete - error, using IndexedDB fallback');
-              }
               return indexedDBData;
             }
           }
-          
-          // Mark first load as complete even on error with no fallback
-          if (isFirstLoad) {
-            firstLoadMap.set(userId, true);
-            console.log('[CustomerService] First load complete - error with no fallback data');
-          }
-          
+
           return [];
         }
       });
@@ -230,15 +260,15 @@ export async function addCustomer(
   try {
     const dbCustomer = toSnakeCase(customerWithUser);
     const { error } = await supabase.from('customers').insert(dbCustomer as unknown);
-    
+
     if (error) {
       console.error('❌ Database insert failed for customer:', error);
       throw error;
     }
-    
+
     console.log('✅ Successfully inserted customer into database');
     dispatchDataRefresh('customers-changed');
-    
+
     return customerWithUser;
   } catch (error) {
     console.error('⚠️ Error creating customer, queued for sync:', error);
@@ -259,7 +289,7 @@ export async function updateCustomer(
 ): Promise<Customer> {
   // Get current customer data
   let currentCustomer: Customer | undefined;
-  
+
   if (isIndexedDBSupported()) {
     try {
       const indexedCustomer = await CustomerDB.getById(id);
@@ -270,7 +300,7 @@ export async function updateCustomer(
       console.warn('[CustomerService] IndexedDB read failed:', error);
     }
   }
-  
+
   if (!currentCustomer) {
     const cached = await cacheManager.get<Customer[]>('customers');
     currentCustomer = cached?.find(c => c.id === id);
@@ -303,11 +333,11 @@ export async function updateCustomer(
       .update(dbUpdates as unknown)
       .eq('id', id)
       .eq('user_id', userId);
-    
+
     if (error) throw error;
-    
+
     dispatchDataRefresh('customers-changed');
-    
+
     return updatedCustomer;
   } catch (error) {
     console.error('Error updating customer:', error);
@@ -349,9 +379,9 @@ export async function deleteCustomer(
       .delete()
       .eq('id', id)
       .eq('user_id', userId);
-    
+
     if (error) throw error;
-    
+
     dispatchDataRefresh('customers-changed');
   } catch (error) {
     console.error('Error deleting customer:', error);

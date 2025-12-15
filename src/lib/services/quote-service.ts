@@ -16,14 +16,14 @@ import { QuoteDB, isIndexedDBSupported } from '../indexed-db';
  */
 function deduplicateQuotes(quotes: Quote[]): Quote[] {
   const quoteMap = new Map<string, Quote>();
-  
+
   for (const quote of quotes) {
     const existing = quoteMap.get(quote.id);
     if (!existing || new Date(quote.updatedAt) > new Date(existing.updatedAt)) {
       quoteMap.set(quote.id, quote);
     }
   }
-  
+
   const deduped = Array.from(quoteMap.values());
   if (quotes.length !== deduped.length) {
     console.log(`[QuoteService] Deduplicated ${quotes.length} quotes to ${deduped.length}`);
@@ -35,21 +35,29 @@ function deduplicateQuotes(quotes: Quote[]): Quote[] {
  * Fetch all quotes for a user
  * Priority: Cache > IndexedDB > Supabase
  */
-export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
+export async function getQuotes(
+  userId: string | undefined,
+  options?: { forceRefresh?: boolean }
+): Promise<Quote[]> {
   if (!userId) {
     console.warn('⚠️ No user ID - using cache for quotes.');
     const cached = await cacheManager.get<Quote[]>('quotes');
     return cached || [];
   }
 
+  const forceRefresh = options?.forceRefresh;
   const dedupKey = `fetch-quotes-${userId}`;
 
   return dedupedRequest(dedupKey, async () => {
+    let cached: Quote[] | null = null;
+
     // 1. Check memory cache first
-    const cached = await cacheManager.get<Quote[]>('quotes');
-    if (cached && cached.length > 0) {
-      console.log(`[QuoteService] Retrieved ${cached.length} quotes from cache`);
-      return deduplicateQuotes(cached);
+    if (!forceRefresh) {
+      cached = await cacheManager.get<Quote[]>('quotes');
+      if (cached && cached.length > 0) {
+        console.log(`[QuoteService] Retrieved ${cached.length} quotes from cache`);
+        return deduplicateQuotes(cached);
+      }
     }
 
     // 2. Try IndexedDB
@@ -57,11 +65,17 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
       try {
         const indexedDBData = await QuoteDB.getAll(userId);
         if (indexedDBData && indexedDBData.length > 0) {
-          console.log(`[QuoteService] Retrieved ${indexedDBData.length} quotes from IndexedDB`);
-          const dedupedData = deduplicateQuotes(indexedDBData);
-          // Populate cache
-          await cacheManager.set('quotes', dedupedData);
-          return dedupedData;
+
+          if (!forceRefresh) {
+            console.log(`[QuoteService] Retrieved ${indexedDBData.length} quotes from IndexedDB`);
+            const dedupedData = deduplicateQuotes(indexedDBData);
+            // Populate cache
+            await cacheManager.set('quotes', dedupedData);
+            cached = dedupedData;
+            return dedupedData;
+          } else {
+            console.log(`[QuoteService] IndexedDB has ${indexedDBData.length} quotes but FORCE REFRESH is on - proceeding to Supabase`);
+          }
         }
       } catch (error) {
         console.warn('[QuoteService] IndexedDB read failed, falling back to Supabase:', error);
@@ -83,26 +97,26 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
             .order('created_at', { ascending: false }),
           15000
         );
-        
+
         if (error) {
           console.error('Error fetching quotes from Supabase:', error);
           throw error;
         }
-        
+
         const result = data ? data.map(item => toCamelCase(item)) as Quote[] : [];
         const dedupedResult = deduplicateQuotes(result);
-        
+
         console.log(`[QuoteService] Fetched ${dedupedResult.length} quotes from Supabase`);
-        
+
         // Update IndexedDB (Replace all logic to ensure sync)
         if (isIndexedDBSupported()) {
           try {
             // Clear existing to remove stale/deleted data
             await QuoteDB.clear(userId);
-            
+
             // Add fresh data
             if (dedupedResult.length > 0) {
-              const promises = dedupedResult.map(quote => 
+              const promises = dedupedResult.map(quote =>
                 QuoteDB.add({ ...quote, userId } as Quote)
               );
               await Promise.all(promises);
@@ -112,10 +126,10 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
             console.warn('[QuoteService] Failed to sync to IndexedDB:', error);
           }
         }
-        
+
         // Update cache
         await cacheManager.set('quotes', dedupedResult);
-        
+
         return dedupedResult;
       } catch (error) {
         console.error('Error fetching quotes:', error);
@@ -130,7 +144,7 @@ export async function getQuotes(userId: string | undefined): Promise<Quote[]> {
  */
 export async function getQuote(userId: string, id: string): Promise<Quote | null> {
   const cacheKey = `quote-${id}`;
-  
+
   // 1. Check memory cache
   const cached = await cacheManager.get<Quote>(cacheKey);
   if (cached) return cached;
@@ -181,7 +195,7 @@ export async function getQuote(userId: string, id: string): Promise<Quote | null
         console.warn("IndexedDB update failed:", e);
       }
     }
-    
+
     await cacheManager.set(cacheKey, result);
     return result;
   } catch (error) {
@@ -221,9 +235,9 @@ export async function addQuote(
   try {
     const dbQuote = toSnakeCase(quoteWithUser);
     const { error } = await supabase.from('quotes').insert(dbQuote as unknown);
-    
+
     if (error) throw error;
-    
+
     console.log('✅ Quote created in Supabase');
     dispatchDataRefresh('quotes-changed');
     return quoteWithUser;
@@ -246,11 +260,11 @@ export async function updateQuote(
 ): Promise<Quote> {
   // Need current state to merge updates
   let currentQuote: Quote | null = null;
-  
+
   if (isIndexedDBSupported()) {
     currentQuote = await QuoteDB.getById(id);
   }
-  
+
   if (!currentQuote) {
     const cached = await cacheManager.get<Quote[]>('quotes');
     currentQuote = cached?.find(q => q.id === id) || null;
@@ -285,9 +299,9 @@ export async function updateQuote(
       .update(dbUpdates as unknown)
       .eq('id', id)
       .eq('user_id', userId);
-    
+
     if (error) throw error;
-    
+
     dispatchDataRefresh('quotes-changed');
     return updatedQuote;
   } catch (error) {
@@ -306,7 +320,7 @@ export async function deleteQuote(
   queueChange?: (change: QueueChange) => void
 ): Promise<void> {
   console.log(`[QuoteService] ========== DELETING QUOTE ${id} ==========`);
-  
+
   // 1. Delete from IndexedDB
   if (isIndexedDBSupported()) {
     try {
@@ -321,7 +335,7 @@ export async function deleteQuote(
   try {
     await cacheManager.invalidate('quotes');
     await cacheManager.invalidate('quotes', id);
-    
+
     // CRITICAL: Clear localStorage specific keys
     const keys = Object.keys(localStorage);
     keys.forEach(key => {
@@ -346,9 +360,9 @@ export async function deleteQuote(
       .delete()
       .eq('id', id)
       .eq('user_id', userId);
-    
+
     if (error) throw error;
-    
+
     console.log('[QuoteService] ✓ Deleted from Supabase');
     dispatchDataRefresh('quotes-changed');
   } catch (error) {
@@ -362,17 +376,17 @@ export async function deleteQuote(
  */
 export async function clearAllQuotes(userId: string): Promise<void> {
   console.log(`[QuoteService] ========== CLEARING ALL QUOTES ==========`);
-  
+
   try {
     // 1. Clear IndexedDB
     if (isIndexedDBSupported()) {
       await QuoteDB.clear(userId);
       console.log('[QuoteService] ✓ Cleared IndexedDB');
     }
-    
+
     // 2. Clear Cache & LocalStorage
     await cacheManager.invalidate('quotes');
-    
+
     const keys = Object.keys(localStorage);
     keys.forEach(key => {
       if (key.includes('quotes') || key.includes('quote-')) {
@@ -380,18 +394,18 @@ export async function clearAllQuotes(userId: string): Promise<void> {
       }
     });
     console.log('[QuoteService] ✓ Cleared Cache & Storage');
-    
+
     // 3. Clear Supabase
     if (navigator.onLine) {
       const { error } = await supabase
         .from('quotes')
         .delete()
         .eq('user_id', userId);
-      
+
       if (error) throw error;
       console.log('[QuoteService] ✓ Cleared Supabase');
     }
-    
+
     dispatchDataRefresh('quotes-changed');
   } catch (error) {
     console.error('[QuoteService] Error clearing quotes:', error);

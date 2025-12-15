@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { Plus, Search, Download, Upload, RefreshCw, AlertCircle, FileText, Trash2 } from 'lucide-react';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,13 +16,14 @@ import { ImportOptionsDialog, DuplicateStrategy } from '@/components/ImportOptio
 import { useAuth } from '@/contexts/AuthContext';
 import { useSyncManager } from '@/hooks/useSyncManager';
 import { useLoadingState } from '@/hooks/useLoadingState';
+import { useOptimisticList } from '@/hooks/useOptimisticList';
 import { ItemsTable } from '@/components/items/ItemsTable';
 import { ItemForm, type FormData } from '@/components/items/ItemForm';
 
 export default function Items() {
   const { user } = useAuth();
   const { queueChange, pauseSync, resumeSync } = useSyncManager();
-  const [items, setItems] = useState<Item[]>([]);
+  const { startLoading, stopLoading } = useLoadingState();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -31,8 +33,23 @@ export default function Items() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const { startLoading, stopLoading } = useLoadingState();
   const loadingRef = useRef(false);
+
+  // Memoize optimistic options
+  const optimisticOptions = useMemo(() => ({
+    entityName: 'Item',
+    onAdd: (item: Item) => addItem(user?.id, item, queueChange),
+    onUpdate: (item: Item) => updateItem(user?.id, item.id, item, queueChange),
+    onDelete: (id: string) => deleteItem(user?.id, id, queueChange)
+  }), [user?.id, queueChange]);
+
+  const {
+    items,
+    setItems,
+    add: optimisticAdd,
+    update: optimisticUpdate,
+    remove: optimisticDelete
+  } = useOptimisticList<Item>([], optimisticOptions);
 
   // Extract unique categories from items
   const uniqueCategories = Array.from(new Set(items.map(item => item.category))).sort();
@@ -40,7 +57,7 @@ export default function Items() {
   // Extract unique units from items
   const uniqueUnits = Array.from(new Set(items.map(item => item.units).filter(Boolean))).sort();
 
-  const loadItems = async (forceRefresh = false) => {
+  const loadItems = useCallback(async (forceRefresh = false) => {
     if (loadingRef.current) {
       console.log('[Items] Load already in progress, skipping');
       return;
@@ -60,7 +77,7 @@ export default function Items() {
         setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
       );
 
-      const dataPromise = getItems(user?.id);
+      const dataPromise = getItems(user?.id, { forceRefresh });
       const data = await Promise.race([dataPromise, timeoutPromise]);
 
       setItems(data);
@@ -85,16 +102,18 @@ export default function Items() {
       stopLoading('load-items');
       setLoadStartTime(null);
     }
-  };
+  }, [user?.id, startLoading, stopLoading, retryCount, setItems]);
 
   useEffect(() => {
-    loadItems();
-  }, [user]);
+    if (user?.id) {
+      loadItems();
+    }
+  }, [user?.id, loadItems]);
 
   // Refresh data when navigating back to the page
   useEffect(() => {
     let lastFocusTime = Date.now();
-    
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && user) {
         const timeSinceFocus = Date.now() - lastFocusTime;
@@ -104,10 +123,10 @@ export default function Items() {
         lastFocusTime = Date.now();
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [user]);
+  }, [user, loadItems]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -130,13 +149,15 @@ export default function Items() {
     if (confirm(`Delete ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}?`)) {
       try {
         const deletedIds = [...selectedItems];
+
+        // Optimistically update UI via setItems first (bulk operation manual handling)
         setItems(prev => prev.filter(i => !deletedIds.includes(i.id)));
         setSelectedItems([]);
-        
-        for (const itemId of deletedIds) {
-          await deleteItem(user?.id, itemId, queueChange);
-        }
-        
+
+        // Perform deletions
+        const promises = deletedIds.map(id => deleteItem(user?.id, id, queueChange));
+        await Promise.all(promises);
+
         toast.success(`Deleted ${deletedIds.length} item${deletedIds.length > 1 ? 's' : ''}`);
       } catch (error) {
         console.error('Error deleting items:', error);
@@ -148,38 +169,42 @@ export default function Items() {
 
   const handleBulkMarkup = async (markup: number, markupType: 'percentage' | 'fixed') => {
     if (selectedItems.length === 0 || !markup) return;
-    
+
     try {
+      // Optimistic update for bulk
       const updatedItems = items.map(item => {
         if (!selectedItems.includes(item.id)) return item;
-        
+
         const basePrice = item.basePrice;
-        const finalPrice = markupType === 'percentage' 
+        const finalPrice = markupType === 'percentage'
           ? basePrice + (basePrice * markup / 100)
           : basePrice + markup;
-        
+
         return { ...item, markup, markupType, finalPrice };
       });
       setItems(updatedItems);
-      
+
+      const promises = [];
       for (const itemId of selectedItems) {
         const item = items.find(i => i.id === itemId);
         if (item) {
           const basePrice = item.basePrice;
-          const finalPrice = markupType === 'percentage' 
+          const finalPrice = markupType === 'percentage'
             ? basePrice + (basePrice * markup / 100)
             : basePrice + markup;
-          
-          await updateItem(user?.id, itemId, {
+
+          promises.push(updateItem(user?.id, itemId, {
             markup,
             markupType,
             finalPrice
-          }, queueChange);
+          }, queueChange));
         }
       }
-      
+
+      await Promise.all(promises);
+
       toast.success(`Applied ${markup}${markupType === 'percentage' ? '%' : '$'} markup to ${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''}`);
-      
+
       const input = document.getElementById('bulk-markup') as HTMLInputElement;
       if (input) input.value = '';
     } catch (error) {
@@ -192,7 +217,7 @@ export default function Items() {
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || 
+    const matchesCategory = categoryFilter === 'all' ||
       item.category.toLowerCase().trim() === categoryFilter.toLowerCase().trim();
     return matchesSearch && matchesCategory;
   });
@@ -208,7 +233,9 @@ export default function Items() {
         : basePrice + markup;
 
       if (editingItem) {
-        const updated = await updateItem(user?.id, editingItem.id, {
+        // Optimistic Update
+        const updatedItem = {
+          ...editingItem,
           name: formData.name,
           description: formData.description,
           category: formData.category.trim(),
@@ -219,12 +246,12 @@ export default function Items() {
           units: formData.units,
           minQuantity,
           imageUrl,
-        }, queueChange);
-        setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
-        toast.success('Item updated successfully');
+        };
+        await optimisticUpdate(updatedItem);
       } else {
+        // Optimistic Add
         const newItem: Item = {
-          id: crypto.randomUUID(),
+          id: crypto.randomUUID(), // Temp ID
           name: formData.name,
           description: formData.description,
           category: formData.category.trim(),
@@ -237,17 +264,14 @@ export default function Items() {
           imageUrl,
           createdAt: new Date().toISOString(),
         };
-        const added = await addItem(user?.id, newItem, queueChange);
-        setItems(prev => [...prev, added]);
-        toast.success('Item added successfully');
+        await optimisticAdd(newItem);
       }
 
       setIsDialogOpen(false);
       setEditingItem(null);
     } catch (error) {
       console.error('Error saving item:', error);
-      toast.error('Failed to save item. Please try again.');
-      await loadItems();
+      // Toast handled by useOptimisticList
     }
   };
 
@@ -258,15 +282,12 @@ export default function Items() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this item?')) return;
-    
+
     try {
-      await deleteItem(user?.id, id, queueChange);
-      setItems(prev => prev.filter(i => i.id !== id));
-      toast.success('Item deleted successfully');
+      await optimisticDelete(id);
     } catch (error) {
       console.error('Error deleting item:', error);
-      toast.error('Failed to delete item. Please try again.');
-      await loadItems();
+      // Toast handled by useOptimisticList
     }
   };
 
@@ -304,7 +325,7 @@ export default function Items() {
       item.finalPrice,
       item.units
     ]);
-    
+
     const csvContent = [headers, ...rows].map(row => formatCSVLine(row)).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -328,24 +349,24 @@ export default function Items() {
 
   const processImport = async (strategy: DuplicateStrategy) => {
     if (!importFile || !user?.id) return;
-    
+
     const reader = new FileReader();
     reader.onload = async (e) => {
       const text = e.target?.result as string;
       const result = await importItemsFromCSV(text, user.id, strategy);
-      
+
       const messages = [];
       if (result.success > 0) messages.push(`✅ Imported: ${result.success}`);
       if (result.skipped > 0) messages.push(`⏭️ Skipped: ${result.skipped}`);
       if (result.overwritten > 0) messages.push(`🔄 Overwritten: ${result.overwritten}`);
       if (result.failed > 0) messages.push(`❌ Failed: ${result.failed}`);
-      
+
       if (result.errors.length > 0) {
         toast.error(`Import completed with errors:\n${result.errors.slice(0, 3).join('\n')}`);
       } else {
         toast.success(messages.join(' | '));
       }
-      
+
       await loadItems(true);
     };
     reader.readAsText(importFile);
@@ -359,187 +380,190 @@ export default function Items() {
     toast.success('Item template downloaded');
   };
 
-  return (
-    <div className="space-y-6 overflow-x-hidden max-w-full">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Items Catalog</h2>
-          <p className="text-muted-foreground">
-            Manage your products and services
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
-            <FileText className="h-4 w-4" />
-            <span className="ml-2 hidden sm:inline">Template</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportToCSV}>
-            <Download className="h-4 w-4" />
-            <span className="ml-2 hidden sm:inline">Export</span>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <label className="cursor-pointer">
-              <Upload className="h-4 w-4" />
-              <span className="ml-2 hidden sm:inline">Import</span>
-              <input
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={handleFileSelect}
-              />
-            </label>
-          </Button>
-          <Button size="sm" onClick={() => setIsDialogOpen(true)}>
-            <Plus className="h-4 w-4" />
-            <span className="ml-2 hidden sm:inline">Add Item</span>
-            <span className="ml-2 sm:hidden">Add</span>
-          </Button>
-        </div>
-      </div>
 
-      {selectedItems.length > 0 && (
-        <Card className="border-primary/50 bg-primary/5">
-          <CardContent className="py-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <span className="text-sm font-medium">
-                {selectedItems.length} item{selectedItems.length > 1 ? 's' : ''} selected
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="Markup"
-                    className="w-24 h-9"
-                    id="bulk-markup"
-                  />
-                  <Select
-                    onValueChange={(value) => {
-                      const input = document.getElementById('bulk-markup') as HTMLInputElement;
-                      if (input && input.value) {
-                        handleBulkMarkup(parseFloat(input.value), value as 'percentage' | 'fixed');
-                      }
-                    }}
+  return (
+    <PullToRefresh onRefresh={() => loadItems(true)}>
+      <div className="space-y-6 overflow-x-hidden max-w-full min-h-[calc(100vh-100px)]">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Items Catalog</h2>
+            <p className="text-muted-foreground">
+              Manage your products and services
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
+              <FileText className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Template</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportToCSV}>
+              <Download className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Export</span>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <label className="cursor-pointer">
+                <Upload className="h-4 w-4" />
+                <span className="ml-2 hidden sm:inline">Import</span>
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+              </label>
+            </Button>
+            <Button size="sm" onClick={() => setIsDialogOpen(true)}>
+              <Plus className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Add Item</span>
+              <span className="ml-2 sm:hidden">Add</span>
+            </Button>
+          </div>
+        </div>
+
+        {selectedItems.length > 0 && (
+          <Card className="border-primary/50 bg-primary/5">
+            <CardContent className="py-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span className="text-sm font-medium">
+                  {selectedItems.length} item{selectedItems.length > 1 ? 's' : ''} selected
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Markup"
+                      className="w-24 h-9"
+                      id="bulk-markup"
+                    />
+                    <Select
+                      onValueChange={(value) => {
+                        const input = document.getElementById('bulk-markup') as HTMLInputElement;
+                        if (input && input.value) {
+                          handleBulkMarkup(parseFloat(input.value), value as 'percentage' | 'fixed');
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-20 h-9">
+                        <SelectValue placeholder="%" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="percentage">%</SelectItem>
+                        <SelectItem value="fixed">$</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBulkDelete}
                   >
-                    <SelectTrigger className="w-20 h-9">
-                      <SelectValue placeholder="%" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="percentage">%</SelectItem>
-                      <SelectItem value="fixed">$</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <Trash2 className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Delete</span>
+                  </Button>
                 </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleBulkDelete}
-                >
-                  <Trash2 className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Delete</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>{error}</span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={handleRetry}>
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Retry {retryCount > 0 && `(${retryCount}/3)`}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleClearCacheAndRetry}>
+                  Clear Cache & Retry
                 </Button>
               </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {loadStartTime && Date.now() - loadStartTime > 10000 && loading && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Loading is taking longer than expected. If this continues, try clearing the cache.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search items..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {uniqueCategories.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
+            {filteredItems.length === 0 && !loading ? (
+              <div className="text-center py-12 text-muted-foreground">
+                {searchTerm || categoryFilter !== 'all' ? (
+                  <p>No items found matching your filters</p>
+                ) : (
+                  <>
+                    <p className="mb-4">No items yet. Add your first item to get started!</p>
+                    <Button onClick={() => setIsDialogOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Item
+                    </Button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <ItemsTable
+                items={filteredItems}
+                selectedItems={selectedItems}
+                onSelectItem={handleSelectItem}
+                onSelectAll={handleSelectAll}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            )}
           </CardContent>
         </Card>
-      )}
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="flex items-center justify-between">
-            <span>{error}</span>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={handleRetry}>
-                <RefreshCw className="h-3 w-3 mr-1" />
-                Retry {retryCount > 0 && `(${retryCount}/3)`}
-              </Button>
-              <Button size="sm" variant="outline" onClick={handleClearCacheAndRetry}>
-                Clear Cache & Retry
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
+        <ItemForm
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          editingItem={editingItem}
+          onSubmit={handleFormSubmit}
+          existingCategories={uniqueCategories}
+          existingUnits={uniqueUnits}
+        />
 
-      {loadStartTime && Date.now() - loadStartTime > 10000 && loading && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Loading is taking longer than expected. If this continues, try clearing the cache.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search items..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {uniqueCategories.map(cat => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {filteredItems.length === 0 && !loading ? (
-            <div className="text-center py-12 text-muted-foreground">
-              {searchTerm || categoryFilter !== 'all' ? (
-                <p>No items found matching your filters</p>
-              ) : (
-                <>
-                  <p className="mb-4">No items yet. Add your first item to get started!</p>
-                  <Button onClick={() => setIsDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Item
-                  </Button>
-                </>
-              )}
-            </div>
-          ) : (
-            <ItemsTable
-              items={filteredItems}
-              selectedItems={selectedItems}
-              onSelectItem={handleSelectItem}
-              onSelectAll={handleSelectAll}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      <ItemForm
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        editingItem={editingItem}
-        onSubmit={handleFormSubmit}
-        existingCategories={uniqueCategories}
-        existingUnits={uniqueUnits}
-      />
-
-      <ImportOptionsDialog
-        open={showImportDialog}
-        onOpenChange={setShowImportDialog}
-        onConfirm={processImport}
-        fileName={importFile?.name || ''}
-        entityType="items"
-      />
-    </div>
+        <ImportOptionsDialog
+          open={showImportDialog}
+          onOpenChange={setShowImportDialog}
+          onConfirm={processImport}
+          fileName={importFile?.name || ''}
+          entityType="items"
+        />
+      </div>
+    </PullToRefresh>
   );
 }

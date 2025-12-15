@@ -17,9 +17,28 @@ const MAX_RETRIES = 3;
 export function useSyncManager() {
   const { user } = useAuth();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [queueLength, setQueueLength] = useState(0);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  // Track failed sync attempts in session
+  const [failedCount, setFailedCount] = useState(0);
+
   const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const syncInProgressRef = useRef(false);
+
+  // Update online status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   /**
    * Get current queue from localStorage
@@ -28,7 +47,7 @@ export function useSyncManager() {
     try {
       const stored = localStorage.getItem(QUEUE_KEY);
       if (!stored) return [];
-      
+
       const queue = JSON.parse(stored);
       return Array.isArray(queue) ? queue : [];
     } catch (error) {
@@ -54,14 +73,14 @@ export function useSyncManager() {
    */
   const queueChange = useCallback((change: QueueChange) => {
     const queue = getQueue();
-    
+
     // CRITICAL: Deduplicate queue - if we're deleting something that was just created, remove both
     const existingCreateIndex = queue.findIndex(
-      q => q.type === 'create' && 
-      q.table === change.table && 
-      q.data.id === change.data.id
+      q => q.type === 'create' &&
+        q.table === change.table &&
+        q.data.id === change.data.id
     );
-    
+
     if (change.type === 'delete' && existingCreateIndex >= 0) {
       // Remove the create operation instead of adding a delete
       console.log('[SyncManager] Removing create operation for deleted item:', change.data.id);
@@ -69,17 +88,17 @@ export function useSyncManager() {
       saveQueue(queue);
       return;
     }
-    
+
     queue.push(change);
     saveQueue(queue);
-    
+
     // Also register with BackgroundSyncManager for better offline support
     backgroundSync.registerSync({
       type: change.type,
       entityType: change.table,
       data: change.data,
     });
-    
+
     console.log('[SyncManager] Queued change:', change.type, change.table);
   }, [getQueue, saveQueue]);
 
@@ -101,7 +120,7 @@ export function useSyncManager() {
           const { error: createError } = await supabase
             .from(change.table)
             .insert(dbData as never);
-          
+
           if (createError) {
             // If it's a duplicate key error, consider it successful
             if (createError.code === '23505') {
@@ -117,13 +136,13 @@ export function useSyncManager() {
             console.error('[SyncManager] Update missing ID:', change);
             return false;
           }
-          
+
           const { error: updateError } = await supabase
             .from(change.table)
             .update(dbData as never)
-            .eq('id', change.data.id)
+            .eq('id', change.data.id as string)
             .eq('user_id', user.id);
-          
+
           if (updateError) throw updateError;
           break;
         }
@@ -132,13 +151,13 @@ export function useSyncManager() {
             console.error('[SyncManager] Delete missing ID:', change);
             return false;
           }
-          
+
           const { error: deleteError } = await supabase
             .from(change.table)
             .delete()
-            .eq('id', change.data.id)
+            .eq('id', change.data.id as string)
             .eq('user_id', user.id);
-          
+
           if (deleteError) {
             // If item doesn't exist, consider delete successful
             if (deleteError.code === 'PGRST116') {
@@ -158,13 +177,13 @@ export function useSyncManager() {
       return true;
     } catch (error) {
       console.error(`[SyncManager] ❌ Error processing ${change.type} for ${change.table}:`, error);
-      
+
       if (retryCount < MAX_RETRIES) {
         console.log(`[SyncManager] Retrying (${retryCount + 1}/${MAX_RETRIES})...`);
         await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
         return processChange(change, retryCount + 1);
       }
-      
+
       return false;
     }
   }, [user?.id]);
@@ -175,6 +194,11 @@ export function useSyncManager() {
   const syncQueue = useCallback(async () => {
     if (!navigator.onLine) {
       console.log('[SyncManager] Offline, skipping sync');
+      return;
+    }
+
+    if (isPaused) {
+      console.log('[SyncManager] Sync paused, skipping');
       return;
     }
 
@@ -207,8 +231,10 @@ export function useSyncManager() {
 
     if (failedChanges.length === 0) {
       console.log('[SyncManager] ✅ All changes synced successfully');
+      setFailedCount(0);
     } else {
       console.warn(`[SyncManager] ⚠️ ${failedChanges.length} changes failed to sync`);
+      setFailedCount(prev => prev + failedChanges.length);
     }
 
     syncInProgressRef.current = false;
@@ -274,12 +300,32 @@ export function useSyncManager() {
     setQueueLength(queue.length);
   }, [getQueue]);
 
+  // Duplicate removed
+  const pauseSync = useCallback(() => {
+    setIsPaused(true);
+    console.log('[SyncManager] Sync paused');
+  }, []);
+
+  const resumeSync = useCallback(() => {
+    setIsPaused(false);
+    console.log('[SyncManager] Sync resumed');
+    // Trigger sync immediately upon resume
+    setTimeout(() => syncQueue(), 100);
+  }, [syncQueue]);
+
   return {
     isSyncing,
+    isPaused,
     queueLength,
     queueChange,
     syncQueue,
     clearQueue,
     removeFromQueue,
+    pauseSync,
+    resumeSync,
+    // Add aliases/extra props expected by consumers
+    isOnline,
+    pendingCount: queueLength,
+    failedCount,
   };
 }
