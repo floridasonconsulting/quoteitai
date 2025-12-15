@@ -254,7 +254,7 @@ export function OnboardingWizard() {
   const publicPaths = ['/public-quote-view', '/auth', '/landing', '/', '/privacy-policy', '/terms-of-service', '/quotes/public'];
   const isPublicPage = publicPaths.some(path =>
     location.pathname === path || location.pathname.startsWith(path + '/')
-  ) || location.pathname.includes('/preview');
+  ) || location.pathname.includes('/preview') || location.pathname.includes('/public/') || location.pathname.includes('/quotes/public');
 
   // Form data
   const [companyData, setCompanyData] = useState<CompanyData>({

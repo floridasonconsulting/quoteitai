@@ -31,7 +31,7 @@ export default function QuotePreview() {
 
       try {
         console.log("[QuotePreview] Loading quote:", id);
-        
+
         // Load quote and settings in parallel
         const [quoteData, settingsData] = await Promise.all([
           getQuote(user.id, id),
@@ -47,6 +47,47 @@ export default function QuotePreview() {
         console.log("[QuotePreview] Quote loaded successfully");
         setQuote(quoteData);
         setSettings(settingsData);
+
+        // 🚀 NEW: Fetch fresh items data for enrichment (similar to PublicQuoteView)
+        console.log("[QuotePreview] 🔄 Fetching fresh items table data for enrichment...");
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data: itemsData, error: itemsError } = await supabase
+          .from('items')
+          .select('name, image_url, enhanced_description, category')
+          .eq('user_id', user.id);
+
+        if (itemsError) {
+          console.warn("[QuotePreview] ⚠️ Could not fetch items table:", itemsError);
+          setQuote(quoteData); // Use minimal data if enrichment fails
+        } else if (itemsData) {
+          // Create lookup map
+          const itemsLookup = new Map();
+          itemsData.forEach(item => {
+            itemsLookup.set(item.name, {
+              imageUrl: item.image_url,
+              enhancedDescription: item.enhanced_description,
+              category: item.category
+            });
+          });
+
+          // Enrich items
+          const enrichedItems = quoteData.items.map(quoteItem => {
+            const freshData = itemsLookup.get(quoteItem.name);
+            if (freshData) {
+              return {
+                ...quoteItem,
+                imageUrl: freshData.imageUrl || quoteItem.imageUrl,
+                enhancedDescription: freshData.enhancedDescription || quoteItem.enhancedDescription,
+                category: freshData.category || quoteItem.category
+              };
+            }
+            return quoteItem;
+          });
+
+          setQuote({ ...quoteData, items: enrichedItems });
+        } else {
+          setQuote(quoteData);
+        }
       } catch (err) {
         console.error("[QuotePreview] Error loading data:", err);
         setError(err instanceof Error ? err.message : "Failed to load quote");
@@ -93,7 +134,7 @@ export default function QuotePreview() {
               This is how your proposal will appear to customers
             </p>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Button
               size="sm"
@@ -105,7 +146,7 @@ export default function QuotePreview() {
               <span className="hidden sm:inline">Back to Edit</span>
               <span className="sm:hidden">Back</span>
             </Button>
-            
+
             <Button
               size="sm"
               variant="outline"
@@ -124,8 +165,11 @@ export default function QuotePreview() {
       <div className="container mx-auto px-4 py-8">
         <ProposalViewer
           quote={quote}
-          companySettings={settings}
-          isPreview={true}
+          settings={settings}
+          isReadOnly={true}
+          onAccept={async () => { }}
+          onDecline={async () => { }}
+          onComment={async () => { }}
         />
       </div>
 
@@ -133,7 +177,7 @@ export default function QuotePreview() {
       <div className="container mx-auto px-4 pb-8">
         <Alert className="bg-amber-50 border-amber-200">
           <AlertDescription className="text-amber-900">
-            💡 <strong>Preview Mode:</strong> This view shows how your proposal appears to customers. 
+            💡 <strong>Preview Mode:</strong> This view shows how your proposal appears to customers.
             The public link requires email verification for security. Use the "View Public Link" button above to test the full customer experience.
           </AlertDescription>
         </Alert>

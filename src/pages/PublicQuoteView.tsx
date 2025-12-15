@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function PublicQuoteView() {
   const { id: shareToken } = useParams<{ id: string }>();
   const { user } = useAuth();
-  
+
   // CRITICAL: Decode the share token from URL (it was encoded with encodeURIComponent)
   const decodedShareToken = shareToken ? decodeURIComponent(shareToken) : undefined;
   const [loading, setLoading] = useState(true);
@@ -33,12 +33,12 @@ export default function PublicQuoteView() {
   // Wait for auth to initialize before checking session
   useEffect(() => {
     console.log('[PublicQuoteView] Auth state:', { user: user?.id, loading: authLoading });
-    
+
     // Give auth context a moment to initialize
     const authTimeout = setTimeout(() => {
       setAuthLoading(false);
     }, 1000);
-    
+
     return () => clearTimeout(authTimeout);
   }, []);
 
@@ -48,20 +48,20 @@ export default function PublicQuoteView() {
       console.log('[PublicQuoteView] Waiting for auth to initialize...');
       return;
     }
-    
+
     console.log('[PublicQuoteView] Auth ready, checking session - shareToken:', decodedShareToken, 'user:', user?.id);
     checkSession();
   }, [decodedShareToken, user?.id, authLoading]);
 
   const checkSession = async () => {
     console.log('[PublicQuoteView] checkSession - user:', user?.id);
-    
+
     try {
       // PRIORITY 1: Check for owner bypass flag from URL parameter
       const urlParams = new URLSearchParams(window.location.search);
       const ownerParam = urlParams.get('owner');
       console.log('[PublicQuoteView] Owner parameter check:', ownerParam);
-      
+
       if (ownerParam === 'true') {
         console.log('[PublicQuoteView] Owner bypass flag found in URL');
         setIsOwner(true);
@@ -86,10 +86,10 @@ export default function PublicQuoteView() {
       const sessionData = sessionStorage.getItem('proposal_session');
       if (sessionData) {
         const session = JSON.parse(sessionData);
-        
+
         // Check if session is valid and matches current share token
-        if (session.shareToken === decodedShareToken && 
-            new Date(session.expiresAt) > new Date()) {
+        if (session.shareToken === decodedShareToken &&
+          new Date(session.expiresAt) > new Date()) {
           console.log('[PublicQuoteView] Valid session token found');
           setSessionToken(session.token);
           setUserEmail(session.email);
@@ -120,7 +120,7 @@ export default function PublicQuoteView() {
 
     try {
       console.log('[PublicQuoteView] Fetching quote with shareToken:', decodedShareToken);
-      
+
       // Fetch quote to check ownership
       const { data: quoteData, error: quoteError } = await supabase
         .from('quotes')
@@ -166,14 +166,14 @@ export default function PublicQuoteView() {
     console.log('[PublicQuoteView] OTP verified');
     setSessionToken(token);
     setAuthenticated(true);
-    
+
     // Get email from session
     const sessionData = sessionStorage.getItem('proposal_session');
     if (sessionData) {
       const session = JSON.parse(sessionData);
       setUserEmail(session.email);
     }
-    
+
     loadQuote();
   };
 
@@ -188,10 +188,10 @@ export default function PublicQuoteView() {
 
     try {
       const { error } = await supabase.functions.invoke('update-quote-status', {
-        body: { 
-          shareToken: decodedShareToken, 
+        body: {
+          shareToken: decodedShareToken,
           status: 'commented',
-          comment: comment 
+          comment: comment
         }
       });
 
@@ -211,7 +211,7 @@ export default function PublicQuoteView() {
       setLoading(false);
       return;
     }
-    
+
     console.log('[PublicQuoteView] 🚀 Loading quote with shareToken:', decodedShareToken);
     setLoading(true);
     try {
@@ -240,7 +240,7 @@ export default function PublicQuoteView() {
         setLoading(false);
         return;
       }
-      
+
       console.log('[PublicQuoteView] ✅ Quote loaded successfully:', quoteData.id);
       console.log('[PublicQuoteView] Quote user_id:', quoteData.user_id);
 
@@ -248,7 +248,7 @@ export default function PublicQuoteView() {
       console.log('[PublicQuoteView] 🔄 Fetching fresh items table data for enrichment...');
       const { data: itemsData, error: itemsError } = await supabase
         .from('items')
-        .select('name, image_url, enhanced_description')
+        .select('name, image_url, enhanced_description, category')
         .eq('user_id', quoteData.user_id);
 
       if (itemsError) {
@@ -270,40 +270,40 @@ export default function PublicQuoteView() {
       // Enrich quote items with fresh data from items table
       const enrichedItems = (quoteData.items as unknown as QuoteItem[]).map(quoteItem => {
         const freshData = itemsLookup.get(quoteItem.name);
-        
+
         // CRITICAL FIX: The quote JSONB uses snake_case (image_url, enhanced_description)
         // but our TypeScript types expect camelCase (imageUrl, enhancedDescription)
         // We need to transform BOTH the JSONB fields AND the fresh data
-        
+
         // Type-safe access to snake_case fields from JSONB
-        type QuoteItemWithSnakeCase = QuoteItem & { 
-          image_url?: string; 
-          enhanced_description?: string; 
+        type QuoteItemWithSnakeCase = QuoteItem & {
+          image_url?: string;
+          enhanced_description?: string;
         };
         const itemWithSnakeCase = quoteItem as QuoteItemWithSnakeCase;
-        
+
         const jsonbImageUrl = itemWithSnakeCase.image_url || quoteItem.imageUrl;
         const jsonbEnhancedDesc = itemWithSnakeCase.enhanced_description || quoteItem.enhancedDescription;
-        
+
         if (freshData) {
           console.log(`[PublicQuoteView] ✅ Enriching "${quoteItem.name}" with:`, {
             imageUrl: freshData.imageUrl ? '✅ YES' : '❌ NO',
             enhancedDescription: freshData.enhancedDescription ? '✅ YES' : '❌ NO'
           });
-          
+
           return {
             ...quoteItem,
             imageUrl: freshData.imageUrl || jsonbImageUrl || quoteItem.imageUrl,
             enhancedDescription: freshData.enhancedDescription || jsonbEnhancedDesc || quoteItem.enhancedDescription
           };
         }
-        
+
         // If no fresh data, still transform snake_case to camelCase
         console.log(`[PublicQuoteView] ⚠️ No fresh data for "${quoteItem.name}", using JSONB:`, {
           hasJsonbImageUrl: !!jsonbImageUrl,
           hasJsonbEnhancedDesc: !!jsonbEnhancedDesc
         });
-        
+
         return {
           ...quoteItem,
           imageUrl: jsonbImageUrl || quoteItem.imageUrl,
@@ -337,7 +337,7 @@ export default function PublicQuoteView() {
       };
 
       console.log('[PublicQuoteView] ✅ Quote formatted. Item count:', formattedQuote.items.length);
-      
+
       // ENHANCED DEBUGGING: Check each item's image URL AFTER ENRICHMENT
       console.log('[PublicQuoteView] 📸 ENRICHED Item image status:', formattedQuote.items.map((item, idx) => ({
         index: idx,
@@ -348,12 +348,12 @@ export default function PublicQuoteView() {
         isValidUrl: item.imageUrl && (item.imageUrl.startsWith('http://') || item.imageUrl.startsWith('https://')),
         hasEnhancedDescription: !!item.enhancedDescription
       })));
-      
+
       setQuote(formattedQuote);
 
       // Fetch company settings - CRITICAL for proposal display
       console.log('[PublicQuoteView] 🔍 Fetching company settings for user:', quoteData.user_id);
-      
+
       const { data: settingsData, error: settingsError } = await supabase
         .from('company_settings')
         .select('*')
@@ -370,7 +370,7 @@ export default function PublicQuoteView() {
           email: settingsData.email,
           phone: settingsData.phone
         });
-        
+
         setSettings({
           name: settingsData.name || '',
           address: settingsData.address || '',
@@ -437,10 +437,10 @@ export default function PublicQuoteView() {
 
     try {
       const { error } = await supabase.functions.invoke('update-quote-status', {
-        body: { 
-          shareToken: decodedShareToken, 
+        body: {
+          shareToken: decodedShareToken,
           status: 'declined',
-          rejectionReason: reason 
+          rejectionReason: reason
         }
       });
 
@@ -510,7 +510,7 @@ export default function PublicQuoteView() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <ProposalViewer 
+      <ProposalViewer
         quote={quote}
         settings={settings || {
           name: '',
@@ -536,7 +536,7 @@ export default function PublicQuoteView() {
         open={paymentDialogOpen}
         onOpenChange={setPaymentDialogOpen}
         quoteTotal={quote.total}
-        onConfirmPayment={async () => {}}
+        onConfirmPayment={async () => { }}
       />
     </div>
   );
