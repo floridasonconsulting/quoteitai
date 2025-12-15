@@ -19,8 +19,8 @@ export const CATEGORY_DISPLAY_ORDER = [
 export type StandardCategory = typeof CATEGORY_DISPLAY_ORDER[number];
 
 // Category metadata for enhanced display
-export const CATEGORY_METADATA: Record<string, { 
-  displayName: string; 
+export const CATEGORY_METADATA: Record<string, {
+  displayName: string;
   description: string;
   icon?: string;
   heroImage?: string;
@@ -75,19 +75,22 @@ export const CATEGORY_METADATA: Record<string, {
 /**
  * Normalizes a category string to match standard categories
  */
-export const normalizeCategory = (category?: string): StandardCategory => {
+/**
+ * Normalizes a category string to match standard categories, or pass through custom ones
+ */
+export const normalizeCategory = (category?: string): string => {
   if (!category) return 'Other';
-  
+
   const normalized = category.trim();
-  
-  // Direct match
-  if (CATEGORY_DISPLAY_ORDER.includes(normalized as StandardCategory)) {
-    return normalized as StandardCategory;
+
+  // Direct match with standard categories
+  if ((CATEGORY_DISPLAY_ORDER as readonly string[]).includes(normalized)) {
+    return normalized;
   }
-  
-  // Fuzzy matching for common variations
+
+  // Fuzzy matching for standard categories (POOL SPECIFIC)
   const lowerCategory = normalized.toLowerCase();
-  
+
   if (lowerCategory.includes('pool') && lowerCategory.includes('structure')) return 'Pool Structure';
   if (lowerCategory.includes('interior') || lowerCategory.includes('finish') || lowerCategory.includes('plaster')) return 'Interior Surface';
   if (lowerCategory.includes('coping') && !lowerCategory.includes('tile')) return 'Coping';
@@ -97,10 +100,12 @@ export const normalizeCategory = (category?: string): StandardCategory => {
   }
   if (lowerCategory.includes('deck')) return 'Decking';
   if (lowerCategory.includes('equipment') || lowerCategory.includes('pump') || lowerCategory.includes('filter')) return 'Equipment';
-  if (lowerCategory.includes('accessory') || lowerCategory.includes('accessories') || lowerCategory.includes('light')) return 'Accessories';
+  if (lowerCategory.includes('accessory') || lowerCategory.includes('accessories')) return 'Accessories'; // Removed 'light' to avoid conflict with generic Lighting
   if (lowerCategory.includes('service')) return 'Services';
-  
-  return 'Other';
+
+  // Return the original normalized category (Title Case preferred but using raw for now)
+  // This allows "Landscaping", "Plumbing", etc. to pass through
+  return normalized;
 };
 
 /**
@@ -108,7 +113,12 @@ export const normalizeCategory = (category?: string): StandardCategory => {
  */
 export const getCategoryMetadata = (category: string) => {
   const normalized = normalizeCategory(category);
-  return CATEGORY_METADATA[normalized];
+  // Return metadata if exists, otherwise generate default
+  return CATEGORY_METADATA[normalized] || {
+    displayName: normalized,
+    description: '',
+    // No default heroImage here, handled by image library
+  };
 };
 
 /**
@@ -118,10 +128,20 @@ export const sortCategoriesByOrder = (categories: string[]): string[] => {
   return categories.sort((a, b) => {
     const normalizedA = normalizeCategory(a);
     const normalizedB = normalizeCategory(b);
-    
-    const indexA = CATEGORY_DISPLAY_ORDER.indexOf(normalizedA);
-    const indexB = CATEGORY_DISPLAY_ORDER.indexOf(normalizedB);
-    
-    return indexA - indexB;
+
+    const indexA = CATEGORY_DISPLAY_ORDER.indexOf(normalizedA as any);
+    const indexB = CATEGORY_DISPLAY_ORDER.indexOf(normalizedB as any);
+
+    // If both are standard categories, sort by order
+    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+
+    // If A is standard and B is custom, A comes first
+    if (indexA !== -1) return -1;
+
+    // If B is standard and A is custom, B comes first
+    if (indexB !== -1) return 1;
+
+    // If both are custom, sort alphabetically
+    return normalizedA.localeCompare(normalizedB);
   });
 };

@@ -47,7 +47,7 @@ const CompanyInfoStep = ({ data, onChange }: CompanyInfoStepProps) => (
       <Building className="h-5 w-5 text-primary" />
       <h4 className="font-semibold">Company Information</h4>
     </div>
-    
+
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="company-name">Company Name *</Label>
@@ -108,7 +108,7 @@ const BrandingStep = ({ data, onChange }: BrandingStepProps) => (
       <Palette className="h-5 w-5 text-primary" />
       <h4 className="font-semibold">Brand Colors</h4>
     </div>
-    
+
     <p className="text-sm text-muted-foreground mb-4">
       Choose colors that match your brand. These will appear on your quotes and proposals.
     </p>
@@ -157,12 +157,12 @@ const BrandingStep = ({ data, onChange }: BrandingStepProps) => (
       <div className="mt-4 p-4 border rounded-lg">
         <p className="text-sm font-medium mb-2">Preview</p>
         <div className="flex gap-2">
-          <div 
-            className="h-12 flex-1 rounded" 
+          <div
+            className="h-12 flex-1 rounded"
             style={{ backgroundColor: data.primaryColor }}
           />
-          <div 
-            className="h-12 flex-1 rounded" 
+          <div
+            className="h-12 flex-1 rounded"
             style={{ backgroundColor: data.accentColor }}
           />
         </div>
@@ -182,7 +182,7 @@ const ImportDataStep = ({ importOption, onChange }: ImportDataStepProps) => (
       <Upload className="h-5 w-5 text-primary" />
       <h4 className="font-semibold">Getting Started</h4>
     </div>
-    
+
     <p className="text-sm text-muted-foreground mb-4">
       How would you like to begin?
     </p>
@@ -249,13 +249,13 @@ export function OnboardingWizard() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isChecking, setIsChecking] = useState(true); // Add checking state
-  
+
   // CRITICAL: Check if this is a public page BEFORE any state initialization
-  const publicPaths = ['/public-quote-view', '/auth', '/landing', '/', '/privacy-policy', '/terms-of-service'];
-  const isPublicPage = publicPaths.some(path => 
+  const publicPaths = ['/public-quote-view', '/auth', '/landing', '/', '/privacy-policy', '/terms-of-service', '/quotes/public'];
+  const isPublicPage = publicPaths.some(path =>
     location.pathname === path || location.pathname.startsWith(path + '/')
-  );
-  
+  ) || location.pathname.includes('/preview');
+
   // Form data
   const [companyData, setCompanyData] = useState<CompanyData>({
     name: "",
@@ -263,12 +263,12 @@ export function OnboardingWizard() {
     phone: "",
     address: "",
   });
-  
+
   const [brandingData, setBrandingData] = useState<BrandingData>({
     primaryColor: "#4F46E5",
     accentColor: "#10B981",
   });
-  
+
   const [importOption, setImportOption] = useState("fresh");
 
   useEffect(() => {
@@ -279,7 +279,7 @@ export function OnboardingWizard() {
       setIsDialogOpen(false);
       return;
     }
-    
+
     // Check onboarding status when user is loaded
     const checkOnboardingStatus = async () => {
       if (!user?.id) {
@@ -287,20 +287,20 @@ export function OnboardingWizard() {
         setIsChecking(false);
         return;
       }
-      
+
       console.log("[OnboardingWizard] ========== CHECKING ONBOARDING STATUS ==========");
       console.log("[OnboardingWizard] User ID:", user.id);
-      
+
       // SIMPLIFIED CHECK: Only check localStorage flags (no database verification)
       const localFlag = localStorage.getItem(`onboarding_completed_${user.id}`);
       const statusFlag = localStorage.getItem(`onboarding_status_${user.id}`);
       const sessionFlag = sessionStorage.getItem(`onboarding_completed_${user.id}`);
-      
+
       console.log("[OnboardingWizard] Completion flags check:");
       console.log("  - localFlag:", localFlag);
       console.log("  - statusFlag:", statusFlag);
       console.log("  - sessionFlag:", sessionFlag);
-      
+
       // If ANY flag is set, consider onboarding complete (no database verification)
       if (localFlag === "true" || statusFlag === "completed" || sessionFlag === "true") {
         console.log("[OnboardingWizard] ✓ Onboarding completed (flags found) - wizard will NOT show");
@@ -309,14 +309,14 @@ export function OnboardingWizard() {
         console.log("[OnboardingWizard] ========== CHECK COMPLETE: WIZARD CLOSED ==========");
         return;
       }
-      
+
       // If no flags found, show onboarding wizard
       console.log("[OnboardingWizard] No completion flags found - wizard WILL show");
       setIsDialogOpen(true);
       setIsChecking(false);
       console.log("[OnboardingWizard] ========== CHECK COMPLETE: WIZARD OPENING ==========");
     };
-    
+
     checkOnboardingStatus();
   }, [user?.id]);
 
@@ -377,28 +377,28 @@ export function OnboardingWizard() {
     try {
       console.log("[OnboardingWizard] ========== STARTING ONBOARDING COMPLETION ==========");
       console.log("[OnboardingWizard] User ID:", user.id);
-      
+
       // CRITICAL: Set completion flags IMMEDIATELY (before any async operations)
       console.log("[OnboardingWizard] Step 1: Setting completion flags...");
       const completionKey = `onboarding_completed_${user.id}`;
       const completionTimestamp = new Date().toISOString();
-      
+
       localStorage.setItem(completionKey, "true");
       localStorage.setItem(`${completionKey}_timestamp`, completionTimestamp);
       localStorage.setItem(`onboarding_status_${user.id}`, "completed");
       sessionStorage.setItem(completionKey, "true");
       localStorage.setItem("onboarding_completed", "true");
       console.log("[OnboardingWizard] ✓ Completion flags set");
-      
+
       // CRITICAL: Close wizard immediately to prevent reopening
       console.log("[OnboardingWizard] Step 2: Closing wizard...");
       setIsDialogOpen(false);
       console.log("[OnboardingWizard] ✓ Wizard closed");
-      
+
       // Step 3: Get existing settings (non-blocking)
       console.log("[OnboardingWizard] Step 3: Fetching existing settings...");
       const existingSettings = await getSettings(user.id);
-      
+
       // Step 4: Merge with new onboarding data
       const updatedSettings = {
         ...existingSettings,
@@ -410,11 +410,11 @@ export function OnboardingWizard() {
       };
 
       console.log("[OnboardingWizard] Step 4: Saving settings...");
-      
+
       // Step 5: Save to storage
       await saveSettings(user.id, updatedSettings);
       console.log("[OnboardingWizard] ✓ Settings saved successfully");
-      
+
       // Step 6: Handle import option
       if (importOption === "sample") {
         console.log("[OnboardingWizard] Step 5: Loading sample data...");
@@ -436,15 +436,15 @@ export function OnboardingWizard() {
     } catch (error) {
       console.error("[OnboardingWizard] ========== ONBOARDING COMPLETION ERROR ==========");
       console.error("[OnboardingWizard] Error:", error);
-      
+
       // Ensure completion flags are set even on error (prevent infinite loop)
       const completionKey = `onboarding_completed_${user.id}`;
       localStorage.setItem(completionKey, "true");
       localStorage.setItem(`onboarding_status_${user.id}`, "completed");
       sessionStorage.setItem(completionKey, "true");
-      
+
       toast.success("Setup complete! If you encounter any issues, try refreshing the page.");
-      
+
       // Always close wizard to prevent loop
       setIsDialogOpen(false);
     }
@@ -454,7 +454,7 @@ export function OnboardingWizard() {
     // Don't render anything while checking - prevents flash of wizard
     return null;
   }
-  
+
   // CRITICAL: Early exit for public pages - don't render at all
   if (isPublicPage) {
     return null;
@@ -471,7 +471,7 @@ export function OnboardingWizard() {
           <DialogTitle className="text-2xl">{steps[currentStep].title}</DialogTitle>
           <DialogDescription>{steps[currentStep].description}</DialogDescription>
         </DialogHeader>
-        
+
         <div className="px-6 pb-2">
           <Progress value={progress} className="h-2" />
         </div>
