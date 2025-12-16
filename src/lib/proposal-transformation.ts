@@ -204,12 +204,11 @@ export function transformQuoteToProposal(
     const normalizedCat = normalizeCategory(item.category);
     const currentGroup = groupedItems.get(normalizedCat) || [];
 
-    console.log(`[Transformation] Item ${index + 1}/${quote.items.length}: "${item.name}"`, {
-      originalCategory: originalCategory || 'NULL/UNDEFINED',
-      normalizedCategory: normalizedCat,
-      wasNormalized: originalCategory !== normalizedCat,
-      groupSize: currentGroup.length + 1
-    });
+    console.log(`[Transformation] Item ${index + 1}/${quote.items.length}: "${item.name}"`);
+    console.log(`  - Original Category: "${originalCategory || 'NULL/UNDEFINED'}"`);
+    console.log(`  - Normalized Category: "${normalizedCat}"`);
+    console.log(`  - Was Normalized: ${originalCategory !== normalizedCat}`);
+    console.log(`  - Group Size: ${currentGroup.length + 1}`);
 
     // UNIVERSAL IMAGE RESOLUTION: Check database FIRST, then smart fallback
     const smartItemImage = getSmartItemImage(item.name, normalizedCat, item.imageUrl);
