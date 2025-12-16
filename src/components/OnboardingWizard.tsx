@@ -251,16 +251,18 @@ export function OnboardingWizard() {
   const [isChecking, setIsChecking] = useState(true); // Add checking state
 
   // CRITICAL: Check if this is a public page BEFORE any state initialization
+  const path = location.pathname.toLowerCase();
   const publicPaths = ['/public-quote-view', '/auth', '/landing', '/', '/privacy-policy', '/terms-of-service', '/quotes/public'];
-  const isPublicPage = publicPaths.some(path =>
-    location.pathname === path || location.pathname.startsWith(path + '/')
-  ) || location.pathname.includes('/preview') || location.pathname.includes('/public/') || location.pathname.includes('/quotes/public');
+  const isPublicPage = publicPaths.some(p =>
+    path === p || path.startsWith(p + '/')
+  ) || path.includes('/preview') || path.includes('/public/') || path.includes('/quotes/public');
 
   console.log('[OnboardingWizard] Checking visibility:', {
     pathname: location.pathname,
+    pathLower: path,
     isPublicPage,
-    matchPreview: location.pathname.includes('/preview'),
-    matchPublic: location.pathname.includes('/public/') || location.pathname.includes('/quotes/public')
+    matchPreview: path.includes('/preview'),
+    matchPublic: path.includes('/public/') || path.includes('/quotes/public')
   });
 
   // Form data
@@ -326,7 +328,7 @@ export function OnboardingWizard() {
     };
 
     checkOnboardingStatus();
-  }, [user?.id, location.pathname, isPublicPage]);
+  }, [user?.id]);
 
   const steps = [
     {
