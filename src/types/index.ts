@@ -86,6 +86,7 @@ export interface CompanySettings {
   phone: string;
   email: string;
   website: string;
+  industry?: 'pool-spa' | 'landscaping' | 'hvac' | 'roofing' | 'fencing' | 'general-contractor' | 'plumbing' | 'electrical' | 'painting' | 'flooring' | 'other';
   logo?: string;
   logoDisplayOption?: "logo" | "name" | "both";
   license?: string;

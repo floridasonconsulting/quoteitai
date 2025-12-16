@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { CategoryGroup } from "@/types/proposal";
 import { cn } from "@/lib/utils";
+import { useRef } from "react";
 
 interface CategoryGroupSectionProps {
   categoryGroup: CategoryGroup;
@@ -13,17 +14,39 @@ interface CategoryGroupSectionProps {
  * UNIVERSAL: Works for ANY industry with smart image fallbacks
  * FIXED: Proper viewport handling, no content hanging off
  * FIXED: Correct pricing visibility logic
+ * FIXED: Scroll boundary detection to prevent unwanted slide navigation
  */
 export function CategoryGroupSection({
   categoryGroup,
   showPricing = true,
   backgroundImage,
 }: CategoryGroupSectionProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
     }).format(amount);
+  };
+
+  // Handle wheel events intelligently - only stop propagation when we can actually scroll
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const isScrollingUp = e.deltaY < 0;
+    const isScrollingDown = e.deltaY > 0;
+
+    const isAtTop = scrollTop === 0;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1; // -1 for rounding
+
+    // Only prevent Swiper navigation if we're scrolling within bounds
+    if ((isScrollingDown && !isAtBottom) || (isScrollingUp && !isAtTop)) {
+      e.stopPropagation();
+    }
+    // If at top and scrolling up, or at bottom and scrolling down, allow Swiper to take over
   };
 
   console.log('[CategoryGroupSection] Rendering:', {
@@ -78,13 +101,11 @@ export function CategoryGroupSection({
         </div>
       )}
 
-      {/* FIXED: Scrollable Content Area with proper height constraints and scroll capture */}
+      {/* FIXED: Scrollable Content Area with smart scroll boundary detection */}
       <div
+        ref={scrollContainerRef}
         className="flex-1 overflow-y-auto"
-        onWheel={(e) => {
-          // Prevent mousewheel from bubbling up to Swiper when scrolling items
-          e.stopPropagation();
-        }}
+        onWheel={handleWheel}
       >
         <div className="max-w-5xl mx-auto p-6 md:p-12 pb-24">
           {/* Category Header - Only show if no background image */}

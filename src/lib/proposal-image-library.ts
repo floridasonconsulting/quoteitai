@@ -2,8 +2,127 @@
  * Proposal Image Library
  * Curated high-quality images for various industries and categories
  * 
- * Strategy: Smart Defaults → User Overrides → Elegant Gradient Fallback
+ * Strategy: Industry Defaults → Smart Keyword Matching → User Overrides → Elegant Gradient Fallback
  */
+
+import type { CompanySettings } from '@/types';
+
+// ============================================================================
+// SUPPORTED INDUSTRIES
+// ============================================================================
+
+export type Industry = CompanySettings['industry'];
+
+export const SUPPORTED_INDUSTRIES = [
+  { value: 'pool-spa', label: 'Pool & Spa Services' },
+  { value: 'landscaping', label: 'Landscaping & Lawn Care' },
+  { value: 'hvac', label: 'HVAC Services' },
+  { value: 'roofing', label: 'Roofing' },
+  { value: 'fencing', label: 'Fencing' },
+  { value: 'general-contractor', label: 'General Contractor' },
+  { value: 'plumbing', label: 'Plumbing' },
+  { value: 'electrical', label: 'Electrical' },
+  { value: 'painting', label: 'Painting' },
+  { value: 'flooring', label: 'Flooring' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+// ============================================================================
+// INDUSTRY-SPECIFIC IMAGE LIBRARIES
+// ============================================================================
+
+export const INDUSTRY_IMAGE_LIBRARIES = {
+  'pool-spa': {
+    cover: [
+      'https://images.unsplash.com/photo-1576013551627-0cc20b468848?w=1920&q=80', // Luxury pool aerial
+      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80', // Pool with travertine deck
+      'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1920&q=80', // Beautiful backyard pool
+      'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=1920&q=80', // Modern spa
+    ],
+    fallback: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80',
+  },
+  'landscaping': {
+    cover: [
+      'https://images.unsplash.com/photo-1558904541-efa843a96f01?w=1920&q=80', // Professional landscaping
+      'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1920&q=80', // Beautiful garden
+      'https://images.unsplash.com/photo-1592307277589-68b9b7c17c27?w=1920&q=80', // Manicured lawn
+      'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1920&q=80', // Irrigation system
+    ],
+    fallback: 'https://images.unsplash.com/photo-1558904541-efa843a96f01?w=1920&q=80',
+  },
+  'hvac': {
+    cover: [
+      'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=1920&q=80', // HVAC unit
+      'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1920&q=80', // Heating equipment
+      'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1920&q=80', // Commercial HVAC
+    ],
+    fallback: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=1920&q=80',
+  },
+  'roofing': {
+    cover: [
+      'https://images.unsplash.com/photo-1632778149955-e80f8ceca2e8?w=1920&q=80', // Roofing work
+      'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=1920&q=80', // Construction site
+      'https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=1920&q=80', // House siding/roof
+    ],
+    fallback: 'https://images.unsplash.com/photo-1632778149955-e80f8ceca2e8?w=1920&q=80',
+  },
+  'fencing': {
+    cover: [
+      'https://images.unsplash.com/photo-1610224705310-ec48f5d2dde1?w=1920&q=80', // Modern fence
+      'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1920&q=80', // Backyard with fence
+      'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=1920&q=80', // Patio fencing
+    ],
+    fallback: 'https://images.unsplash.com/photo-1610224705310-ec48f5d2dde1?w=1920&q=80',
+  },
+  'general-contractor': {
+    cover: [
+      'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=1920&q=80', // Construction site
+      'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=80', // Renovation work
+      'https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=1920&q=80', // Remodeling
+    ],
+    fallback: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=1920&q=80',
+  },
+  'plumbing': {
+    cover: [
+      'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1920&q=80', // Plumbing work
+      'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=1920&q=80', // Modern bathroom
+      'https://images.unsplash.com/photo-1556912167-f556f1f39faa?w=1920&q=80', // Kitchen plumbing
+    ],
+    fallback: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1920&q=80',
+  },
+  'electrical': {
+    cover: [
+      'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1920&q=80', // Electrical panel
+      'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=1920&q=80', // Modern lighting
+      'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1920&q=80', // Electrical work
+    ],
+    fallback: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1920&q=80',
+  },
+  'painting': {
+    cover: [
+      'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=1920&q=80', // Painting work
+      'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=1920&q=80', // Modern interior
+      'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1920&q=80', // Painted bedroom
+    ],
+    fallback: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=1920&q=80',
+  },
+  'flooring': {
+    cover: [
+      'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=1920&q=80', // Hardwood flooring
+      'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=1920&q=80', // Modern living room
+      'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1920&q=80', // Flooring installation
+    ],
+    fallback: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=1920&q=80',
+  },
+  'other': {
+    cover: [
+      'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1920&q=80', // Modern home exterior
+      'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80', // Commercial building
+      'https://images.unsplash.com/photo-1557683316-973673baf926?w=1920&q=80', // Abstract modern
+    ],
+    fallback: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1920&q=80',
+  },
+} as const;
 
 // ============================================================================
 // ELEGANT GRADIENT FALLBACK (Professional, Brand-Neutral)
