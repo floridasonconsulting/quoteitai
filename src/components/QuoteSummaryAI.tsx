@@ -67,12 +67,13 @@ export function QuoteSummaryAI({ quote, customer, onSummaryGenerated }: QuoteSum
 Title: ${sanitizedTitle}
 Customer: ${sanitizedCustomerName}
 Items: ${itemCount} items
-Total Investment: $${total}
 
-Key Items: ${quote.items.slice(0, 3).map(i => sanitizeForAI(i.name, 50)).join(', ')}`;
+Key Items: ${quote.items.slice(0, 3).map(i => sanitizeForAI(i.name, 50)).join(', ')}
+
+Create a professional, compelling summary that highlights the value and scope of this project. Do NOT include dollar amounts or totals.`;
 
     const result = await summaryAI.generate(prompt, context);
-    
+
     // Check if upgrade is required
     if (result && typeof result === 'object' && 'needsUpgrade' in result) {
       setRequiredTier(result.requiredTier);

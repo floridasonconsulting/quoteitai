@@ -25,7 +25,7 @@ export function CategoryGroupSection({
       currency: 'USD',
     }).format(amount);
   };
-  
+
   console.log('[CategoryGroupSection] Rendering:', {
     category: categoryGroup.category,
     itemCount: categoryGroup.items.length,
@@ -44,7 +44,7 @@ export function CategoryGroupSection({
     <div className="h-full w-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Hero Title Banner */}
       {backgroundImage && (
-        <div 
+        <div
           className="relative w-full h-48 md:h-64 flex-shrink-0"
           style={{
             backgroundImage: `url(${backgroundImage})`,
@@ -78,8 +78,14 @@ export function CategoryGroupSection({
         </div>
       )}
 
-      {/* FIXED: Scrollable Content Area with proper height constraints */}
-      <div className="flex-1 overflow-y-auto">
+      {/* FIXED: Scrollable Content Area with proper height constraints and scroll capture */}
+      <div
+        className="flex-1 overflow-y-auto"
+        onWheel={(e) => {
+          // Prevent mousewheel from bubbling up to Swiper when scrolling items
+          e.stopPropagation();
+        }}
+      >
         <div className="max-w-5xl mx-auto p-6 md:p-12 pb-24">
           {/* Category Header - Only show if no background image */}
           {!backgroundImage && (
