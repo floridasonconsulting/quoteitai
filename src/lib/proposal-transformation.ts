@@ -201,7 +201,7 @@ export function transformQuoteToProposal(
 
   quote.items.forEach((item, index) => {
     const originalCategory = item.category;
-    const normalizedCat = normalizeCategory(item.category);
+    const normalizedCat = normalizeCategory(item.category, item.name); // Pass item name for inference
     const currentGroup = groupedItems.get(normalizedCat) || [];
 
     console.log(`[Transformation] Item ${index + 1}/${quote.items.length}: "${item.name}"`);

@@ -76,10 +76,47 @@ export const CATEGORY_METADATA: Record<string, {
  * Normalizes a category string to match standard categories
  */
 /**
- * Normalizes a category string to match standard categories, or pass through custom ones
+ * Infer category from item name when category is missing
  */
-export const normalizeCategory = (category?: string): string => {
-  if (!category) return 'Other';
+function inferCategoryFromItemName(itemName: string): string {
+  const nameLower = itemName.toLowerCase();
+
+  // Pool Structure & Surface
+  if (nameLower.includes('quartz') || nameLower.includes('plaster') || nameLower.includes('pebble')) return 'Interior Surface';
+  if (nameLower.includes('pool') && (nameLower.includes('shell') || nameLower.includes('structure'))) return 'Pool Structure';
+
+  // Coping
+  if (nameLower.includes('coping')) return 'Coping';
+
+  // Tile
+  if (nameLower.includes('tile') || nameLower.includes('glass tile')) return 'Tile';
+
+  // Decking
+  if (nameLower.includes('travertine') || nameLower.includes('paver') || nameLower.includes('deck')) return 'Decking';
+
+  // Equipment
+  if (nameLower.includes('pump') || nameLower.includes('filter') || nameLower.includes('heater')) return 'Equipment';
+
+  // Removal/Labor services
+  if (nameLower.includes('removal') || nameLower.includes('demolition')) return 'Services';
+
+  return 'Other';
+}
+
+/**
+ * Normalizes a category string to match standard categories, or pass through custom ones
+ * ENHANCED: Now infers category from item name if category is missing
+ */
+export const normalizeCategory = (category?: string, itemName?: string): string => {
+  // If no category provided, try to infer from item name
+  if (!category) {
+    if (itemName) {
+      const inferred = inferCategoryFromItemName(itemName);
+      console.log(`[normalizeCategory] Inferred "${inferred}" from item name: "${itemName}"`);
+      return inferred;
+    }
+    return 'Other';
+  }
 
   const normalized = category.trim();
 
@@ -100,19 +137,18 @@ export const normalizeCategory = (category?: string): string => {
   }
   if (lowerCategory.includes('deck')) return 'Decking';
   if (lowerCategory.includes('equipment') || lowerCategory.includes('pump') || lowerCategory.includes('filter')) return 'Equipment';
-  if (lowerCategory.includes('accessory') || lowerCategory.includes('accessories')) return 'Accessories'; // Removed 'light' to avoid conflict with generic Lighting
+  if (lowerCategory.includes('accessory') || lowerCategory.includes('accessories')) return 'Accessories';
   if (lowerCategory.includes('service')) return 'Services';
 
-  // Return the original normalized category (Title Case preferred but using raw for now)
-  // This allows "Landscaping", "Plumbing", etc. to pass through
+  // Return the original normalized category
   return normalized;
 };
 
 /**
  * Gets display metadata for a category
  */
-export const getCategoryMetadata = (category: string) => {
-  const normalized = normalizeCategory(category);
+export const getCategoryMetadata = (category: string, itemName?: string) => {
+  const normalized = normalizeCategory(category, itemName);
   // Return metadata if exists, otherwise generate default
   return CATEGORY_METADATA[normalized] || {
     displayName: normalized,
@@ -126,8 +162,8 @@ export const getCategoryMetadata = (category: string) => {
  */
 export const sortCategoriesByOrder = (categories: string[]): string[] => {
   return categories.sort((a, b) => {
-    const normalizedA = normalizeCategory(a);
-    const normalizedB = normalizeCategory(b);
+    const normalizedA = normalizeCategory(a, undefined);
+    const normalizedB = normalizeCategory(b, undefined);
 
     const indexA = CATEGORY_DISPLAY_ORDER.indexOf(normalizedA as any);
     const indexB = CATEGORY_DISPLAY_ORDER.indexOf(normalizedB as any);
