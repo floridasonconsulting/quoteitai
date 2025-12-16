@@ -24,6 +24,7 @@ export default function QuotePreview() {
   useEffect(() => {
     const loadData = async () => {
       if (!id || !user?.id) {
+        console.error("[QuotePreview] Missing ID or User ID:", { id, userId: user?.id });
         setError("Invalid quote ID or user not authenticated");
         setLoading(false);
         return;

@@ -45,15 +45,24 @@ export function OTPSecurityWall({ shareToken, onVerified, onExpired }: OTPSecuri
       setExpiresIn(data.expiresIn || 900);
       setStep('code');
       toast.success('Access code sent to your email');
-      
+
       // Auto-clear code input after 15 minutes
       setTimeout(() => {
         setCode('');
         setStep('email');
         setError('Code expired. Please request a new one.');
       }, (data.expiresIn || 900) * 1000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error generating access code:', err);
+      if (err?.context?.response) {
+        try {
+          // Try to read response body if available
+          const body = await err.context.response.json();
+          console.error('Edge Function Error Body:', body);
+        } catch (e) {
+          console.error('Could not read error body:', e);
+        }
+      }
       setError(err instanceof Error ? err.message : 'Failed to send access code');
     } finally {
       setLoading(false);
@@ -110,7 +119,7 @@ export function OTPSecurityWall({ shareToken, onVerified, onExpired }: OTPSecuri
           </div>
           <CardTitle className="text-2xl">Secure Proposal Access</CardTitle>
           <CardDescription>
-            {step === 'email' 
+            {step === 'email'
               ? 'Enter your email to receive a secure access code'
               : 'Enter the 6-digit code sent to your email'
             }
@@ -148,9 +157,9 @@ export function OTPSecurityWall({ shareToken, onVerified, onExpired }: OTPSecuri
                 </p>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full h-12" 
+              <Button
+                type="submit"
+                className="w-full h-12"
                 disabled={loading || !email}
               >
                 {loading ? (
@@ -191,9 +200,9 @@ export function OTPSecurityWall({ shareToken, onVerified, onExpired }: OTPSecuri
                 </p>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full h-12" 
+              <Button
+                type="submit"
+                className="w-full h-12"
                 disabled={loading || code.length !== 6}
               >
                 {loading ? (

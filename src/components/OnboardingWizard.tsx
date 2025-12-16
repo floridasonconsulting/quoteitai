@@ -256,6 +256,13 @@ export function OnboardingWizard() {
     location.pathname === path || location.pathname.startsWith(path + '/')
   ) || location.pathname.includes('/preview') || location.pathname.includes('/public/') || location.pathname.includes('/quotes/public');
 
+  console.log('[OnboardingWizard] Checking visibility:', {
+    pathname: location.pathname,
+    isPublicPage,
+    matchPreview: location.pathname.includes('/preview'),
+    matchPublic: location.pathname.includes('/public/') || location.pathname.includes('/quotes/public')
+  });
+
   // Form data
   const [companyData, setCompanyData] = useState<CompanyData>({
     name: "",
@@ -289,6 +296,7 @@ export function OnboardingWizard() {
       }
 
       console.log("[OnboardingWizard] ========== CHECKING ONBOARDING STATUS ==========");
+      console.log("[OnboardingWizard] Location:", location.pathname);
       console.log("[OnboardingWizard] User ID:", user.id);
 
       // SIMPLIFIED CHECK: Only check localStorage flags (no database verification)
@@ -318,7 +326,7 @@ export function OnboardingWizard() {
     };
 
     checkOnboardingStatus();
-  }, [user?.id]);
+  }, [user?.id, location.pathname, isPublicPage]);
 
   const steps = [
     {
