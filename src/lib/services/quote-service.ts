@@ -246,7 +246,20 @@ export async function addQuote(
     dispatchDataRefresh('quotes-changed');
 
     // Return the server-side object (with shareToken, timestamps, etc.)
-    return toCamelCase(insertedData) as Quote;
+    const createdQuote = toCamelCase(insertedData) as Quote;
+
+    // CRITICAL: Ensure IndexedDB is updated with the server-returned data
+    if (isIndexedDBSupported() && userId) {
+      try {
+        const quoteWithUserId = { ...createdQuote, userId };
+        await QuoteDB.update(quoteWithUserId);
+        console.log('[QuoteService] ✅ IndexedDB updated with created quote');
+      } catch (error) {
+        console.warn('[QuoteService] ⚠️ Failed to update IndexedDB after quote creation:', error);
+      }
+    }
+
+    return createdQuote;
   } catch (error) {
     console.error('⚠️ Error creating quote, queuing for sync:', error);
     queueChange?.({ type: 'create', table: 'quotes', data: quoteWithUser });
