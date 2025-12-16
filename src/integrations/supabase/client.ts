@@ -7,10 +7,6 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// Functions client - Original Softgen Supabase (Edge Functions only: AI, email, etc.)
-const FUNCTIONS_SUPABASE_URL = "https://onxyqhixydadpnkvdtvm.supabase.co";
-const FUNCTIONS_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ueHlxaGl4eWRhZHBua3ZkdHZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1OTg2MjksImV4cCI6MjA3NTE3NDYyOX0.EVvMGQc-oRESw31zxliGKxx99tSor0-35nWBs4HjS8c";
-
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   console.error('⚠️ Missing Supabase environment variables!');
   console.error('Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel');
@@ -23,6 +19,9 @@ export const supabase = createClient<Database>(
   SUPABASE_PUBLISHABLE_KEY || 'placeholder-key'
 );
 
-// Functions client - Original Softgen Supabase (Edge Functions only: AI, email, etc.)
-// This allows you to keep your data separate while using existing Edge Functions
-export const supabaseFunctions = createClient(FUNCTIONS_SUPABASE_URL, FUNCTIONS_SUPABASE_KEY);
+// Functions client - Uses YOUR Supabase project (Edge Functions must be deployed there)
+// Reusing the primary client credentials to ensure consistency
+export const supabaseFunctions = createClient(
+  SUPABASE_URL || 'https://placeholder.supabase.co',
+  SUPABASE_PUBLISHABLE_KEY || 'placeholder-key'
+);

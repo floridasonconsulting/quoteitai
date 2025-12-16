@@ -61,7 +61,7 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
   const generate = async (prompt: string, context?: Record<string, unknown>): Promise<string | AIUpgradeInfo | null> => {
     // Sanitize prompt to prevent injection attacks
     const sanitizedPrompt = sanitizeForAI(prompt);
-    
+
     if (!sanitizedPrompt) {
       toast.error('Invalid Input', {
         description: 'Please provide valid input for AI generation.',
@@ -80,34 +80,36 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
       const data = await rateLimiter.trackRequest(rateLimitKey, async () => {
         try {
           const { data, error } = await supabaseFunctions.functions.invoke('ai-assist', {
-            body: { 
-              featureType, 
-              prompt: sanitizedPrompt, 
-              context 
+            body: {
+              featureType,
+              prompt: sanitizedPrompt,
+              context
             },
           });
 
           // Handle network/invoke errors
           if (error) {
-            console.error('[useAI] Edge Function invoke error:', error);
-            
+            console.error('[useAI] Edge Function invoke error (full):', JSON.stringify(error, null, 2));
+            console.error('[useAI] Error name:', error.name);
+            console.error('[useAI] Error message:', error.message);
+
             // Check if it's a 404 (Edge Function doesn't exist)
-            if (error.message?.includes('404') || 
-                error.message?.includes('FunctionsRelayError') ||
-                error.message?.includes('FunctionsHttpError')) {
+            if (error.message?.includes('404') ||
+              error.message?.includes('FunctionsRelayError') ||
+              error.message?.includes('FunctionsHttpError')) {
               // Return graceful error instead of throwing
               return {
                 error: 'AI features are currently unavailable. The app works without AI assistance - you can still create quotes manually.'
               };
             }
-            
+
             throw new Error('Failed to connect to AI service. Please try again.');
           }
 
           return data;
         } catch (invokeError) {
           console.error('[useAI] Edge Function not available:', invokeError);
-          
+
           // Return a friendly error for missing Edge Functions
           return {
             error: 'AI features are not available. Edge Functions need to be deployed to your Supabase project.'
@@ -119,9 +121,9 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
       if (data?.requiresUpgrade) {
         const needsMax = data.error?.toLowerCase?.()?.includes('max') ?? false;
         const requiredTier = needsMax ? 'max' : 'pro';
-        
+
         options?.onUpgradeRequired?.(requiredTier);
-        
+
         return {
           needsUpgrade: true,
           requiredTier,
@@ -137,7 +139,7 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
           options?.onError?.(data.error);
           return null;
         }
-        
+
         toast.error('AI Request Failed', {
           description: data.error,
           duration: 5000,
@@ -159,7 +161,7 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'AI generation failed';
       console.error('[useAI] AI generation error:', error);
-      
+
       // Special handling for rate limit errors
       if (message.includes('Rate limit exceeded')) {
         toast.error('Too Many Requests', {
@@ -174,7 +176,7 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
           description: message,
         });
       }
-      
+
       options?.onError?.(message);
       return null;
     } finally {

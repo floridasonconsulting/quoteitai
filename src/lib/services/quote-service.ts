@@ -90,11 +90,11 @@ export async function getQuotes(
     return cacheManager.coalesce(`quotes-${userId}`, async () => {
       try {
         const { data, error } = await withTimeout(
-          supabase
+          Promise.resolve(supabase
             .from('quotes')
             .select('*')
             .eq('user_id', userId)
-            .order('created_at', { ascending: false }),
+            .order('created_at', { ascending: false })),
           15000
         );
 
@@ -234,13 +234,19 @@ export async function addQuote(
   // 3. Save to Supabase
   try {
     const dbQuote = toSnakeCase(quoteWithUser);
-    const { error } = await supabase.from('quotes').insert(dbQuote as unknown);
+    const { data: insertedData, error } = await supabase
+      .from('quotes')
+      .insert(dbQuote as any)
+      .select()
+      .single();
 
     if (error) throw error;
 
     console.log('✅ Quote created in Supabase');
     dispatchDataRefresh('quotes-changed');
-    return quoteWithUser;
+
+    // Return the server-side object (with shareToken, timestamps, etc.)
+    return toCamelCase(insertedData) as Quote;
   } catch (error) {
     console.error('⚠️ Error creating quote, queuing for sync:', error);
     queueChange?.({ type: 'create', table: 'quotes', data: quoteWithUser });
