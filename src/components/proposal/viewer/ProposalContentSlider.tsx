@@ -159,7 +159,7 @@ function HeroSlide({ section }: { section: ProposalSection }) {
       style={{
         backgroundImage: section.backgroundImage
           ? `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.6)), url(${section.backgroundImage})`
-          : undefined,
+          : 'linear-gradient(135deg, #1e3a8a 0%, #000000 100%)', // Deep professional blue gradient
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}

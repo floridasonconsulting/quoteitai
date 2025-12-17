@@ -128,6 +128,7 @@ export default function Settings() {
           proposalTheme: (sSettings.proposal_theme as any) || 'modern-corporate',
           notifyEmailAccepted: sSettings.notify_email_accepted ?? true,
           notifyEmailDeclined: sSettings.notify_email_declined ?? true,
+          showProposalImages: sSettings.show_proposal_images ?? true,
           onboardingCompleted: sSettings.onboarding_completed ?? false,
         };
 

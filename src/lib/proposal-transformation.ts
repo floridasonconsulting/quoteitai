@@ -75,13 +75,16 @@ export function transformQuoteToProposal(
   const itemNames = quote.items.map(item => item.name);
 
   // Smart cover image selection (now uses quote title + categories + item names)
-  const smartCoverImage = getSmartCoverImage(
-    quote.title,
-    uniqueCategories,
-    visuals?.coverImage,
-    itemNames,
-    activeSettings.industry
-  );
+  // ONLY if images are enabled in settings
+  const smartCoverImage = activeSettings.showProposalImages !== false
+    ? getSmartCoverImage(
+      quote.title,
+      uniqueCategories,
+      visuals?.coverImage,
+      itemNames,
+      activeSettings.industry
+    )
+    : undefined;
 
   console.log('[Transformation] Smart cover image selected:', smartCoverImage);
 
@@ -148,7 +151,10 @@ export function transformQuoteToProposal(
     console.log(`  - Group Size: ${currentGroup.length + 1}`);
 
     // UNIVERSAL IMAGE RESOLUTION: Check database FIRST, then smart fallback
-    const smartItemImage = getSmartItemImage(item.name, normalizedCat, item.imageUrl, activeSettings.industry);
+    // ONLY if images are enabled in settings
+    const smartItemImage = activeSettings.showProposalImages !== false
+      ? getSmartItemImage(item.name, normalizedCat, item.imageUrl, activeSettings.industry)
+      : undefined;
 
     console.log('[Transformation] Processing item with SMART RESOLUTION:', {
       itemName: item.name,
@@ -196,11 +202,14 @@ export function transformQuoteToProposal(
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
 
     // Smart category image selection
-    const categoryImage = getCategoryImage(
-      category,
-      visuals?.sectionBackgrounds,
-      activeSettings.industry
-    );
+    // ONLY if images are enabled in settings
+    const categoryImage = activeSettings.showProposalImages !== false
+      ? getCategoryImage(
+        category,
+        visuals?.sectionBackgrounds,
+        activeSettings.industry
+      )
+      : undefined;
 
     const categoryGroup: CategoryGroup = {
       category,

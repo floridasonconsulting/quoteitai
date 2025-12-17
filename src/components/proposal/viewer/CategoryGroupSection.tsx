@@ -66,40 +66,40 @@ export function CategoryGroupSection({
   return (
     <div className="h-full w-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Hero Title Banner - REDUCED HEIGHT */}
-      {backgroundImage && (
-        <div
-          className="relative w-full h-32 md:h-40 flex-shrink-0"
-          style={{
-            backgroundImage: `url(${backgroundImage})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center px-6">
-              <motion.h2
+      <div
+        className="relative w-full h-32 md:h-40 flex-shrink-0"
+        style={{
+          backgroundImage: backgroundImage
+            ? `url(${backgroundImage})`
+            : 'linear-gradient(135deg, #111827 0%, #374151 100%)', // Subtle professional dark gradient
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center px-6">
+            <motion.h2
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-2xl md:text-4xl font-bold text-white mb-1"
+            >
+              {categoryGroup.displayName}
+            </motion.h2>
+            {categoryGroup.description && (
+              <motion.p
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="text-2xl md:text-4xl font-bold text-white mb-1"
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="text-sm md:text-base text-white/90 max-w-2xl mx-auto line-clamp-1"
               >
-                {categoryGroup.displayName}
-              </motion.h2>
-              {categoryGroup.description && (
-                <motion.p
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                  className="text-sm md:text-base text-white/90 max-w-2xl mx-auto line-clamp-1"
-                >
-                  {categoryGroup.description}
-                </motion.p>
-              )}
-            </div>
+                {categoryGroup.description}
+              </motion.p>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
       <div
         ref={scrollContainerRef}
@@ -107,26 +107,6 @@ export function CategoryGroupSection({
         onWheel={handleWheel}
       >
         <div className="max-w-5xl mx-auto p-4 md:p-8 pb-16">
-          {/* Category Header - Only show if no background image */}
-          {!backgroundImage && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="mb-8"
-            >
-              <h2 className="text-3xl md:text-5xl font-bold mb-3 text-gray-900 dark:text-white">
-                {categoryGroup.displayName}
-              </h2>
-              {categoryGroup.description && (
-                <p className="text-base md:text-lg text-muted-foreground max-w-3xl">
-                  {categoryGroup.description}
-                </p>
-              )}
-              <div className="mt-4 h-1 w-24 bg-primary rounded-full" />
-            </motion.div>
-          )}
-
           {/* Items Grid - TIGHTER SPACING */}
           <div className="space-y-4 mb-6">
             {categoryGroup.items.map((item, idx) => (

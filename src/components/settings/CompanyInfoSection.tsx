@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { CompanySettings } from "@/types";
 import { SUPPORTED_INDUSTRIES } from "@/lib/proposal-image-library";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 interface CompanyInfoSectionProps {
   settings: CompanySettings;
@@ -27,10 +28,11 @@ export function CompanyInfoSection({ settings, onUpdate }: CompanyInfoSectionPro
     industry: settings.industry || "other",
     license: settings.license || "",
     insurance: settings.insurance || "",
+    showProposalImages: settings.showProposalImages ?? true,
   });
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -180,6 +182,20 @@ export function CompanyInfoSection({ settings, onUpdate }: CompanyInfoSectionPro
               value={formData.insurance}
               onChange={(e) => handleChange("insurance", e.target.value)}
               placeholder="Optional"
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-3 border rounded-lg md:col-span-2">
+            <div className="space-y-0.5">
+              <Label htmlFor="showImages">Show Rich Images in Proposals</Label>
+              <div className="text-xs text-muted-foreground">
+                Display high-quality industry photos in proposal headers and sections
+              </div>
+            </div>
+            <Switch
+              id="showImages"
+              checked={formData.showProposalImages}
+              onCheckedChange={(checked) => handleChange("showProposalImages", checked)}
             />
           </div>
         </div>

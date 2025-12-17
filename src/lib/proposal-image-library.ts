@@ -52,11 +52,12 @@ export const INDUSTRY_IMAGE_LIBRARIES = {
   },
   'hvac': {
     cover: [
-      'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=1920&q=80', // HVAC unit
-      'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1920&q=80', // Heating equipment
-      'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1920&q=80', // Commercial HVAC
+      'https://images.unsplash.com/photo-1504384308090-c89eec2cd3a9?w=1920&q=80', // Modern furnace
+      'https://images.unsplash.com/photo-1590856029826-c7a73142bbf1?w=1920&q=80', // AC unit
+      'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=1920&q=80', // Industrial HVAC
+      'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1920&q=80', // Technician work
     ],
-    fallback: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=1920&q=80',
+    fallback: 'https://images.unsplash.com/photo-1504384308090-c89eec2cd3a9?w=1920&q=80',
   },
   'roofing': {
     cover: [
@@ -84,11 +85,12 @@ export const INDUSTRY_IMAGE_LIBRARIES = {
   },
   'plumbing': {
     cover: [
-      'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1920&q=80', // Plumbing work
-      'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=1920&q=80', // Modern bathroom
-      'https://images.unsplash.com/photo-1556912167-f556f1f39faa?w=1920&q=80', // Kitchen plumbing
+      'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=1920&q=80', // Pipe system
+      'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=1920&q=80', // Modern faucet
+      'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=1920&q=80', // Fine bathroom
+      'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1920&q=80', // Tools & work
     ],
-    fallback: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1920&q=80',
+    fallback: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=1920&q=80',
   },
   'electrical': {
     cover: [
@@ -205,12 +207,12 @@ export const DEFAULT_COVER_IMAGES = {
 
 export const CATEGORY_IMAGES = {
   // Pool Categories
-  'Pool Structure': 'https://images.unsplash.com/photo-1576013551627-0cc20b468848?w=1920&q=80',
-  'Coping': 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80',
-  'Tile': 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1920&q=80',
-  'Decking': 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1920&q=80',
-  'Equipment': 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1920&q=80',
-  'Accessories': 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1920&q=80',
+  'Pool Structure': 'https://images.unsplash.com/photo-1560742124-275138ed4e95?w=1920&q=80', // Construction focus
+  'Coping': 'https://images.unsplash.com/photo-1558904541-efa843a96f01?w=1920&q=80', // Trim/Detail
+  'Tile': 'https://images.unsplash.com/photo-1556912167-f556f1f39faa?w=1920&q=80', // Clean tiled surface
+  'Decking': 'https://images.unsplash.com/photo-1590059530462-811c7590874e?w=1920&q=80', // Stone pavers
+  'Equipment': 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=1920&q=80',
+  'Accessories': 'https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=1920&q=80',
 
   // Construction Categories
   'Foundation': 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=80',
@@ -227,17 +229,17 @@ export const CATEGORY_IMAGES = {
   'Flooring': 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=1920&q=80',
 
   // Landscaping
-  'Landscaping': 'https://images.unsplash.com/photo-1558904541-efa843a96f01?w=1920&q=80',
-  'Irrigation': 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1920&q=80',
-  'Hardscaping': 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=1920&q=80',
+  'Landscaping': 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1920&q=80',
+  'Irrigation': 'https://images.unsplash.com/photo-1563453392212-326f5e854473?w=1920&q=80',
+  'Hardscaping': 'https://images.unsplash.com/photo-1590059530462-811c7590874e?w=1920&q=80',
   'Lighting': 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=1920&q=80',
   'Softscaping': 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1920&q=80',
 
   // Interior Work
-  'Kitchen': 'https://images.unsplash.com/photo-1556912167-f556f1f39faa?w=1920&q=80',
-  'Bathroom': 'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=1920&q=80',
+  'Kitchen': 'https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?w=1920&q=80',
+  'Bathroom': 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=1920&q=80',
   'Cabinets': 'https://images.unsplash.com/photo-1556909212-d5b604d0c90d?w=1920&q=80',
-  'Countertops': 'https://images.unsplash.com/photo-1556912173-46c336c7fd55?w=1920&q=80',
+  'Countertops': 'https://images.unsplash.com/photo-1505798577917-a65157d3320a?w=1920&q=80',
 
   // Services
   'Services': 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1920&q=80',
@@ -262,14 +264,14 @@ export const CATEGORY_IMAGES = {
 
 export const SMART_KEYWORD_LIBRARY = {
   'pool-spa': [
-    { keywords: ['pump', 'motor'], url: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80' },
-    { keywords: ['filter', 'cartridge'], url: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=800&q=80' },
-    { keywords: ['heater', 'heat pump'], url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=800&q=80' },
-    { keywords: ['salt', 'chlorine', 'ozone'], url: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80' },
-    { keywords: ['skimmer', 'basket'], url: 'https://images.unsplash.com/photo-1576013551627-0cc20b468848?w=800&q=80' },
-    { keywords: ['pebble', 'plaster', 'quartz', 'marcite', 'finish'], url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80' },
-    { keywords: ['tile', 'mosaic'], url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80' },
-    { keywords: ['coping', 'cantilever', 'travertine'], url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80' },
+    { keywords: ['pump', 'motor'], url: 'https://images.unsplash.com/photo-1590856029826-c7a73142bbf1?w=800&q=80' },
+    { keywords: ['filter', 'cartridge'], url: 'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=800&q=80' },
+    { keywords: ['heater', 'heat pump'], url: 'https://images.unsplash.com/photo-1584622741563-12-811c7590874e?w=800&q=80' },
+    { keywords: ['salt', 'chlorine', 'ozone'], url: 'https://images.unsplash.com/photo-1560742124-275138ed4e95?w=800&q=80' },
+    { keywords: ['skimmer', 'basket'], url: 'https://images.unsplash.com/photo-1505798577917-a65157d3320a?w=800&q=80' },
+    { keywords: ['pebble', 'plaster', 'quartz', 'marcite', 'finish'], url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80' },
+    { keywords: ['tile', 'mosaic'], url: 'https://images.unsplash.com/photo-1556912167-f556f1f39faa?w=800&q=80' },
+    { keywords: ['coping', 'cantilever', 'travertine'], url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80' },
   ],
   'landscaping': [
     { keywords: ['plant', 'tree', 'shrub', 'flower'], url: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80' },
@@ -279,10 +281,10 @@ export const SMART_KEYWORD_LIBRARY = {
     { keywords: ['retain', 'wall', 'paver', 'stone'], url: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=800&q=80' },
   ],
   'hvac': [
-    { keywords: ['ac', 'air', 'cool', 'condenser'], url: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=800&q=80' },
-    { keywords: ['furnace', 'heat', 'boiler'], url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=800&q=80' },
+    { keywords: ['ac', 'air', 'cool', 'condenser'], url: 'https://images.unsplash.com/photo-1590856029826-c7a73142bbf1?w=800&q=80' },
+    { keywords: ['furnace', 'heat', 'boiler'], url: 'https://images.unsplash.com/photo-1504384308090-c89eec2cd3a9?w=800&q=80' },
     { keywords: ['duct', 'vent', 'register'], url: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=800&q=80' },
-    { keywords: ['thermostat', 'smart', 'control'], url: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80' },
+    { keywords: ['thermostat', 'smart', 'control'], url: 'https://images.unsplash.com/photo-1563453392212-326f5e854473?w=800&q=80' },
   ],
   'plumbing': [
     { keywords: ['pipe', 'leak', 'plumb'], url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=800&q=80' },
@@ -293,8 +295,8 @@ export const SMART_KEYWORD_LIBRARY = {
   'electrical': [
     { keywords: ['panel', 'breaker', 'fuse'], url: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80' },
     { keywords: ['wire', 'outlet', 'switch'], url: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80' },
-    { keywords: ['light', 'lamp', 'fixture', 'recessed'], url: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=800&q=80' },
-    { keywords: ['ev', 'charger', 'tesla'], url: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80' },
+    { keywords: ['light', 'lamp', 'fixture', 'recessed'], url: 'https://images.unsplash.com/photo-1510563800743-aed236490d08?w=800&q=80' },
+    { keywords: ['ev', 'charger', 'tesla'], url: 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=800&q=80' },
   ],
   'roofing': [
     { keywords: ['roof', 'shingle', 'tile'], url: 'https://images.unsplash.com/photo-1632778149955-e80f8ceca2e8?w=800&q=80' },

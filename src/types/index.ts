@@ -95,6 +95,7 @@ export interface CompanySettings {
   proposalTemplate?: "classic" | "modern" | "detailed";
   proposalTheme?: "modern-corporate" | "creative-studio" | "minimalist" | "bold-impact" | "elegant-serif" | "tech-future";
   currency?: string;
+  showProposalImages?: boolean;
   notifyEmailAccepted?: boolean;
   notifyEmailDeclined?: boolean;
   onboardingCompleted?: boolean;
