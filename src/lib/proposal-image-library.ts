@@ -231,6 +231,7 @@ export const CATEGORY_IMAGES = {
   'Irrigation': 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1920&q=80',
   'Hardscaping': 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=1920&q=80',
   'Lighting': 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=1920&q=80',
+  'Softscaping': 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1920&q=80',
 
   // Interior Work
   'Kitchen': 'https://images.unsplash.com/photo-1556912167-f556f1f39faa?w=1920&q=80',
@@ -247,8 +248,64 @@ export const CATEGORY_IMAGES = {
   // Generic - Pool/Outdoor focused fallbacks
   'Other': 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80', // Generic pool scene
   'Additional Items': 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1920&q=80', // Backyard pool
-  'Materials': 'https://images.unsplash.com/photo-1600607687644-c7171b42498b?w=1920&q=80',
+  'Materials': 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=80',
   'Labor': 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=80',
+
+  // HVAC
+  'Heating': 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1920&q=80',
+  'Cooling': 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=1920&q=80',
+} as const;
+
+// ============================================================================
+// SMART KEYWORD LIBRARY (Categorized by Industry)
+// ============================================================================
+
+export const SMART_KEYWORD_LIBRARY = {
+  'pool-spa': [
+    { keywords: ['pump', 'motor'], url: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80' },
+    { keywords: ['filter', 'cartridge'], url: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=800&q=80' },
+    { keywords: ['heater', 'heat pump'], url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=800&q=80' },
+    { keywords: ['salt', 'chlorine', 'ozone'], url: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80' },
+    { keywords: ['skimmer', 'basket'], url: 'https://images.unsplash.com/photo-1576013551627-0cc20b468848?w=800&q=80' },
+    { keywords: ['pebble', 'plaster', 'quartz', 'marcite', 'finish'], url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80' },
+    { keywords: ['tile', 'mosaic'], url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&q=80' },
+    { keywords: ['coping', 'cantilever', 'travertine'], url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80' },
+  ],
+  'landscaping': [
+    { keywords: ['plant', 'tree', 'shrub', 'flower'], url: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80' },
+    { keywords: ['lawn', 'grass', 'sod', 'mowing'], url: 'https://images.unsplash.com/photo-1592307277589-68b9b7c17c27?w=800&q=80' },
+    { keywords: ['irrigation', 'sprinkler', 'drip'], url: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800&q=80' },
+    { keywords: ['mulch', 'bark', 'rock'], url: 'https://images.unsplash.com/photo-1558904541-efa843a96f01?w=800&q=80' },
+    { keywords: ['retain', 'wall', 'paver', 'stone'], url: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=800&q=80' },
+  ],
+  'hvac': [
+    { keywords: ['ac', 'air', 'cool', 'condenser'], url: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=800&q=80' },
+    { keywords: ['furnace', 'heat', 'boiler'], url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=800&q=80' },
+    { keywords: ['duct', 'vent', 'register'], url: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=800&q=80' },
+    { keywords: ['thermostat', 'smart', 'control'], url: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80' },
+  ],
+  'plumbing': [
+    { keywords: ['pipe', 'leak', 'plumb'], url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=800&q=80' },
+    { keywords: ['water heater', 'tank'], url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=800&q=80' },
+    { keywords: ['drain', 'clog', 'sewer'], url: 'https://images.unsplash.com/photo-1556912167-f556f1f39faa?w=800&q=80' },
+    { keywords: ['faucet', 'sink', 'toilet', 'fixture'], url: 'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=800&q=80' },
+  ],
+  'electrical': [
+    { keywords: ['panel', 'breaker', 'fuse'], url: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80' },
+    { keywords: ['wire', 'outlet', 'switch'], url: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80' },
+    { keywords: ['light', 'lamp', 'fixture', 'recessed'], url: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=800&q=80' },
+    { keywords: ['ev', 'charger', 'tesla'], url: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&q=80' },
+  ],
+  'roofing': [
+    { keywords: ['roof', 'shingle', 'tile'], url: 'https://images.unsplash.com/photo-1632778149955-e80f8ceca2e8?w=800&q=80' },
+    { keywords: ['gutter', 'downspout'], url: 'https://images.unsplash.com/photo-1632778149955-e80f8ceca2e8?w=800&q=80' },
+    { keywords: ['skylight', 'vent'], url: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=800&q=80' },
+  ],
+  'painting': [
+    { keywords: ['paint', 'coat', 'prime'], url: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=800&q=80' },
+    { keywords: ['drywall', 'patch', 'texture'], url: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=800&q=80' },
+    { keywords: ['stain', 'seal'], url: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80' },
+  ],
 } as const;
 
 // ============================================================================
@@ -257,75 +314,93 @@ export const CATEGORY_IMAGES = {
 
 /**
  * Get the best cover image based on quote title, categories, AND item names
- * ENHANCED: Now analyzes all available text for better matching
  */
 export function getSmartCoverImage(
   quoteTitle: string,
   categories: string[],
   userCoverImage?: string,
-  itemNames?: string[], // NEW: Analyze item names too
-  industry?: Industry   // NEW: Explicit industry selection
+  itemNames?: string[],
+  industry?: Industry
 ): string {
-  // Priority 1: User-uploaded image
   if (userCoverImage) return userCoverImage;
 
-  // Priority 2: Explicit industry selection (High priority match)
+  // Use explicit industry if provided
   if (industry && industry in DEFAULT_COVER_IMAGES) {
-    console.log(`[SmartImage] Using explicit industry for cover: ${industry}`);
     return DEFAULT_COVER_IMAGES[industry as keyof typeof DEFAULT_COVER_IMAGES];
   }
 
-  // Combine title and categories ONLY for analysis (NOT item names - they're too specific)
-  const allText = [
-    quoteTitle,
-    ...categories
-  ].join(' ').toLowerCase();
-
-  console.log('[SmartImage] Analyzing quote for INDUSTRY-LEVEL cover image:', { quoteTitle, categories });
-
-  // Priority 2: Score each image by keyword relevance
-  const scores: Record<string, number> = {};
-
-  for (const [keyword, imageUrl] of Object.entries(DEFAULT_COVER_IMAGES)) {
-    let score = 0;
-    const keywordLower = keyword.toLowerCase();
-
-    // Title match (highest weight)
-    if (quoteTitle.toLowerCase().includes(keywordLower)) score += 10;
-
-    // Category match (medium weight)
-    for (const category of categories) {
-      if (category.toLowerCase().includes(keywordLower)) score += 5;
-    }
-
-    // General text match (low weight)
-    if (allText.includes(keywordLower)) score += 1;
-
-    if (score > 0) {
-      scores[keyword] = score;
-      console.log(`[SmartImage] Keyword "${keyword}" scored ${score}`);
-    }
-  }
-
-  // Return highest scoring image
-  if (Object.keys(scores).length > 0) {
-    const bestKeyword = Object.entries(scores)
-      .sort(([, a], [, b]) => b - a)[0][0];
-
-    console.log(`[SmartImage] Best match: "${bestKeyword}" (score: ${scores[bestKeyword]})`);
-    return DEFAULT_COVER_IMAGES[bestKeyword as keyof typeof DEFAULT_COVER_IMAGES];
-  }
-
-  // Priority 3: Detect industry from combined text
+  // Detect industry from all available text
   const detectedIndustry = detectIndustry(quoteTitle, categories);
+
+  // Keyword scoring
+  const scores: Record<string, number> = {};
+  const allText = `${quoteTitle} ${categories.join(' ')}`.toLowerCase();
+
+  for (const [id, imageUrl] of Object.entries(DEFAULT_COVER_IMAGES)) {
+    const idLower = id.toLowerCase();
+    let score = 0;
+
+    if (quoteTitle.toLowerCase().includes(idLower)) score += 10;
+    if (categories.some(c => c.toLowerCase().includes(idLower))) score += 5;
+    if (allText.includes(idLower)) score += 1;
+
+    if (score > 0) scores[id] = score;
+  }
+
+  if (Object.keys(scores).length > 0) {
+    const bestMatch = Object.entries(scores).sort(([, a], [, b]) => b - a)[0][0];
+    return DEFAULT_COVER_IMAGES[bestMatch as keyof typeof DEFAULT_COVER_IMAGES];
+  }
+
+  // Fallback to detected industry
   if (detectedIndustry && detectedIndustry in DEFAULT_COVER_IMAGES) {
-    console.log(`[SmartImage] Industry detected: ${detectedIndustry}`);
     return DEFAULT_COVER_IMAGES[detectedIndustry as keyof typeof DEFAULT_COVER_IMAGES];
   }
 
-  // Priority 4: Elegant gradient fallback (professional, brand-neutral)
-  console.log('[SmartImage] No match found, using elegant gradient fallback');
   return getGradientFallback();
+}
+
+/**
+ * Get a smart item image based on name, category and industry
+ * UNIVERSAL: Works for ANY industry using the keyword library
+ */
+export function getSmartItemImage(
+  itemName: string,
+  category: string,
+  existingUrl?: string,
+  industry?: Industry
+): string | undefined {
+  if (existingUrl && existingUrl.startsWith('http')) return existingUrl;
+
+  const nameLower = itemName.toLowerCase();
+
+  // 1. Search in explicitly selected industry first
+  if (industry && industry in SMART_KEYWORD_LIBRARY) {
+    const lib = SMART_KEYWORD_LIBRARY[industry as keyof typeof SMART_KEYWORD_LIBRARY];
+    for (const item of lib) {
+      if (item.keywords.some(k => nameLower.includes(k))) return item.url;
+    }
+  }
+
+  // 2. Search across ALL industries (cross-matching)
+  for (const [ind, lib] of Object.entries(SMART_KEYWORD_LIBRARY)) {
+    for (const item of lib) {
+      if (item.keywords.some(k => nameLower.includes(k))) return item.url;
+    }
+  }
+
+  // 3. Category match
+  const catImage = getCategoryImage(category);
+  const genericOther = CATEGORY_IMAGES['Other'];
+
+  if (catImage && catImage !== genericOther) return catImage;
+
+  // 4. Industry-specific fallback
+  if (industry && industry in INDUSTRY_IMAGE_LIBRARIES) {
+    return (INDUSTRY_IMAGE_LIBRARIES[industry as keyof typeof INDUSTRY_IMAGE_LIBRARIES] as any).fallback;
+  }
+
+  return catImage;
 }
 
 /**
@@ -333,28 +408,25 @@ export function getSmartCoverImage(
  */
 export function getCategoryImage(
   category: string,
-  userImages?: Record<string, string>
+  userImages?: Record<string, string>,
+  industry?: Industry
 ): string {
-  // Priority 1: User-uploaded category image
-  if (userImages?.[category]) {
-    return userImages[category];
+  if (userImages?.[category]) return userImages[category];
+
+  // Exact match
+  if (category in CATEGORY_IMAGES) return CATEGORY_IMAGES[category as keyof typeof CATEGORY_IMAGES];
+
+  // Fuzzy match
+  const catLower = category.toLowerCase();
+  for (const [key, url] of Object.entries(CATEGORY_IMAGES)) {
+    if (catLower.includes(key.toLowerCase()) || key.toLowerCase().includes(catLower)) return url;
   }
 
-  // Priority 2: Exact match from library
-  if (category in CATEGORY_IMAGES) {
-    return CATEGORY_IMAGES[category as keyof typeof CATEGORY_IMAGES];
+  // Industry-specific fallback for category
+  if (industry && industry in INDUSTRY_IMAGE_LIBRARIES) {
+    return (INDUSTRY_IMAGE_LIBRARIES[industry as keyof typeof INDUSTRY_IMAGE_LIBRARIES] as any).fallback;
   }
 
-  // Priority 3: Fuzzy match
-  const categoryLower = category.toLowerCase();
-
-  for (const [key, imageUrl] of Object.entries(CATEGORY_IMAGES)) {
-    if (categoryLower.includes(key.toLowerCase()) || key.toLowerCase().includes(categoryLower)) {
-      return imageUrl;
-    }
-  }
-
-  // Priority 4: Generic fallback
   return CATEGORY_IMAGES['Other'];
 }
 
@@ -363,50 +435,32 @@ export function getCategoryImage(
  */
 export function mapCategoriesToImages(
   categories: string[],
-  userImages?: Record<string, string>
+  userImages?: Record<string, string>,
+  industry?: Industry
 ): Record<string, string> {
   const mapping: Record<string, string> = {};
-
   categories.forEach(category => {
-    mapping[category] = getCategoryImage(category, userImages);
+    mapping[category] = getCategoryImage(category, userImages, industry);
   });
-
   return mapping;
 }
 
 /**
  * Industry detection from quote data
- * ENHANCED: More comprehensive keyword matching
  */
 export function detectIndustry(quoteTitle: string, categories: string[]): string {
   const allText = `${quoteTitle} ${categories.join(' ')}`.toLowerCase();
 
-  // Pool & Spa (most specific first)
-  if (allText.includes('pool') || allText.includes('spa') || allText.includes('swimming')) return 'pool';
-
-  // Landscaping
-  if (allText.includes('landscape') || allText.includes('garden') || allText.includes('lawn')) return 'landscaping';
-
-  // Home Services
-  if (allText.includes('roof')) return 'roofing';
-  if (allText.includes('plumb')) return 'plumbing';
-  if (allText.includes('electric')) return 'electrical';
-  if (allText.includes('hvac') || allText.includes('heating') || allText.includes('cooling') || allText.includes('air condition')) return 'hvac';
-
-  // Interior
-  if (allText.includes('kitchen')) return 'kitchen';
-  if (allText.includes('bathroom') || allText.includes('bath')) return 'bathroom';
-
-  // Exterior
+  if (allText.includes('pool') || allText.includes('spa') || allText.includes('swimming')) return 'pool-spa';
+  if (allText.includes('landscape') || allText.includes('garden') || allText.includes('lawn') || allText.includes('mowing')) return 'landscaping';
+  if (allText.includes('hvac') || allText.includes('heat') || allText.includes('cool') || allText.includes('ac ')) return 'hvac';
+  if (allText.includes('roof') || allText.includes('shingle')) return 'roofing';
+  if (allText.includes('plumb') || allText.includes('pipe') || allText.includes('leak')) return 'plumbing';
+  if (allText.includes('electric') || allText.includes('wire') || allText.includes('panel')) return 'electrical';
   if (allText.includes('paint')) return 'painting';
-  if (allText.includes('floor')) return 'flooring';
-  if (allText.includes('deck')) return 'decking';
-  if (allText.includes('patio')) return 'patio';
+  if (allText.includes('floor') || allText.includes('hardwood') || allText.includes('tile')) return 'flooring';
   if (allText.includes('fence')) return 'fencing';
+  if (allText.includes('renov') || allText.includes('remodel') || allText.includes('construct')) return 'general-contractor';
 
-  // Construction
-  if (allText.includes('construct') || allText.includes('build') || allText.includes('renovat') || allText.includes('remodel')) return 'construction';
-
-  // Fallback to elegant gradient
-  return 'generic_modern';
+  return 'other';
 }

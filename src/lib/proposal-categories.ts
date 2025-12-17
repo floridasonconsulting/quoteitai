@@ -6,14 +6,21 @@
 // Standard category display order (enforced in proposals)
 export const CATEGORY_DISPLAY_ORDER = [
   'Pool Structure',
-  'Interior Surface',  // NEW: Added for pool finishes
+  'Interior Surface',
   'Coping',
   'Tile',
   'Decking',
+  'Heating',
+  'Cooling',
+  'Landscaping',
+  'Hardscaping',
+  'Softscaping',
   'Equipment',
   'Accessories',
+  'Labor',
+  'Materials',
   'Services',
-  'Other' // Catch-all for uncategorized items
+  'Other'
 ] as const;
 
 export type StandardCategory = typeof CATEGORY_DISPLAY_ORDER[number];
@@ -70,6 +77,39 @@ export const CATEGORY_METADATA: Record<string, {
     description: 'Other items and services',
     heroImage: 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=1920&q=80'
   },
+  // HVAC
+  'Heating': {
+    displayName: 'Heating Services',
+    description: 'Furnace installation, repair, and maintenance',
+    heroImage: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1920&q=80'
+  },
+  'Cooling': {
+    displayName: 'Cooling Services',
+    description: 'AC installation and cooling system optimization',
+    heroImage: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=1920&q=80'
+  },
+  // Landscaping
+  'Softscaping': {
+    displayName: 'Planting & Softscaping',
+    description: 'Trees, shrubs, flowers, and turf installation',
+    heroImage: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1920&q=80'
+  },
+  'Hardscaping': {
+    displayName: 'Hardscaping',
+    description: 'Patios, walls, and structural landscape elements',
+    heroImage: 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=1920&q=80'
+  },
+  // General
+  'Materials': {
+    displayName: 'Materials & Supplies',
+    description: 'High-quality materials for your project',
+    heroImage: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=80'
+  },
+  'Labor': {
+    displayName: 'Professional Labor',
+    description: 'Skilled craftsmanship and expert installation',
+    heroImage: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=80'
+  }
 };
 
 /**
@@ -139,6 +179,18 @@ export const normalizeCategory = (category?: string, itemName?: string): string 
   if (lowerCategory.includes('equipment') || lowerCategory.includes('pump') || lowerCategory.includes('filter')) return 'Equipment';
   if (lowerCategory.includes('accessory') || lowerCategory.includes('accessories')) return 'Accessories';
   if (lowerCategory.includes('service')) return 'Services';
+
+  // HVAC
+  if (lowerCategory.includes('heat') || lowerCategory.includes('furnace')) return 'Heating';
+  if (lowerCategory.includes('cool') || lowerCategory.includes('ac ')) return 'Cooling';
+
+  // Landscaping
+  if (lowerCategory.includes('plant') || lowerCategory.includes('tree') || lowerCategory.includes('flower') || lowerCategory.includes('softscape')) return 'Softscaping';
+  if (lowerCategory.includes('hardscape') || lowerCategory.includes('paving') || lowerCategory.includes('wall')) return 'Hardscaping';
+
+  // General
+  if (lowerCategory.includes('labor') || lowerCategory.includes('work') || lowerCategory.includes('installation')) return 'Labor';
+  if (lowerCategory.includes('material') || lowerCategory.includes('supply')) return 'Materials';
 
   // Return the original normalized category
   return normalized;
