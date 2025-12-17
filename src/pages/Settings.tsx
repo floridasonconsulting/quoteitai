@@ -62,6 +62,7 @@ export default function Settings() {
     phone: "",
     email: "",
     website: "",
+    industry: "other",
     license: "",
     insurance: "",
     logoDisplayOption: "both",
@@ -96,35 +97,38 @@ export default function Settings() {
       }
 
       if (supabaseSettings) {
+        const sSettings = supabaseSettings as any;
         console.log('[Settings] ✓ Loaded settings from Supabase:', {
-          name: supabaseSettings.name,
-          email: supabaseSettings.email,
-          phone: supabaseSettings.phone,
-          address: supabaseSettings.address,
-          termsLength: supabaseSettings.terms?.length || 0,
-          hasLogo: !!supabaseSettings.logo
+          name: sSettings.name,
+          email: sSettings.email,
+          phone: sSettings.phone,
+          address: sSettings.address,
+          industry: sSettings.industry,
+          termsLength: sSettings.terms?.length || 0,
+          hasLogo: !!sSettings.logo
         });
 
         // Convert database format to app format
         const loadedSettings: CompanySettings = {
-          name: supabaseSettings.name || "",
-          address: supabaseSettings.address || "",
-          city: supabaseSettings.city || "",
-          state: supabaseSettings.state || "",
-          zip: supabaseSettings.zip || "",
-          phone: supabaseSettings.phone || "",
-          email: supabaseSettings.email || "",
-          website: supabaseSettings.website || "",
-          logo: supabaseSettings.logo || undefined,
-          logoDisplayOption: (supabaseSettings.logo_display_option as 'logo' | 'name' | 'both') || 'both',
-          license: supabaseSettings.license || "",
-          insurance: supabaseSettings.insurance || "",
-          terms: supabaseSettings.terms || "",
-          proposalTemplate: (supabaseSettings.proposal_template as 'classic' | 'modern' | 'detailed') || 'classic',
-          proposalTheme: supabaseSettings.proposal_theme || 'modern-corporate',
-          notifyEmailAccepted: supabaseSettings.notify_email_accepted ?? true,
-          notifyEmailDeclined: supabaseSettings.notify_email_declined ?? true,
-          onboardingCompleted: supabaseSettings.onboarding_completed ?? false,
+          name: sSettings.name || "",
+          address: sSettings.address || "",
+          city: sSettings.city || "",
+          state: sSettings.state || "",
+          zip: sSettings.zip || "",
+          phone: sSettings.phone || "",
+          email: sSettings.email || "",
+          website: sSettings.website || "",
+          logo: sSettings.logo || undefined,
+          logoDisplayOption: (sSettings.logo_display_option as any) || 'both',
+          industry: (sSettings.industry as any) || "other",
+          license: sSettings.license || "",
+          insurance: sSettings.insurance || "",
+          terms: sSettings.terms || "",
+          proposalTemplate: (sSettings.proposal_template as any) || 'classic',
+          proposalTheme: (sSettings.proposal_theme as any) || 'modern-corporate',
+          notifyEmailAccepted: sSettings.notify_email_accepted ?? true,
+          notifyEmailDeclined: sSettings.notify_email_declined ?? true,
+          onboardingCompleted: sSettings.onboarding_completed ?? false,
         };
 
         setSettings(loadedSettings);
@@ -173,7 +177,7 @@ export default function Settings() {
       });
 
       // Save settings with sync queue
-      await saveSettings(user.id, updatedSettings, queueChange);
+      await saveSettings(user.id, updatedSettings, queueChange as any);
 
       // Update local state
       setSettings(updatedSettings);
@@ -424,18 +428,15 @@ export default function Settings() {
         </Card>
 
         <NotificationPreferencesSection
-          settings={settings}
-          onUpdate={handleUpdateSettings}
+          settings={settings as any}
+          onUpdate={handleUpdateSettings as any}
         />
 
         <AppearanceSection />
 
         <AccountSection />
 
-        <IntegrationsSection
-          settings={settings}
-          onUpdate={handleUpdateSettings}
-        />
+        <IntegrationsSection />
 
         <DataManagementSection />
 

@@ -170,17 +170,19 @@ export async function saveSettings(
       // Verify the save by reading back
       const { data: verifyData, error: verifyError } = await supabase
         .from('company_settings')
-        .select('name, email, terms')
+        .select('name, email, terms, industry, license, insurance')
         .eq('user_id', userId)
         .single();
 
       if (verifyError) {
         console.error('[DB Service] ❌ Verification failed:', verifyError);
       } else {
+        const vData = verifyData as any;
         console.log('[DB Service] ✓ Verified save:', {
-          name: verifyData.name,
-          email: verifyData.email,
-          termsLength: verifyData.terms?.length || 0
+          name: vData.name,
+          email: vData.email,
+          industry: vData.industry,
+          termsLength: vData.terms?.length || 0
         });
       }
     } else {
@@ -203,19 +205,8 @@ export async function saveSettings(
     console.error('[DB Service] ========== CRITICAL ERROR SAVING SETTINGS ==========');
     console.error('[DB Service] Error:', error);
 
-    // Even if Supabase fails, settings are saved locally, so don't throw
-    console.log('[DB Service] Settings saved locally, will retry Supabase sync');
-
-    // Queue for sync if handler provided
-    if (queueChange) {
-      queueChange({
-        id: `settings-${userId}`,
-        type: 'settings',
-        action: 'update',
-        data: settings,
-        timestamp: Date.now()
-      });
-    }
+    // RE-THROW error so UI knows save failed
+    throw error;
   }
 }
 
