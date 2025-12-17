@@ -1,13 +1,15 @@
 import {
-  ProposalData,
-  ProposalSection,
-  ProposalItem,
   Quote,
   QuoteItem,
   CompanySettings,
+} from "@/types";
+import {
+  ProposalData,
+  ProposalSection,
+  ProposalItem,
   CategoryGroup,
   ProposalVisuals
-} from "@/types";
+} from "@/types/proposal";
 import {
   CATEGORY_DISPLAY_ORDER,
   normalizeCategory,
@@ -143,7 +145,8 @@ export function transformQuoteToProposal(
     quote.title,
     uniqueCategories,
     visuals?.coverImage,
-    itemNames
+    itemNames,
+    activeSettings.industry
   );
 
   console.log('[Transformation] Smart cover image selected:', smartCoverImage);

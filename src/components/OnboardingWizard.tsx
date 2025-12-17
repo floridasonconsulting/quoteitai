@@ -12,12 +12,15 @@ import { getSettings, saveSettings } from "@/lib/db-service";
 import { SettingsDB, isIndexedDBSupported } from "@/lib/indexed-db";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useLocation } from "react-router-dom";
+import { SUPPORTED_INDUSTRIES, Industry } from "@/lib/proposal-image-library";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface CompanyData {
   name: string;
   email: string;
   phone: string;
   address: string;
+  industry: Industry;
   logo?: string;
 }
 
@@ -92,6 +95,25 @@ const CompanyInfoStep = ({ data, onChange }: CompanyInfoStepProps) => (
           onChange={(e) => onChange({ ...data, address: e.target.value })}
           rows={3}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="company-industry">Primary Industry</Label>
+        <Select
+          value={data.industry}
+          onValueChange={(value) => onChange({ ...data, industry: value as Industry })}
+        >
+          <SelectTrigger id="company-industry">
+            <SelectValue placeholder="Select industry..." />
+          </SelectTrigger>
+          <SelectContent>
+            {SUPPORTED_INDUSTRIES.map(industry => (
+              <SelectItem key={industry.value} value={industry.value}>
+                {industry.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   </div>
@@ -271,6 +293,7 @@ export function OnboardingWizard() {
     email: "",
     phone: "",
     address: "",
+    industry: "other",
   });
 
   const [brandingData, setBrandingData] = useState<BrandingData>({
@@ -416,6 +439,7 @@ export function OnboardingWizard() {
         email: companyData.email,
         phone: companyData.phone,
         address: companyData.address,
+        industry: companyData.industry,
         onboardingCompleted: true,
       };
 

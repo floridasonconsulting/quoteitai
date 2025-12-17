@@ -261,10 +261,17 @@ export function getSmartCoverImage(
   quoteTitle: string,
   categories: string[],
   userCoverImage?: string,
-  itemNames?: string[] // NEW: Analyze item names too
+  itemNames?: string[], // NEW: Analyze item names too
+  industry?: Industry   // NEW: Explicit industry selection
 ): string {
   // Priority 1: User-uploaded image
   if (userCoverImage) return userCoverImage;
+
+  // Priority 2: Explicit industry selection (High priority match)
+  if (industry && industry in DEFAULT_COVER_IMAGES) {
+    console.log(`[SmartImage] Using explicit industry for cover: ${industry}`);
+    return DEFAULT_COVER_IMAGES[industry as keyof typeof DEFAULT_COVER_IMAGES];
+  }
 
   // Combine title and categories ONLY for analysis (NOT item names - they're too specific)
   const allText = [
@@ -308,10 +315,10 @@ export function getSmartCoverImage(
   }
 
   // Priority 3: Detect industry from combined text
-  const industry = detectIndustry(quoteTitle, categories);
-  if (industry && industry in DEFAULT_COVER_IMAGES) {
-    console.log(`[SmartImage] Industry detected: ${industry}`);
-    return DEFAULT_COVER_IMAGES[industry as keyof typeof DEFAULT_COVER_IMAGES];
+  const detectedIndustry = detectIndustry(quoteTitle, categories);
+  if (detectedIndustry && detectedIndustry in DEFAULT_COVER_IMAGES) {
+    console.log(`[SmartImage] Industry detected: ${detectedIndustry}`);
+    return DEFAULT_COVER_IMAGES[detectedIndustry as keyof typeof DEFAULT_COVER_IMAGES];
   }
 
   // Priority 4: Elegant gradient fallback (professional, brand-neutral)

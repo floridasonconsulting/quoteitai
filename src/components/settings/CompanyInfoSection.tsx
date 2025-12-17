@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { CompanySettings } from "@/types";
+import { SUPPORTED_INDUSTRIES } from "@/lib/proposal-image-library";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface CompanyInfoSectionProps {
   settings: CompanySettings;
@@ -22,6 +24,7 @@ export function CompanyInfoSection({ settings, onUpdate }: CompanyInfoSectionPro
     phone: settings.phone || "",
     email: settings.email || "",
     website: settings.website || "",
+    industry: settings.industry || "other",
     license: settings.license || "",
     insurance: settings.insurance || "",
   });
@@ -139,6 +142,25 @@ export function CompanyInfoSection({ settings, onUpdate }: CompanyInfoSectionPro
               onChange={(e) => handleChange("zip", e.target.value)}
               placeholder="10001"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="industry">Primary Industry</Label>
+            <Select
+              value={formData.industry}
+              onValueChange={(value) => handleChange("industry", value)}
+            >
+              <SelectTrigger id="industry">
+                <SelectValue placeholder="Select industry..." />
+              </SelectTrigger>
+              <SelectContent>
+                {SUPPORTED_INDUSTRIES.map(industry => (
+                  <SelectItem key={industry.value} value={industry.value}>
+                    {industry.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
