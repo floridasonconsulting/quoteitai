@@ -142,11 +142,13 @@ export const getGradientFallback = (): string => {
 
 export const DEFAULT_COVER_IMAGES = {
   // Construction & Renovation
+  'general-contractor': 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=1920&q=80',
   construction: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=1920&q=80',
   renovation: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=80',
   remodeling: 'https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=1920&q=80',
 
   // Pool & Water - ENHANCED: Luxurious backyard pool scenes
+  'pool-spa': 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80',
   pool: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80', // Beautiful pool with travertine deck
   pools: 'https://images.unsplash.com/photo-1576013551627-0cc20b468848?w=1920&q=80', // Luxury pool wide angle
   spa: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=1920&q=80', // Modern spa

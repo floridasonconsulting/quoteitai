@@ -16,7 +16,7 @@ import {
   getCategoryMetadata,
   sortCategoriesByOrder
 } from "./proposal-categories";
-import { getSmartCoverImage, getCategoryImage } from "./proposal-image-library";
+import { getSmartCoverImage, getCategoryImage, INDUSTRY_IMAGE_LIBRARIES, Industry } from "./proposal-image-library";
 
 /**
  * UNIVERSAL IMAGE RESOLUTION SYSTEM
@@ -32,7 +32,7 @@ import { getSmartCoverImage, getCategoryImage } from "./proposal-image-library";
  * Get a smart item image based on item name and category
  * This works universally across all industries
  */
-function getSmartItemImage(itemName: string, category: string, existingUrl?: string): string | undefined {
+function getSmartItemImage(itemName: string, category: string, existingUrl?: string, industry?: Industry): string | undefined {
   // Priority 1: Use existing URL if present and valid
   if (existingUrl && existingUrl.trim() && existingUrl.startsWith('http')) {
     console.log(`[SmartImage] ✅ Using database URL for "${itemName}":`, existingUrl);
@@ -87,7 +87,17 @@ function getSmartItemImage(itemName: string, category: string, existingUrl?: str
 
   // Priority 3: Fall back to category-based image
   const categoryNormalized = normalizeCategory(category);
-  return getCategoryImage(categoryNormalized);
+  const categoryImage = getCategoryImage(categoryNormalized);
+  if (categoryImage && categoryImage !== 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80') { // Check if it's not the generic "Other" pool scene
+    return categoryImage;
+  }
+
+  // Priority 4: Industry-specific fallback
+  if (industry && industry in INDUSTRY_IMAGE_LIBRARIES) {
+    return (INDUSTRY_IMAGE_LIBRARIES[industry as keyof typeof INDUSTRY_IMAGE_LIBRARIES] as any).fallback;
+  }
+
+  return categoryImage;
 }
 
 /**
@@ -214,7 +224,7 @@ export function transformQuoteToProposal(
     console.log(`  - Group Size: ${currentGroup.length + 1}`);
 
     // UNIVERSAL IMAGE RESOLUTION: Check database FIRST, then smart fallback
-    const smartItemImage = getSmartItemImage(item.name, normalizedCat, item.imageUrl);
+    const smartItemImage = getSmartItemImage(item.name, normalizedCat, item.imageUrl, activeSettings.industry);
 
     console.log('[Transformation] Processing item with SMART RESOLUTION:', {
       itemName: item.name,

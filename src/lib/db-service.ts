@@ -24,7 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 export * from './services/quote-service';
 export * from './services/customer-service';
 export * from './services/item-service';
-    
+
 // Re-export the clearInFlightRequests from the request pool service
 export { clearInFlightRequests } from './services/request-pool-service';
 
@@ -46,7 +46,7 @@ interface SyncChange {
 // Wrap getSettings to check IndexedDB first (async for proper data retrieval)
 export const getSettings = async (userId: string): Promise<CompanySettings> => {
   console.log('[db-service] getSettings called with userId:', userId);
-  
+
   // Try IndexedDB first if supported
   if (isIndexedDBSupported()) {
     try {
@@ -59,7 +59,7 @@ export const getSettings = async (userId: string): Promise<CompanySettings> => {
       console.warn('[db-service] IndexedDB read failed, falling back to localStorage:', error);
     }
   }
-  
+
   // Fall back to localStorage
   const localStorageSettings = storageGetSettings(userId);
   console.log('[db-service] ✓ Retrieved settings from localStorage');
@@ -82,7 +82,7 @@ export async function saveSettings(
     terms: settings.terms?.substring(0, 50) + '...',
     proposalTheme: settings.proposalTheme
   });
-  
+
   try {
     // Step 1: Store in memory cache first
     const cacheKey = `settings-${userId}`;
@@ -108,7 +108,7 @@ export async function saveSettings(
 
     // Step 3: ALWAYS attempt Supabase save (even if offline, we'll queue it)
     console.log('[DB Service] Attempting Supabase save...');
-    
+
     // CRITICAL: Build the database object with proper field mapping
     const dbSettings = {
       user_id: userId,
@@ -127,6 +127,7 @@ export async function saveSettings(
       terms: settings.terms || '',
       proposal_template: settings.proposalTemplate || 'classic',
       proposal_theme: settings.proposalTheme || 'modern-corporate',
+      industry: settings.industry || 'other',
       notify_email_accepted: settings.notifyEmailAccepted ?? true,
       notify_email_declined: settings.notifyEmailDeclined ?? true,
       onboarding_completed: settings.onboardingCompleted ?? false,
@@ -145,9 +146,9 @@ export async function saveSettings(
       // Use upsert with proper conflict resolution
       const { data, error } = await supabase
         .from('company_settings')
-        .upsert(dbSettings, { 
+        .upsert(dbSettings, {
           onConflict: 'user_id',
-          ignoreDuplicates: false 
+          ignoreDuplicates: false
         })
         .select()
         .single();
@@ -165,14 +166,14 @@ export async function saveSettings(
 
       console.log('[DB Service] ✓ Settings saved to Supabase successfully');
       console.log('[DB Service] Supabase returned data:', data ? 'data received' : 'no data');
-      
+
       // Verify the save by reading back
       const { data: verifyData, error: verifyError } = await supabase
         .from('company_settings')
         .select('name, email, terms')
         .eq('user_id', userId)
         .single();
-      
+
       if (verifyError) {
         console.error('[DB Service] ❌ Verification failed:', verifyError);
       } else {
@@ -201,10 +202,10 @@ export async function saveSettings(
   } catch (error) {
     console.error('[DB Service] ========== CRITICAL ERROR SAVING SETTINGS ==========');
     console.error('[DB Service] Error:', error);
-    
+
     // Even if Supabase fails, settings are saved locally, so don't throw
     console.log('[DB Service] Settings saved locally, will retry Supabase sync');
-    
+
     // Queue for sync if handler provided
     if (queueChange) {
       queueChange({

@@ -651,3 +651,35 @@ All colors MUST be HSL.
     transition: var(--transition-spring);
   }
 }
+
+/* Custom Scrollbar for Proposal Viewer */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: hsl(var(--muted) / 0.2);
+  border-radius: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.5);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.8);
+  background-clip: content-box;
+}
+
+/* Swiper pagination active color */
+.proposal-swiper .swiper-pagination-bullet-active {
+  background: hsl(var(--primary)) !important;
+}
+
+.proposal-swiper .swiper-button-next,
+.proposal-swiper .swiper-button-prev {
+  color: hsl(var(--primary)) !important;
+}

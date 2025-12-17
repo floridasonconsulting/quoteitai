@@ -65,33 +65,33 @@ export function CategoryGroupSection({
 
   return (
     <div className="h-full w-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
-      {/* Hero Title Banner */}
+      {/* Hero Title Banner - REDUCED HEIGHT */}
       {backgroundImage && (
         <div
-          className="relative w-full h-48 md:h-64 flex-shrink-0"
+          className="relative w-full h-32 md:h-40 flex-shrink-0"
           style={{
             backgroundImage: `url(${backgroundImage})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center px-6">
               <motion.h2
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="text-3xl md:text-5xl font-bold text-white mb-2"
+                transition={{ duration: 0.5 }}
+                className="text-2xl md:text-4xl font-bold text-white mb-1"
               >
                 {categoryGroup.displayName}
               </motion.h2>
               {categoryGroup.description && (
                 <motion.p
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  className="text-base md:text-lg text-white/90 max-w-2xl mx-auto"
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  className="text-sm md:text-base text-white/90 max-w-2xl mx-auto line-clamp-1"
                 >
                   {categoryGroup.description}
                 </motion.p>
@@ -101,13 +101,12 @@ export function CategoryGroupSection({
         </div>
       )}
 
-      {/* FIXED: Scrollable Content Area with smart scroll boundary detection */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-auto custom-scrollbar"
         onWheel={handleWheel}
       >
-        <div className="max-w-5xl mx-auto p-6 md:p-12 pb-24">
+        <div className="max-w-5xl mx-auto p-4 md:p-8 pb-16">
           {/* Category Header - Only show if no background image */}
           {!backgroundImage && (
             <motion.div
@@ -128,23 +127,23 @@ export function CategoryGroupSection({
             </motion.div>
           )}
 
-          {/* Items Grid */}
-          <div className="space-y-6 mb-8">
+          {/* Items Grid - TIGHTER SPACING */}
+          <div className="space-y-4 mb-6">
             {categoryGroup.items.map((item, idx) => (
               <motion.div
                 key={idx}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1, duration: 0.5 }}
+                transition={{ delay: idx * 0.05, duration: 0.4 }}
                 className={cn(
-                  "flex flex-col gap-4 bg-gray-50 dark:bg-gray-900 p-5 md:p-6 rounded-xl shadow-md",
-                  "hover:shadow-lg transition-shadow duration-300 border border-gray-200 dark:border-gray-800",
+                  "flex flex-col gap-3 bg-gray-50 dark:bg-gray-900 p-4 md:p-5 rounded-xl shadow-sm",
+                  "hover:shadow-md transition-shadow duration-300 border border-gray-200 dark:border-gray-800",
                   item.imageUrl ? "md:flex-row" : ""
                 )}
               >
-                {/* Item Image - UNIVERSAL: Only show if imageUrl exists and is valid */}
+                {/* Item Image - REDUCED SIZE */}
                 {item.imageUrl && item.imageUrl.startsWith('http') && (
-                  <div className="flex-shrink-0 w-full md:w-64 h-48 md:h-56">
+                  <div className="flex-shrink-0 w-full md:w-32 h-32 md:h-32">
                     <img
                       src={item.imageUrl}
                       alt={item.name}
@@ -166,25 +165,24 @@ export function CategoryGroupSection({
                 {/* Item Details */}
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-xl md:text-2xl font-semibold mb-2 text-gray-900 dark:text-white">
+                    <h3 className="text-lg md:text-xl font-semibold mb-1 text-gray-900 dark:text-white leading-tight">
                       {item.name}
                     </h3>
-                    <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 mb-3 leading-relaxed">
+                    <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 mb-2 leading-snug">
                       {item.enhancedDescription || item.description}
                     </p>
                   </div>
 
                   {/* FIXED: Pricing Info - Conditional display based on showPricing */}
                   {showPricing ? (
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
-                      <div className="flex items-baseline gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-baseline gap-2 text-[10px] md:text-xs text-muted-foreground">
                         <span>Qty: {item.quantity} {item.units || "units"}</span>
                         <span>•</span>
                         <span>Unit: {formatCurrency(item.price)}</span>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-muted-foreground mb-1">Total</p>
-                        <p className="text-xl md:text-2xl font-bold text-primary">
+                        <p className="text-base md:text-lg font-bold text-primary">
                           {formatCurrency(item.total)}
                         </p>
                       </div>

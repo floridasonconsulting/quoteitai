@@ -51,7 +51,12 @@ export function ProposalContentSlider({
         direction="vertical"
         slidesPerView={1}
         spaceBetween={0}
-        mousewheel={true}
+        mousewheel={{
+          releaseOnEdges: true,
+          forceToAxis: true,
+          sensitivity: 0.5,
+          thresholdDelta: 50,
+        }}
         keyboard={{ enabled: true }}
         pagination={{ clickable: true }}
         navigation={true}
@@ -74,21 +79,21 @@ export function ProposalContentSlider({
  */
 function processSectionsForPagination(sections: ProposalSection[]): ProposalSection[] {
   const processed: ProposalSection[] = [];
-  
+
   sections.forEach((section) => {
     if (section.type === 'categoryGroup' && section.categoryGroups?.[0]) {
       const categoryGroup = section.categoryGroups[0];
       const items = categoryGroup.items;
-      
+
       // If category has >10 items, split into multiple slides
       if (items.length > 10) {
         const itemsPerPage = 10;
         const pageCount = Math.ceil(items.length / itemsPerPage);
-        
+
         for (let i = 0; i < pageCount; i++) {
           const pageItems = items.slice(i * itemsPerPage, (i + 1) * itemsPerPage);
           const pageSubtotal = pageItems.reduce((sum, item) => sum + item.total, 0);
-          
+
           processed.push({
             ...section,
             id: `${section.id}-page-${i + 1}`,
@@ -107,7 +112,7 @@ function processSectionsForPagination(sections: ProposalSection[]): ProposalSect
       processed.push(section);
     }
   });
-  
+
   return processed;
 }
 
@@ -149,10 +154,10 @@ function SlideContent({ section, isActive }: { section: ProposalSection; isActiv
  */
 function HeroSlide({ section }: { section: ProposalSection }) {
   return (
-    <div 
+    <div
       className="h-full flex items-center justify-center p-8 md:p-16 relative overflow-y-auto"
       style={{
-        backgroundImage: section.backgroundImage 
+        backgroundImage: section.backgroundImage
           ? `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.6)), url(${section.backgroundImage})`
           : undefined,
         backgroundSize: "cover",
@@ -207,11 +212,11 @@ function TextSlide({ section }: { section: ProposalSection }) {
  */
 function CategorySlide({ section }: { section: ProposalSection }) {
   const categoryGroup = section.categoryGroups?.[0];
-  
+
   if (!categoryGroup) return null;
 
   return (
-    <CategoryGroupSection 
+    <CategoryGroupSection
       categoryGroup={categoryGroup}
       showPricing={section.showPricing}
       backgroundImage={section.backgroundImage}
