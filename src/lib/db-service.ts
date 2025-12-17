@@ -130,6 +130,7 @@ export async function saveSettings(
       industry: settings.industry || 'other',
       notify_email_accepted: settings.notifyEmailAccepted ?? true,
       notify_email_declined: settings.notifyEmailDeclined ?? true,
+      show_proposal_images: settings.showProposalImages ?? true,
       onboarding_completed: settings.onboardingCompleted ?? false,
       updated_at: new Date().toISOString()
     };
@@ -156,12 +157,12 @@ export async function saveSettings(
       if (error) {
         console.error('[DB Service] ❌ Supabase upsert error:', error);
 
-        // AUTOMATIC RECOVERY: If 'industry' column is missing, retry without it
-        if (error.message?.includes("industry") || error.code === 'PGRST204') {
-          console.warn('[DB Service] ⚠️ Industry column missing in database. Retrying save without industry...');
+        // AUTOMATIC RECOVERY: If 'industry' or 'show_proposal_images' column is missing, retry without it
+        if (error.message?.includes("industry") || error.message?.includes("show_proposal_images") || error.code === 'PGRST204') {
+          console.warn('[DB Service] ⚠️ Industry or ShowImages column missing in database. Retrying save without them...');
 
-          // Create a copy without the industry field
-          const { industry, ...resilientSettings } = dbSettings;
+          // Create a copy without the industry and show_proposal_images fields
+          const { industry, show_proposal_images, ...resilientSettings } = dbSettings as any;
 
           const { data: retryData, error: retryError } = await supabase
             .from('company_settings')
@@ -191,7 +192,7 @@ export async function saveSettings(
       // Verify the save by reading back
       const { data: verifyData, error: verifyError } = await supabase
         .from('company_settings')
-        .select('name, email, terms, industry, license, insurance')
+        .select('name, email, terms, industry, license, insurance, show_proposal_images')
         .eq('user_id', userId)
         .single();
 
@@ -203,6 +204,7 @@ export async function saveSettings(
           name: vData.name,
           email: vData.email,
           industry: vData.industry,
+          showProposalImages: vData.show_proposal_images,
           termsLength: vData.terms?.length || 0
         });
       }
