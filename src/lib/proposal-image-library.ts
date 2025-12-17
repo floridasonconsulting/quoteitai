@@ -245,9 +245,9 @@ export const CATEGORY_IMAGES = {
   'Maintenance': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1920&q=80',
   'Repair': 'https://images.unsplash.com/photo-1590856029826-c7a73142bbf1?w=1920&q=80',
 
-  // Generic - Pool/Outdoor focused fallbacks
-  'Other': 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80', // Generic pool scene
-  'Additional Items': 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1920&q=80', // Backyard pool
+  // Generic - Trade-neutral fallbacks
+  'Other': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80', // Professional abstract architecture
+  'Additional Items': 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1920&q=80', // Modern workspace/neutral
   'Materials': 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=80',
   'Labor': 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=80',
 

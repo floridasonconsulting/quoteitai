@@ -34,7 +34,7 @@ export function ProposalViewer({
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [successState, setSuccessState] = useState<SuccessType | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   // Debug logging for company info
   console.log('[ProposalViewer] Settings received:', {
     hasSettings: !!settings,
@@ -44,7 +44,7 @@ export function ProposalViewer({
     settingsPhone: settings?.phone,
     settingsAddress: settings?.address
   });
-  
+
   console.log('[ProposalViewer] Quote data:', {
     quoteId: quote.id,
     itemCount: quote.items.length,
@@ -57,15 +57,13 @@ export function ProposalViewer({
       enhancedDescription: quote.items[0].enhancedDescription
     } : null
   });
-  
+
   // Data Transformation with null checks
   const proposalData = useMemo(() => {
-    // Improved Visuals Logic with Fallback
     const mockVisuals = {
-      coverImage: quote.items.find(i => i.imageUrl)?.imageUrl || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80',
       logo: settings?.logo,
     };
-    
+
     console.log('[ProposalViewer] Transforming quote:', quote.id);
     console.log('[ProposalViewer] Using visuals:', mockVisuals);
     console.log('[ProposalViewer] Using settings:', settings);
@@ -77,7 +75,7 @@ export function ProposalViewer({
 
   // Theme handling
   const { setTheme } = useTheme();
-  
+
   useEffect(() => {
     // Enforce light mode for proposal viewer by default unless specified
     setTheme('light');
@@ -87,10 +85,10 @@ export function ProposalViewer({
   const navigationItems = useMemo(() => {
     return proposalData.sections.map((section, index) => {
       let type: 'summary' | 'category' | 'terms' = 'category';
-      
+
       if (section.type === 'lineItems') type = 'summary';
       else if (section.type === 'legal') type = 'terms';
-      
+
       return {
         id: section.id,
         label: section.title || 'Untitled Section',
@@ -147,7 +145,7 @@ export function ProposalViewer({
       <AnimatePresence mode="wait">
         {/* STAGE 1: COVER */}
         {stage === 'cover' && (
-          <ProposalCover 
+          <ProposalCover
             key="cover"
             companyName={proposalData.sender?.company || "Company Name"}
             projectTitle={proposalData.sections.find(s => s.type === 'hero')?.title || "Project Proposal"}
@@ -159,7 +157,7 @@ export function ProposalViewer({
 
         {/* STAGE 2: MAIN CONTENT */}
         {stage === 'content' && !successState && (
-          <motion.div 
+          <motion.div
             key="content"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -174,7 +172,7 @@ export function ProposalViewer({
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-64 p-0">
-                  <ProposalNavigation 
+                  <ProposalNavigation
                     sections={navigationItems}
                     activeIndex={activeSlideIndex}
                     onNavigate={setActiveSlideIndex}
@@ -190,9 +188,9 @@ export function ProposalViewer({
               <div className="p-6 border-b border-gray-200 dark:border-gray-800">
                 {settings?.logo ? (
                   <div className="mb-4">
-                    <img 
-                      src={settings.logo} 
-                      alt={settings.name || "Company Logo"} 
+                    <img
+                      src={settings.logo}
+                      alt={settings.name || "Company Logo"}
                       className="h-12 w-auto object-contain"
                       onError={(e) => {
                         console.error('[ProposalViewer] Logo failed to load:', settings.logo);
@@ -216,9 +214,9 @@ export function ProposalViewer({
                   </div>
                 )}
               </div>
-              
+
               {/* Navigation Links */}
-              <ProposalNavigation 
+              <ProposalNavigation
                 sections={navigationItems}
                 activeIndex={activeSlideIndex}
                 onNavigate={setActiveSlideIndex}
@@ -227,7 +225,7 @@ export function ProposalViewer({
 
             {/* Main Content Slider */}
             <div className="flex-1 h-full relative">
-              <ProposalContentSlider 
+              <ProposalContentSlider
                 sections={proposalData.sections}
                 activeIndex={activeSlideIndex}
                 onSlideChange={setActiveSlideIndex}
@@ -236,7 +234,7 @@ export function ProposalViewer({
 
             {/* Sticky Action Bar */}
             {!isReadOnly && (
-              <ProposalActionBar 
+              <ProposalActionBar
                 totalAmount={quote.total}
                 currency={settings?.currency || 'USD'}
                 onAccept={handleAccept}
@@ -250,7 +248,7 @@ export function ProposalViewer({
 
         {/* STAGE 3: SUCCESS STATES */}
         {successState && (
-          <ProposalSuccessStates 
+          <ProposalSuccessStates
             key="success"
             type={successState}
             salesRepName={settings?.name || "Your Sales Representative"}
