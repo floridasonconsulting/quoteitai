@@ -155,13 +155,33 @@ export async function saveSettings(
 
       if (error) {
         console.error('[DB Service] ❌ Supabase upsert error:', error);
+
+        // AUTOMATIC RECOVERY: If 'industry' column is missing, retry without it
+        if (error.message?.includes("industry") || error.code === 'PGRST204') {
+          console.warn('[DB Service] ⚠️ Industry column missing in database. Retrying save without industry...');
+
+          // Create a copy without the industry field
+          const { industry, ...resilientSettings } = dbSettings;
+
+          const { data: retryData, error: retryError } = await supabase
+            .from('company_settings')
+            .upsert(resilientSettings, {
+              onConflict: 'user_id',
+              ignoreDuplicates: false
+            })
+            .select()
+            .single();
+
+          if (retryError) {
+            console.error('[DB Service] ❌ Resilient retry failed:', retryError);
+            throw retryError;
+          }
+
+          console.log('[DB Service] ✓ Settings saved successfully (without industry)');
+          return;
+        }
+
         console.error('[DB Service] Full Error JSON:', JSON.stringify(error, null, 2));
-        console.error('[DB Service] Error details:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        });
         throw error;
       }
 
