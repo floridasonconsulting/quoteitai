@@ -155,6 +155,7 @@ export async function saveSettings(
 
       if (error) {
         console.error('[DB Service] ❌ Supabase upsert error:', error);
+        console.error('[DB Service] Full Error JSON:', JSON.stringify(error, null, 2));
         console.error('[DB Service] Error details:', {
           code: error.code,
           message: error.message,
