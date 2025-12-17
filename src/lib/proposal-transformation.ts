@@ -67,6 +67,7 @@ export function transformQuoteToProposal(
   };
 
   const activeSettings = settings || defaultSettings;
+  const showImages = activeSettings.showProposalImages !== false;
 
   // Extract unique categories for smart image selection
   const uniqueCategories = Array.from(new Set(quote.items.map(item => normalizeCategory(item.category))));
@@ -76,7 +77,7 @@ export function transformQuoteToProposal(
 
   // Smart cover image selection (now uses quote title + categories + item names)
   // ONLY if images are enabled in settings
-  const smartCoverImage = activeSettings.showProposalImages !== false
+  const smartCoverImage = showImages
     ? getSmartCoverImage(
       quote.title,
       uniqueCategories,
@@ -152,7 +153,7 @@ export function transformQuoteToProposal(
 
     // UNIVERSAL IMAGE RESOLUTION: Check database FIRST, then smart fallback
     // ONLY if images are enabled in settings
-    const smartItemImage = activeSettings.showProposalImages !== false
+    const smartItemImage = showImages
       ? getSmartItemImage(item.name, normalizedCat, item.imageUrl, activeSettings.industry)
       : undefined;
 
@@ -179,7 +180,7 @@ export function transformQuoteToProposal(
       price: item.price,
       total: item.total,
       units: item.units,
-      imageUrl: smartItemImage, // ⬅️ SMART RESOLUTION APPLIED HERE
+      imageUrl: smartItemImage,
       category: normalizedCat,
     });
 
@@ -203,7 +204,7 @@ export function transformQuoteToProposal(
 
     // Smart category image selection
     // ONLY if images are enabled in settings
-    const categoryImage = activeSettings.showProposalImages !== false
+    const categoryImage = showImages
       ? getCategoryImage(
         category,
         visuals?.sectionBackgrounds,
@@ -254,6 +255,7 @@ export function transformQuoteToProposal(
     title: 'Investment Summary',
     items: quote.items.map(i => ({
       ...i,
+      imageUrl: showImages ? i.imageUrl : undefined,
       category: normalizeCategory(i.category)
     })),
     subtotal: quote.subtotal,

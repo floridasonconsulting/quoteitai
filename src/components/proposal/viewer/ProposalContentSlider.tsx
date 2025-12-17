@@ -187,21 +187,37 @@ function HeroSlide({ section }: { section: ProposalSection }) {
 }
 
 /**
- * Slide Component: Text Section
+ * Slide Component: Text Section (Terms & Conditions)
  */
 function TextSlide({ section }: { section: ProposalSection }) {
   return (
-    <div className="h-full p-8 md:p-16 overflow-y-auto">
-      <div className="max-w-4xl mx-auto pb-24">
-        <h2 className="text-3xl md:text-4xl font-bold mb-6">{section.title}</h2>
-        {section.subtitle && (
-          <p className="text-lg text-muted-foreground mb-8">{section.subtitle}</p>
-        )}
-        {section.content && (
-          <div className="prose prose-lg dark:prose-invert max-w-none">
-            <p className="text-base leading-relaxed whitespace-pre-wrap">{section.content}</p>
-          </div>
-        )}
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
+      {/* Consistent Header Banner */}
+      <div className="relative w-full h-32 md:h-40 flex-shrink-0"
+        style={{
+          backgroundImage: section.backgroundImage
+            ? `url(${section.backgroundImage})`
+            : 'linear-gradient(135deg, #111827 0%, #374151 100%)',
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-white">{section.title}</h2>
+        </div>
+      </div>
+
+      <div className="flex-1 p-8 md:p-16 overflow-y-auto">
+        <div className="max-w-4xl mx-auto pb-24">
+          {section.subtitle && (
+            <p className="text-lg text-muted-foreground mb-8">{section.subtitle}</p>
+          )}
+          {section.content && (
+            <div className="prose prose-lg dark:prose-invert max-w-none">
+              <p className="text-base leading-relaxed whitespace-pre-wrap">{section.content}</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -242,7 +258,7 @@ function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(item);
     return acc;
-  }, {} as Record<string, typeof section.items>);
+  }, {} as Record<string, any[]>);
 
   // Calculate category subtotals
   const categorySubtotals = Object.entries(itemsByCategory || {}).map(([category, items]) => ({
@@ -252,67 +268,76 @@ function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
   }));
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-y-auto">
-      <div className="max-w-4xl mx-auto w-full p-6 md:p-8">
-        {/* Header - Reduced spacing */}
-        <div className="mb-4 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1">
-            {section.title || "Investment Summary"}
-          </h2>
-          <div className="h-0.5 w-20 bg-primary mx-auto rounded-full" />
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
+      {/* Consistent Header Banner */}
+      <div className="relative w-full h-32 md:h-40 flex-shrink-0"
+        style={{
+          backgroundImage: section.backgroundImage
+            ? `url(${section.backgroundImage})`
+            : 'linear-gradient(135deg, #111827 0%, #374151 100%)',
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-white">{section.title || "Investment Summary"}</h2>
         </div>
+      </div>
 
-        {/* Professional Line Item Format - TIGHTER SPACING */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 md:p-6 space-y-3">
-          {categorySubtotals.map(({ category, items, subtotal }, idx) => (
-            <div key={idx} className="space-y-1.5">
-              {/* Category Header - Smaller text */}
-              <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white mb-1.5">
-                {category}
-              </h3>
+      <div className="flex-1 overflow-y-auto w-full">
+        <div className="max-w-4xl mx-auto p-6 md:p-8 pb-32">
+          {/* Professional Line Item Format - TIGHTER SPACING */}
+          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 md:p-6 space-y-3">
+            {categorySubtotals.map(({ category, items, subtotal }, idx) => (
+              <div key={idx} className="space-y-1.5">
+                {/* Category Header - Smaller text */}
+                <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white mb-1.5">
+                  {category}
+                </h3>
 
-              {/* Items (no pricing) - Smaller text, tighter spacing */}
-              <div className="space-y-0.5 pl-3">
-                {items.map((item, itemIdx) => (
-                  <div key={itemIdx} className="flex items-start gap-1.5 text-xs md:text-sm text-gray-700 dark:text-gray-300">
-                    <span className="text-primary mt-0.5 text-xs">•</span>
-                    <span className="leading-tight">{item.name}</span>
-                  </div>
-                ))}
+                {/* Items (no pricing) - Smaller text, tighter spacing */}
+                <div className="space-y-0.5 pl-3">
+                  {items.map((item, itemIdx) => (
+                    <div key={itemIdx} className="flex items-start gap-1.5 text-xs md:text-sm text-gray-700 dark:text-gray-300">
+                      <span className="text-primary mt-0.5 text-xs">•</span>
+                      <span className="leading-tight">{item.name}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Category Subtotal with Dotted Leader - Reduced spacing */}
+                <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-700">
+                  <span className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Subtotal
+                  </span>
+                  <div className="flex-1 mx-3 border-b border-dotted border-gray-300 dark:border-gray-600" />
+                  <span className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
+                    {formatCurrency(subtotal)}
+                  </span>
+                </div>
               </div>
+            ))}
 
-              {/* Category Subtotal with Dotted Leader - Reduced spacing */}
-              <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-700">
-                <span className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Subtotal
+            {/* Total Investment - Reduced top spacing */}
+            <div className="pt-4 mt-4 border-t-2 border-gray-900 dark:border-white">
+              <div className="flex items-center justify-between">
+                <span className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
+                  Total Investment
                 </span>
-                <div className="flex-1 mx-3 border-b border-dotted border-gray-300 dark:border-gray-600" />
-                <span className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
-                  {formatCurrency(subtotal)}
+                <div className="flex-1 mx-4 border-b-2 border-dotted border-gray-400 dark:border-gray-500" />
+                <span className="text-xl md:text-2xl font-bold text-primary">
+                  {formatCurrency(section.total || 0)}
                 </span>
               </div>
-            </div>
-          ))}
-
-          {/* Total Investment - Reduced top spacing */}
-          <div className="pt-4 mt-4 border-t-2 border-gray-900 dark:border-white">
-            <div className="flex items-center justify-between">
-              <span className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
-                Total Investment
-              </span>
-              <div className="flex-1 mx-4 border-b-2 border-dotted border-gray-400 dark:border-gray-500" />
-              <span className="text-xl md:text-2xl font-bold text-primary">
-                {formatCurrency(section.total || 0)}
-              </span>
             </div>
           </div>
-        </div>
 
-        {/* Footer Note - Smaller */}
-        <div className="mt-4 text-center">
-          <p className="text-[10px] md:text-xs text-muted-foreground">
-            All pricing subject to terms and conditions outlined in this proposal
-          </p>
+          {/* Footer Note - Smaller */}
+          <div className="mt-4 text-center">
+            <p className="text-[10px] md:text-xs text-muted-foreground">
+              All pricing subject to terms and conditions outlined in this proposal
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -324,20 +349,30 @@ function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
  */
 function LegalSlide({ section }: { section: ProposalSection }) {
   return (
-    <div className="h-full overflow-y-auto bg-gray-50 dark:bg-gray-950">
-      <div className="max-w-4xl mx-auto p-8 md:p-16 pb-24">
-        <div className="mb-8">
-          <h2 className="text-3xl md:text-5xl font-bold mb-4 text-gray-900 dark:text-white">
-            {section.title || "Terms & Conditions"}
-          </h2>
-          <div className="h-1 w-32 bg-primary rounded-full" />
+    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
+      {/* Consistent Header Banner */}
+      <div className="relative w-full h-32 md:h-40 flex-shrink-0"
+        style={{
+          backgroundImage: section.backgroundImage
+            ? `url(${section.backgroundImage})`
+            : 'linear-gradient(135deg, #111827 0%, #374151 100%)',
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-white">{section.title || "Terms & Conditions"}</h2>
         </div>
+      </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-8 md:p-12">
-          <div className="prose prose-base dark:prose-invert max-w-none">
-            <p className="whitespace-pre-wrap text-base leading-relaxed text-gray-700 dark:text-gray-300">
-              {section.terms || section.content}
-            </p>
+      <div className="flex-1 p-8 md:p-16 overflow-y-auto">
+        <div className="max-w-4xl mx-auto pb-24">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-8 md:p-12 border border-gray-100 dark:border-gray-800">
+            <div className="prose prose-base dark:prose-invert max-w-none">
+              <p className="whitespace-pre-wrap text-base leading-relaxed text-gray-700 dark:text-gray-300">
+                {section.terms || section.content}
+              </p>
+            </div>
           </div>
         </div>
       </div>
