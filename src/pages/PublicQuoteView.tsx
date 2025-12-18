@@ -10,6 +10,8 @@ import { transformQuoteToProposal } from '@/lib/proposal-transformation';
 import { PaymentDialog } from '@/components/PaymentDialog';
 import { createPaymentIntent } from '@/lib/stripe-service';
 import { useAuth } from '@/contexts/AuthContext';
+import { visualsService } from '@/lib/services/visuals-service';
+import { ProposalVisuals } from '@/types/proposal';
 
 export default function PublicQuoteView() {
   const { id: shareToken } = useParams<{ id: string }>();
@@ -29,6 +31,7 @@ export default function PublicQuoteView() {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const [visuals, setVisuals] = useState<ProposalVisuals | null>(null);
 
   // Wait for auth to initialize before checking session
   useEffect(() => {
@@ -244,6 +247,18 @@ export default function PublicQuoteView() {
       console.log('[PublicQuoteView] ✅ Quote loaded successfully:', quoteData.id);
       console.log('[PublicQuoteView] Quote user_id:', quoteData.user_id);
 
+      // 🚀 NEW: Fetch visuals from proposal_visuals table
+      console.log('[PublicQuoteView] 🖼️ Fetching visuals for quote:', quoteData.id);
+      try {
+        const visualsData = await visualsService.getVisuals(quoteData.id);
+        if (visualsData) {
+          console.log('[PublicQuoteView] ✅ Visuals loaded:', visualsData);
+          setVisuals(visualsData);
+        }
+      } catch (visualsError) {
+        console.warn('[PublicQuoteView] ⚠️ Could not fetch visuals:', visualsError);
+      }
+
       // 🚀 NEW: Fetch current items table data to enrich quote JSONB
       console.log('[PublicQuoteView] 🔄 Fetching fresh items table data for enrichment...');
       const { data: itemsData, error: itemsError } = await supabase
@@ -386,7 +401,7 @@ export default function PublicQuoteView() {
           insurance: settingsData.insurance || '',
           terms: settingsData.terms || '',
           proposalTemplate: (settingsData.proposal_template as 'classic' | 'modern' | 'detailed') || 'classic',
-          proposalTheme: settingsData.proposal_theme || 'modern-corporate',
+          proposalTheme: (settingsData.proposal_theme as any) || 'modern-corporate',
         });
       } else {
         console.warn('[PublicQuoteView] ⚠️ No settings found, using fallback');
@@ -529,6 +544,7 @@ export default function PublicQuoteView() {
         onDecline={handleReject}
         onComment={handleComment}
         isReadOnly={isOwner}
+        visuals={visuals || undefined}
       />
 
       {/* Hidden Payment Dialog */}

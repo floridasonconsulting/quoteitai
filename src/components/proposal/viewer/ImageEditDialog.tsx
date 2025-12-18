@@ -38,8 +38,8 @@ export function ImageEditDialog({
     const [isLoading, setIsLoading] = useState(false);
     const [customUrl, setCustomUrl] = useState("");
     const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
-    const [accessKey, setAccessKey] = useState(import.meta.env.VITE_UNSPLASH_ACCESS_KEY || "QnCH4kO-p9J8m9_qWw8oT0v-jS6-Vf3-_4R0V_X8-g0");
-    const [showKeyInput, setShowKeyInput] = useState(false);
+    const [accessKey, setAccessKey] = useState(import.meta.env.VITE_UNSPLASH_ACCESS_KEY || "");
+    const [showKeyInput, setShowKeyInput] = useState(!import.meta.env.VITE_UNSPLASH_ACCESS_KEY);
 
     const [error, setError] = useState<string | null>(null);
 

@@ -14,6 +14,7 @@ import { Menu, Edit3 } from "lucide-react";
 import { ImageEditDialog } from "./ImageEditDialog";
 import { visualsService } from "@/lib/services/visuals-service";
 import { useToast } from "@/hooks/use-toast";
+import { ProposalVisuals } from "@/types/proposal";
 
 interface ProposalViewerProps {
   quote: Quote;
@@ -22,6 +23,7 @@ interface ProposalViewerProps {
   onDecline: () => Promise<void>;
   onComment: (comment: string) => Promise<void>;
   isReadOnly?: boolean;
+  visuals?: ProposalVisuals;
 }
 
 export function ProposalViewer({
@@ -30,7 +32,8 @@ export function ProposalViewer({
   onAccept,
   onDecline,
   onComment,
-  isReadOnly = false
+  isReadOnly = false,
+  visuals
 }: ProposalViewerProps) {
   // State
   const [stage, setStage] = useState<'cover' | 'content'>('cover');
@@ -71,18 +74,16 @@ export function ProposalViewer({
 
   // Data Transformation with null checks
   const proposalData = useMemo(() => {
-    const mockVisuals = {
+    const activeVisuals = visuals || {
       logo: settings?.logo,
     };
 
     console.log('[ProposalViewer] Transforming quote:', quote.id);
-    console.log('[ProposalViewer] Using visuals:', mockVisuals);
+    console.log('[ProposalViewer] Using visuals:', activeVisuals);
     console.log('[ProposalViewer] Using settings:', settings);
-    console.log('[ProposalViewer] Settings name:', settings?.name);
-    console.log('[ProposalViewer] Settings logo:', settings?.logo);
 
-    return transformQuoteToProposal(quote, settings, mockVisuals);
-  }, [quote, settings]);
+    return transformQuoteToProposal(quote, settings, activeVisuals);
+  }, [quote, settings, visuals]);
 
   // Theme handling
   const { setTheme } = useTheme();

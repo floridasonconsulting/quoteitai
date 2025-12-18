@@ -11,6 +11,8 @@ import { Quote, CompanySettings } from "@/types";
 import { ProposalViewer } from "@/components/proposal/viewer/ProposalViewer";
 import { LoadingFallback } from "@/components/LoadingFallback";
 import { useAuth } from "@/contexts/AuthContext";
+import { visualsService } from "@/lib/services/visuals-service";
+import { ProposalVisuals } from "@/types/proposal";
 
 export default function QuotePreview() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +22,7 @@ export default function QuotePreview() {
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [visuals, setVisuals] = useState<ProposalVisuals | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -48,6 +51,18 @@ export default function QuotePreview() {
         console.log("[QuotePreview] Quote loaded successfully");
         setQuote(quoteData);
         setSettings(settingsData);
+
+        // Fetch visuals
+        console.log("[QuotePreview] 🖼️ Fetching visuals for quote:", id);
+        try {
+          const visualsData = await visualsService.getVisuals(id);
+          if (visualsData) {
+            console.log("[QuotePreview] ✅ Visuals loaded:", visualsData);
+            setVisuals(visualsData);
+          }
+        } catch (visualsError) {
+          console.warn("[QuotePreview] ⚠️ Could not fetch visuals:", visualsError);
+        }
 
         // 🚀 NEW: Fetch fresh items data for enrichment (similar to PublicQuoteView)
         console.log("[QuotePreview] 🔄 Fetching fresh items table data for enrichment...");
@@ -171,6 +186,7 @@ export default function QuotePreview() {
           onAccept={async () => { }}
           onDecline={async () => { }}
           onComment={async () => { }}
+          visuals={visuals || undefined}
         />
       </div>
 
