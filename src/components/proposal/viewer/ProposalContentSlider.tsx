@@ -279,74 +279,148 @@ function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
   }));
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
-      {/* Consistent Header Banner */}
-      <div className="relative w-full h-32 md:h-40 flex-shrink-0"
+    <div className="h-full flex flex-col bg-[#F8FAFC] dark:bg-gray-950 overflow-hidden">
+      {/* Premium Header Banner */}
+      <div className="relative w-full h-40 md:h-56 flex-shrink-0"
         style={{
           backgroundImage: section.backgroundImage
-            ? `url(${section.backgroundImage})`
+            ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url(${section.backgroundImage})`
             : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-white">{section.title || "Investment Summary"}</h2>
+          <div className="text-center px-6">
+            <span className="text-xs md:text-sm uppercase tracking-[0.3em] text-white/70 font-bold mb-2 block">PROJECT OVERVIEW</span>
+            <h2 className="text-3xl md:text-6xl font-black text-white tracking-tight leading-none uppercase drop-shadow-lg">
+              {section.title || "Scope & Investment"}
+            </h2>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto w-full">
-        <div className="max-w-4xl mx-auto p-6 md:p-8 pb-32">
-          {/* Professional Line Item Format - TIGHTER SPACING */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 md:p-6 space-y-3">
-            {categorySubtotals.map(({ category, items, subtotal }, idx) => (
-              <div key={idx} className="space-y-1.5">
-                {/* Category Header - Smaller text */}
-                <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white mb-1.5">
-                  {category}
-                </h3>
+      <div className="flex-1 overflow-y-auto w-full custom-scrollbar">
+        <div className="max-w-6xl mx-auto p-6 md:p-12 pb-32">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
 
-                {/* Items (no pricing) - Smaller text, tighter spacing */}
-                <div className="space-y-0.5 pl-3">
-                  {items.map((item, itemIdx) => (
-                    <div key={itemIdx} className="flex items-start gap-1.5 text-xs md:text-sm text-gray-700 dark:text-gray-300">
-                      <span className="text-primary mt-0.5 text-xs">•</span>
-                      <span className="leading-tight">{item.name}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Category Subtotal with Dotted Leader - Reduced spacing */}
-                <div className="flex items-center justify-between pt-1.5 border-t border-gray-200 dark:border-gray-700">
-                  <span className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Subtotal
-                  </span>
-                  <div className="flex-1 mx-3 border-b border-dotted border-gray-300 dark:border-gray-600" />
-                  <span className="text-sm md:text-base font-bold text-gray-900 dark:text-white">
-                    {formatCurrency(subtotal)}
-                  </span>
-                </div>
+            {/* Left: Detailed Scope (Table Style) */}
+            <div className="lg:col-span-2 space-y-8">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="h-8 w-1 bg-primary rounded-full" />
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white uppercase tracking-wider">Project Scope Breakdown</h3>
               </div>
-            ))}
 
-            {/* Total Investment - Reduced top spacing */}
-            <div className="pt-4 mt-4 border-t-2 border-gray-900 dark:border-white">
-              <div className="flex items-center justify-between">
-                <span className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
-                  Total Investment
-                </span>
-                <div className="flex-1 mx-4 border-b-2 border-dotted border-gray-400 dark:border-gray-500" />
-                <span className="text-xl md:text-2xl font-bold text-primary">
-                  {formatCurrency(section.total || 0)}
-                </span>
+              <div className="space-y-6">
+                {categorySubtotals.map(({ category, items, subtotal }, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden"
+                  >
+                    <div className="bg-gray-50/50 dark:bg-gray-800/30 px-6 py-3 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                      <span className="text-sm font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{category}</span>
+                      <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded uppercase">{items.length} Items</span>
+                    </div>
+
+                    <div className="p-6 space-y-4">
+                      <table className="w-full text-left">
+                        <thead className="hidden md:table-header-group">
+                          <tr className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                            <th className="pb-3 pr-4">Description</th>
+                            <th className="pb-3 text-right">Investment</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                          {items.map((item, itemIdx) => (
+                            <tr key={itemIdx} className="group">
+                              <td className="py-3 pr-4">
+                                <p className="text-sm md:text-base font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors line-clamp-1">{item.name}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{item.enhancedDescription || item.description}</p>
+                              </td>
+                              <td className="py-3 text-right align-top">
+                                <span className="text-sm md:text-base font-medium text-gray-700 dark:text-gray-300">
+                                  {formatCurrency(item.total)}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+
+                      <div className="pt-4 flex justify-between items-center border-t border-gray-100 dark:border-gray-800">
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{category} TOTAL</span>
+                        <span className="text-lg font-black text-gray-900 dark:text-white">{formatCurrency(subtotal)}</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
             </div>
+
+            {/* Right: Investment Summary Card */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-0 space-y-6">
+                <div className="bg-white dark:bg-gray-900 rounded-[2rem] border-2 border-primary/20 shadow-2xl overflow-hidden">
+                  <div className="bg-primary p-8 text-center text-white">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] opacity-80 mb-2">Investment Total</p>
+                    <h3 className="text-4xl md:text-5xl font-black">{formatCurrency(section.total || 0)}</h3>
+                  </div>
+
+                  <div className="p-8 space-y-6">
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500 dark:text-gray-400 font-medium">Project Subtotal</span>
+                        <span className="text-gray-900 dark:text-white font-bold">{formatCurrency(section.subtotal || 0)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500 dark:text-gray-400 font-medium">Estimated Tax</span>
+                        <span className="text-gray-900 dark:text-white font-bold">{formatCurrency(section.tax || 0)}</span>
+                      </div>
+                      <div className="h-px bg-gray-100 dark:bg-gray-800 w-full" />
+                      <div className="flex justify-between items-center pt-2">
+                        <span className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tighter">Total Amount</span>
+                        <span className="text-2xl font-black text-primary tracking-tighter">{formatCurrency(section.total || 0)}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50">
+                      <p className="text-[10px] leading-relaxed text-blue-700/80 dark:text-blue-300/80 italic text-center">
+                        This investment summary represents the total scope of work outlined in the preceding sections.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] text-center">Flexible Financing Available</p>
+                      <div className="flex justify-center gap-2">
+                        <div className="h-1 w-8 bg-gray-200 dark:bg-gray-800 rounded-full" />
+                        <div className="h-1 w-8 bg-primary/40 rounded-full" />
+                        <div className="h-1 w-8 bg-gray-200 dark:bg-gray-800 rounded-full" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-900 dark:bg-white rounded-2xl p-6 text-white dark:text-gray-900 shadow-xl">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-white/10 dark:bg-gray-100 p-3 rounded-xl font-black text-xl">100%</div>
+                    <div>
+                      <p className="text-sm font-bold leading-tight">Price Protection Guaranteed</p>
+                      <p className="text-[10px] opacity-70">Price locked for 30 days from proposal date.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          {/* Footer Note - Smaller */}
-          <div className="mt-4 text-center">
-            <p className="text-[10px] md:text-xs text-muted-foreground">
-              All pricing subject to terms and conditions outlined in this proposal
+          {/* Footer Note */}
+          <div className="mt-16 text-center border-t border-gray-200 dark:border-gray-800 pt-8">
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">
+              Acceptance of this proposal constitutes a binding agreement
             </p>
           </div>
         </div>
