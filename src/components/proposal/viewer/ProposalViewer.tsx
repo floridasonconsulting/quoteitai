@@ -10,7 +10,10 @@ import { ProposalActionBar } from "./ProposalActionBar";
 import { ProposalSuccessStates, SuccessType } from "./ProposalSuccessStates";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
+import { Menu, Edit3 } from "lucide-react";
+import { ImageEditDialog } from "./ImageEditDialog";
+import { visualsService } from "@/lib/services/visuals-service";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProposalViewerProps {
   quote: Quote;
@@ -34,6 +37,14 @@ export function ProposalViewer({
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [successState, setSuccessState] = useState<SuccessType | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [editImageConfig, setEditImageConfig] = useState<{
+    isOpen: boolean;
+    type: 'cover' | 'section' | 'item';
+    id: string; // sectionId or itemName
+    currentImage?: string;
+  }>({ isOpen: false, type: 'cover', id: '' });
+
+  const { toast } = useToast();
 
   // Debug logging for company info
   console.log('[ProposalViewer] Settings received:', {
@@ -139,6 +150,34 @@ export function ProposalViewer({
     }
   };
 
+  const handleUpdateImage = async (url: string) => {
+    try {
+      if (editImageConfig.type === 'cover') {
+        await visualsService.saveCoverOverride(quote.id, url);
+      } else if (editImageConfig.type === 'section') {
+        await visualsService.saveSectionImageOverride(quote.id, editImageConfig.id, url);
+      } else if (editImageConfig.type === 'item') {
+        await visualsService.saveItemImageOverride(quote.id, editImageConfig.id, url);
+      }
+
+      toast({
+        title: "Image updated",
+        description: "The proposal visuals have been updated successfully.",
+      });
+
+      // Refresh page to show new visual state
+      // In a more complex app we'd trigger a re-transformation of proposalData
+      window.location.reload();
+    } catch (error) {
+      console.error("Failed to update image:", error);
+      toast({
+        title: "Update failed",
+        description: "There was an error saving the image selection.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Render
   return (
     <div className="h-screen w-full bg-background overflow-hidden font-sans">
@@ -147,13 +186,21 @@ export function ProposalViewer({
         {stage === 'cover' && (
           <ProposalCover
             key="cover"
-            companyName={proposalData.sender?.company || "Company Name"}
-            projectTitle={proposalData.sections.find(s => s.type === 'hero')?.title || "Project Proposal"}
+            title={proposalData.sections.find(s => s.type === 'hero')?.title || "Project Proposal"}
+            subtitle={proposalData.sections.find(s => s.type === 'hero')?.subtitle || ""}
             clientName={proposalData.client.name}
             coverImage={proposalData.visuals?.coverImage}
+            companyLogo={settings?.logo}
             totalAmount={quote.total}
             currency={settings?.currency || 'USD'}
             onEnter={() => setStage('content')}
+            isOwner={isReadOnly} // Note: isReadOnly is true when owner is previewing
+            onEditImage={(url) => setEditImageConfig({
+              isOpen: true,
+              type: 'cover',
+              id: 'cover',
+              currentImage: url
+            })}
           />
         )}
 
@@ -211,7 +258,7 @@ export function ProposalViewer({
                   </h3>
                 )}
                 {isReadOnly && (
-                  <div className="mt-3 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 rounded text-xs text-blue-700 dark:text-blue-300 text-center">
+                  <div className="mt-3 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 rounded text-xs text-blue-700 dark:text-blue-300 text-center uppercase font-bold tracking-tight">
                     Owner Preview Mode
                   </div>
                 )}
@@ -231,6 +278,19 @@ export function ProposalViewer({
                 sections={proposalData.sections}
                 activeIndex={activeSlideIndex}
                 onSlideChange={setActiveSlideIndex}
+                isOwner={isReadOnly}
+                onEditSectionImage={(id, url) => setEditImageConfig({
+                  isOpen: true,
+                  type: 'section',
+                  id,
+                  currentImage: url
+                })}
+                onEditItemImage={(name, url) => setEditImageConfig({
+                  isOpen: true,
+                  type: 'item',
+                  id: name,
+                  currentImage: url
+                })}
               />
             </div>
 
@@ -258,6 +318,14 @@ export function ProposalViewer({
           />
         )}
       </AnimatePresence>
+
+      <ImageEditDialog
+        isOpen={editImageConfig.isOpen}
+        onClose={() => setEditImageConfig({ ...editImageConfig, isOpen: false })}
+        onSelect={handleUpdateImage}
+        title={`Change ${editImageConfig.type === 'item' ? 'Item' : 'Section'} Image`}
+        currentImage={editImageConfig.currentImage}
+      />
     </div>
   );
 }

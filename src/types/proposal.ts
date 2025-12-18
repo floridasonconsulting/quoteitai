@@ -54,6 +54,7 @@ export interface ProposalVisuals {
   logo?: string; // Company/brand logo
   gallery?: string[]; // Additional images for gallery sections
   sectionBackgrounds?: Record<string, string>; // Category-specific backgrounds
+  itemImages?: Record<string, string>; // NEW: Line item specific images
 }
 
 export interface ProposalSection {

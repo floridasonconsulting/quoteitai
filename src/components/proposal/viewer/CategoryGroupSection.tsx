@@ -1,12 +1,17 @@
 import { motion } from "framer-motion";
-import { CategoryGroup } from "@/types/proposal";
+import { CategoryGroup, ProposalItem } from "@/types/proposal";
 import { cn } from "@/lib/utils";
 import { useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Edit3 } from "lucide-react";
 
 interface CategoryGroupSectionProps {
   categoryGroup: CategoryGroup;
-  showPricing?: boolean;
   backgroundImage?: string;
+  showPricing?: boolean;
+  isOwner?: boolean;
+  onEditBackgroundImage?: (url?: string) => void;
+  onEditItemImage?: (itemName: string, url?: string) => void;
 }
 
 /**
@@ -18,8 +23,11 @@ interface CategoryGroupSectionProps {
  */
 export function CategoryGroupSection({
   categoryGroup,
-  showPricing = true,
   backgroundImage,
+  showPricing = true,
+  isOwner,
+  onEditBackgroundImage,
+  onEditItemImage,
 }: CategoryGroupSectionProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -67,15 +75,29 @@ export function CategoryGroupSection({
     <div className="h-full w-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Hero Title Banner - REDUCED HEIGHT */}
       <div
-        className="relative w-full h-40 md:h-56 flex-shrink-0"
+        className="relative h-[40vh] md:h-[50vh] flex items-center justify-center overflow-hidden"
         style={{
-          backgroundImage: backgroundImage
+          background: backgroundImage
             ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url(${backgroundImage})`
-            : 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', // Premium mesh-style dark fallback
+            : "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       >
+        {/* Owner Action */}
+        {isOwner && (
+          <div className="absolute top-4 right-4 z-50">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEditBackgroundImage?.(backgroundImage)}
+              className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 rounded-full font-bold uppercase tracking-wider text-[10px]"
+            >
+              <Edit3 className="w-3 h-3 mr-2" />
+              Edit Header Image
+            </Button>
+          </div>
+        )}
         <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" />
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center px-6 max-w-4xl">

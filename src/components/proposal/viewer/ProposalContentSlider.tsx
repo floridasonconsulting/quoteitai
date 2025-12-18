@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import type { Swiper as SwiperType } from "swiper";
 import type { ProposalSection } from "@/types/proposal";
 import { CategoryGroupSection } from "./CategoryGroupSection";
+import { Button } from "@/components/ui/button";
+import { Edit3 } from "lucide-react";
 
 // Import Swiper styles
 import "swiper/css";
@@ -15,6 +17,9 @@ interface ProposalContentSliderProps {
   sections: ProposalSection[];
   onSlideChange: (index: number) => void;
   activeIndex?: number;
+  isOwner?: boolean;
+  onEditSectionImage?: (sectionId: string, currentUrl?: string) => void;
+  onEditItemImage?: (itemName: string, currentUrl?: string) => void;
 }
 
 /**
@@ -25,6 +30,9 @@ export function ProposalContentSlider({
   sections,
   onSlideChange,
   activeIndex = 0,
+  isOwner,
+  onEditSectionImage,
+  onEditItemImage,
 }: ProposalContentSliderProps) {
   const swiperRef = useRef<SwiperType | null>(null);
   const [currentIndex, setCurrentIndex] = useState(activeIndex);
@@ -119,21 +127,38 @@ function processSectionsForPagination(sections: ProposalSection[]): ProposalSect
 /**
  * Individual Slide Content Renderer
  */
-function SlideContent({ section, isActive }: { section: ProposalSection; isActive: boolean }) {
+function SlideContent({
+  section,
+  isActive,
+  isOwner,
+  onEditSectionImage,
+  onEditItemImage
+}: {
+  section: ProposalSection;
+  isActive: boolean;
+  isOwner?: boolean;
+  onEditSectionImage?: (sectionId: string, currentUrl?: string) => void;
+  onEditItemImage?: (itemName: string, currentUrl?: string) => void;
+}) {
   const getSlideComponent = () => {
     switch (section.type) {
       case 'hero':
-        return <HeroSlide section={section} />;
+        return <HeroSlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} />;
       case 'text':
-        return <TextSlide section={section} />;
+        return <TextSlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} />;
       case 'categoryGroup':
-        return <CategorySlide section={section} />;
+        return <CategorySlide
+          section={section}
+          isOwner={isOwner}
+          onEditSectionImage={onEditSectionImage}
+          onEditItemImage={onEditItemImage}
+        />;
       case 'lineItems':
         return <InvestmentSummarySlide section={section} />;
       case 'legal':
         return <LegalSlide section={section} />;
       default:
-        return <div>Unknown section type</div>;
+        return null;
     }
   };
 
@@ -152,7 +177,15 @@ function SlideContent({ section, isActive }: { section: ProposalSection; isActiv
 /**
  * Slide Component: Hero/Executive Summary
  */
-function HeroSlide({ section }: { section: ProposalSection }) {
+function HeroSlide({
+  section,
+  isOwner,
+  onEditImage
+}: {
+  section: ProposalSection,
+  isOwner?: boolean,
+  onEditImage?: (url?: string) => void
+}) {
   return (
     <div
       className="h-full flex items-center justify-center p-8 md:p-16 relative overflow-y-auto"
@@ -164,6 +197,20 @@ function HeroSlide({ section }: { section: ProposalSection }) {
         backgroundPosition: "center",
       }}
     >
+      {/* Owner Action */}
+      {isOwner && (
+        <div className="absolute top-4 right-4 md:top-8 md:right-8 z-50">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onEditImage?.(section.backgroundImage)}
+            className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 rounded-full font-bold uppercase tracking-wider text-[10px]"
+          >
+            <Edit3 className="w-3 h-3 mr-2" />
+            Edit Landing Image
+          </Button>
+        </div>
+      )}
       <div className="max-w-4xl">
         <motion.div
           initial={{ y: 20, opacity: 0 }}
@@ -200,7 +247,15 @@ function HeroSlide({ section }: { section: ProposalSection }) {
 /**
  * Slide Component: Text Section (Terms & Conditions)
  */
-function TextSlide({ section }: { section: ProposalSection }) {
+function TextSlide({
+  section,
+  isOwner,
+  onEditImage
+}: {
+  section: ProposalSection,
+  isOwner?: boolean,
+  onEditImage?: (url?: string) => void
+}) {
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Consistent Header Banner */}
@@ -212,6 +267,20 @@ function TextSlide({ section }: { section: ProposalSection }) {
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}>
+        {/* Owner Action */}
+        {isOwner && (
+          <div className="absolute top-4 right-4 z-50">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEditImage?.(section.backgroundImage)}
+              className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 rounded-full font-bold uppercase tracking-wider text-[10px]"
+            >
+              <Edit3 className="w-3 h-3 mr-2" />
+              Edit Header Image
+            </Button>
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
         <div className="absolute inset-0 flex items-center justify-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white">{section.title}</h2>
@@ -237,7 +306,17 @@ function TextSlide({ section }: { section: ProposalSection }) {
 /**
  * Slide Component: Category Group (Magazine Style)
  */
-function CategorySlide({ section }: { section: ProposalSection }) {
+function CategorySlide({
+  section,
+  isOwner,
+  onEditSectionImage,
+  onEditItemImage
+}: {
+  section: ProposalSection,
+  isOwner?: boolean,
+  onEditSectionImage?: (id: string, url?: string) => void,
+  onEditItemImage?: (name: string, url?: string) => void
+}) {
   const categoryGroup = section.categoryGroups?.[0];
 
   if (!categoryGroup) return null;
@@ -247,6 +326,9 @@ function CategorySlide({ section }: { section: ProposalSection }) {
       categoryGroup={categoryGroup}
       showPricing={section.showPricing}
       backgroundImage={section.backgroundImage}
+      isOwner={isOwner}
+      onEditBackgroundImage={(url) => onEditSectionImage?.(section.id, url)}
+      onEditItemImage={onEditItemImage}
     />
   );
 }
@@ -256,11 +338,31 @@ function CategorySlide({ section }: { section: ProposalSection }) {
  * UPDATED: Tighter spacing, smaller text to minimize scrolling
  */
 function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
     }).format(amount);
+  };
+
+  // Handle wheel events intelligently - only stop propagation when we can actually scroll
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const isScrollingUp = e.deltaY < 0;
+    const isScrollingDown = e.deltaY > 0;
+
+    const isAtTop = scrollTop === 0;
+    const isAtBottom = Math.ceil(scrollTop + clientHeight) >= scrollHeight;
+
+    // Only prevent Swiper navigation if we're scrolling within bounds
+    if ((isScrollingDown && !isAtBottom) || (isScrollingUp && !isAtTop)) {
+      e.stopPropagation();
+    }
   };
 
   // Group items by category
@@ -280,8 +382,8 @@ function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
 
   return (
     <div className="h-full flex flex-col bg-[#F8FAFC] dark:bg-gray-950 overflow-hidden">
-      {/* Premium Header Banner */}
-      <div className="relative w-full h-40 md:h-56 flex-shrink-0"
+      {/* Compact Header Banner */}
+      <div className="relative w-full h-32 md:h-40 flex-shrink-0"
         style={{
           backgroundImage: section.backgroundImage
             ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url(${section.backgroundImage})`
@@ -292,56 +394,60 @@ function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
         <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" />
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center px-6">
-            <span className="text-xs md:text-sm uppercase tracking-[0.3em] text-white/70 font-bold mb-2 block">PROJECT OVERVIEW</span>
-            <h2 className="text-3xl md:text-6xl font-black text-white tracking-tight leading-none uppercase drop-shadow-lg">
+            <span className="text-[10px] md:text-sm uppercase tracking-[0.3em] text-white/70 font-bold mb-1 block">PROJECT OVERVIEW</span>
+            <h2 className="text-2xl md:text-4xl font-black text-white tracking-tight uppercase drop-shadow-lg">
               {section.title || "Scope & Investment"}
             </h2>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto w-full custom-scrollbar">
-        <div className="max-w-6xl mx-auto p-6 md:p-12 pb-32">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
+      <div
+        ref={scrollContainerRef}
+        onWheel={handleWheel}
+        className="flex-1 overflow-y-auto w-full custom-scrollbar"
+      >
+        <div className="max-w-6xl mx-auto p-4 md:p-8 pb-32">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
 
             {/* Left: Detailed Scope (Table Style) */}
-            <div className="lg:col-span-2 space-y-8">
-              <div className="flex items-center gap-4 mb-2">
-                <div className="h-8 w-1 bg-primary rounded-full" />
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white uppercase tracking-wider">Project Scope Breakdown</h3>
+            <div className="lg:col-span-2 space-y-6">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="h-6 w-1 bg-primary rounded-full" />
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-wider">Project Scope Breakdown</h3>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {categorySubtotals.map(({ category, items, subtotal }, idx) => (
                   <motion.div
                     key={idx}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.1 }}
-                    className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden"
+                    transition={{ delay: idx * 0.05 }}
+                    className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden"
                   >
-                    <div className="bg-gray-50/50 dark:bg-gray-800/30 px-6 py-3 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                      <span className="text-sm font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{category}</span>
-                      <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded uppercase">{items.length} Items</span>
+                    <div className="bg-gray-50/50 dark:bg-gray-800/30 px-5 py-2.5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                      <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{category}</span>
+                      <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded uppercase">{items.length} Items</span>
                     </div>
 
-                    <div className="p-6 space-y-4">
+                    <div className="p-5 space-y-3">
                       <table className="w-full text-left">
                         <thead className="hidden md:table-header-group">
                           <tr className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
-                            <th className="pb-3 pr-4">Description</th>
-                            <th className="pb-3 text-right">Investment</th>
+                            <th className="pb-2 pr-4">Description</th>
+                            <th className="pb-2 text-right">Investment</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                           {items.map((item, itemIdx) => (
                             <tr key={itemIdx} className="group">
-                              <td className="py-3 pr-4">
-                                <p className="text-sm md:text-base font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors line-clamp-1">{item.name}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{item.enhancedDescription || item.description}</p>
+                              <td className="py-2.5 pr-4">
+                                <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors leading-tight">{item.name}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug break-words">{item.enhancedDescription || item.description}</p>
                               </td>
-                              <td className="py-3 text-right align-top">
-                                <span className="text-sm md:text-base font-medium text-gray-700 dark:text-gray-300">
+                              <td className="py-2.5 text-right align-top whitespace-nowrap">
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                   {formatCurrency(item.total)}
                                 </span>
                               </td>
@@ -350,9 +456,9 @@ function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
                         </tbody>
                       </table>
 
-                      <div className="pt-4 flex justify-between items-center border-t border-gray-100 dark:border-gray-800">
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{category} TOTAL</span>
-                        <span className="text-lg font-black text-gray-900 dark:text-white">{formatCurrency(subtotal)}</span>
+                      <div className="pt-3 flex justify-between items-center border-t border-gray-100 dark:border-gray-800">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">SUBTOTAL</span>
+                        <span className="text-base font-black text-gray-900 dark:text-white">{formatCurrency(subtotal)}</span>
                       </div>
                     </div>
                   </motion.div>
@@ -363,30 +469,30 @@ function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
             {/* Right: Investment Summary Card */}
             <div className="lg:col-span-1">
               <div className="sticky top-0 space-y-6">
-                <div className="bg-white dark:bg-gray-900 rounded-[2rem] border-2 border-primary/20 shadow-2xl overflow-hidden">
-                  <div className="bg-primary p-8 text-center text-white">
-                    <p className="text-xs font-black uppercase tracking-[0.2em] opacity-80 mb-2">Investment Total</p>
-                    <h3 className="text-4xl md:text-5xl font-black">{formatCurrency(section.total || 0)}</h3>
+                <div className="bg-white dark:bg-gray-900 rounded-[1.5rem] border-2 border-primary/20 shadow-xl overflow-hidden">
+                  <div className="bg-primary p-6 text-center text-white">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mb-1">Investment Total</p>
+                    <h3 className="text-3xl md:text-4xl font-black tracking-tighter">{formatCurrency(section.total || 0)}</h3>
                   </div>
 
-                  <div className="p-8 space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-500 dark:text-gray-400 font-medium">Project Subtotal</span>
+                  <div className="p-6 space-y-5">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Project Subtotal</span>
                         <span className="text-gray-900 dark:text-white font-bold">{formatCurrency(section.subtotal || 0)}</span>
                       </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-500 dark:text-gray-400 font-medium">Estimated Tax</span>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Estimated Tax</span>
                         <span className="text-gray-900 dark:text-white font-bold">{formatCurrency(section.tax || 0)}</span>
                       </div>
                       <div className="h-px bg-gray-100 dark:bg-gray-800 w-full" />
-                      <div className="flex justify-between items-center pt-2">
-                        <span className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tighter">Total Amount</span>
-                        <span className="text-2xl font-black text-primary tracking-tighter">{formatCurrency(section.total || 0)}</span>
+                      <div className="flex justify-between items-center pt-1">
+                        <span className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tighter">Total Amount</span>
+                        <span className="text-xl font-black text-primary tracking-tighter">{formatCurrency(section.total || 0)}</span>
                       </div>
                     </div>
 
-                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800/50">
                       <p className="text-[10px] leading-relaxed text-blue-700/80 dark:text-blue-300/80 italic text-center">
                         This investment summary represents the total scope of work outlined in the preceding sections.
                       </p>
@@ -395,20 +501,20 @@ function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
                     <div className="space-y-2">
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] text-center">Flexible Financing Available</p>
                       <div className="flex justify-center gap-2">
-                        <div className="h-1 w-8 bg-gray-200 dark:bg-gray-800 rounded-full" />
-                        <div className="h-1 w-8 bg-primary/40 rounded-full" />
-                        <div className="h-1 w-8 bg-gray-200 dark:bg-gray-800 rounded-full" />
+                        <div className="h-0.5 w-6 bg-gray-200 dark:bg-gray-800 rounded-full" />
+                        <div className="h-0.5 w-6 bg-primary/40 rounded-full" />
+                        <div className="h-0.5 w-6 bg-gray-200 dark:bg-gray-800 rounded-full" />
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-gray-900 dark:bg-white rounded-2xl p-6 text-white dark:text-gray-900 shadow-xl">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-white/10 dark:bg-gray-100 p-3 rounded-xl font-black text-xl">100%</div>
+                <div className="bg-gray-900 dark:bg-white rounded-xl p-5 text-white dark:text-gray-900 shadow-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/10 dark:bg-gray-100 p-2.5 rounded-lg font-black text-lg">100%</div>
                     <div>
-                      <p className="text-sm font-bold leading-tight">Price Protection Guaranteed</p>
-                      <p className="text-[10px] opacity-70">Price locked for 30 days from proposal date.</p>
+                      <p className="text-[11px] font-bold leading-tight">Price Protection Guaranteed</p>
+                      <p className="text-[10px] opacity-70">Locked for 30 days from proposal date.</p>
                     </div>
                   </div>
                 </div>
@@ -418,8 +524,8 @@ function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
           </div>
 
           {/* Footer Note */}
-          <div className="mt-16 text-center border-t border-gray-200 dark:border-gray-800 pt-8">
-            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">
+          <div className="mt-12 text-center border-t border-gray-200 dark:border-gray-800 pt-6">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
               Acceptance of this proposal constitutes a binding agreement
             </p>
           </div>

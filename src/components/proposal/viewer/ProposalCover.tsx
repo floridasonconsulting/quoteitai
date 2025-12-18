@@ -1,15 +1,18 @@
 import { motion } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ProposalCoverProps {
-  companyName: string;
-  projectTitle: string;
+  title: string;
+  subtitle: string;
   clientName: string;
   coverImage?: string;
+  companyLogo?: string;
   totalAmount?: number;
   currency?: string;
   onEnter: () => void;
+  isOwner?: boolean;
+  onEditImage?: (url?: string) => void;
 }
 
 /**
@@ -17,14 +20,24 @@ interface ProposalCoverProps {
  * Full-screen landing page with high-impact visuals
  */
 export function ProposalCover({
-  companyName,
-  projectTitle,
+  title,
+  subtitle,
   clientName,
   coverImage,
+  companyLogo,
   totalAmount,
-  currency = 'USD',
+  currency = 'USD', // Default to USD
   onEnter,
+  isOwner,
+  onEditImage,
 }: ProposalCoverProps) {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+    }).format(amount);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -40,6 +53,20 @@ export function ProposalCover({
         backgroundPosition: "center",
       }}
     >
+      {/* Owner Image Edit Action */}
+      {isOwner && (
+        <div className="absolute top-4 right-4 md:top-8 md:right-8 z-50">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onEditImage?.(coverImage)}
+            className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 rounded-full font-bold uppercase tracking-wider text-[10px]"
+          >
+            <Edit3 className="w-3 h-3 mr-2" />
+            Edit Hero Image
+          </Button>
+        </div>
+      )}
       {/* Content Container */}
       <div className="text-center text-white px-4 max-w-4xl w-full">
         {/* Company Logo/Name */}
@@ -49,10 +76,17 @@ export function ProposalCover({
           transition={{ delay: 0.2, duration: 0.6 }}
           className="mb-12"
         >
-          <p className="text-sm uppercase tracking-widest text-white/80 mb-2 font-medium">
-            Proposal from
-          </p>
-          <h3 className="text-3xl font-bold">{companyName}</h3>
+          {companyLogo ? (
+            <img
+              src={companyLogo}
+              alt="Company Logo"
+              className="h-16 md:h-24 mx-auto mb-4 object-contain brightness-0 invert"
+            />
+          ) : (
+            <p className="text-sm uppercase tracking-widest text-white/80 mb-2 font-black">
+              PROPOSAL FOR
+            </p>
+          )}
         </motion.div>
 
         {/* Project Title and Client info */}
@@ -62,28 +96,25 @@ export function ProposalCover({
           transition={{ delay: 0.4, duration: 0.6 }}
           className="space-y-8"
         >
-          <h1 className="text-5xl md:text-8xl font-black mb-4 leading-tight tracking-tight">
-            {projectTitle}
+          <h1 className="text-5xl md:text-8xl font-black mb-4 leading-tight tracking-tight uppercase">
+            {title}
           </h1>
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 pt-4">
             <div className="space-y-1">
-              <p className="text-white/60 text-sm uppercase tracking-widest font-medium">Prepared For</p>
-              <p className="text-2xl md:text-3xl font-semibold">{clientName}</p>
+              <p className="text-white/60 text-[10px] md:text-xs uppercase tracking-[0.3em] font-black">Prepared For</p>
+              <p className="text-2xl md:text-3xl font-black">{clientName}</p>
             </div>
 
             {totalAmount !== undefined && (
-              <div className="h-16 w-px bg-white/20 hidden md:block" />
+              <div className="h-12 w-px bg-white/20 hidden md:block" />
             )}
 
             {totalAmount !== undefined && (
               <div className="space-y-1">
-                <p className="text-white/60 text-sm uppercase tracking-widest font-medium">Total Investment</p>
-                <p className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-blue-200 to-white bg-clip-text text-transparent">
-                  {new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: currency,
-                  }).format(totalAmount)}
+                <p className="text-white/60 text-[10px] md:text-xs uppercase tracking-[0.3em] font-black">Total Investment</p>
+                <p className="text-3xl md:text-5xl font-black text-white">
+                  {formatCurrency(totalAmount)}
                 </p>
               </div>
             )}

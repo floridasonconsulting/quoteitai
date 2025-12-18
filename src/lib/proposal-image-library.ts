@@ -370,14 +370,24 @@ export function mapCategoriesToImages(
 export function detectIndustry(quoteTitle: string, categories: string[]): string {
   const allText = `${quoteTitle} ${categories.join(' ')}`.toLowerCase();
 
-  if (allText.includes('pool') || allText.includes('spa') || allText.includes('swimming')) return 'pool-spa';
-  if (allText.includes('landscape') || allText.includes('garden') || allText.includes('lawn') || allText.includes('mowing')) return 'landscaping';
+  // POOL & SPA - Extended with common remodel terms
+  if (
+    allText.includes('pool') ||
+    allText.includes('spa') ||
+    allText.includes('swimming') ||
+    allText.includes('plaster') ||
+    allText.includes('pebble') ||
+    allText.includes('coping') ||
+    allText.includes('water feature')
+  ) return 'pool-spa';
+
+  if (allText.includes('landscape') || allText.includes('garden') || allText.includes('lawn') || allText.includes('irrigation') || allText.includes('sod')) return 'landscaping';
   if (allText.includes('hvac') || allText.includes('heat') || allText.includes('cool') || allText.includes('ac ')) return 'hvac';
   if (allText.includes('roof') || allText.includes('shingle')) return 'roofing';
   if (allText.includes('plumb') || allText.includes('pipe') || allText.includes('leak')) return 'plumbing';
   if (allText.includes('electric') || allText.includes('wire') || allText.includes('panel')) return 'electrical';
   if (allText.includes('paint')) return 'painting';
-  if (allText.includes('floor') || allText.includes('hardwood') || allText.includes('tile')) return 'flooring';
+  if (allText.includes('floor') || allText.includes('hardwood')) return 'flooring'; // Removed "tile" as it's common in pools too
   if (allText.includes('fence')) return 'fencing';
   if (allText.includes('renov') || allText.includes('remodel') || allText.includes('construct')) return 'general-contractor';
 
