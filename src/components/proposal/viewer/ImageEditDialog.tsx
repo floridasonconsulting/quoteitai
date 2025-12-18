@@ -38,16 +38,36 @@ export function ImageEditDialog({
     const [isLoading, setIsLoading] = useState(false);
     const [customUrl, setCustomUrl] = useState("");
     const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
+    const [accessKey, setAccessKey] = useState(import.meta.env.VITE_UNSPLASH_ACCESS_KEY || "QnCH4kO-p9J8m9_qWw8oT0v-jS6-Vf3-_4R0V_X8-g0");
+    const [showKeyInput, setShowKeyInput] = useState(false);
+
+    const [error, setError] = useState<string | null>(null);
 
     const handleSearch = async () => {
         if (!searchQuery.trim()) return;
         setIsLoading(true);
+        setError(null);
         try {
-            const response = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(searchQuery)}&client_id=QnCH4kO-p9J8m9_qWw8oT0v-jS6-Vf3-_4R0V_X8-g0&per_page=12`);
+            const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(searchQuery)}&client_id=${accessKey}&per_page=12`;
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                if (response.status === 401 || response.status === 403) {
+                    setShowKeyInput(true);
+                    throw new Error("Invalid or rate-limited API key. Please provide a valid Unsplash Access Key.");
+                }
+                throw new Error(errorData.errors?.[0] || `Search failed with status ${response.status}`);
+            }
+
             const data = await response.json();
             setSearchResults(data.results || []);
-        } catch (error) {
+            if (data.results?.length === 0) {
+                setError("No images found for this search. Try a broader term.");
+            }
+        } catch (error: any) {
             console.error("Failed to search Unsplash:", error);
+            setError(error.message || "Failed to search Unsplash.");
         } finally {
             setIsLoading(false);
         }
@@ -109,8 +129,8 @@ export function ImageEditDialog({
                                             setCustomUrl("");
                                         }}
                                         className={`relative aspect-[4/3] rounded-2xl overflow-hidden cursor-pointer group transition-all duration-300 ${selectedUrl === img.urls.regular
-                                                ? "ring-4 ring-primary ring-offset-2 dark:ring-offset-gray-950"
-                                                : "hover:scale-[1.02] hover:shadow-lg"
+                                            ? "ring-4 ring-primary ring-offset-2 dark:ring-offset-gray-950"
+                                            : "hover:scale-[1.02] hover:shadow-lg"
                                             }`}
                                     >
                                         <img
@@ -133,7 +153,27 @@ export function ImageEditDialog({
                             </AnimatePresence>
                         </div>
 
-                        {searchResults.length === 0 && !isLoading && (
+                        {error && (
+                            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50 rounded-2xl">
+                                <p className="text-xs text-red-600 dark:text-red-400 font-medium text-center">{error}</p>
+                                {showKeyInput && (
+                                    <div className="mt-4 space-y-2">
+                                        <Input
+                                            type="password"
+                                            placeholder="Enter your Unsplash Access Key"
+                                            value={accessKey}
+                                            onChange={(e) => setAccessKey(e.target.value)}
+                                            className="h-10 bg-white/50 dark:bg-black/50 border-red-200"
+                                        />
+                                        <p className="text-[10px] text-red-500/70 italic text-center">
+                                            Get a free key at <a href="https://unsplash.com/developers" target="_blank" rel="noopener noreferrer" className="underline">unsplash.com/developers</a>
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {searchResults.length === 0 && !isLoading && !error && (
                             <div className="h-40 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 rounded-3xl border-2 border-dashed border-gray-100 dark:border-gray-800">
                                 <ImageIcon className="w-8 h-8 text-gray-300 mb-2" />
                                 <p className="text-xs text-gray-400 font-medium">Search for professional imagery on Unsplash</p>

@@ -74,7 +74,13 @@ export function ProposalContentSlider({
       >
         {processedSections.map((section, index) => (
           <SwiperSlide key={`${section.id}-${index}`}>
-            <SlideContent section={section} isActive={index === currentIndex} />
+            <SlideContent
+              section={section}
+              isActive={index === currentIndex}
+              isOwner={isOwner}
+              onEditSectionImage={onEditSectionImage}
+              onEditItemImage={onEditItemImage}
+            />
           </SwiperSlide>
         ))}
       </Swiper>
@@ -154,9 +160,9 @@ function SlideContent({
           onEditItemImage={onEditItemImage}
         />;
       case 'lineItems':
-        return <InvestmentSummarySlide section={section} />;
+        return <InvestmentSummarySlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} />;
       case 'legal':
-        return <LegalSlide section={section} />;
+        return <LegalSlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} />;
       default:
         return null;
     }
@@ -337,7 +343,15 @@ function CategorySlide({
  * Slide Component: Investment Summary (Professional Format)
  * UPDATED: Tighter spacing, smaller text to minimize scrolling
  */
-function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
+function InvestmentSummarySlide({
+  section,
+  isOwner,
+  onEditImage
+}: {
+  section: ProposalSection,
+  isOwner?: boolean,
+  onEditImage?: (url?: string) => void
+}) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const formatCurrency = (amount: number) => {
@@ -392,6 +406,22 @@ function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
           backgroundPosition: "center",
         }}>
         <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" />
+
+        {/* Owner Action */}
+        {isOwner && (
+          <div className="absolute top-4 right-4 z-50">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEditImage?.(section.backgroundImage)}
+              className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 rounded-full font-bold uppercase tracking-wider text-[10px]"
+            >
+              <Edit3 className="w-3 h-3 mr-2" />
+              Edit Header Image
+            </Button>
+          </div>
+        )}
+
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center px-6">
             <span className="text-[10px] md:text-sm uppercase tracking-[0.3em] text-white/70 font-bold mb-1 block">PROJECT OVERVIEW</span>
@@ -538,7 +568,15 @@ function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
 /**
  * Slide Component: Legal/Terms
  */
-function LegalSlide({ section }: { section: ProposalSection }) {
+function LegalSlide({
+  section,
+  isOwner,
+  onEditImage
+}: {
+  section: ProposalSection,
+  isOwner?: boolean,
+  onEditImage?: (url?: string) => void
+}) {
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Consistent Header Banner */}
@@ -551,6 +589,22 @@ function LegalSlide({ section }: { section: ProposalSection }) {
           backgroundPosition: "center",
         }}>
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
+
+        {/* Owner Action */}
+        {isOwner && (
+          <div className="absolute top-4 right-4 z-50">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEditImage?.(section.backgroundImage)}
+              className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 rounded-full font-bold uppercase tracking-wider text-[10px]"
+            >
+              <Edit3 className="w-3 h-3 mr-2" />
+              Edit Header Image
+            </Button>
+          </div>
+        )}
+
         <div className="absolute inset-0 flex items-center justify-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white">{section.title || "Terms & Conditions"}</h2>
         </div>

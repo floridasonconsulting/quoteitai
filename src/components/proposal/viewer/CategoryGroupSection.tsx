@@ -63,12 +63,6 @@ export function CategoryGroupSection({
     backgroundImage,
     showPricing,
     itemsWithImages: categoryGroup.items.filter(i => i.imageUrl).length,
-    itemsDebug: categoryGroup.items.map(item => ({
-      name: item.name,
-      hasImageUrl: !!item.imageUrl,
-      imageUrl: item.imageUrl,
-      imageUrlValid: item.imageUrl && item.imageUrl.startsWith('http')
-    }))
   });
 
   return (
@@ -109,7 +103,7 @@ export function CategoryGroupSection({
             >
               <span className="text-xs md:text-sm uppercase tracking-[0.3em] text-white/70 font-bold">SECTION</span>
               <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-none drop-shadow-lg uppercase">
-                {categoryGroup.displayName}
+                {categoryGroup.displayName || categoryGroup.category}
               </h2>
               {categoryGroup.description && (
                 <div className="h-1 w-12 bg-primary mx-auto my-4 rounded-full" />
@@ -146,7 +140,7 @@ export function CategoryGroupSection({
               >
                 {/* Item Image - REDUCED SIZE */}
                 {item.imageUrl && item.imageUrl.startsWith('http') && (
-                  <div className="flex-shrink-0 w-full md:w-32 h-32 md:h-32">
+                  <div className="flex-shrink-0 w-full md:w-32 h-32 md:h-32 relative group/img">
                     <img
                       src={item.imageUrl}
                       alt={item.name}
@@ -162,6 +156,23 @@ export function CategoryGroupSection({
                         e.currentTarget.style.display = 'none';
                       }}
                     />
+                    {isOwner && (
+                      <button
+                        onClick={() => onEditItemImage?.(item.name, item.imageUrl)}
+                        className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center rounded-lg"
+                      >
+                        <Edit3 className="w-5 h-5 text-white" />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* If no image and is owner, show a placeholder edit trigger */}
+                {!item.imageUrl && isOwner && (
+                  <div className="flex-shrink-0 w-full md:w-12 h-12 md:h-32 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-primary/50 transition-colors cursor-pointer"
+                    onClick={() => onEditItemImage?.(item.name)}
+                  >
+                    <Edit3 className="w-4 h-4 text-gray-400" />
                   </div>
                 )}
 
