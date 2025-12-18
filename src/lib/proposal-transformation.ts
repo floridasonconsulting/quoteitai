@@ -132,6 +132,8 @@ export function transformQuoteToProposal(
     content: quote.executiveSummary || "Thank you for the opportunity to present this proposal. We have carefully reviewed your requirements and crafted a solution that meets your specific needs.",
     backgroundImage: smartCoverImage,
     companyName: activeSettings.name || '',
+    total: quote.total,
+    currency: activeSettings.currency || 'USD',
   });
 
   // --- Section B: Category Groups (The Meat) with SMART IMAGE RESOLUTION ---

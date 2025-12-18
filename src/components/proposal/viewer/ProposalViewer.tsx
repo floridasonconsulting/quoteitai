@@ -151,6 +151,8 @@ export function ProposalViewer({
             projectTitle={proposalData.sections.find(s => s.type === 'hero')?.title || "Project Proposal"}
             clientName={proposalData.client.name}
             coverImage={proposalData.visuals?.coverImage}
+            totalAmount={quote.total}
+            currency={settings?.currency || 'USD'}
             onEnter={() => setStage('content')}
           />
         )}

@@ -180,6 +180,17 @@ function HeroSlide({ section }: { section: ProposalSection }) {
               <p className="text-lg leading-relaxed whitespace-pre-wrap">{section.content}</p>
             </div>
           )}
+          {section.total !== undefined && (
+            <div className="mt-12 inline-block bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 md:p-8">
+              <p className="text-white/60 text-sm uppercase tracking-widest font-medium mb-1">Total Investment</p>
+              <p className="text-4xl md:text-5xl font-bold text-white">
+                {new Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency: section.currency || 'USD',
+                }).format(section.total)}
+              </p>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

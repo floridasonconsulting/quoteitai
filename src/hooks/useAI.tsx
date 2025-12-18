@@ -20,7 +20,8 @@ export type AIFeatureType =
   | 'customer_insights'
   | 'competitive_analysis'
   | 'rfp_response_matching'
-  | 'content_generation';
+  | 'content_generation'
+  | 'advanced_analytics';
 
 interface UseAIOptions {
   onSuccess?: (content: string) => void;
@@ -52,6 +53,7 @@ const FEATURE_RATE_LIMIT_MAP: Record<AIFeatureType, string> = {
   competitive_analysis: 'ai-assist',
   rfp_response_matching: 'ai-assist',
   content_generation: 'ai-assist',
+  advanced_analytics: 'ai-assist',
 };
 
 export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {

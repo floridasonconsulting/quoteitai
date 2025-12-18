@@ -69,6 +69,7 @@ export interface ProposalSection {
   subtotal?: number;
   tax?: number;
   total?: number;
+  currency?: string;
   terms?: string;
   showPricing?: boolean; // Toggle for line-item pricing visibility
 }
@@ -113,7 +114,7 @@ export const getCategoryDisplayName = (category: string): string => {
     'Services': 'Services',
     'Other': 'Other'
   };
-  
+
   return standardCategories[category] || 'Other';
 };
 

@@ -29,18 +29,18 @@ interface SendQuoteDialogProps {
   onConfirm: (emailContent: EmailContent) => void;
 }
 
-export function SendQuoteDialog({ 
-  open, 
-  onOpenChange, 
-  quote, 
+export function SendQuoteDialog({
+  open,
+  onOpenChange,
+  quote,
   customer,
-  onConfirm 
+  onConfirm
 }: SendQuoteDialogProps) {
-  const greeting = customer?.contactFirstName 
+  const greeting = customer?.contactFirstName
     ? `Hello ${customer.contactFirstName},`
     : customer?.contactLastName
-    ? `Hello Mr./Ms. ${customer.contactLastName},`
-    : `Hello,`;
+      ? `Hello Mr./Ms. ${customer.contactLastName},`
+      : `Hello,`;
 
   const [subject, setSubject] = useState(`Quote #${quote.quoteNumber}: ${quote.title}`);
   const [greetingText, setGreetingText] = useState(greeting);
@@ -52,7 +52,7 @@ export function SendQuoteDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [requiredTier, setRequiredTier] = useState<'pro' | 'max'>('pro');
-  
+
   // Log share token for debugging
   useEffect(() => {
     if (quote.shareToken) {
@@ -138,8 +138,8 @@ export function SendQuoteDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="email-subject">Subject</Label>
-                <Input 
-                  id="email-subject" 
+                <Input
+                  id="email-subject"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder="Email subject"
@@ -148,8 +148,8 @@ export function SendQuoteDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="email-greeting">Greeting</Label>
-                <Input 
-                  id="email-greeting" 
+                <Input
+                  id="email-greeting"
                   value={greetingText}
                   onChange={(e) => setGreetingText(e.target.value)}
                   placeholder="Hello,"
@@ -158,8 +158,8 @@ export function SendQuoteDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="email-body">Email Body</Label>
-                <Textarea 
-                  id="email-body" 
+                <Textarea
+                  id="email-body"
                   value={bodyText}
                   onChange={(e) => setBodyText(e.target.value)}
                   rows={5}
@@ -235,8 +235,8 @@ export function SendQuoteDialog({
 
             <div className="space-y-2">
               <Label htmlFor="email-closing">Closing</Label>
-              <Input 
-                id="email-closing" 
+              <Input
+                id="email-closing"
                 value={closingText}
                 onChange={(e) => setClosingText(e.target.value)}
                 placeholder="Best regards"
@@ -264,3 +264,4 @@ export function SendQuoteDialog({
     </>
   );
 }
+export default SendQuoteDialog;

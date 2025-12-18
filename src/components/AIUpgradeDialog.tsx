@@ -92,6 +92,21 @@ const FEATURE_BENEFITS: Record<AIFeatureType, {
       'Top customer reports',
       'Export analytics data'
     ]
+  },
+  scope_of_work: {
+    name: 'AI Scope of Work',
+    description: 'Generate detailed, professional SOW documents in seconds',
+    benefits: ['Comprehensive scope definitions', 'Clear project boundaries', 'Legal-ready language']
+  },
+  rfp_response_matching: {
+    name: 'AI RFP Matching',
+    description: 'Match your items and services to RFP requirements automatically',
+    benefits: ['Increase win rate', 'Precise requirement mapping', 'Save hours of manual review']
+  },
+  content_generation: {
+    name: 'AI Content Generation',
+    description: 'Generate custom content and marketing copy for your proposals',
+    benefits: ['Personalized storytelling', 'Professional copywriting', 'Consistent brand voice']
   }
 };
 
@@ -180,7 +195,7 @@ export function AIUpgradeDialog({ isOpen, onClose, featureName, requiredTier }: 
           <Button variant="outline" onClick={onClose}>
             Maybe Later
           </Button>
-          <Button 
+          <Button
             onClick={handleUpgrade}
             className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
           >
@@ -192,3 +207,4 @@ export function AIUpgradeDialog({ isOpen, onClose, featureName, requiredTier }: 
     </Dialog>
   );
 }
+export default AIUpgradeDialog;

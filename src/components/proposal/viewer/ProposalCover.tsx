@@ -3,10 +3,12 @@ import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ProposalCoverProps {
-  coverImage?: string;
   companyName: string;
   projectTitle: string;
   clientName: string;
+  coverImage?: string;
+  totalAmount?: number;
+  currency?: string;
   onEnter: () => void;
 }
 
@@ -15,14 +17,14 @@ interface ProposalCoverProps {
  * Full-screen landing page with high-impact visuals
  */
 export function ProposalCover({
-  coverImage,
   companyName,
   projectTitle,
   clientName,
+  coverImage,
+  totalAmount,
+  currency = 'USD',
   onEnter,
 }: ProposalCoverProps) {
-  const defaultCoverImage = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80";
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -39,33 +41,53 @@ export function ProposalCover({
       }}
     >
       {/* Content Container */}
-      <div className="text-center text-white px-4 max-w-4xl">
+      <div className="text-center text-white px-4 max-w-4xl w-full">
         {/* Company Logo/Name */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.6 }}
-          className="mb-8"
+          className="mb-12"
         >
-          <p className="text-sm uppercase tracking-widest text-white/80 mb-2">
+          <p className="text-sm uppercase tracking-widest text-white/80 mb-2 font-medium">
             Proposal from
           </p>
-          <h3 className="text-2xl font-semibold">{companyName}</h3>
+          <h3 className="text-3xl font-bold">{companyName}</h3>
         </motion.div>
 
-        {/* Project Title */}
+        {/* Project Title and Client info */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.6 }}
-          className="mb-6"
+          className="space-y-8"
         >
-          <h1 className="text-5xl md:text-7xl font-bold mb-4 leading-tight">
+          <h1 className="text-5xl md:text-8xl font-black mb-4 leading-tight tracking-tight">
             {projectTitle}
           </h1>
-          <p className="text-xl md:text-2xl text-white/90">
-            Prepared for {clientName}
-          </p>
+
+          <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 pt-4">
+            <div className="space-y-1">
+              <p className="text-white/60 text-sm uppercase tracking-widest font-medium">Prepared For</p>
+              <p className="text-2xl md:text-3xl font-semibold">{clientName}</p>
+            </div>
+
+            {totalAmount !== undefined && (
+              <div className="h-16 w-px bg-white/20 hidden md:block" />
+            )}
+
+            {totalAmount !== undefined && (
+              <div className="space-y-1">
+                <p className="text-white/60 text-sm uppercase tracking-widest font-medium">Total Investment</p>
+                <p className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-blue-200 to-white bg-clip-text text-transparent">
+                  {new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: currency,
+                  }).format(totalAmount)}
+                </p>
+              </div>
+            )}
+          </div>
         </motion.div>
 
         {/* CTA Button */}
@@ -73,21 +95,17 @@ export function ProposalCover({
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.6 }}
-          className="mt-12"
+          className="mt-20"
         >
           <Button
             onClick={onEnter}
             size="lg"
-            className="group relative overflow-hidden bg-white text-gray-900 hover:bg-white/90 text-lg px-8 py-6 rounded-full shadow-2xl"
+            className="group relative overflow-hidden bg-white text-gray-900 hover:bg-white/90 text-lg px-12 py-8 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-105"
           >
-            <motion.span
-              animate={{ y: [0, -3, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="flex items-center gap-2"
-            >
-              View Proposal
-              <ChevronDown className="w-5 h-5" />
-            </motion.span>
+            <span className="flex items-center gap-3 font-bold uppercase tracking-wider">
+              Enter Proposal
+              <ChevronDown className="w-6 h-6 animate-bounce" />
+            </span>
           </Button>
         </motion.div>
 
@@ -98,11 +116,13 @@ export function ProposalCover({
           transition={{ delay: 1, duration: 0.6 }}
           className="absolute bottom-8 left-0 right-0 text-center"
         >
-          <p className="text-xs text-white/60">
-            Powered by <span className="font-semibold">Quote.it AI</span>
+          <p className="text-xs text-white/40 tracking-widest uppercase">
+            Powered by <span className="font-bold text-white/60">Quote.it AI</span>
           </p>
         </motion.div>
       </div>
     </motion.div>
   );
 }
+
+export default ProposalCover;

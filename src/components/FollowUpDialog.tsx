@@ -48,7 +48,7 @@ export function FollowUpDialog({ open, onOpenChange, quote, customer }: FollowUp
         : q
     );
     localStorage.setItem('quotes', JSON.stringify(updatedQuotes));
-    
+
     // Schedule notification
     scheduleFollowUpNotification(
       quote.id,
@@ -64,18 +64,18 @@ export function FollowUpDialog({ open, onOpenChange, quote, customer }: FollowUp
     } else {
       toast.success(`Follow-up scheduled for ${format(followUpDate, 'PPP')} (enable notifications in Settings for reminders)`);
     }
-    
+
     onOpenChange(false);
   };
 
   const getTemplateMessage = () => {
     // Determine the best greeting name
-    const greetingName = customer?.contactFirstName 
+    const greetingName = customer?.contactFirstName
       ? customer.contactFirstName
       : customer?.contactLastName
-      ? `Mr./Ms. ${customer.contactLastName}`
-      : customer?.name || quote.customerName;
-    
+        ? `Mr./Ms. ${customer.contactLastName}`
+        : customer?.name || quote.customerName;
+
     const template = MESSAGE_TEMPLATES[messageTemplate as keyof typeof MESSAGE_TEMPLATES] || '';
     return template
       .replace('{customerName}', greetingName)
@@ -94,7 +94,7 @@ export function FollowUpDialog({ open, onOpenChange, quote, customer }: FollowUp
     const subject = encodeURIComponent(`Follow-up: Quote ${quote.quoteNumber}`);
     const body = encodeURIComponent(message);
     const to = encodeURIComponent(customer.email);
-    
+
     window.open(`mailto:${to}?subject=${subject}&body=${body}`, '_blank');
     toast.success('Email client opened');
     onOpenChange(false);
@@ -108,7 +108,7 @@ export function FollowUpDialog({ open, onOpenChange, quote, customer }: FollowUp
 
     const message = customMessage || getTemplateMessage();
     const body = encodeURIComponent(message.substring(0, 160)); // SMS limit
-    
+
     window.open(`sms:${customer.phone}?body=${body}`, '_blank');
     toast.success('SMS app opened');
     onOpenChange(false);
@@ -226,3 +226,4 @@ export function FollowUpDialog({ open, onOpenChange, quote, customer }: FollowUp
     </Dialog>
   );
 }
+export default FollowUpDialog;
