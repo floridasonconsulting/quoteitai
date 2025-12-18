@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -43,13 +43,30 @@ export function ImageEditDialog({
 
     const [error, setError] = useState<string | null>(null);
 
+    // Debug logging for environment variable detection
+    useEffect(() => {
+        if (isOpen) {
+            console.log("[ImageEditDialog] Unsplash key detection:", {
+                hasEnvKey: !!import.meta.env.VITE_UNSPLASH_ACCESS_KEY,
+                envKeyLength: import.meta.env.VITE_UNSPLASH_ACCESS_KEY?.length,
+                currentAccessKeyLength: accessKey?.length
+            });
+        }
+    }, [isOpen, accessKey]);
+
     const handleSearch = async () => {
         if (!searchQuery.trim()) return;
         setIsLoading(true);
         setError(null);
         try {
-            const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(searchQuery)}&client_id=${accessKey}&per_page=12`;
-            const response = await fetch(url);
+            // Use header-based authentication as recommended by Unsplash docs
+            const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(searchQuery)}&per_page=12`;
+            const response = await fetch(url, {
+                headers: {
+                    "Authorization": `Client-ID ${accessKey}`,
+                    "Accept-Version": "v1"
+                }
+            });
 
             if (!response.ok) {
                 const errorData = await response.json();

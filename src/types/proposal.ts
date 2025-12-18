@@ -87,6 +87,7 @@ export interface ProposalData {
   };
   sections: ProposalSection[];
   visuals?: ProposalVisuals; // NEW: Visual assets
+  total?: number; // Added total for easier access
   createdAt: string;
   updatedAt: string;
 }

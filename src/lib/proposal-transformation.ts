@@ -114,6 +114,7 @@ export function transformQuoteToProposal(
       ...visuals,
       coverImage: smartCoverImage
     },
+    total: quote.total,
     createdAt: quote.createdAt,
     updatedAt: quote.updatedAt,
   };
@@ -155,8 +156,10 @@ export function transformQuoteToProposal(
 
     // UNIVERSAL IMAGE RESOLUTION: Check database FIRST, then smart fallback
     // ONLY if images are enabled in settings
+    const itemOverride = visuals?.itemImages?.[item.name] || visuals?.sectionBackgrounds?.[`item_${item.name}`];
+
     const smartItemImage = showImages
-      ? getSmartItemImage(item.name, normalizedCat, item.imageUrl, activeSettings.industry)
+      ? getSmartItemImage(item.name, normalizedCat, item.imageUrl, activeSettings.industry, itemOverride)
       : undefined;
 
     console.log('[Transformation] Processing item with SMART RESOLUTION:', {

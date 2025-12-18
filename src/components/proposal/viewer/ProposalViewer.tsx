@@ -14,27 +14,37 @@ import { Menu, Edit3 } from "lucide-react";
 import { ImageEditDialog } from "./ImageEditDialog";
 import { visualsService } from "@/lib/services/visuals-service";
 import { useToast } from "@/hooks/use-toast";
-import { ProposalVisuals } from "@/types/proposal";
+import { ProposalVisuals, ProposalData } from "@/types/proposal";
 
 interface ProposalViewerProps {
-  quote: Quote;
-  settings: CompanySettings;
-  onAccept: () => Promise<void>;
-  onDecline: () => Promise<void>;
-  onComment: (comment: string) => Promise<void>;
+  quote?: Quote;
+  settings?: CompanySettings;
+  proposal?: ProposalData;
+  onAccept?: () => Promise<void>;
+  onDecline?: () => Promise<void>;
+  onComment?: (comment: string) => Promise<void>;
   isReadOnly?: boolean;
   visuals?: ProposalVisuals;
 }
 
 export function ProposalViewer({
-  quote,
-  settings,
+  quote: initialQuote,
+  settings: initialSettings,
+  proposal: directProposal,
   onAccept,
   onDecline,
   onComment,
   isReadOnly = false,
   visuals
 }: ProposalViewerProps) {
+  // Determine if this is a quote-based or direct proposal-based view
+  const quote = directProposal ? null : initialQuote;
+  const settings = directProposal ? directProposal.settings as any : initialSettings;
+
+  // Note: isReadOnly=true usually means "the visitor" is viewing.
+  // But wait! PublicQuoteView passes isOwner as isReadOnly.
+  // If isOwner is true, they SHOULD be able to edit images.
+  const isOwner = isReadOnly;
   // State
   const [stage, setStage] = useState<'cover' | 'content'>('cover');
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
@@ -60,30 +70,31 @@ export function ProposalViewer({
   });
 
   console.log('[ProposalViewer] Quote data:', {
-    quoteId: quote.id,
-    itemCount: quote.items.length,
-    firstItemHasImage: !!quote.items[0]?.imageUrl,
-    firstItemImageUrl: quote.items[0]?.imageUrl,
-    allItemImages: quote.items.map(i => ({ name: i.name, imageUrl: i.imageUrl, hasImage: !!i.imageUrl })),
-    sampleItem: quote.items[0] ? {
+    quoteId: quote?.id || directProposal?.id,
+    itemCount: quote?.items?.length || 0,
+    firstItemHasImage: !!quote?.items?.[0]?.imageUrl,
+    firstItemImageUrl: quote?.items?.[0]?.imageUrl,
+    sampleItem: quote?.items?.[0] ? {
       name: quote.items[0].name,
       imageUrl: quote.items[0].imageUrl,
-      enhancedDescription: quote.items[0].enhancedDescription
     } : null
   });
 
   // Data Transformation with null checks
   const proposalData = useMemo(() => {
+    if (directProposal) return directProposal;
+    if (!quote || !settings) return null;
+
     const activeVisuals = visuals || {
       logo: settings?.logo,
     };
 
-    console.log('[ProposalViewer] Transforming quote:', quote.id);
+    console.log('[ProposalViewer] Transforming quote:', quote?.id);
     console.log('[ProposalViewer] Using visuals:', activeVisuals);
     console.log('[ProposalViewer] Using settings:', settings);
 
     return transformQuoteToProposal(quote, settings, activeVisuals);
-  }, [quote, settings, visuals]);
+  }, [quote, settings, visuals, directProposal]);
 
   // Theme handling
   const { setTheme } = useTheme();
@@ -135,7 +146,9 @@ export function ProposalViewer({
     }
   };
 
-  const handleComment = async () => {
+  const handleCommentInternal = async () => {
+    if (!onComment) return;
+
     // Simple prompt for MVP - replace with proper dialog later
     const comment = window.prompt("Please enter your feedback:");
     if (!comment) return;
@@ -152,13 +165,25 @@ export function ProposalViewer({
   };
 
   const handleUpdateImage = async (url: string) => {
+    const quoteId = quote?.id || directProposal?.id;
+    if (!quoteId) return;
+
+    console.log("[ProposalViewer] handleUpdateImage triggered:", {
+      type: editImageConfig.type,
+      id: editImageConfig.id,
+      url: url.substring(0, 50) + "...",
+      quoteId
+    });
+
+    setIsProcessing(true);
     try {
       if (editImageConfig.type === 'cover') {
-        await visualsService.saveCoverOverride(quote.id, url);
+        await visualsService.saveCoverOverride(quoteId, url);
       } else if (editImageConfig.type === 'section') {
-        await visualsService.saveSectionImageOverride(quote.id, editImageConfig.id, url);
+        await visualsService.saveSectionImageOverride(quoteId, editImageConfig.id, url);
       } else if (editImageConfig.type === 'item') {
-        await visualsService.saveItemImageOverride(quote.id, editImageConfig.id, url);
+        console.log("[ProposalViewer] Saving item image override:", { itemName: editImageConfig.id, url });
+        await visualsService.saveItemImageOverride(quoteId, editImageConfig.id, url);
       }
 
       toast({
@@ -167,7 +192,6 @@ export function ProposalViewer({
       });
 
       // Refresh page to show new visual state
-      // In a more complex app we'd trigger a re-transformation of proposalData
       window.location.reload();
     } catch (error) {
       console.error("Failed to update image:", error);
@@ -176,8 +200,18 @@ export function ProposalViewer({
         description: "There was an error saving the image selection.",
         variant: "destructive"
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
+
+  if (!proposalData) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center p-8 text-muted-foreground">
+        Loading proposal data...
+      </div>
+    );
+  }
 
   // Render
   return (
@@ -192,10 +226,10 @@ export function ProposalViewer({
             clientName={proposalData.client.name}
             coverImage={proposalData.visuals?.coverImage}
             companyLogo={settings?.logo}
-            totalAmount={quote.total}
+            totalAmount={initialQuote?.total || directProposal?.total || 0}
             currency={settings?.currency || 'USD'}
             onEnter={() => setStage('content')}
-            isOwner={isReadOnly} // Note: isReadOnly is true when owner is previewing
+            isOwner={isOwner}
             onEditImage={(url) => setEditImageConfig({
               isOpen: true,
               type: 'cover',
@@ -279,7 +313,7 @@ export function ProposalViewer({
                 sections={proposalData.sections}
                 activeIndex={activeSlideIndex}
                 onSlideChange={setActiveSlideIndex}
-                isOwner={isReadOnly}
+                isOwner={isOwner}
                 onEditSectionImage={(id, url) => setEditImageConfig({
                   isOpen: true,
                   type: 'section',
@@ -296,13 +330,13 @@ export function ProposalViewer({
             </div>
 
             {/* Sticky Action Bar */}
-            {!isReadOnly && (
+            {!isOwner && onAccept && onDecline && onComment && (
               <ProposalActionBar
-                totalAmount={quote.total}
+                totalAmount={initialQuote?.total || directProposal?.total || 0}
                 currency={settings?.currency || 'USD'}
                 onAccept={handleAccept}
                 onDecline={handleDecline}
-                onComment={handleComment}
+                onComment={handleCommentInternal}
                 isProcessing={isProcessing}
               />
             )}

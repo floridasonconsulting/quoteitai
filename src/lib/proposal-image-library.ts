@@ -287,8 +287,10 @@ export function getSmartItemImage(
   itemName: string,
   category: string,
   existingUrl?: string,
-  industry?: Industry
+  industry?: Industry,
+  overrideUrl?: string
 ): string | undefined {
+  if (overrideUrl && (overrideUrl.startsWith('http') || overrideUrl.startsWith('data:'))) return overrideUrl;
   if (existingUrl && existingUrl.startsWith('http')) return existingUrl;
 
   const nameLower = itemName.toLowerCase();
