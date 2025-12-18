@@ -19,12 +19,31 @@ export const visualsService = {
     }
 
     const visualsData = data as any;
+
+    // Extract item images from both sources for backward compatibility
+    const itemImagesFromColumn = (visualsData.item_images as Record<string, string>) || {};
+    const sectionBackgrounds = (visualsData.section_backgrounds as Record<string, string>) || {};
+
+    // Extract item images from section_backgrounds (fallback storage)
+    const itemImagesFromSections: Record<string, string> = {};
+    const cleanedSectionBackgrounds: Record<string, string> = {};
+    for (const [key, value] of Object.entries(sectionBackgrounds)) {
+      if (key.startsWith('item_')) {
+        itemImagesFromSections[key.substring(5)] = value; // Remove "item_" prefix
+      } else {
+        cleanedSectionBackgrounds[key] = value;
+      }
+    }
+
+    // Merge: item_images column takes precedence over section_backgrounds fallback
+    const mergedItemImages = { ...itemImagesFromSections, ...itemImagesFromColumn };
+
     return {
       coverImage: visualsData.cover_image,
       logo: visualsData.logo_url,
       gallery: (visualsData.gallery as string[]) || [],
-      sectionBackgrounds: (visualsData.section_backgrounds as Record<string, string>) || {},
-      itemImages: (visualsData.item_images as Record<string, string>) || {}
+      sectionBackgrounds: cleanedSectionBackgrounds,
+      itemImages: mergedItemImages
     };
   },
 
@@ -161,14 +180,18 @@ export const visualsService = {
         .update(updateData)
         .eq('id', existingData.id);
 
-      if (error && error.message?.includes('item_images')) {
-        console.warn('[Visuals] item_images column missing, falling back to section_backgrounds');
+      if (error) {
+        console.warn('[Visuals] Error saving item_images, falling back to section_backgrounds:', error.message);
         const sectionBackgrounds = (existingData?.section_backgrounds as Record<string, string>) || {};
         sectionBackgrounds[`item_${itemName}`] = url;
-        await supabase
+        const { error: fallbackError } = await supabase
           .from('proposal_visuals')
-          .update({ section_backgrounds: sectionBackgrounds })
+          .update({ section_backgrounds: sectionBackgrounds, updated_at: new Date().toISOString() })
           .eq('id', existingData.id);
+        if (fallbackError) {
+          console.error('[Visuals] Fallback save also failed:', fallbackError);
+          throw fallbackError;
+        }
       }
     } else {
       const userId = await this.getUserId();
@@ -180,16 +203,20 @@ export const visualsService = {
           ...updateData
         });
 
-      if (error && error.message?.includes('item_images')) {
-        console.warn('[Visuals] item_images column missing on insert, retrying without it');
+      if (error) {
+        console.warn('[Visuals] Error inserting with item_images, retrying without it:', error.message);
         const sectionBackgrounds = { [`item_${itemName}`]: url };
-        await supabase
+        const { error: fallbackError } = await supabase
           .from('proposal_visuals')
           .insert({
             user_id: userId,
             quote_id: quoteId,
             section_backgrounds: sectionBackgrounds
           });
+        if (fallbackError) {
+          console.error('[Visuals] Fallback insert also failed:', fallbackError);
+          throw fallbackError;
+        }
       }
     }
   }
