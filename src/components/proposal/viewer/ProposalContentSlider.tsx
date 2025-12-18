@@ -159,7 +159,7 @@ function HeroSlide({ section }: { section: ProposalSection }) {
       style={{
         backgroundImage: section.backgroundImage
           ? `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.6)), url(${section.backgroundImage})`
-          : 'linear-gradient(135deg, #1e3a8a 0%, #000000 100%)', // Deep professional blue gradient
+          : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', // Unified professional dark theme
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
@@ -208,7 +208,7 @@ function TextSlide({ section }: { section: ProposalSection }) {
         style={{
           backgroundImage: section.backgroundImage
             ? `url(${section.backgroundImage})`
-            : 'linear-gradient(135deg, #111827 0%, #374151 100%)',
+            : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}>
@@ -285,7 +285,7 @@ function InvestmentSummarySlide({ section }: { section: ProposalSection }) {
         style={{
           backgroundImage: section.backgroundImage
             ? `url(${section.backgroundImage})`
-            : 'linear-gradient(135deg, #111827 0%, #374151 100%)',
+            : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}>
@@ -366,7 +366,7 @@ function LegalSlide({ section }: { section: ProposalSection }) {
         style={{
           backgroundImage: section.backgroundImage
             ? `url(${section.backgroundImage})`
-            : 'linear-gradient(135deg, #111827 0%, #374151 100%)',
+            : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}>

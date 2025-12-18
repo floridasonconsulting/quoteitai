@@ -35,7 +35,7 @@ export const CATEGORY_METADATA: Record<string, {
   'Pool Structure': {
     displayName: 'Pool Structure',
     description: 'Foundation and structural elements of your pool',
-    heroImage: 'https://images.unsplash.com/photo-1576013551627-0cc20b468848?w=1920&q=80'
+    heroImage: 'https://images.unsplash.com/photo-1560742124-275138ed4e95?w=1920&q=80'
   },
   'Interior Surface': {
     displayName: 'Interior Surface',
@@ -50,22 +50,22 @@ export const CATEGORY_METADATA: Record<string, {
   'Tile': {
     displayName: 'Tile',
     description: 'Decorative tile work and finishes',
-    heroImage: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1920&q=80'
+    heroImage: 'https://images.unsplash.com/photo-1556912167-f556f1f39faa?w=1920&q=80'
   },
   'Decking': {
     displayName: 'Decking',
     description: 'Pool deck materials and installation',
-    heroImage: 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1920&q=80'
+    heroImage: 'https://images.unsplash.com/photo-1590059530462-811c7590874e?w=1920&q=80'
   },
   'Equipment': {
     displayName: 'Equipment',
     description: 'Pumps, filters, heaters, and automation',
-    heroImage: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1920&q=80'
+    heroImage: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=1920&q=80'
   },
   'Accessories': {
     displayName: 'Accessories',
     description: 'Lights, covers, cleaning equipment, and extras',
-    heroImage: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1920&q=80'
+    heroImage: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1920&q=80'
   },
   'Services': {
     displayName: 'Services',
@@ -75,7 +75,7 @@ export const CATEGORY_METADATA: Record<string, {
   'Other': {
     displayName: 'Additional Items',
     description: 'Other items and services',
-    heroImage: 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=1920&q=80'
+    heroImage: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1920&q=80'
   },
   // HVAC
   'Heating': {
@@ -103,12 +103,12 @@ export const CATEGORY_METADATA: Record<string, {
   'Materials': {
     displayName: 'Materials & Supplies',
     description: 'High-quality materials for your project',
-    heroImage: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=80'
+    heroImage: 'https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?w=1920&q=80'
   },
   'Labor': {
     displayName: 'Professional Labor',
     description: 'Skilled craftsmanship and expert installation',
-    heroImage: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&q=80'
+    heroImage: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=1920&q=80'
   }
 };
 

@@ -67,36 +67,37 @@ export function CategoryGroupSection({
     <div className="h-full w-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Hero Title Banner - REDUCED HEIGHT */}
       <div
-        className="relative w-full h-32 md:h-40 flex-shrink-0"
+        className="relative w-full h-40 md:h-56 flex-shrink-0"
         style={{
           backgroundImage: backgroundImage
-            ? `url(${backgroundImage})`
-            : 'linear-gradient(135deg, #111827 0%, #374151 100%)', // Subtle professional dark gradient
+            ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url(${backgroundImage})`
+            : 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', // Premium mesh-style dark fallback
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center px-6">
-            <motion.h2
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-2xl md:text-4xl font-bold text-white mb-1"
+          <div className="text-center px-6 max-w-4xl">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6 }}
+              className="space-y-2"
             >
-              {categoryGroup.displayName}
-            </motion.h2>
-            {categoryGroup.description && (
-              <motion.p
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="text-sm md:text-base text-white/90 max-w-2xl mx-auto line-clamp-1"
-              >
-                {categoryGroup.description}
-              </motion.p>
-            )}
+              <span className="text-xs md:text-sm uppercase tracking-[0.3em] text-white/70 font-bold">SECTION</span>
+              <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-none drop-shadow-lg uppercase">
+                {categoryGroup.displayName}
+              </h2>
+              {categoryGroup.description && (
+                <div className="h-1 w-12 bg-primary mx-auto my-4 rounded-full" />
+              )}
+              {categoryGroup.description && (
+                <p className="text-sm md:text-lg text-white/90 max-w-2xl mx-auto font-medium leading-relaxed italic opacity-80 decoration-primary/30">
+                  {categoryGroup.description}
+                </p>
+              )}
+            </motion.div>
           </div>
         </div>
       </div>
