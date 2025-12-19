@@ -50,7 +50,7 @@ export function ProposalCover({
           ? (coverImage.startsWith('linear-gradient') || coverImage.startsWith('radial-gradient') || coverImage.startsWith('conic-gradient') || coverImage.startsWith('url')
             ? `linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.4)), ${coverImage}`
             : `linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.4)), url(${coverImage})`)
-          : 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', // Premium deep slate mesh-style gradient
+          : 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%)', // Bold theme gradient fallback
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}

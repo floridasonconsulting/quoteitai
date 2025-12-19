@@ -5,6 +5,16 @@ import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Edit3 } from "lucide-react";
 
+// Helper to generate consistent colors from strings
+function stringToColor(str: string) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const c = (hash & 0x00ffffff).toString(16).toUpperCase();
+  return '#' + '00000'.substring(0, 6 - c.length) + c;
+}
+
 interface CategoryGroupSectionProps {
   categoryGroup: CategoryGroup;
   backgroundImage?: string;
@@ -102,13 +112,13 @@ export function CategoryGroupSection({
     <div className="h-full w-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Hero Title Banner - REDUCED HEIGHT */}
       <div
-        className="relative h-[30vh] md:h-[50vh] flex items-center justify-center overflow-hidden flex-shrink-0"
+        className="relative h-32 md:h-40 flex items-center justify-center overflow-hidden flex-shrink-0"
         style={{
           backgroundImage: backgroundImage
             ? (backgroundImage.startsWith('linear-gradient') || backgroundImage.startsWith('radial-gradient') || backgroundImage.startsWith('conic-gradient') || backgroundImage.startsWith('url')
-              ? `linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.1)), ${backgroundImage}`
-              : `linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.1)), url(${backgroundImage})`)
-            : "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+              ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), ${backgroundImage}`
+              : `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url(${backgroundImage})`)
+            : "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%)",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
@@ -137,7 +147,7 @@ export function CategoryGroupSection({
               className="space-y-2"
             >
               <span className="text-xs md:text-sm uppercase tracking-[0.3em] text-white/70 font-bold">SECTION</span>
-              <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-none drop-shadow-lg uppercase">
+              <h2 className="text-2xl md:text-4xl font-black text-white tracking-tight uppercase drop-shadow-lg">
                 {categoryGroup.displayName || categoryGroup.category}
               </h2>
               {categoryGroup.description && (
@@ -195,9 +205,19 @@ export function CategoryGroupSection({
                       />
                     ) : (
                       <div
-                        className="w-full h-full rounded-lg shadow-sm"
-                        style={{ background: item.imageUrl }}
-                      />
+                        className="w-full h-full rounded-lg shadow-sm flex items-center justify-center bg-gray-100 dark:bg-gray-800"
+                        style={{
+                          background: item.imageUrl && (item.imageUrl.includes('gradient') || item.imageUrl.startsWith('#'))
+                            ? item.imageUrl
+                            : `linear-gradient(135deg, ${stringToColor(item.name)}40 0%, ${stringToColor(item.name)}10 100%)`
+                        }}
+                      >
+                        {!item.imageUrl?.includes('gradient') && (
+                          <span className="text-2xl font-bold opacity-30 uppercase">
+                            {item.name.substring(0, 2)}
+                          </span>
+                        )}
+                      </div>
                     )}
 
                     {isOwner && (

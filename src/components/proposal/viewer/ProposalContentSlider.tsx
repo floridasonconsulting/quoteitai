@@ -273,7 +273,7 @@ function HeroSlide({
           ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient') || section.backgroundImage.startsWith('conic-gradient') || section.backgroundImage.startsWith('url')
             ? `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.6)), ${section.backgroundImage}`
             : `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.6)), url(${section.backgroundImage})`)
-          : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', // Unified professional dark theme
+          : 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%)', // Use bold theme colors
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
@@ -346,7 +346,7 @@ function TextSlide({
             ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient') || section.backgroundImage.startsWith('conic-gradient') || section.backgroundImage.startsWith('url')
               ? section.backgroundImage
               : `url(${section.backgroundImage})`)
-            : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+            : 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%)',
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}>
@@ -513,7 +513,7 @@ function InvestmentSummarySlide({
             ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient') || section.backgroundImage.startsWith('conic-gradient') || section.backgroundImage.startsWith('url')
               ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), ${section.backgroundImage}`
               : `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url(${section.backgroundImage})`)
-            : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+            : 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%)',
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}>
@@ -700,7 +700,7 @@ function LegalSlide({
             ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient') || section.backgroundImage.startsWith('conic-gradient') || section.backgroundImage.startsWith('url')
               ? section.backgroundImage
               : `url(${section.backgroundImage})`)
-            : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+            : 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%)',
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}>

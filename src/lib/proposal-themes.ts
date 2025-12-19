@@ -4,7 +4,7 @@
  * Defines styling for all proposal components
  */
 
-export type ProposalTheme = 
+export type ProposalTheme =
   | "modern-corporate"
   | "creative-studio"
   | "minimalist"
@@ -92,17 +92,17 @@ export const proposalThemes: Record<ProposalTheme, ThemeDefinition> = {
     name: "Modern Corporate",
     description: "Professional design with clean lines and bold typography",
     colors: {
-      primary: "#2563eb",
-      secondary: "#64748b",
-      accent: "#0ea5e9",
-      background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
+      primary: "#1d4ed8", // Deep Royal Blue (Stronger)
+      secondary: "#334155", // Darker for better text contrast
+      accent: "#0284c7",    // Vivid Sky Blue
+      background: "linear-gradient(135deg, #f0f9ff 0%, #cbebff 100%)", // More visible blue tint
       surface: "#ffffff",
       text: {
-        primary: "#0f172a",
-        secondary: "#475569",
-        muted: "#94a3b8"
+        primary: "#020617", // Almost black
+        secondary: "#1e293b",
+        muted: "#64748b"
       },
-      border: "#e2e8f0"
+      border: "#bfdbfe" // Blue-ish border
     },
     typography: {
       fontFamily: {
@@ -157,17 +157,17 @@ export const proposalThemes: Record<ProposalTheme, ThemeDefinition> = {
     name: "Creative Studio",
     description: "Eye-catching design with artistic flair and vibrant accents",
     colors: {
-      primary: "#a855f7",
-      secondary: "#ec4899",
+      primary: "#9333ea", // Vibrant Purple
+      secondary: "#db2777", // Hot Pink
       accent: "#f59e0b",
-      background: "linear-gradient(135deg, #fdf4ff 0%, #fce7f3 100%)",
+      background: "linear-gradient(135deg, #faf5ff 0%, #f5d0fe 100%)", // Richer gradient
       surface: "#ffffff",
       text: {
-        primary: "#1f2937",
-        secondary: "#6b7280",
-        muted: "#9ca3af"
+        primary: "#2e0249", // Deep purple text
+        secondary: "#701a75",
+        muted: "#a21caf"
       },
-      border: "#f3e8ff"
+      border: "#f0abfc"
     },
     typography: {
       fontFamily: {
@@ -288,17 +288,17 @@ export const proposalThemes: Record<ProposalTheme, ThemeDefinition> = {
     name: "Bold Impact",
     description: "High-contrast design that demands attention and conveys confidence",
     colors: {
-      primary: "#dc2626",
-      secondary: "#0f172a",
-      accent: "#fbbf24",
-      background: "linear-gradient(135deg, #fef3c7 0%, #fecaca 100%)",
+      primary: "#b91c1c", // Deep Bold Red
+      secondary: "#020617", // Ink Black
+      accent: "#d97706",    // Amber
+      background: "linear-gradient(135deg, #fffbeb 0%, #fcd34d 100%)", // Stronger Gold/Amber Gradient
       surface: "#ffffff",
       text: {
-        primary: "#0f172a",
-        secondary: "#334155",
-        muted: "#64748b"
+        primary: "#450a0a", // Dark Red/Brown text
+        secondary: "#78350f",
+        muted: "#92400e"
       },
-      border: "#fef3c7"
+      border: "#fde68a"
     },
     typography: {
       fontFamily: {

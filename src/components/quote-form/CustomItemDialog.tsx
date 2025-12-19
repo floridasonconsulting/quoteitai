@@ -8,6 +8,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { QuoteItem } from "@/types";
 import { calculateItemTotal } from "@/lib/quote-utils";
+import { ImageSelectorInput } from "@/components/shared/ImageSelectorInput";
 
 interface CustomItemDialogProps {
   isOpen: boolean;
@@ -80,8 +81,8 @@ export function CustomItemDialog({ isOpen, onOpenChange, onAddItem }: CustomItem
           </div>
           <div className="space-y-2">
             <Label htmlFor="customCategory">Category *</Label>
-            <Select 
-              value={customItem.category} 
+            <Select
+              value={customItem.category}
               onValueChange={(value) => setCustomItem({ ...customItem, category: value })}
             >
               <SelectTrigger id="customCategory">
@@ -96,16 +97,12 @@ export function CustomItemDialog({ isOpen, onOpenChange, onAddItem }: CustomItem
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="customImageUrl">Image URL (Optional)</Label>
-            <Input
-              id="customImageUrl"
-              type="url"
-              value={customItem.imageUrl}
-              onChange={(e) => setCustomItem({ ...customItem, imageUrl: e.target.value })}
-              placeholder="https://example.com/image.jpg"
-            />
-          </div>
+          <ImageSelectorInput
+            value={customItem.imageUrl || ''}
+            onChange={(url) => setCustomItem({ ...customItem, imageUrl: url })}
+            label="Image"
+            subLabel="(Optional)"
+          />
           <div className="grid gap-4 grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="customQuantity">Quantity</Label>

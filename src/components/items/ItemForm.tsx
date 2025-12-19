@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Item } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import { ImageSelectorInput } from '@/components/shared/ImageSelectorInput';
 
 interface ItemFormProps {
   open: boolean;
@@ -27,7 +28,7 @@ export interface FormData {
   markupType: 'percentage' | 'fixed';
   units: string;
   minQuantity: string;
-  imageUrl: string; // NEW: Image URL field
+  imageUrl: string;
 }
 
 export function ItemForm({ open, onOpenChange, editingItem, onSubmit, existingCategories = [], existingUnits = [] }: ItemFormProps) {
@@ -74,7 +75,7 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit, existingCa
   const calculateFinalPrice = () => {
     const base = parseFloat(formData.basePrice) || 0;
     const markup = parseFloat(formData.markup) || 0;
-    
+
     if (formData.markupType === 'percentage') {
       return base + (base * markup / 100);
     }
@@ -83,7 +84,7 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit, existingCa
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.basePrice) {
       toast.error('Name and base price are required');
       return;
@@ -179,22 +180,11 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit, existingCa
             />
           </div>
 
-          {/* NEW: Image URL Field */}
-          <div className="space-y-2">
-            <Label htmlFor="imageUrl" className="flex items-center gap-2">
-              Image URL
-              <span className="text-xs text-muted-foreground font-normal">
-                (Optional - URL to product/service image for proposals)
-              </span>
-            </Label>
-            <Input
-              id="imageUrl"
-              type="url"
-              value={formData.imageUrl}
-              onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-              placeholder="https://example.com/image.jpg"
-            />
-          </div>
+          <ImageSelectorInput
+            value={formData.imageUrl}
+            onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+            label="Item Image"
+          />
 
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
             <div className="space-y-2">
