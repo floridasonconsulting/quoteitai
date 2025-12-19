@@ -227,9 +227,7 @@ export default function NewQuote() {
         notes: quoteNotes,
         executiveSummary,
         showPricing,
-        createdAt: existingQuote?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        userId: user?.id || '',
+        pricingMode, // Save pricing mode
       };
 
       await updateQuote(user?.id, editQuoteId, updatedQuote, queueChange);
@@ -252,6 +250,7 @@ export default function NewQuote() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         userId: user?.id || '',
+        pricingMode, // Save pricing mode
       };
 
       await addQuote(user?.id, quote, queueChange);
@@ -328,6 +327,7 @@ export default function NewQuote() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         userId: user?.id || '',
+        pricingMode, // Save pricing mode
       };
 
       await addQuote(user?.id, quote, queueChange);

@@ -76,13 +76,13 @@ export function ProposalCover({
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.6 }}
-          className="mb-12"
+          className="mb-8"
         >
           {companyLogo ? (
             <img
               src={companyLogo}
               alt="Company Logo"
-              className="h-16 md:h-24 mx-auto mb-4 object-contain brightness-0 invert"
+              className="h-12 md:h-20 mx-auto mb-4 object-contain brightness-0 invert"
             />
           ) : (
             <p className="text-sm uppercase tracking-widest text-white/80 mb-2 font-black">
@@ -96,16 +96,16 @@ export function ProposalCover({
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.6 }}
-          className="space-y-8"
+          className="space-y-6"
         >
-          <h1 className="text-5xl md:text-8xl font-black mb-4 leading-tight tracking-tight uppercase">
+          <h1 className="text-4xl md:text-6xl font-black mb-4 leading-tight tracking-tight uppercase text-balance">
             {title}
           </h1>
 
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 pt-4">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 pt-2">
             <div className="space-y-1">
               <p className="text-white/60 text-[10px] md:text-xs uppercase tracking-[0.3em] font-black">Prepared For</p>
-              <p className="text-2xl md:text-3xl font-black">{clientName}</p>
+              <p className="text-xl md:text-2xl font-black">{clientName}</p>
             </div>
           </div>
         </motion.div>
@@ -115,16 +115,16 @@ export function ProposalCover({
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.6 }}
-          className="mt-20"
+          className="mt-12"
         >
           <Button
             onClick={onEnter}
             size="lg"
-            className="group relative overflow-hidden bg-white text-gray-900 hover:bg-white/90 text-lg px-12 py-8 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-105"
+            className="group relative overflow-hidden bg-white text-gray-900 hover:bg-white/90 text-base md:text-lg px-8 md:px-12 py-6 md:py-8 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-105"
           >
             <span className="flex items-center gap-3 font-bold uppercase tracking-wider">
               Enter Proposal
-              <ChevronDown className="w-6 h-6 animate-bounce" />
+              <ChevronDown className="w-5 h-5 md:w-6 md:h-6 animate-bounce" />
             </span>
           </Button>
         </motion.div>
@@ -134,9 +134,9 @@ export function ProposalCover({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1, duration: 0.6 }}
-          className="mt-16 text-center"
+          className="mt-12 text-center"
         >
-          <p className="text-xs text-white/40 tracking-widest uppercase">
+          <p className="text-[10px] md:text-xs text-white/40 tracking-widest uppercase">
             Powered by <span className="font-bold text-white/60">Quote.it AI</span>
           </p>
         </motion.div>
