@@ -28,6 +28,8 @@ export const SUPPORTED_INDUSTRIES = [
 // THEME GRADIENT LIBRARY (High Quality CSS Gradients)
 // ============================================================================
 
+import { getGeneratedBackground } from './svg-patterns';
+
 export const THEME_GRADIENTS = {
   'modern-corporate': {
     cover: 'radial-gradient(circle at top right, #1e40af 0%, #0f172a 100%)', // Rich Blue to Slate
@@ -64,8 +66,38 @@ export const THEME_GRADIENTS = {
 export const DEFAULT_FALLBACK_GRADIENT = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
 
 export function getThemeGradient(theme?: Theme, type: 'cover' | 'section' | 'item' = 'cover'): string {
-  if (!theme || !(theme in THEME_GRADIENTS)) return DEFAULT_FALLBACK_GRADIENT;
-  return THEME_GRADIENTS[theme as keyof typeof THEME_GRADIENTS][type];
+  const selectedTheme = theme && theme in THEME_GRADIENTS ? theme as keyof typeof THEME_GRADIENTS : undefined;
+
+  if (!selectedTheme) return DEFAULT_FALLBACK_GRADIENT; // Fallback if invalid theme
+
+  const baseGradient = THEME_GRADIENTS[selectedTheme][type];
+
+  // Only apply SVG patterns to 'cover' for maximum impact (keep sections/items cleaner)
+  if (type === 'cover') {
+    switch (selectedTheme) {
+      case 'modern-corporate':
+        return getGeneratedBackground('waves', '#3b82f6', '#1e40af', baseGradient);
+      case 'creative-studio':
+        return getGeneratedBackground('blobs', '#db2777', '#7e22ce', baseGradient); // Pass vibrant colors for blobs
+      case 'minimalist':
+        return baseGradient; // Minimalist keeps it clean (no pattern)
+      case 'bold-impact':
+        return getGeneratedBackground('grid', '#ffffff', '#000000', baseGradient);
+      case 'elegant-serif':
+        return getGeneratedBackground('dots', '#ffffff', '#000000', baseGradient);
+      case 'tech-future':
+        return getGeneratedBackground('isometric', '#4c1d95', '#0f172a', baseGradient);
+      default:
+        return baseGradient;
+    }
+  }
+
+  // Check for 'section' patterns if requested (optional, keeping clean for now)
+  if (type === 'section' && selectedTheme === 'tech-future') {
+    return getGeneratedBackground('grid', '#1e293b', '#0f172a', baseGradient);
+  }
+
+  return baseGradient;
 }
 
 // ============================================================================

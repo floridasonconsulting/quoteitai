@@ -197,7 +197,7 @@ function HeroSlide({
       className="h-full flex items-center justify-center p-8 md:p-16 relative overflow-y-auto"
       style={{
         backgroundImage: section.backgroundImage
-          ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient')
+          ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient') || section.backgroundImage.startsWith('conic-gradient') || section.backgroundImage.startsWith('url')
             ? `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.6)), ${section.backgroundImage}`
             : `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.6)), url(${section.backgroundImage})`)
           : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', // Unified professional dark theme
@@ -270,7 +270,7 @@ function TextSlide({
       <div className="relative w-full h-32 md:h-40 flex-shrink-0"
         style={{
           backgroundImage: section.backgroundImage
-            ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient')
+            ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient') || section.backgroundImage.startsWith('conic-gradient') || section.backgroundImage.startsWith('url')
               ? section.backgroundImage
               : `url(${section.backgroundImage})`)
             : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
@@ -437,7 +437,7 @@ function InvestmentSummarySlide({
       <div className="relative w-full h-32 md:h-40 flex-shrink-0"
         style={{
           backgroundImage: section.backgroundImage
-            ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient')
+            ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient') || section.backgroundImage.startsWith('conic-gradient') || section.backgroundImage.startsWith('url')
               ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), ${section.backgroundImage}`
               : `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url(${section.backgroundImage})`)
             : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
@@ -624,7 +624,7 @@ function LegalSlide({
       <div className="relative w-full h-32 md:h-40 flex-shrink-0"
         style={{
           backgroundImage: section.backgroundImage
-            ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient')
+            ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient') || section.backgroundImage.startsWith('conic-gradient') || section.backgroundImage.startsWith('url')
               ? section.backgroundImage
               : `url(${section.backgroundImage})`)
             : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
