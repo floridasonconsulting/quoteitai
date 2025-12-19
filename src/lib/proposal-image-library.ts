@@ -139,10 +139,10 @@ export function getSmartItemImage(itemName: string, category: string, currentUrl
 
   // 2. Visual Rules
   if (settings?.visualRules) {
-    const lowerName = itemName.toLowerCase();
-    const lowerCat = category.toLowerCase();
+    const lowerName = (itemName || '').toLowerCase();
+    const lowerCat = (category || '').toLowerCase();
     const match = settings.visualRules.find(rule => {
-      const key = rule.keyword.toLowerCase();
+      const key = (rule.keyword || '').toLowerCase();
       return lowerCat.includes(key) || lowerName.includes(key);
     });
     if (match) return match.imageUrl;
@@ -167,8 +167,8 @@ export function getCategoryImage(categoryName: string, currentUrl?: string, them
 
   // 2. Visual Rules
   if (settings?.visualRules) {
-    const lowerCat = categoryName.toLowerCase();
-    const match = settings.visualRules.find(rule => lowerCat.includes(rule.keyword.toLowerCase()));
+    const lowerCat = (categoryName || '').toLowerCase();
+    const match = settings.visualRules.find(rule => lowerCat.includes((rule.keyword || '').toLowerCase()));
     if (match) return match.imageUrl;
   }
 
