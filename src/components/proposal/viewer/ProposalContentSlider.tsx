@@ -412,6 +412,7 @@ function CategorySlide({
     <CategoryGroupSection
       categoryGroup={categoryGroup}
       showPricing={section.showPricing}
+      pricingMode={section.pricingMode}
       backgroundImage={section.backgroundImage}
       isOwner={isOwner}
       onEditBackgroundImage={(url) => onEditSectionImage?.(section.id, url)}
@@ -583,55 +584,55 @@ function InvestmentSummarySlide({
                 {categorySubtotals.map(({ category, items, subtotal }, idx) => (
                   <motion.div
                     key={idx}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.05 }}
-                    className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden"
+                    className="mb-8 last:mb-0"
                   >
-                    <div className="bg-gray-50/50 dark:bg-gray-800/30 px-5 py-2.5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                      <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{category}</span>
+                    {/* Category Header */}
+                    <div className="flex items-center justify-between border-b-2 border-gray-100 dark:border-gray-800 pb-2 mb-4">
+                      <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-widest">
+                        {category}
+                      </h4>
                       {pricingMode !== 'grand_total' && (
-                        <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded uppercase">{formatCurrency(subtotal)}</span>
+                        <span className="text-xs font-bold text-primary bg-primary/5 px-2 py-1 rounded">
+                          {formatCurrency(subtotal)}
+                        </span>
                       )}
                     </div>
 
-                    <div className="p-4 space-y-1">
-                      {/* Single Line Item List */}
+                    {/* Items List */}
+                    <div className="space-y-4 pl-2">
                       {items.map((item: any, itemIdx: number) => (
-                        <div key={itemIdx} className="flex items-baseline justify-between py-1.5 border-b border-gray-50 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 px-2 -mx-2 rounded transition-colors group">
-                          <div className="flex items-baseline gap-2 overflow-hidden min-w-0 pr-4">
-                            <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap flex-shrink-0">
-                              {item.name}
-                            </span>
+                        <div key={itemIdx} className="group flex justify-between items-start gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                {item.name}
+                              </span>
+                              {pricingMode === 'itemized' && item.quantity > 1 && (
+                                <span className="text-[10px] font-mono text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 rounded">
+                                  Qty: {item.quantity}
+                                </span>
+                              )}
+                            </div>
+
                             {(item.enhancedDescription || item.description) && (
-                              <span className="text-xs text-gray-500 dark:text-gray-400 truncate hidden sm:inline-block">
-                                - {item.enhancedDescription || item.description}
-                              </span>
-                            )}
-                            {item.quantity > 1 && (
-                              <span className="text-[10px] text-gray-400 font-mono whitespace-nowrap">
-                                (x{item.quantity})
-                              </span>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed max-w-prose">
+                                {item.enhancedDescription || item.description}
+                              </p>
                             )}
                           </div>
 
-                          {/* Price Column - Only show if Itemized */}
+                          {/* Price Display (Only if Itemized) */}
                           {pricingMode === 'itemized' && (
-                            <div className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap tabular-nums">
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap pt-0.5">
                               {formatCurrency(item.total)}
                             </div>
                           )}
                         </div>
                       ))}
                     </div>
-
-                    {/* Footer for Category (Subtotal) - Only show if NOT grand_total */}
-                    {pricingMode !== 'grand_total' && (
-                      <div className="bg-gray-50/30 dark:bg-gray-800/20 px-5 py-2 flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Category Total</span>
-                        <span className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(subtotal)}</span>
-                      </div>
-                    )}
                   </motion.div>
                 ))}
               </div>

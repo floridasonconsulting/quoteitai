@@ -162,13 +162,13 @@ Please return a JSON object with:
 {
   "title": "Professional quote title (max 60 chars)",
   "notes": "Professional terms and conditions",
-  "summary": "2-3 sentence executive summary highlighting value. IMPORTANT: Do NOT include pricing, costs, or total investment figures.",
-  "clientName": "Extracted client name from description (or empty string)",
+  "summary": "2-3 sentence executive summary highlighting value. CRITICAL RULE: You must NOT mention any specific prices, costs, or total dollar amounts in this summary. Keep it focused on value and scope.",
+  "clientName": "Extracted client name from description. If a name is mentioned (e.g. 'for John Smith'), extract 'John Smith'. If no name is found, return empty string.",
   "suggestedItems": [
     {
       "itemId": "item id from catalog",
       "name": "item name",
-      "description": "item description",
+      "description": "item description (refined)",
       "quantity": 1,
       "price": 100,
       "total": 100,

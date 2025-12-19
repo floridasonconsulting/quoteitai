@@ -278,7 +278,12 @@ export function transformQuoteToProposal(
     // Pass persistent pricing mode setting (default to 'category_total')
     pricingMode: quote.pricingMode || 'category_total', // Use quote setting directly
     backgroundImage: showImages
-      ? (visuals?.sectionBackgrounds?.['financials'] || getThemeGradient(activeSettings.proposalTheme, 'cover'))
+      ? getCategoryImage(
+        'Investment Summary', // Pseudo-category name
+        visuals?.sectionBackgrounds?.['financials'],
+        activeSettings.proposalTheme,
+        activeSettings
+      )
       : undefined
   } as any);
 
@@ -301,7 +306,12 @@ Liability: We maintain full insurance coverage for all work performed.`;
     title: 'Terms & Conditions',
     content: termsContent,
     backgroundImage: showImages
-      ? (visuals?.sectionBackgrounds?.['terms'] || getThemeGradient(activeSettings.proposalTheme, 'cover'))
+      ? getCategoryImage(
+        'Terms & Conditions', // Pseudo-category name
+        visuals?.sectionBackgrounds?.['terms'],
+        activeSettings.proposalTheme,
+        activeSettings
+      )
       : undefined
   });
 
