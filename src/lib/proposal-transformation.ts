@@ -256,7 +256,8 @@ export function transformQuoteToProposal(
       title: metadata?.displayName,
       categoryGroups: [categoryGroup],
       backgroundImage: categoryImage,
-      showPricing: quote.showPricing
+      showPricing: quote.showPricing,
+      pricingMode: quote.pricingMode || 'category_total'
     });
   });
 

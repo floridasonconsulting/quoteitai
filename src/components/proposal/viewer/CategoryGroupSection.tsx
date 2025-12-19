@@ -63,6 +63,7 @@ interface CategoryGroupSectionProps {
   categoryGroup: CategoryGroup;
   backgroundImage?: string;
   showPricing?: boolean;
+  pricingMode?: 'itemized' | 'category_total' | 'grand_total';
   isOwner?: boolean;
   onEditBackgroundImage?: (url?: string) => void;
   onEditItemImage?: (itemName: string, url?: string) => void;
@@ -79,6 +80,7 @@ export function CategoryGroupSection({
   categoryGroup,
   backgroundImage,
   showPricing = true,
+  pricingMode = 'category_total',
   isOwner,
   onEditBackgroundImage,
   onEditItemImage,
@@ -256,8 +258,8 @@ export function CategoryGroupSection({
                     </p>
                   </div>
 
-                  {/* FIXED: Pricing Info - Conditional display based on showPricing */}
-                  {showPricing ? (
+                  {/* FIXED: Pricing Info - Conditional display based on showPricing AND pricingMode */}
+                  {showPricing && pricingMode === 'itemized' ? (
                     <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
                       <div className="flex items-baseline gap-2 text-[10px] md:text-xs text-muted-foreground">
                         <span>Qty: {item.quantity} {item.units || "units"}</span>
@@ -271,10 +273,10 @@ export function CategoryGroupSection({
                       </div>
                     </div>
                   ) : (
-                    /* When pricing is hidden: Show NOTHING (no qty, no unit price, no total) */
+                    /* When pricing is hidden or not itemized: Show message for Category/Grand Total modes */
                     <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
                       <p className="text-xs text-muted-foreground italic">
-                        Pricing available in investment summary
+                        {showPricing ? "Item pricing consolidated in summary" : "Pricing available in investment summary"}
                       </p>
                     </div>
                   )}
