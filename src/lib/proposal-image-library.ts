@@ -10,6 +10,20 @@ import type { CompanySettings } from '@/types';
 export type Industry = CompanySettings['industry'];
 export type Theme = CompanySettings['proposalTheme'];
 
+export const SUPPORTED_INDUSTRIES = [
+  { value: 'pool-spa', label: 'Pool & Spa Services' },
+  { value: 'landscaping', label: 'Landscaping & Lawn Care' },
+  { value: 'hvac', label: 'HVAC Services' },
+  { value: 'roofing', label: 'Roofing' },
+  { value: 'fencing', label: 'Fencing' },
+  { value: 'general-contractor', label: 'General Contractor' },
+  { value: 'plumbing', label: 'Plumbing' },
+  { value: 'electrical', label: 'Electrical' },
+  { value: 'painting', label: 'Painting' },
+  { value: 'flooring', label: 'Flooring' },
+  { value: 'other', label: 'Other' },
+] as const;
+
 // ============================================================================
 // THEME GRADIENT LIBRARY (High Quality CSS Gradients)
 // ============================================================================
