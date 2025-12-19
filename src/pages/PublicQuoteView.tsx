@@ -362,6 +362,7 @@ export default function PublicQuoteView() {
         executiveSummary: quoteData.executive_summary,
         userId: quoteData.user_id,
         showPricing: quoteData.show_pricing ?? true,
+        pricingMode: (quoteData as any).pricing_mode || 'category_total', // Load pricing mode
       };
 
       console.log('[PublicQuoteView] ✅ Quote formatted. Item count:', formattedQuote.items.length);
