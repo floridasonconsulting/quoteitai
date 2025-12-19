@@ -1,8 +1,8 @@
 # 📚 Master System Reference - Quote.it AI
 
-**Version:** 2.2  
-**Last Updated:** December 5, 2025  
-**Status:** ✅ Production-Ready | 🔄 Bug Fixes & Field Additions Complete
+**Version:** 2.3
+**Last Updated:** December 19, 2025
+**Status:** ✅ Production-Ready | 🎨 Theme Engine Active
 
 ---
 
@@ -375,10 +375,26 @@ graph TD
     G --> H[Connection Restored]
     H --> F
     F --> I[Upload to Supabase]
-    I --> J{Success?}
     J -->|Yes| K[Remove from Queue]
     J -->|No| L[Retry with Backoff]
 ```
+
+### Intelligent Visuals System (✅ New - Dec 19, 2025)
+
+**Strategy:** Theme-Based Gradients + User Overrides
+**Legacy Status:** Stock photos, "Smart Matching", and AI image generation logic have been completely removed.
+
+**Logic Flow:**
+1. Check for **User Override** (URL saved in DB).
+2. If none, check **Proposal Theme** (from Company Settings).
+3. Apply high-quality CSS gradient mapped to the active Theme.
+4. Default fallback: Professional Blue/Purple gradient.
+
+**Key Components:**
+- `src/lib/proposal-image-library.ts`: Defines `THEME_GRADIENTS` and simplified helper functions.
+- `src/lib/proposal-transformation.ts`: Injects gradient logic during proposal generation.
+- `src/components/proposal/viewer/*.tsx`: Renders CSS gradients natively without `url()` wrappers.
+
 
 ---
 
@@ -1281,6 +1297,7 @@ View debug logs in console prefixed with service name:
 - **After Major Changes:** Immediately after significant updates
 
 ### Version History
+- **v2.3** (December 19, 2025) - Implemented Theme-Based Gradients, removed legacy stock photo logic
 - **v2.2** (December 5, 2025) - Critical bug fixes for data persistence, field additions
 - **v2.1** (November 24, 2025) - Phase 1 complete, updated with IndexedDB integration
 - **v2.0** (November 18, 2025) - Complete system reference created
@@ -1315,9 +1332,9 @@ When making significant changes to the system:
 
 ---
 
-**Last Updated:** December 5, 2025  
-**Next Review:** December 6, 2025  
-**Status:** ✅ All Critical Bugs Fixed | 🔄 Phase 2 Starting
+**Last Updated:** December 19, 2025
+**Next Review:** January 2026
+**Status:** ✅ Visual System Refactored
 
 ---
 

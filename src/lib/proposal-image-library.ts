@@ -30,33 +30,33 @@ export const SUPPORTED_INDUSTRIES = [
 
 export const THEME_GRADIENTS = {
   'modern-corporate': {
-    cover: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)', // Slate 800 -> 700
-    section: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)', // Slate 100 -> 200
-    item: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)', // Slate 50 -> 100
+    cover: 'radial-gradient(circle at top right, #1e40af 0%, #0f172a 100%)', // Rich Blue to Slate
+    section: 'linear-gradient(to right, #f8fafc, #e2e8f0)', // Slate 50 -> 200
+    item: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', // Blue 50 -> 100 (Subtle)
   },
   'creative-studio': {
-    cover: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)', // Indigo -> Purple -> Pink
-    section: 'linear-gradient(135deg, #e0e7ff 0%, #fae8ff 100%)', // Indigo 100 -> Fuchsia 100
-    item: 'linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%)', // White -> Violet 50
+    cover: 'conic-gradient(from 0deg at 50% 50%, #7e22ce, #db2777, #ea580c, #7e22ce)', // Multi-color vibrant
+    section: 'linear-gradient(120deg, #fce7f3 0%, #e0e7ff 100%)', // Pink to Indigo light
+    item: 'linear-gradient(to bottom right, #faf5ff, #f3e8ff)', // Purple 50 -> 100
   },
   'minimalist': {
-    cover: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)', // Gray 100 -> 200
-    section: 'linear-gradient(to right, #ffffff, #f9fafb)', // White -> Gray 50
-    item: 'linear-gradient(to bottom right, #ffffff, #fafafa)', // Pure clean
+    cover: 'linear-gradient(to bottom, #f3f4f6, #9ca3af)', // Gray 100 -> 400
+    section: 'linear-gradient(to right, #ffffff, #f3f4f6)', // White -> Gray 100
+    item: 'linear-gradient(to bottom, #ffffff, #fafafa)', // Pure clean
   },
   'bold-impact': {
-    cover: 'linear-gradient(135deg, #000000 0%, #111111 100%)', // Pure Black
-    section: 'linear-gradient(135deg, #18181b 0%, #27272a 100%)', // Zinc 900 -> 800
-    item: 'linear-gradient(135deg, #27272a 0%, #3f3f46 100%)', // Zinc 800 -> 700
+    cover: 'linear-gradient(45deg, #000000 0%, #be123c 100%)', // Black to Crimson
+    section: 'linear-gradient(to right, #18181b, #27272a)', // Zinc 900 -> 800
+    item: 'linear-gradient(135deg, #27272a 0%, #52525b 100%)', // Zinc 800 -> 600
   },
   'elegant-serif': {
-    cover: 'linear-gradient(135deg, #1c1917 0%, #44403c 100%)', // Stone 900 -> 700
-    section: 'linear-gradient(135deg, #f5f5f4 0%, #e7e5e4 100%)', // Stone 100 -> 200
+    cover: 'radial-gradient(circle at center, #57534e 0%, #1c1917 100%)', // Stone 600 -> 900
+    section: 'linear-gradient(to right, #fafaf9, #e7e5e4)', // Stone 50 -> 200
     item: 'linear-gradient(135deg, #fafaf9 0%, #f5f5f4 100%)', // Stone 50 -> 100
   },
   'tech-future': {
-    cover: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', // Slate 900 -> Indigo 950
-    section: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', // Slate 800 -> 900
+    cover: 'linear-gradient(180deg, #020617 0%, #1e1b4b 50%, #4c1d95 100%)', // Space logic
+    section: 'linear-gradient(to right, #0f172a, #1e293b)', // Slate 900 -> 800
     item: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)', // Slate 800 -> 700
   },
 } as const;

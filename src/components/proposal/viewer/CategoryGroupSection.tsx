@@ -100,8 +100,8 @@ export function CategoryGroupSection({
         className="relative h-[30vh] md:h-[50vh] flex items-center justify-center overflow-hidden flex-shrink-0"
         style={{
           background: backgroundImage
-            ? (backgroundImage.startsWith('linear-gradient') || backgroundImage.startsWith('radial-gradient')
-              ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), ${backgroundImage}`
+            ? (backgroundImage.startsWith('linear-gradient') || backgroundImage.startsWith('radial-gradient') || backgroundImage.startsWith('conic-gradient')
+              ? `linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.4)), ${backgroundImage}`
               : `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url(${backgroundImage})`)
             : "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
           backgroundSize: "cover",
