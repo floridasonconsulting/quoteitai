@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Upload, Globe, Sparkles, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Upload, Globe, Image as ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,30 +53,7 @@ export function VisualsTab({ quoteId, projectDescription }: VisualsTabProps) {
     }
   };
 
-  const handleAutoMatch = async () => {
-    setLoading(true);
-    try {
-      // Simulate AI processing
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const images = await visualsService.autoMatchImages(projectDescription?.split(" ") || []);
-      
-      const newVisuals = {
-        ...visuals,
-        coverImage: images[0] || visuals.coverImage,
-        gallery: [...(visuals.gallery || []), ...images.slice(1)]
-      };
-      
-      await handleSave(newVisuals);
-      toast({ 
-        title: "AI Match Complete", 
-        description: "We've selected some beautiful images for your proposal." 
-      });
-    } catch (error) {
-      toast({ title: "AI Match Failed", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   return (
     <div className="space-y-6">
@@ -85,14 +62,7 @@ export function VisualsTab({ quoteId, projectDescription }: VisualsTabProps) {
           <h2 className="text-2xl font-bold tracking-tight">Visual Assets</h2>
           <p className="text-muted-foreground">Manage imagery and branding for this proposal</p>
         </div>
-        <Button 
-          onClick={handleAutoMatch} 
-          disabled={loading}
-          className="bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700"
-        >
-          {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-          AI Auto-Match
-        </Button>
+
       </div>
 
       <Tabs defaultValue="cover" className="w-full">
@@ -121,8 +91,8 @@ export function VisualsTab({ quoteId, projectDescription }: VisualsTabProps) {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Input 
-                    placeholder="Image URL..." 
+                  <Input
+                    placeholder="Image URL..."
                     value={visuals.coverImage}
                     onChange={(e) => handleSave({ ...visuals, coverImage: e.target.value })}
                   />
@@ -148,8 +118,8 @@ export function VisualsTab({ quoteId, projectDescription }: VisualsTabProps) {
                     </div>
                   )}
                 </div>
-                <Input 
-                  placeholder="Logo URL..." 
+                <Input
+                  placeholder="Logo URL..."
                   value={visuals.logo || ""}
                   onChange={(e) => handleSave({ ...visuals, logo: e.target.value })}
                 />
@@ -184,8 +154,8 @@ export function VisualsTab({ quoteId, projectDescription }: VisualsTabProps) {
                     </Button>
                   </div>
                 ))}
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="aspect-square flex flex-col items-center justify-center gap-2 h-full w-full border-dashed"
                   onClick={() => {
                     const url = prompt("Enter image URL:");
@@ -212,7 +182,7 @@ export function VisualsTab({ quoteId, projectDescription }: VisualsTabProps) {
                 {['Pool Structure', 'Equipment', 'Decking'].map((section) => (
                   <div key={section} className="flex items-center gap-4">
                     <Label className="w-32">{section}</Label>
-                    <Input 
+                    <Input
                       placeholder="Background Image URL..."
                       value={visuals.sectionBackgrounds?.[section] || ""}
                       onChange={(e) => {

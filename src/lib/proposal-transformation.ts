@@ -20,7 +20,6 @@ import {
   getSmartCoverImage,
   getCategoryImage,
   getSmartItemImage,
-  INDUSTRY_IMAGE_LIBRARIES,
   Industry
 } from "./proposal-image-library";
 
@@ -79,11 +78,7 @@ export function transformQuoteToProposal(
   // ONLY if images are enabled in settings
   const smartCoverImage = showImages
     ? getSmartCoverImage(
-      quote.title,
-      uniqueCategories,
       visuals?.coverImage,
-      itemNames,
-      activeSettings.industry,
       activeSettings.proposalTheme
     )
     : undefined;
@@ -160,7 +155,7 @@ export function transformQuoteToProposal(
     const itemOverride = visuals?.itemImages?.[item.name] || visuals?.sectionBackgrounds?.[`item_${item.name}`];
 
     const smartItemImage = showImages
-      ? getSmartItemImage(item.name, normalizedCat, item.imageUrl, activeSettings.industry, itemOverride, activeSettings.proposalTheme)
+      ? getSmartItemImage(item.imageUrl, itemOverride, activeSettings.proposalTheme)
       : undefined;
 
     console.log('[Transformation] Processing item with SMART RESOLUTION:', {
@@ -214,7 +209,6 @@ export function transformQuoteToProposal(
       ? getCategoryImage(
         category,
         visuals?.sectionBackgrounds,
-        activeSettings.industry,
         activeSettings.proposalTheme
       )
       : undefined;

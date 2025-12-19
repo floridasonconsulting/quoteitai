@@ -82,19 +82,7 @@ export const visualsService = {
     }
   },
 
-  /**
-   * AI Auto-Match: Find images based on keywords (Mock implementation for now)
-   */
-  async autoMatchImages(keywords: string[]): Promise<string[]> {
-    // In a real implementation, this would call Unsplash API via Edge Function
-    // For now, return high-quality Unsplash fallbacks based on keywords
-    const poolImages = [
-      "https://images.unsplash.com/photo-1572331165267-854da2b00ca1?w=800&q=80",
-      "https://images.unsplash.com/photo-1562778612-e1e0cda9915c?w=800&q=80",
-      "https://images.unsplash.com/photo-1576013551627-0cc20b468848?w=800&q=80"
-    ];
-    return poolImages;
-  },
+
 
   /**
    * Save an override for the cover image
