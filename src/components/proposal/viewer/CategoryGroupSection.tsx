@@ -285,22 +285,24 @@ export function CategoryGroupSection({
             ))}
           </div>
 
-          {/* Category Subtotal - ALWAYS SHOW (even when individual pricing is hidden) */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="pt-6 border-t-2 border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 p-6 rounded-lg"
-          >
-            <div className="flex justify-between items-center">
-              <span className="text-xl md:text-2xl font-semibold text-gray-700 dark:text-gray-300">
-                {categoryGroup.displayName} Subtotal
-              </span>
-              <span className="text-2xl md:text-3xl font-bold text-primary">
-                {formatCurrency(categoryGroup.subtotal)}
-              </span>
-            </div>
-          </motion.div>
+          {/* Category Subtotal - HIDDEN in 'grand_total' mode */}
+          {showPricing && pricingMode !== 'grand_total' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="pt-6 border-t-2 border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 p-6 rounded-lg"
+            >
+              <div className="flex justify-between items-center">
+                <span className="text-xl md:text-2xl font-semibold text-gray-700 dark:text-gray-300">
+                  {categoryGroup.displayName} Subtotal
+                </span>
+                <span className="text-2xl md:text-3xl font-bold text-primary">
+                  {formatCurrency(categoryGroup.subtotal)}
+                </span>
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
     </div >

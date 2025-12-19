@@ -11,7 +11,20 @@ import { PaymentDialog } from '@/components/PaymentDialog';
 import { createPaymentIntent } from '@/lib/stripe-service';
 import { useAuth } from '@/contexts/AuthContext';
 import { visualsService } from '@/lib/services/visuals-service';
-import { ProposalVisuals } from '@/types/proposal';
+import { ProposalVisuals, ProposalSection } from '@/types/proposal';
+import { VisualRule } from "@/types";
+
+// Helper to safely parse visual rules from JSON or object
+const parseVisualRules = (rules: any): VisualRule[] => {
+  if (!rules) return [];
+  if (Array.isArray(rules)) return rules; // Already an object (Supabase JSONB auto-parsing)
+  try {
+    return JSON.parse(rules); // Stringified JSON
+  } catch (e) {
+    console.error("Failed to parse visual rules:", e);
+    return [];
+  }
+};
 
 export default function PublicQuoteView() {
   const { id: shareToken } = useParams<{ id: string }>();
@@ -379,29 +392,35 @@ export default function PublicQuoteView() {
         console.error('[PublicQuoteView] ⚠️ Settings fetch error:', settingsError);
         console.log('[PublicQuoteView] Creating fallback settings');
       } else if (settingsData) {
+        // Cast to any to access new columns until types are regenerated
+        const s = settingsData as any;
         console.log('[PublicQuoteView] ✅ Settings loaded:', {
-          name: settingsData.name,
-          hasLogo: !!settingsData.logo,
-          email: settingsData.email,
-          phone: settingsData.phone
+          name: s.name,
+          hasLogo: !!s.logo,
+          email: s.email,
+          phone: s.phone
         });
 
         setSettings({
-          name: settingsData.name || '',
-          address: settingsData.address || '',
-          city: settingsData.city || '',
-          state: settingsData.state || '',
-          zip: settingsData.zip || '',
-          phone: settingsData.phone || '',
-          email: settingsData.email || '',
-          website: settingsData.website || '',
-          logo: settingsData.logo || undefined,
-          logoDisplayOption: (settingsData.logo_display_option as 'logo' | 'name' | 'both') || 'both',
-          license: settingsData.license || '',
-          insurance: settingsData.insurance || '',
-          terms: settingsData.terms || '',
-          proposalTemplate: (settingsData.proposal_template as 'classic' | 'modern' | 'detailed') || 'classic',
-          proposalTheme: (settingsData.proposal_theme as any) || 'modern-corporate',
+          name: s.name || '',
+          address: s.address || '',
+          city: s.city || '',
+          state: s.state || '',
+          zip: s.zip || '',
+          phone: s.phone || '',
+          email: s.email || '',
+          website: s.website || '',
+          logo: s.logo || undefined,
+          logoDisplayOption: (s.logo_display_option as 'logo' | 'name' | 'both') || 'both',
+          license: s.license || '',
+          insurance: s.insurance || '',
+          terms: s.terms || '',
+          proposalTemplate: (s.proposal_template as 'classic' | 'modern' | 'detailed') || 'classic',
+          proposalTheme: (s.proposal_theme as any) || 'modern-corporate',
+          showProposalImages: s.show_proposal_images ?? true,
+          defaultCoverImage: s.default_cover_image || undefined,
+          defaultHeaderImage: s.default_header_image || undefined,
+          visualRules: s.visual_rules ? parseVisualRules(s.visual_rules) : [],
         });
       } else {
         console.warn('[PublicQuoteView] ⚠️ No settings found, using fallback');
