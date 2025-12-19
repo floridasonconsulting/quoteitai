@@ -243,7 +243,7 @@ export function VisualsDefaultsSection({ settings, onUpdate }: VisualsDefaultsSe
                                                         <img src={rule.imageUrl} alt={rule.keyword} className="h-full w-full object-cover" />
                                                     </div>
                                                     <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                                        {rule.imageUrl.split('/').pop()}
+                                                        {rule.imageUrl ? rule.imageUrl.split('/').pop() : 'No image'}
                                                     </span>
                                                 </div>
                                             </TableCell>
