@@ -38,8 +38,22 @@ import { AccountSection } from "@/components/settings/AccountSection";
 import { AppearanceSection } from "@/components/settings/AppearanceSection";
 import { IntegrationsSection } from "@/components/settings/IntegrationsSection";
 import { ProposalThemeSelector } from "@/components/settings/ProposalThemeSelector";
+import { VisualsDefaultsSection } from "@/components/settings/VisualsDefaultsSection";
 import { CacheManagementSection } from '@/components/settings/CacheManagementSection';
 import { PerformanceDashboard } from '@/components/PerformanceDashboard';
+import { VisualRule } from "@/types";
+
+// Helper to safely parse visual rules from JSON or object
+const parseVisualRules = (rules: any): VisualRule[] => {
+  if (!rules) return [];
+  if (Array.isArray(rules)) return rules; // Already an object (Supabase JSONB auto-parsing)
+  try {
+    return JSON.parse(rules); // Stringified JSON
+  } catch (e) {
+    console.error("Failed to parse visual rules:", e);
+    return [];
+  }
+};
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -129,6 +143,9 @@ export default function Settings() {
           notifyEmailAccepted: sSettings.notify_email_accepted ?? true,
           notifyEmailDeclined: sSettings.notify_email_declined ?? true,
           showProposalImages: sSettings.show_proposal_images ?? true,
+          defaultCoverImage: sSettings.default_cover_image || undefined,
+          defaultHeaderImage: sSettings.default_header_image || undefined,
+          visualRules: sSettings.visual_rules ? parseVisualRules(sSettings.visual_rules) : [],
           onboardingCompleted: sSettings.onboarding_completed ?? false,
         };
 
@@ -431,6 +448,11 @@ export default function Settings() {
         <NotificationPreferencesSection
           settings={settings as any}
           onUpdate={handleUpdateSettings as any}
+        />
+
+        <VisualsDefaultsSection
+          settings={settings}
+          onUpdate={handleUpdateSettings}
         />
 
         <AppearanceSection />

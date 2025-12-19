@@ -131,6 +131,9 @@ export async function saveSettings(
       notify_email_accepted: settings.notifyEmailAccepted ?? true,
       notify_email_declined: settings.notifyEmailDeclined ?? true,
       show_proposal_images: settings.showProposalImages ?? true,
+      default_cover_image: settings.defaultCoverImage || null,
+      default_header_image: settings.defaultHeaderImage || null,
+      visual_rules: settings.visualRules ? JSON.stringify(settings.visualRules) : null,
       onboarding_completed: settings.onboardingCompleted ?? false,
       updated_at: new Date().toISOString()
     };

@@ -96,9 +96,20 @@ export interface CompanySettings {
   proposalTheme?: "modern-corporate" | "creative-studio" | "minimalist" | "bold-impact" | "elegant-serif" | "tech-future";
   currency?: string;
   showProposalImages?: boolean;
+  defaultCoverImage?: string;       // NEW: Global default cover image
+  defaultHeaderImage?: string;      // NEW: Global default section header
+  visualRules?: VisualRule[];      // NEW: Keyword mapping rules
   notifyEmailAccepted?: boolean;
   notifyEmailDeclined?: boolean;
   onboardingCompleted?: boolean;
+}
+
+// NEW: Interface for Visual Rules
+export interface VisualRule {
+  id: string;
+  keyword: string;
+  imageUrl: string;
+  matchType: 'contains' | 'exact';
 }
 
 // For offline sync queue

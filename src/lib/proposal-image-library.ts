@@ -2,7 +2,7 @@
  * Proposal Image Library
  * Curated high-quality gradients for proposals
  * 
- * Strategy: User Overrides → Theme-Based Gradients → Default Gradient
+ * Strategy: User Overrides → Visual Rules → Global Defaults → Theme Gradients
  */
 
 import type { CompanySettings } from '@/types';
@@ -105,39 +105,79 @@ export function getThemeGradient(theme?: Theme, type: 'cover' | 'section' | 'ite
 // ============================================================================
 
 /**
- * Get the best cover image based on theme and overrides
+ * Gets a smart cover image based on availability and priority:
+ * 1. User overridden URL (passed as currentUrl)
+ * 2. Settings "Default Cover Image"
+ * 3. Theme-based Gradient
  */
-export function getSmartCoverImage(
-  userCoverImage?: string,
-  theme?: Theme
-): string {
-  if (userCoverImage) return userCoverImage;
+export function getSmartCoverImage(currentUrl?: string, theme?: Theme, settings?: CompanySettings): string {
+  // 1. Override
+  if (currentUrl && currentUrl !== "") {
+    return currentUrl;
+  }
+
+  // 2. Global Default
+  if (settings?.defaultCoverImage) {
+    return settings.defaultCoverImage;
+  }
+
+  // 3. Fallback
   return getThemeGradient(theme, 'cover');
 }
 
 /**
- * Get item image based on override or theme
+ * Gets item image based on priority:
+ * 1. Specific Override (Quote Item)
+ * 2. Visual Rules (Category/Name match)
+ * 3. Theme Gradient
  */
-export function getSmartItemImage(
-  existingUrl?: string,
-  overrideUrl?: string,
-  theme?: Theme
-): string | undefined {
-  if (overrideUrl && (overrideUrl.startsWith('http') || overrideUrl.startsWith('data:'))) return overrideUrl;
-  if (existingUrl && existingUrl.startsWith('http')) return existingUrl;
+export function getSmartItemImage(itemName: string, category: string, currentUrl?: string, theme?: Theme, settings?: CompanySettings): string {
+  // 1. Override
+  if (currentUrl && (currentUrl.startsWith('http') || currentUrl.startsWith('data:'))) {
+    return currentUrl;
+  }
 
+  // 2. Visual Rules
+  if (settings?.visualRules) {
+    const lowerName = itemName.toLowerCase();
+    const lowerCat = category.toLowerCase();
+    const match = settings.visualRules.find(rule => {
+      const key = rule.keyword.toLowerCase();
+      return lowerCat.includes(key) || lowerName.includes(key);
+    });
+    if (match) return match.imageUrl;
+  }
+
+  // 3. Theme Gradient
   return getThemeGradient(theme, 'item');
 }
 
 /**
- * Get category background image theme
+ * Gets category header image based on priority:
+ * 1. Manual Override (User edited this specific section)
+ * 2. Visual Rules (Category match)
+ * 3. Global Default Header
+ * 4. Theme Gradient
  */
-export function getCategoryImage(
-  category: string, // Kept for signature compatibility if needed, but unused for logic
-  userImages?: Record<string, string>,
-  theme?: Theme
-): string {
-  if (userImages?.[category]) return userImages[category];
+export function getCategoryImage(categoryName: string, currentUrl?: string, theme?: Theme, settings?: CompanySettings): string {
+  // 1. Override
+  if (currentUrl && currentUrl !== "") {
+    return currentUrl;
+  }
+
+  // 2. Visual Rules
+  if (settings?.visualRules) {
+    const lowerCat = categoryName.toLowerCase();
+    const match = settings.visualRules.find(rule => lowerCat.includes(rule.keyword.toLowerCase()));
+    if (match) return match.imageUrl;
+  }
+
+  // 3. Global Default Header
+  if (settings?.defaultHeaderImage) {
+    return settings.defaultHeaderImage;
+  }
+
+  // 4. Fallback
   return getThemeGradient(theme, 'section');
 }
 
@@ -147,11 +187,14 @@ export function getCategoryImage(
 export function mapCategoriesToImages(
   categories: string[],
   userImages?: Record<string, string>,
-  theme?: Theme
+  theme?: Theme,
+  settings?: CompanySettings
 ): Record<string, string> {
   const mapping: Record<string, string> = {};
   categories.forEach(category => {
-    mapping[category] = getCategoryImage(category, userImages, theme);
+    // Treat userImages lookup as the "override" (Step 1)
+    const currentUrl = userImages?.[category];
+    mapping[category] = getCategoryImage(category, currentUrl, theme, settings);
   });
   return mapping;
 }

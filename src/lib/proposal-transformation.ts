@@ -80,7 +80,8 @@ export function transformQuoteToProposal(
   const smartCoverImage = showImages
     ? getSmartCoverImage(
       visuals?.coverImage,
-      activeSettings.proposalTheme
+      activeSettings.proposalTheme,
+      activeSettings
     )
     : undefined;
 
@@ -156,7 +157,7 @@ export function transformQuoteToProposal(
     const itemOverride = visuals?.itemImages?.[item.name] || visuals?.sectionBackgrounds?.[`item_${item.name}`];
 
     const smartItemImage = showImages
-      ? getSmartItemImage(item.imageUrl, itemOverride, activeSettings.proposalTheme)
+      ? getSmartItemImage(item.name, item.category, itemOverride, activeSettings.proposalTheme, activeSettings)
       : undefined;
 
     console.log('[Transformation] Processing item with SMART RESOLUTION:', {
@@ -209,8 +210,9 @@ export function transformQuoteToProposal(
     const categoryImage = showImages
       ? getCategoryImage(
         category,
-        visuals?.sectionBackgrounds,
-        activeSettings.proposalTheme
+        visuals?.sectionBackgrounds?.[category], // Use direct lookup or pass map if needed, but getCategoryImage expects single URL
+        activeSettings.proposalTheme,
+        activeSettings
       )
       : undefined;
 
