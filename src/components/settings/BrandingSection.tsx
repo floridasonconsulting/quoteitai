@@ -58,7 +58,7 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
       // Upload to Supabase Storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${user?.id}/logo.${fileExt}`;
-      const filePath = `company-logos/${fileName}`;
+      const filePath = fileName; // CRITICAL: Do limit path to just user/file for RLS to work
 
       const { error: uploadError } = await supabase.storage
         .from('company-logos')
