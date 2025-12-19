@@ -49,6 +49,25 @@ export function ProposalContentSlider({
     onSlideChange(newIndex);
   };
 
+  // Detect Desktop View
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    // Check if window is defined (SSR safety)
+    if (typeof window === 'undefined') return;
+
+    const checkDesktop = () => {
+      setIsDesktop(window.innerWidth >= 768); // Md breakpoint
+    };
+
+    // Initial check
+    checkDesktop();
+
+    // Listen
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
+
   // Auto-paginate categories with >10 items
   const processedSections = processSectionsForPagination(sections);
 
@@ -56,7 +75,7 @@ export function ProposalContentSlider({
     <div className="h-full w-full">
       <Swiper
         modules={[Navigation, Pagination, Keyboard, Mousewheel]}
-        direction="horizontal"
+        direction={isDesktop ? "horizontal" : "vertical"}
         slidesPerView={1}
         spaceBetween={0}
         mousewheel={{
@@ -71,7 +90,7 @@ export function ProposalContentSlider({
         className="h-full w-full proposal-swiper"
       >
         {processedSections.map((section, index) => (
-          <SwiperSlide key={`${section.id}-${index}`}>
+          <SwiperSlide key={`${section.id}-${index}`} className="!h-full">
             <SlideContent
               section={section}
               isActive={index === currentIndex}

@@ -44,7 +44,16 @@ export class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log to console for debugging
     console.error('ErrorBoundary caught an error:', error, errorInfo);
-    
+
+    // Auto-recover from chunk load errors
+    if (error.message.includes('Failed to fetch dynamically imported module') || error.message.includes('Importing a module script failed')) {
+      if (!sessionStorage.getItem('chunk_retry')) {
+        sessionStorage.setItem('chunk_retry', 'true');
+        window.location.reload();
+        return;
+      }
+    }
+
     // Update state with error info
     this.setState(prevState => ({
       errorInfo,
@@ -62,6 +71,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   private handleReset = () => {
     // Clear error state
+    sessionStorage.removeItem('chunk_retry');
     this.setState({
       hasError: false,
       error: null,
@@ -77,7 +87,7 @@ export class ErrorBoundary extends Component<Props, State> {
       localStorage.removeItem('quotes-cache');
       localStorage.removeItem('sync-queue');
       localStorage.removeItem('failed-sync-queue');
-      
+
       // Clear service worker cache if available
       if ('caches' in window) {
         caches.keys().then(names => {
@@ -87,7 +97,7 @@ export class ErrorBoundary extends Component<Props, State> {
     } catch (e) {
       console.error('Error clearing caches:', e);
     }
-    
+
     window.location.href = '/dashboard';
   };
 
@@ -125,7 +135,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <CardTitle className="text-xl">Something went wrong</CardTitle>
               </div>
               <CardDescription>
-                {isRecurring 
+                {isRecurring
                   ? 'The application is experiencing persistent issues. Please try a hard reset.'
                   : 'The application encountered an unexpected error. You can try to recover or reset the application.'}
               </CardDescription>
@@ -152,8 +162,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
               <div className="flex flex-col gap-2">
                 {!isRecurring && (
-                  <Button 
-                    onClick={this.handleReset} 
+                  <Button
+                    onClick={this.handleReset}
                     className="w-full"
                     size="lg"
                   >
@@ -161,9 +171,9 @@ export class ErrorBoundary extends Component<Props, State> {
                     Try Again
                   </Button>
                 )}
-                
-                <Button 
-                  onClick={this.handleHardReset} 
+
+                <Button
+                  onClick={this.handleHardReset}
                   variant={isRecurring ? "default" : "outline"}
                   className="w-full"
                   size="lg"
@@ -172,8 +182,8 @@ export class ErrorBoundary extends Component<Props, State> {
                   Reset & Go to Dashboard
                 </Button>
 
-                <Button 
-                  onClick={this.handleReportError} 
+                <Button
+                  onClick={this.handleReportError}
                   variant="secondary"
                   className="w-full"
                   size="sm"

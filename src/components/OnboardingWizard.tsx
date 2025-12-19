@@ -363,7 +363,10 @@ export function OnboardingWizard() {
           return;
         }
       } catch (err) {
-        console.warn("[OnboardingWizard] Failed to verify with database, defaulting to show wizard:", err);
+        console.warn("[OnboardingWizard] Failed to verify with database, defaulting to HIDE to prevent interruption:", err);
+        setIsDialogOpen(false);
+        setIsChecking(false);
+        return;
       }
 
       console.log("[OnboardingWizard] No completion flags found locally or in DB - wizard WILL show");
