@@ -54,7 +54,7 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
 
     try {
       setIsUploading(true);
-      
+
       // Upload to Supabase Storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${user?.id}/logo.${fileExt}`;
@@ -92,12 +92,12 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
 
       // Extract file path from URL
       const logoPath = settings.logo.split('/company-logos/')[1];
-      
+
       if (logoPath) {
         // Remove from storage
         const { error: deleteError } = await supabase.storage
           .from('company-logos')
-          .remove([`company-logos/${logoPath}`]);
+          .remove([logoPath]);
 
         if (deleteError) {
           console.warn("Failed to delete logo from storage:", deleteError);
@@ -132,8 +132,8 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
         {/* Logo Display Option */}
         <div className="space-y-3">
           <Label htmlFor="logoDisplayOption">Logo Display on Proposals</Label>
-          <Select 
-            value={settings.logoDisplayOption || 'both'} 
+          <Select
+            value={settings.logoDisplayOption || 'both'}
             onValueChange={handleLogoDisplayChange}
           >
             <SelectTrigger id="logoDisplayOption">
@@ -153,12 +153,12 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
         {/* White-Label Logo Upload (Max AI Tier Only) */}
         <div className="space-y-3 pt-4 border-t">
           <Label htmlFor="logo-upload">Company Logo</Label>
-          
+
           {!isMaxAITier && (
             <Alert>
               <Crown className="h-4 w-4" />
               <AlertDescription>
-                Custom logo upload is available exclusively for Max AI tier subscribers. 
+                Custom logo upload is available exclusively for Max AI tier subscribers.
                 <Button variant="link" className="p-0 h-auto ml-1" onClick={() => window.location.href = '/subscription'}>
                   Upgrade to Max AI
                 </Button>

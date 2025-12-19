@@ -72,7 +72,7 @@ export function ProposalContentSlider({
   const processedSections = processSectionsForPagination(sections);
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full overflow-hidden">
       <Swiper
         modules={[Navigation, Pagination, Keyboard, Mousewheel]}
         direction={isDesktop ? "horizontal" : "vertical"}

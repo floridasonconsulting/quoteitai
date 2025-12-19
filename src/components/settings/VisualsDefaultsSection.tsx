@@ -37,6 +37,7 @@ export function VisualsDefaultsSection({ settings, onUpdate }: VisualsDefaultsSe
             const fileExt = file.name.split('.').pop();
             const fileName = `${user.id}/${uuidv4()}.${fileExt}`;
             const bucket = 'company-logos'; // Using existing public bucket to avoid "Bucket not found" errors
+            console.log("Uploading to verified bucket:", bucket);
 
             const { error: uploadError } = await supabase.storage
                 .from(bucket)
@@ -52,9 +53,10 @@ export function VisualsDefaultsSection({ settings, onUpdate }: VisualsDefaultsSe
                 await onUpdate({ [field]: publicUrl });
                 toast.success(`Default ${field === 'defaultCoverImage' ? 'Cover' : 'Header'} updated`);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Upload failed:", error);
-            toast.error("Failed to upload image");
+            const bucket = 'company-logos';
+            toast.error(`Failed to upload: ${error.message || 'Unknown error'} (Target: ${bucket})`);
         } finally {
             setIsUploading(null);
         }

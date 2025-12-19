@@ -718,7 +718,9 @@ All colors MUST be HSL.
 /* Swiper Critical Overrides for Desktop Horizontal Mode */
 .proposal-swiper {
   width: 100%;
+  max-width: 100vw;
   height: 100%;
+  overflow: hidden;
 }
 
 .proposal-swiper .swiper-wrapper {
