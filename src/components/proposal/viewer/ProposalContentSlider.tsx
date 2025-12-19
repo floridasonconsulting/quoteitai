@@ -233,7 +233,12 @@ function SlideContent({
           onEditItemImage={onEditItemImage}
         />;
       case 'lineItems':
-        return <InvestmentSummarySlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} />;
+        return <InvestmentSummarySlide
+          section={section}
+          isOwner={isOwner}
+          onEditImage={(url) => onEditSectionImage?.(section.id, url)}
+          onEditSectionImage={onEditSectionImage}
+        />;
       case 'legal':
         return <LegalSlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} />;
       default:
@@ -418,16 +423,18 @@ function CategorySlide({
 
 /**
  * Slide Component: Investment Summary (Professional Format)
- * UPDATED: Tighter spacing, smaller text to minimize scrolling
+ * UPDATED: Tighter spacing, smaller text, and Pricing Display Modes
  */
 function InvestmentSummarySlide({
   section,
   isOwner,
-  onEditImage
+  onEditImage,
+  onEditSectionImage
 }: {
   section: ProposalSection,
   isOwner?: boolean,
-  onEditImage?: (url?: string) => void
+  onEditImage?: (url?: string) => void,
+  onEditSectionImage?: (id: string, url: string) => void
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -503,6 +510,9 @@ function InvestmentSummarySlide({
     items: items || [],
     subtotal: (items || []).reduce((sum, item) => sum + item.total, 0)
   }));
+
+  // Determine active pricing mode from section data (injected via logic)
+  const pricingMode = (section as any).pricingMode || 'category_total';
 
   return (
     <div className="h-full flex flex-col bg-[#F8FAFC] dark:bg-gray-950 overflow-hidden">
@@ -584,32 +594,69 @@ function InvestmentSummarySlide({
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-                          {items.map((item, itemIdx) => (
-                            <tr key={itemIdx} className="group">
-                              <td className="py-2.5 pr-4">
-                                <div className="flex justify-between items-baseline">
-                                  <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors leading-tight">
-                                    {item.name}
-                                  </p>
-                                  {/* Optional: Show quantity if relevant */}
-                                  {item.quantity > 1 && (
-                                    <span className="text-[10px] bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-500 font-mono">
-                                      x{item.quantity}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug line-clamp-2 mt-0.5">
-                                  {item.enhancedDescription || item.description}
-                                </p>
-                              </td>
-                              {/* Hiding individual item price as requested */}
-                              {/* <td className="py-2.5 text-right align-top whitespace-nowrap">
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                  {formatCurrency(item.total)}
-                                </span>
-                              </td> */}
-                            </tr>
-                          ))}
+                          {/* Pricing Display Logic */}
+                          {(() => {
+                            return (
+                              <>
+                                {/* Detailed Itemized View */}
+                                {pricingMode === 'itemized' && items.map((item: any, itemIdx: number) => (
+                                  <tr key={itemIdx} className="group">
+                                    <td className="py-2.5 pr-4">
+                                      <div className="flex justify-between items-baseline">
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors leading-tight">
+                                          {item.name}
+                                        </p>
+                                        {/* Optional: Show quantity if relevant */}
+                                        {item.quantity > 1 && (
+                                          <span className="text-[10px] bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-500 font-mono">
+                                            x{item.quantity}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug line-clamp-2 mt-0.5">
+                                        {item.enhancedDescription || item.description}
+                                      </p>
+                                    </td>
+                                    <td className="py-2.5 text-right align-top whitespace-nowrap">
+                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        {formatCurrency(item.total)}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+
+                                {/* Category Total View (Default) */}
+                                {pricingMode === 'category_total' && items.map((item: any, itemIdx: number) => (
+                                  <tr key={itemIdx} className="group">
+                                    <td className="py-2.5 pr-4" colSpan={2}>
+                                      <div className="flex justify-between items-baseline">
+                                        <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors leading-tight">
+                                          {item.name}
+                                        </p>
+                                        {item.quantity > 1 && (
+                                          <span className="text-[10px] bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-500 font-mono">
+                                            x{item.quantity}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug line-clamp-2 mt-0.5">
+                                        {item.enhancedDescription || item.description}
+                                      </p>
+                                    </td>
+                                  </tr>
+                                ))}
+
+                                {/* Grand Total Only View */}
+                                {pricingMode === 'grand_total' && (
+                                  <tr>
+                                    <td colSpan={2} className="py-4 text-center text-sm text-gray-500 italic">
+                                      {items.length} items included in this category
+                                    </td>
+                                  </tr>
+                                )}
+                              </>
+                            );
+                          })()}
                         </tbody>
                       </table>
 
@@ -650,6 +697,31 @@ function InvestmentSummarySlide({
                         <span className="text-xl font-black text-primary tracking-tighter">{formatCurrency(section.total || 0)}</span>
                       </div>
                     </div>
+
+                    {/* Owner Controls for Pricing Mode */}
+                    {isOwner && (
+                      <div className="mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-gray-700">
+                        <p className="text-[10px] uppercase font-bold text-gray-400 mb-2">Display Mode (Owner Only)</p>
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { id: 'itemized', label: 'Itemized' },
+                            { id: 'category_total', label: 'Cat Totals' },
+                            { id: 'grand_total', label: 'Grand Total' }
+                          ].map((mode) => (
+                            <button
+                              key={mode.id}
+                              onClick={() => onEditSectionImage?.('settings_pricing_mode', mode.id)}
+                              className={`px-2 py-1 text-[10px] rounded border transition-colors ${pricingMode === mode.id
+                                ? "bg-primary text-white border-primary"
+                                : "bg-white dark:bg-gray-800 text-gray-600 border-gray-200 hover:border-primary/50"
+                                }`}
+                            >
+                              {mode.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800/50">
                       <p className="text-[10px] leading-relaxed text-blue-700/80 dark:text-blue-300/80 italic text-center">

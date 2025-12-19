@@ -210,12 +210,15 @@ export function transformQuoteToProposal(
     const metadata = getCategoryMetadata(category);
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
 
+    // Generate consistent section ID for lookup
+    const sectionId = `cat-${category.toLowerCase().replace(/\s+/g, '-')}`;
+
     // Smart category image selection
     // ONLY if images are enabled in settings
     const categoryImage = showImages
       ? getCategoryImage(
         category,
-        visuals?.sectionBackgrounds?.[category], // Use direct lookup or pass map if needed, but getCategoryImage expects single URL
+        visuals?.sectionBackgrounds?.[sectionId] || visuals?.sectionBackgrounds?.[category], // Try ID first (new format), then name (legacy)
         activeSettings.proposalTheme,
         activeSettings
       )
@@ -262,19 +265,30 @@ export function transformQuoteToProposal(
     id: 'financials',
     type: 'lineItems',
     title: 'Investment Summary',
-    items: quote.items.map(i => ({
-      ...i,
-      imageUrl: showImages ? i.imageUrl : undefined,
-      category: normalizeCategory(i.category)
-    })),
+    content: {
+      items: quote.items.map(i => ({
+        ...i,
+        imageUrl: showImages ? i.imageUrl : undefined,
+        category: normalizeCategory(i.category)
+      })),
+      subtotal: quote.subtotal,
+      tax: quote.tax,
+      total: quote.total,
+      sections: sections.filter(s => s.type === 'categoryGroup').flatMap(s => s.categoryGroups || []),
+      // Pass persistent pricing mode setting (default to 'category_total')
+      pricingMode: visuals?.sectionBackgrounds?.['settings_pricing_mode'] || 'category_total'
+    },
     subtotal: quote.subtotal,
     tax: quote.tax,
     total: quote.total,
     showPricing: true,
+    // Pass persistent pricing mode setting (default to 'category_total')
+    // Cast to any to bypass strict type checking if ProposalSection definition is missing this field
+    pricingMode: visuals?.sectionBackgrounds?.['settings_pricing_mode'] || 'category_total',
     backgroundImage: showImages
       ? (visuals?.sectionBackgrounds?.['financials'] || getThemeGradient(activeSettings.proposalTheme, 'cover'))
       : undefined
-  });
+  } as any);
 
   // --- Section D: Terms & Conditions ---
   const termsContent = activeSettings.terms && activeSettings.terms.trim()

@@ -32,34 +32,34 @@ import { getGeneratedBackground } from './svg-patterns';
 
 export const THEME_GRADIENTS = {
   'modern-corporate': {
-    cover: 'radial-gradient(circle at top right, #1e40af 0%, #0f172a 100%)', // Rich Blue to Slate
-    section: 'linear-gradient(to right, #f8fafc, #e2e8f0)', // Slate 50 -> 200
-    item: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', // Blue 50 -> 100 (Subtle)
+    cover: 'linear-gradient(135deg, #0F2027 0%, #203A43 50%, #2C5364 100%)', // Deep Teal/Slate
+    section: 'linear-gradient(to right, #f8fafc, #e2e8f0)',
+    item: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
   },
   'creative-studio': {
-    cover: 'conic-gradient(from 0deg at 50% 50%, #7e22ce, #db2777, #ea580c, #7e22ce)', // Multi-color vibrant
-    section: 'linear-gradient(120deg, #fce7f3 0%, #e0e7ff 100%)', // Pink to Indigo light
-    item: 'linear-gradient(to bottom right, #faf5ff, #f3e8ff)', // Purple 50 -> 100
+    cover: 'conic-gradient(from 0deg at 50% 50%, #FF3CAC 0%, #784BA0 50%, #2B86C5 100%)', // Vibrant Pink/Purple/Blue
+    section: 'linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%)', // Clean White
+    item: 'linear-gradient(to bottom right, #fff1eb 0%, #ace0f9 100%)', // Subtle Peach/Blue
   },
   'minimalist': {
-    cover: 'linear-gradient(to bottom, #f3f4f6, #9ca3af)', // Gray 100 -> 400
-    section: 'linear-gradient(to right, #ffffff, #f3f4f6)', // White -> Gray 100
-    item: 'linear-gradient(to bottom, #ffffff, #fafafa)', // Pure clean
+    cover: 'linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%)', // Soft Silver
+    section: 'linear-gradient(to right, #ffffff, #f3f4f6)',
+    item: 'linear-gradient(to bottom, #ffffff, #fafafa)',
   },
   'bold-impact': {
-    cover: 'linear-gradient(45deg, #000000 0%, #be123c 100%)', // Black to Crimson
-    section: 'linear-gradient(to right, #18181b, #27272a)', // Zinc 900 -> 800
-    item: 'linear-gradient(135deg, #27272a 0%, #52525b 100%)', // Zinc 800 -> 600
+    cover: 'linear-gradient(to right, #243949 0%, #517fa4 100%)', // Strong Blue Steel
+    section: 'linear-gradient(to right, #18181b, #27272a)',
+    item: 'linear-gradient(135deg, #27272a 0%, #52525b 100%)',
   },
   'elegant-serif': {
-    cover: 'radial-gradient(circle at center, #57534e 0%, #1c1917 100%)', // Stone 600 -> 900
-    section: 'linear-gradient(to right, #fafaf9, #e7e5e4)', // Stone 50 -> 200
-    item: 'linear-gradient(135deg, #fafaf9 0%, #f5f5f4 100%)', // Stone 50 -> 100
+    cover: 'radial-gradient(circle at center, #603813 0%, #b29f94 100%)', // Rich Brown/Taupe
+    section: 'linear-gradient(to right, #fafaf9, #e7e5e4)',
+    item: 'linear-gradient(135deg, #fafaf9 0%, #f5f5f4 100%)',
   },
   'tech-future': {
-    cover: 'linear-gradient(180deg, #020617 0%, #1e1b4b 50%, #4c1d95 100%)', // Space logic
-    section: 'linear-gradient(to right, #0f172a, #1e293b)', // Slate 900 -> 800
-    item: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)', // Slate 800 -> 700
+    cover: 'radial-gradient(circle at 10% 20%, rgb(0, 0, 0) 0%, rgb(64, 64, 64) 90.2%)', // Deep Carbon
+    section: 'linear-gradient(to right, #0f172a, #1e293b)',
+    item: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
   },
 } as const;
 

@@ -73,6 +73,7 @@ export interface ProposalSection {
   currency?: string;
   terms?: string;
   showPricing?: boolean; // Toggle for line-item pricing visibility
+  pricingMode?: 'itemized' | 'category_total' | 'grand_total'; // NEW: Pricing display mode
 }
 
 export interface ProposalData {
