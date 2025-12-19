@@ -343,8 +343,30 @@ export function OnboardingWizard() {
         return;
       }
 
-      // If no flags found, show onboarding wizard
-      console.log("[OnboardingWizard] No completion flags found - wizard WILL show");
+      // If no flags found, CHECK DATABASE before showing wizard
+      try {
+        console.log("[OnboardingWizard] Local flags missing. Verifying with database...");
+        // Check DB settings (non-blocking verification)
+        const dbSettings = await getSettings(user.id);
+
+        if (dbSettings && (dbSettings.onboardingCompleted || (dbSettings.name && dbSettings.email))) {
+          console.log("[OnboardingWizard] ✓ Database confirms onboarding complete. Restoring local flags...");
+
+          // Restore local flags to avoid future DB checks
+          const completionKey = `onboarding_completed_${user.id}`;
+          localStorage.setItem(completionKey, "true");
+          localStorage.setItem(`onboarding_status_${user.id}`, "completed");
+          sessionStorage.setItem(completionKey, "true");
+
+          setIsDialogOpen(false);
+          setIsChecking(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("[OnboardingWizard] Failed to verify with database, defaulting to show wizard:", err);
+      }
+
+      console.log("[OnboardingWizard] No completion flags found locally or in DB - wizard WILL show");
       setIsDialogOpen(true);
       setIsChecking(false);
       console.log("[OnboardingWizard] ========== CHECK COMPLETE: WIZARD OPENING ==========");

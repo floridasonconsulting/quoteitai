@@ -68,10 +68,12 @@ export function CategoryGroupSection({
   const touchStartY = useRef<number | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (!e.touches || e.touches.length === 0) return;
     touchStartY.current = e.touches[0].clientY;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    if (!e.touches || e.touches.length === 0) return;
     if (touchStartY.current === null) return;
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -79,6 +81,9 @@ export function CategoryGroupSection({
     const currentY = e.touches[0].clientY;
     const diff = touchStartY.current - currentY;
     const { scrollTop, scrollHeight, clientHeight } = container;
+
+    // Safety check for scroll dimensions
+    if (scrollHeight <= clientHeight) return;
 
     const isAtTop = scrollTop <= 0;
     const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;

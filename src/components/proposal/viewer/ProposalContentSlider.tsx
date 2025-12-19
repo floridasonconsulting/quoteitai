@@ -368,11 +368,14 @@ function InvestmentSummarySlide({
   const touchStartY = useRef<number | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (!e.touches || e.touches.length === 0) return;
     touchStartY.current = e.touches[0].clientY;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    if (!e.touches || e.touches.length === 0) return;
     if (touchStartY.current === null) return;
+
     const container = scrollContainerRef.current;
     if (!container) return;
 
@@ -380,9 +383,14 @@ function InvestmentSummarySlide({
     const diff = touchStartY.current - currentY;
     const { scrollTop, scrollHeight, clientHeight } = container;
 
+    // Safety check for scroll dimensions
+    if (scrollHeight <= clientHeight) return;
+
     const isAtTop = scrollTop <= 0;
     const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
 
+    // Use cancelable check if possible, or just swallow error if preventDefault fails
+    // React synthetic events manage this, but logic here is stopPropagation
     if (diff > 0 && !isAtBottom) {
       e.stopPropagation();
     } else if (diff < 0 && !isAtTop) {
