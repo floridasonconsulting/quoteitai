@@ -79,16 +79,19 @@ export function ProposalCover({
           className="mb-8"
         >
           {companyLogo ? (
-            <img
-              src={companyLogo}
-              alt="Company Logo"
-              className="h-12 md:h-20 mx-auto mb-4 object-contain brightness-0 invert"
-              onError={(e) => {
-                console.error('[ProposalCover] Logo failed to load:', companyLogo);
-                // Hide broken image
-                e.currentTarget.style.display = 'none';
-              }}
-            />
+            <>
+              {console.log('[ProposalCover] Rendering logo:', companyLogo)}
+              <img
+                src={companyLogo}
+                alt="Company Logo"
+                className="h-12 md:h-20 mx-auto mb-4 object-contain drop-shadow-lg"
+                onError={(e) => {
+                  console.error('[ProposalCover] Logo failed to load:', companyLogo);
+                  // Hide broken image
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </>
           ) : (
             <p className="text-sm uppercase tracking-widest text-white/80 mb-2 font-black">
               PROPOSAL FOR

@@ -160,25 +160,56 @@ export function getSmartItemImage(itemName: string, category: string, currentUrl
  * 4. Theme Gradient
  */
 export function getCategoryImage(categoryName: string, currentUrl?: string, theme?: Theme, settings?: CompanySettings): string {
+  console.log('[getCategoryImage] 🔍 CATEGORY IMAGE RESOLUTION:', {
+    categoryName,
+    hasOverride: !!currentUrl,
+    overrideUrl: currentUrl?.substring(0, 50),
+    hasSettings: !!settings,
+    hasVisualRules: !!(settings?.visualRules?.length),
+    visualRulesCount: settings?.visualRules?.length || 0,
+    hasDefaultHeader: !!settings?.defaultHeaderImage,
+    defaultHeaderUrl: settings?.defaultHeaderImage?.substring(0, 50),
+    theme
+  });
+
   // 1. Override
   if (currentUrl && currentUrl !== "") {
+    console.log('[getCategoryImage] ✓ Using OVERRIDE:', currentUrl.substring(0, 50));
     return currentUrl;
   }
 
   // 2. Visual Rules
-  if (settings?.visualRules) {
+  if (settings?.visualRules && settings.visualRules.length > 0) {
     const lowerCat = (categoryName || '').toLowerCase();
-    const match = settings.visualRules.find(rule => lowerCat.includes((rule.keyword || '').toLowerCase()));
-    if (match) return match.imageUrl;
+    console.log('[getCategoryImage] Checking visual rules:', {
+      categoryLower: lowerCat,
+      rules: settings.visualRules.map(r => ({ keyword: r.keyword, hasImageUrl: !!r.imageUrl }))
+    });
+
+    const match = settings.visualRules.find(rule => {
+      const keywordLower = (rule.keyword || '').toLowerCase();
+      const isMatch = lowerCat.includes(keywordLower);
+      console.log(`[getCategoryImage] Rule check: "${lowerCat}" includes "${keywordLower}" = ${isMatch}`);
+      return isMatch;
+    });
+
+    if (match) {
+      console.log('[getCategoryImage] ✓ Visual rule MATCHED:', match.keyword, '->', match.imageUrl?.substring(0, 50));
+      return match.imageUrl;
+    }
+    console.log('[getCategoryImage] ✗ No visual rule matched');
   }
 
   // 3. Global Default Header
   if (settings?.defaultHeaderImage) {
+    console.log('[getCategoryImage] ✓ Using DEFAULT HEADER:', settings.defaultHeaderImage.substring(0, 50));
     return settings.defaultHeaderImage;
   }
 
   // 4. Fallback
-  return getThemeGradient(theme, 'section');
+  const gradient = getThemeGradient(theme, 'section');
+  console.log('[getCategoryImage] ⚠️ FALLBACK to gradient');
+  return gradient;
 }
 
 /**
