@@ -138,6 +138,19 @@ export async function saveSettings(
       updated_at: new Date().toISOString()
     };
 
+    // DEBUG: Log visual rules specifically
+    if (settings.visualRules) {
+      console.log('[DB Service] Visual rules being saved:', {
+        count: settings.visualRules.length,
+        rules: settings.visualRules.map(r => ({
+          keyword: r.keyword,
+          hasImageUrl: !!r.imageUrl,
+          imageUrlPreview: r.imageUrl?.substring(0, 80)
+        })),
+        stringified: dbSettings.visual_rules?.substring(0, 200)
+      });
+    }
+
     console.log('[DB Service] Upserting to Supabase with data:', {
       user_id: dbSettings.user_id,
       name: dbSettings.name,

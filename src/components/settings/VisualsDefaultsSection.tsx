@@ -75,8 +75,20 @@ export function VisualsDefaultsSection({ settings, onUpdate }: VisualsDefaultsSe
             matchType: 'contains'
         };
 
+        console.log('[VisualsDefaults] Creating new rule:', {
+            keyword: newRule.keyword,
+            imageUrl: newRule.imageUrl,
+            imageUrlLength: newRule.imageUrl?.length
+        });
+
         const currentRules = settings.visualRules || [];
         const updatedRules = [...currentRules, newRule];
+
+        console.log('[VisualsDefaults] Saving updated rules:', updatedRules.map(r => ({
+            keyword: r.keyword,
+            hasImageUrl: !!r.imageUrl,
+            imageUrlPreview: r.imageUrl?.substring(0, 50)
+        })));
 
         await onUpdate({ visualRules: updatedRules });
 
