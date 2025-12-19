@@ -160,11 +160,26 @@ AVAILABLE ITEMS CATALOG:
 ${JSON.stringify(itemsCatalog, null, 2)}
 
 CRITICAL INSTRUCTIONS:
-1. CLIENT NAME EXTRACTION: Look carefully for any person's name or business name in the project description. Examples:
-   - "Pool remodel for John Smith" → clientName: "John Smith"
-   - "Quote for Johnsons residence" → clientName: "Johnson"
-   - "Project at 123 Main St for Mike's Pools" → clientName: "Mike's Pools"
-   - If NO name is found, set clientName to ""
+
+1. CLIENT NAME EXTRACTION - EXTRACT USING THESE PATTERNS:
+   Look for these keyword patterns in the description (case-insensitive):
+   - "customer is [NAME]" → extract [NAME]
+   - "client is [NAME]" → extract [NAME]
+   - "for [NAME]" → extract [NAME]
+   - "at the [NAME] home" or "at [NAME]'s home" → extract [NAME]
+   - "[NAME] residence" → extract [NAME]
+   - "[NAME] property" → extract [NAME]
+   - "quote for [NAME]" → extract [NAME]
+   - "proposal for [NAME]" → extract [NAME]
+   - "Mr./Mrs./Ms. [NAME]" → extract [NAME]
+   - Any capitalized proper noun that appears to be a person or business name
+   
+   Examples:
+   - "I'm at the Hill Family home and we will be doing pool work" → clientName: "Hill Family"
+   - "Customer is Johnson Pools LLC" → clientName: "Johnson Pools LLC"
+   - "Quote for the Smith residence" → clientName: "Smith"
+   - "Pool renovation for Mike's Backyard Services" → clientName: "Mike's Backyard Services"
+   - If NO name pattern is found, set clientName to ""
 
 2. EXECUTIVE SUMMARY RULES - THIS IS CRITICAL:
    - The summary MUST NOT contain ANY dollar amounts, prices, totals, or cost references
@@ -213,8 +228,12 @@ CRITICAL INSTRUCTIONS:
             <Textarea
               value={projectDescription}
               onChange={(e) => setProjectDescription(e.target.value)}
-              placeholder="Describe the project: what the customer needs, scope of work, key requirements..."
-              rows={4}
+              placeholder={`Example: "I'm at the Johnson residence and we will be installing new equipment and providing maintenance services."
+
+Or: "Customer is ABC Company. They need a complete inspection and repair of their existing system..."
+
+Include the customer/client name for automatic matching!`}
+              rows={5}
             />
           </div>
           <AIButton
@@ -226,7 +245,7 @@ CRITICAL INSTRUCTIONS:
             Generate Complete Quote with AI
           </AIButton>
           <p className="text-xs text-muted-foreground">
-            AI will suggest a title, recommended items, professional notes, and executive summary based on your project description.
+            💡 <strong>Tip:</strong> Start with "I'm at the [Name] home..." or "Customer is [Name]..." to auto-match clients. AI will suggest items, title, notes, and executive summary.
           </p>
         </CardContent>
       </Card>

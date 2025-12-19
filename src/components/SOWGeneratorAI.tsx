@@ -23,7 +23,7 @@ export function SOWGeneratorAI({ quote, companyName, onSOWGenerated }: SOWGenera
     const [generatedSOW, setGeneratedSOW] = useState<string | null>(null);
     const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
-    const sowAI = useAI('sow_generation', {
+    const sowAI = useAI('scope_of_work', {
         onSuccess: (content) => {
             // Clean up any markdown code blocks
             const cleanedContent = content
@@ -198,7 +198,7 @@ Format this as a professional document using markdown. Use clear headings, bulle
             <AIUpgradeDialog
                 isOpen={showUpgradeDialog}
                 onClose={() => setShowUpgradeDialog(false)}
-                featureName="sow_generation"
+                featureName="scope_of_work"
                 requiredTier="business"
             />
         </>
