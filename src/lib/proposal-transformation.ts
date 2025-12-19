@@ -265,26 +265,17 @@ export function transformQuoteToProposal(
     id: 'financials',
     type: 'lineItems',
     title: 'Investment Summary',
-    content: {
-      items: quote.items.map(i => ({
-        ...i,
-        imageUrl: showImages ? i.imageUrl : undefined,
-        category: normalizeCategory(i.category)
-      })),
-      subtotal: quote.subtotal,
-      tax: quote.tax,
-      total: quote.total,
-      sections: sections.filter(s => s.type === 'categoryGroup').flatMap(s => s.categoryGroups || []),
-      // Pass persistent pricing mode setting (default to 'category_total')
-      pricingMode: visuals?.sectionBackgrounds?.['settings_pricing_mode'] || 'category_total'
-    },
+    items: quote.items.map(i => ({
+      ...i,
+      imageUrl: showImages ? i.imageUrl : undefined,
+      category: normalizeCategory(i.category)
+    })),
     subtotal: quote.subtotal,
     tax: quote.tax,
     total: quote.total,
     showPricing: true,
     // Pass persistent pricing mode setting (default to 'category_total')
-    // Cast to any to bypass strict type checking if ProposalSection definition is missing this field
-    pricingMode: visuals?.sectionBackgrounds?.['settings_pricing_mode'] || 'category_total',
+    pricingMode: quote.pricingMode || 'category_total', // Use quote setting directly
     backgroundImage: showImages
       ? (visuals?.sectionBackgrounds?.['financials'] || getThemeGradient(activeSettings.proposalTheme, 'cover'))
       : undefined

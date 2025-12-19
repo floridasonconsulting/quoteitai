@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AIButton } from '@/components/AIButton';
-import { Customer, QuoteItem, Settings } from '@/types';
+import { Customer, QuoteItem, CompanySettings } from '@/types';
 import { sanitizeForAI, sanitizeNumber } from '@/lib/input-sanitization';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -21,13 +21,15 @@ interface QuoteBasicInfoProps {
   quoteItems: QuoteItem[];
   subtotal: number;
   total: number;
-  settings: Settings | null;
+  settings: CompanySettings | null;
   showPricing: boolean;
   onShowPricingChange: (show: boolean) => void;
   onTitleGenerate: (prompt: string, context: Record<string, string>) => void;
   onNotesGenerate: (prompt: string) => Promise<void>;
   titleAILoading: boolean;
   notesAILoading: boolean;
+  pricingMode: string;
+  onPricingModeChange: (mode: 'itemized' | 'category_total' | 'grand_total') => void;
 }
 
 export function QuoteBasicInfo({
@@ -48,6 +50,8 @@ export function QuoteBasicInfo({
   onNotesGenerate,
   titleAILoading,
   notesAILoading,
+  pricingMode,
+  onPricingModeChange
 }: QuoteBasicInfoProps) {
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
 
@@ -90,9 +94,9 @@ Quote Details:
 
 Items:
 ${quoteItems.map((item, idx) => {
-  const sanitizedItemName = sanitizeForAI(item.name, 100);
-  return `${idx + 1}. ${sanitizedItemName} - Qty: ${item.quantity} @ $${sanitizeNumber(item.price)} each = $${sanitizeNumber(item.quantity * item.price)}`;
-}).join('\n')}
+      const sanitizedItemName = sanitizeForAI(item.name, 100);
+      return `${idx + 1}. ${sanitizedItemName} - Qty: ${item.quantity} @ $${sanitizeNumber(item.price)} each = $${sanitizeNumber(item.quantity * item.price)}`;
+    }).join('\n')}
 
 Please include:
 1. Payment terms (30 days net)
@@ -194,6 +198,40 @@ Format as clear, professional terms and conditions.`;
             Show individual item pricing in proposal
           </Label>
         </div>
+
+        {showPricing && (
+          <div className="space-y-2 pt-2 border-t">
+            <Label htmlFor="pricingMode">Pricing Breakdown Display</Label>
+            <Select
+              value={pricingMode}
+              onValueChange={(val: any) => onPricingModeChange(val)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select display mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="category_total">
+                  <div className="flex flex-col">
+                    <span className="font-bold">Category Totals (Default)</span>
+                    <span className="text-xs text-muted-foreground">Detailed items without individual prices</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="itemized">
+                  <div className="flex flex-col">
+                    <span className="font-bold">Fully Itemized</span>
+                    <span className="text-xs text-muted-foreground">Show price for every single item</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="grand_total">
+                  <div className="flex flex-col">
+                    <span className="font-bold">Grand Total Only</span>
+                    <span className="text-xs text-muted-foreground">Hide all items and category breakdowns</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

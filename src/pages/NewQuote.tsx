@@ -42,6 +42,7 @@ export default function NewQuote() {
   const [executiveSummary, setExecutiveSummary] = useState('');
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
   const [showPricing, setShowPricing] = useState(true);
+  const [pricingMode, setPricingMode] = useState<'itemized' | 'category_total' | 'grand_total'>('category_total');
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
 
@@ -121,6 +122,7 @@ export default function NewQuote() {
       setQuoteNotes(editQuote.notes || '');
       setExecutiveSummary(editQuote.executiveSummary || '');
       setShowPricing(editQuote.showPricing !== false);
+      setPricingMode(editQuote.pricingMode || 'category_total');
     }
     // Fallback: Load quote for editing if id is provided (old method)
     else if (id) {
@@ -136,6 +138,7 @@ export default function NewQuote() {
         setQuoteNotes(quoteToEdit.notes || '');
         setExecutiveSummary(quoteToEdit.executiveSummary || '');
         setShowPricing(quoteToEdit.showPricing !== false);
+        setPricingMode(quoteToEdit.pricingMode || 'category_total');
       } else {
         toast.error('Quote not found');
         navigate('/quotes');
@@ -297,8 +300,10 @@ export default function NewQuote() {
         showPricing,
         sentDate: new Date().toISOString(),
         createdAt: existingQuote?.createdAt || new Date().toISOString(),
+        createdAt: editQuoteId ? undefined : new Date().toISOString(), // Only set on create
         updatedAt: new Date().toISOString(),
         userId: user?.id || '',
+        pricingMode, // Save pricing mode
       };
 
       await updateQuote(user?.id, editQuoteId, updatedQuote, queueChange);
@@ -474,6 +479,8 @@ export default function NewQuote() {
             settings={settings}
             showPricing={showPricing}
             onShowPricingChange={setShowPricing}
+            pricingMode={pricingMode}
+            onPricingModeChange={setPricingMode}
             onTitleGenerate={async (p) => { await titleAI.generate(p); }}
             onNotesGenerate={async (p) => { await notesAI.generate(p); }}
             titleAILoading={titleAI.isLoading}

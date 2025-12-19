@@ -66,6 +66,7 @@ export interface Quote {
   viewedAt?: string;
   showPricing?: boolean; // Control line-item pricing visibility in proposals
   projectDescription?: string; // NEW: For AI visual matching
+  pricingMode?: 'itemized' | 'category_total' | 'grand_total'; // NEW: Pricing display mode
 }
 
 export type QuoteAge = 'fresh' | 'warm' | 'aging' | 'stale';

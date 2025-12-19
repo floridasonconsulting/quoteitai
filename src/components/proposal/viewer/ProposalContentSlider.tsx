@@ -237,7 +237,6 @@ function SlideContent({
           section={section}
           isOwner={isOwner}
           onEditImage={(url) => onEditSectionImage?.(section.id, url)}
-          onEditSectionImage={onEditSectionImage}
         />;
       case 'legal':
         return <LegalSlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} />;
@@ -428,13 +427,11 @@ function CategorySlide({
 function InvestmentSummarySlide({
   section,
   isOwner,
-  onEditImage,
-  onEditSectionImage
+  onEditImage
 }: {
   section: ProposalSection,
   isOwner?: boolean,
-  onEditImage?: (url?: string) => void,
-  onEditSectionImage?: (id: string, url: string) => void
+  onEditImage?: (url?: string) => void
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -511,8 +508,8 @@ function InvestmentSummarySlide({
     subtotal: (items || []).reduce((sum, item) => sum + item.total, 0)
   }));
 
-  // Determine active pricing mode from section data (injected via logic)
-  const pricingMode = (section as any).pricingMode || 'category_total';
+  // Determine active pricing mode from section data
+  const pricingMode = section.pricingMode || 'category_total';
 
   return (
     <div className="h-full flex flex-col bg-[#F8FAFC] dark:bg-gray-950 overflow-hidden">
@@ -698,30 +695,7 @@ function InvestmentSummarySlide({
                       </div>
                     </div>
 
-                    {/* Owner Controls for Pricing Mode */}
-                    {isOwner && (
-                      <div className="mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-gray-700">
-                        <p className="text-[10px] uppercase font-bold text-gray-400 mb-2">Display Mode (Owner Only)</p>
-                        <div className="flex flex-wrap gap-2">
-                          {[
-                            { id: 'itemized', label: 'Itemized' },
-                            { id: 'category_total', label: 'Cat Totals' },
-                            { id: 'grand_total', label: 'Grand Total' }
-                          ].map((mode) => (
-                            <button
-                              key={mode.id}
-                              onClick={() => onEditSectionImage?.('settings_pricing_mode', mode.id)}
-                              className={`px-2 py-1 text-[10px] rounded border transition-colors ${pricingMode === mode.id
-                                ? "bg-primary text-white border-primary"
-                                : "bg-white dark:bg-gray-800 text-gray-600 border-gray-200 hover:border-primary/50"
-                                }`}
-                            >
-                              {mode.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    {/* Pricing Display Mode is now controlled in Quote Settings */}
 
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800/50">
                       <p className="text-[10px] leading-relaxed text-blue-700/80 dark:text-blue-300/80 italic text-center">
