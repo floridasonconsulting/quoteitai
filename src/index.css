@@ -683,3 +683,18 @@ All colors MUST be HSL.
 .proposal-swiper .swiper-button-prev {
   color: hsl(var(--primary)) !important;
 }
+
+/* Swiper Critical Overrides for Desktop Horizontal Mode */
+.proposal-swiper {
+  width: 100%;
+  height: 100%;
+}
+
+.proposal-swiper .swiper-wrapper {
+  height: 100%;
+}
+
+.proposal-swiper .swiper-slide {
+  height: 100%;
+  width: 100% !important; /* Force width */
+}

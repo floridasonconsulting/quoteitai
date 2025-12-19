@@ -275,16 +275,17 @@ export function OnboardingWizard() {
   // CRITICAL: Check if this is a public page BEFORE any state initialization
   const path = location.pathname.toLowerCase();
   const publicPaths = ['/public-quote-view', '/auth', '/landing', '/', '/privacy-policy', '/terms-of-service', '/quotes/public'];
+
+  // Skip logic: Public pages OR Quote Viewer pages (to prevent interruption while working)
   const isPublicPage = publicPaths.some(p =>
     path === p || path.startsWith(p + '/')
-  ) || path.includes('/preview') || path.includes('/public/') || path.includes('/quotes/public');
+  ) || path.includes('/preview') || path.includes('/public/') || path.includes('/quotes/') || path === '/quotes';
 
   console.log('[OnboardingWizard] Checking visibility:', {
     pathname: location.pathname,
     pathLower: path,
     isPublicPage,
-    matchPreview: path.includes('/preview'),
-    matchPublic: path.includes('/public/') || path.includes('/quotes/public')
+    reason: path.includes('/quotes/') ? 'Quote Page' : 'Public/Other'
   });
 
   // Form data

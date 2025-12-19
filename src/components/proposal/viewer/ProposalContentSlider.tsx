@@ -78,6 +78,7 @@ export function ProposalContentSlider({
         direction={isDesktop ? "horizontal" : "vertical"}
         slidesPerView={1}
         spaceBetween={0}
+        autoHeight={false} // Disable autoHeight to force fill
         mousewheel={{
           thresholdDelta: 50,
           forceToAxis: true,
@@ -85,19 +86,26 @@ export function ProposalContentSlider({
         keyboard={{ enabled: true }}
         pagination={{ clickable: true }}
         navigation={true}
-        onSwiper={(swiper) => (swiperRef.current = swiper)}
+        onSwiper={(swiper) => {
+          swiperRef.current = swiper;
+          // Force update on mount
+          swiper.update();
+        }}
         onSlideChange={handleSlideChange}
         className="h-full w-full proposal-swiper"
+        style={{ height: '100%', width: '100%' }}
       >
         {processedSections.map((section, index) => (
-          <SwiperSlide key={`${section.id}-${index}`} className="!h-full">
-            <SlideContent
-              section={section}
-              isActive={index === currentIndex}
-              isOwner={isOwner}
-              onEditSectionImage={onEditSectionImage}
-              onEditItemImage={onEditItemImage}
-            />
+          <SwiperSlide key={`${section.id}-${index}`} className="!h-full !w-full flex items-center justify-center">
+            <div className="w-full h-full relative">
+              <SlideContent
+                section={section}
+                isActive={index === currentIndex}
+                isOwner={isOwner}
+                onEditSectionImage={onEditSectionImage}
+                onEditItemImage={onEditItemImage}
+              />
+            </div>
           </SwiperSlide>
         ))}
       </Swiper>
