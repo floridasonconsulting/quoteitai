@@ -134,7 +134,7 @@ export function ProposalCover({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1, duration: 0.6 }}
-          className="absolute bottom-8 left-0 right-0 text-center"
+          className="mt-16 text-center"
         >
           <p className="text-xs text-white/40 tracking-widest uppercase">
             Powered by <span className="font-bold text-white/60">Quote.it AI</span>

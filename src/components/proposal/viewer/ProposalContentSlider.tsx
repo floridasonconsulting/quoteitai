@@ -77,18 +77,23 @@ export function ProposalContentSlider({
         modules={[Navigation, Pagination, Keyboard, Mousewheel]}
         direction={isDesktop ? "horizontal" : "vertical"}
         slidesPerView={1}
+        centeredSlides={true}
         spaceBetween={0}
-        autoHeight={false} // Disable autoHeight to force fill
+        autoHeight={false}
         mousewheel={{
           thresholdDelta: 50,
           forceToAxis: true,
         }}
         keyboard={{ enabled: true }}
-        pagination={{ clickable: true }}
+        pagination={{
+          clickable: true,
+          renderBullet: function (index, className) {
+            return '<span class="' + className + ' w-2 h-2"></span>';
+          }
+        }}
         navigation={true}
         onSwiper={(swiper) => {
           swiperRef.current = swiper;
-          // Force update on mount
           swiper.update();
         }}
         onSlideChange={handleSlideChange}
@@ -96,8 +101,8 @@ export function ProposalContentSlider({
         style={{ height: '100%', width: '100%' }}
       >
         {processedSections.map((section, index) => (
-          <SwiperSlide key={`${section.id}-${index}`} className="!h-full !w-full flex items-center justify-center">
-            <div className="w-full h-full relative">
+          <SwiperSlide key={`${section.id}-${index}`} className="!h-full !w-full flex items-center justify-center bg-background">
+            <div className="w-full h-full relative flex flex-col">
               <SlideContent
                 section={section}
                 isActive={index === currentIndex}
@@ -105,10 +110,53 @@ export function ProposalContentSlider({
                 onEditSectionImage={onEditSectionImage}
                 onEditItemImage={onEditItemImage}
               />
+
+              {/* Desktop Visual Hints */}
+              {isDesktop && (
+                <div className="absolute bottom-6 right-16 z-40 bg-black/40 backdrop-blur-sm text-white px-3 py-1 rounded-full text-[10px] font-bold tracking-widest border border-white/10 pointer-events-none">
+                  PAGE {index + 1} / {processedSections.length}
+                </div>
+              )}
             </div>
           </SwiperSlide>
         ))}
       </Swiper>
+
+      {/* Global Custom Navigation Styling */}
+      <style>{`
+        .swiper-button-next, .swiper-button-prev {
+            color: ${isDesktop ? 'hsl(var(--primary))' : 'white'} !important;
+            background: ${isDesktop ? 'rgba(255,255,255,0.8)' : 'transparent'};
+            width: 44px !important;
+            height: 44px !important;
+            border-radius: 50%;
+            backdrop-filter: blur(4px);
+            box-shadow: ${isDesktop ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'};
+            transition: all 0.2s ease;
+            margin-top: -22px !important;
+        }
+        .swiper-button-next:hover, .swiper-button-prev:hover {
+            transform: scale(1.1);
+            background: white;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+        }
+        .swiper-button-next::after, .swiper-button-prev::after {
+            font-size: 18px !important;
+            font-weight: 800 !important;
+        }
+        .swiper-pagination-bullet {
+            width: 8px;
+            height: 8px;
+            transition: all 0.3s ease;
+            background: rgba(0,0,0,0.2) !important;
+            opacity: 1 !important;
+        }
+        .swiper-pagination-bullet-active {
+            width: 24px;
+            border-radius: 4px;
+            background: hsl(var(--primary)) !important;
+        }
+      `}</style>
     </div>
   );
 }
