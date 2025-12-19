@@ -269,7 +269,7 @@ export function transformQuoteToProposal(
     items: quote.items.map(i => ({
       ...i,
       imageUrl: showImages ? i.imageUrl : undefined,
-      category: normalizeCategory(i.category)
+      category: normalizeCategory(i.category, i.name) // Pass item name for inference
     })),
     subtotal: quote.subtotal,
     tax: quote.tax,
