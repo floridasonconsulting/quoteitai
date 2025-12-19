@@ -20,6 +20,7 @@ import {
   getSmartCoverImage,
   getCategoryImage,
   getSmartItemImage,
+  getThemeGradient,
   Industry
 } from "./proposal-image-library";
 
@@ -262,7 +263,10 @@ export function transformQuoteToProposal(
     subtotal: quote.subtotal,
     tax: quote.tax,
     total: quote.total,
-    showPricing: true
+    showPricing: true,
+    backgroundImage: showImages
+      ? (visuals?.sectionBackgrounds?.['financials'] || getThemeGradient(activeSettings.proposalTheme, 'cover'))
+      : undefined
   });
 
   // --- Section D: Terms & Conditions ---
@@ -283,6 +287,9 @@ Liability: We maintain full insurance coverage for all work performed.`;
     type: 'legal',
     title: 'Terms & Conditions',
     content: termsContent,
+    backgroundImage: showImages
+      ? (visuals?.sectionBackgrounds?.['terms'] || getThemeGradient(activeSettings.proposalTheme, 'cover'))
+      : undefined
   });
 
   proposalData.sections = sections;

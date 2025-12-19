@@ -107,19 +107,6 @@ export function ProposalCover({
               <p className="text-white/60 text-[10px] md:text-xs uppercase tracking-[0.3em] font-black">Prepared For</p>
               <p className="text-2xl md:text-3xl font-black">{clientName}</p>
             </div>
-
-            {totalAmount !== undefined && (
-              <div className="h-12 w-px bg-white/20 hidden md:block" />
-            )}
-
-            {totalAmount !== undefined && (
-              <div className="space-y-1">
-                <p className="text-white/60 text-[10px] md:text-xs uppercase tracking-[0.3em] font-black">Total Investment</p>
-                <p className="text-3xl md:text-5xl font-black text-white">
-                  {formatCurrency(totalAmount)}
-                </p>
-              </div>
-            )}
           </div>
         </motion.div>
 

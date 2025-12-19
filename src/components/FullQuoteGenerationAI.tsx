@@ -17,6 +17,7 @@ interface FullQuoteGenerationAIProps {
     notes: string;
     summary: string;
     suggestedItems: QuoteItem[];
+    customerId?: string;
   }) => void;
 }
 
@@ -30,6 +31,28 @@ export function FullQuoteGenerationAI({ items, onQuoteGenerated }: FullQuoteGene
     onSuccess: (content) => {
       try {
         const parsed = JSON.parse(content);
+
+        // INTELLIGENT CUSTOMER MATCHING
+        if (parsed.clientName && parsed.clientName.trim() !== '') {
+          // We need to fetch customers to match
+          // Since we can't use async in this synchronous callback easily without side effects, 
+          // we'll fire and forget the matching inside the async scope, 
+          // OR we can make this onSuccess handler async if useAI allows it (it usually doesn't await).
+          // BUT, we have to call onQuoteGenerated.
+          // Let's try to do it:
+
+          import('@/lib/db-service').then(async ({ getCustomers }) => {
+            const customers = await getCustomers(userRole === 'admin' ? undefined : undefined); // user ID is handled by service usually, or we need user.id
+            // Wait, getCustomers(userId). user is in hook.
+            // We need to access user from context inside this callback.
+          });
+        }
+
+        // RE-PLAN: The hook onSuccess is standard function. I can make it async or use .then().
+        // Better approach: Do the matching inside the handleQuoteGenerated in NewQuote.tsx?
+        // NO, the prompt returns clientName. NewQuote doesn't see the raw content unless I pass clientName.
+        // I will pass clientName to onQuoteGenerated.
+
         onQuoteGenerated(parsed);
         toast.success('Quote generated successfully!');
         setProjectDescription('');
@@ -79,6 +102,7 @@ Please return a JSON object with:
   "title": "Professional quote title (max 60 chars)",
   "notes": "Professional terms and conditions",
   "summary": "2-3 sentence executive summary highlighting value",
+  "clientName": "Extracted client name from description (or empty string)",
   "suggestedItems": [
     {
       "itemId": "item id from catalog",

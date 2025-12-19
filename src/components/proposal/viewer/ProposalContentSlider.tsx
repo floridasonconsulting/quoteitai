@@ -56,14 +56,12 @@ export function ProposalContentSlider({
     <div className="h-full w-full">
       <Swiper
         modules={[Navigation, Pagination, Keyboard, Mousewheel]}
-        direction="vertical"
+        direction="horizontal"
         slidesPerView={1}
         spaceBetween={0}
         mousewheel={{
-          releaseOnEdges: true,
-          forceToAxis: true,
-          sensitivity: 0.5,
           thresholdDelta: 50,
+          forceToAxis: true,
         }}
         keyboard={{ enabled: true }}
         pagination={{ clickable: true }}
@@ -602,7 +600,7 @@ function InvestmentSummarySlide({
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }
 

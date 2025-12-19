@@ -78,11 +78,16 @@ export default function NewQuote() {
     notes: string;
     summary: string;
     suggestedItems: QuoteItem[];
+    customerId?: string;
   }) => {
     setQuoteTitle(data.title);
     setQuoteNotes(data.notes);
     setExecutiveSummary(data.summary);
     setQuoteItems(data.suggestedItems);
+    if (data.customerId) {
+      setSelectedCustomerId(data.customerId);
+      toast.info('Customer matched automatically!');
+    }
     toast.success('Quote generated! Review and adjust as needed.');
   };
 
@@ -97,11 +102,11 @@ export default function NewQuote() {
       getItems(user?.id),
       getSettings(user?.id),
     ]);
-    
+
     setCustomers(customersData);
     setItems(itemsData);
     setSettings(settingsData);
-    
+
     // Check if we're editing via navigation state (from QuoteDetail)
     const state = location.state as LocationState | null;
     const editQuote = state?.editQuote;
@@ -141,7 +146,7 @@ export default function NewQuote() {
 
   const addItemToQuote = (item: Item) => {
     const existingItem = quoteItems.find(qi => qi.itemId === item.id);
-    
+
     if (existingItem) {
       // If item already exists, add the minimum quantity to current quantity
       const newQuantity = existingItem.quantity + (item.minQuantity || 1);
@@ -223,7 +228,7 @@ export default function NewQuote() {
         updatedAt: new Date().toISOString(),
         userId: user?.id || '',
       };
-      
+
       await updateQuote(user?.id, editQuoteId, updatedQuote, queueChange);
       toast.success('Quote updated');
     } else {
@@ -295,7 +300,7 @@ export default function NewQuote() {
         updatedAt: new Date().toISOString(),
         userId: user?.id || '',
       };
-      
+
       await updateQuote(user?.id, editQuoteId, updatedQuote, queueChange);
       await generatePDF(updatedQuote);
       toast.success('Quote updated and sent');
@@ -335,7 +340,7 @@ export default function NewQuote() {
     doc.setFontSize(20);
     doc.text(settings?.name || 'Your Company', 20, yPos);
     yPos += 10;
-    
+
     doc.setFontSize(10);
     if (settings?.address) {
       doc.text(settings.address, 20, yPos);
@@ -468,15 +473,15 @@ export default function NewQuote() {
             settings={settings}
             showPricing={showPricing}
             onShowPricingChange={setShowPricing}
-            onTitleGenerate={titleAI.generate}
-            onNotesGenerate={notesAI.generate}
+            onTitleGenerate={async (p) => { await titleAI.generate(p); }}
+            onNotesGenerate={async (p) => { await notesAI.generate(p); }}
             titleAILoading={titleAI.isLoading}
             notesAILoading={notesAI.isLoading}
           />
 
           {/* Executive Summary Section */}
           {quoteItems.length > 0 && selectedCustomerId && (
-            <QuoteSummaryAI 
+            <QuoteSummaryAI
               quote={{
                 id: editQuoteId || '', // CRITICAL: Use editQuoteId or empty string
                 quoteNumber: generateQuoteNumber(),

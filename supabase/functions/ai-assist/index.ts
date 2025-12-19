@@ -31,7 +31,7 @@ const FEATURE_CONFIG = {
   discount_justification: { tier: "pro", monthlyLimit: 50 },
   email_draft: { tier: "pro", monthlyLimit: null }, // unlimited
   scope_of_work: { tier: "pro", monthlyLimit: 25 },
-  
+
   // Max Tier Features
   full_quote_generation: { tier: "max", monthlyLimit: null },
   item_recommendations: { tier: "max", monthlyLimit: null },
@@ -74,34 +74,34 @@ serve(async (req) => {
     // CRITICAL: Server-side rate limiting to prevent API abuse
     const rateLimit = checkRateLimit(user.id, "AI_GENERATION");
     if (!rateLimit.allowed) {
-      logStep("Rate limit exceeded", { 
-        userId: user.id, 
-        remaining: rateLimit.remaining, 
-        resetIn: rateLimit.resetIn 
+      logStep("Rate limit exceeded", {
+        userId: user.id,
+        remaining: rateLimit.remaining,
+        resetIn: rateLimit.resetIn
       });
-      
+
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: `Rate limit exceeded. You can make ${rateLimit.limit} AI requests per minute. Please try again in ${rateLimit.resetIn} seconds.`,
           rateLimitExceeded: true,
           resetIn: rateLimit.resetIn,
         }),
-        { 
-          headers: { 
-            ...corsHeaders, 
+        {
+          headers: {
+            ...corsHeaders,
             "Content-Type": "application/json",
             "X-RateLimit-Limit": rateLimit.limit.toString(),
             "X-RateLimit-Remaining": rateLimit.remaining.toString(),
             "X-RateLimit-Reset": rateLimit.resetIn.toString(),
-          }, 
-          status: 429 
+          },
+          status: 429
         }
       );
     }
 
-    logStep("Rate limit check passed", { 
-      remaining: rateLimit.remaining, 
-      limit: rateLimit.limit 
+    logStep("Rate limit check passed", {
+      remaining: rateLimit.remaining,
+      limit: rateLimit.limit
     });
 
     // Check if feature exists
@@ -112,15 +112,15 @@ serve(async (req) => {
     const { data: userRole, error: roleError } = await supabaseClient
       .rpc("get_user_highest_role", { _user_id: user.id });
 
-    logStep("Role query result", { 
-      hasData: !!userRole, 
-      role: userRole, 
-      hasError: !!roleError, 
-      errorMsg: roleError?.message 
+    logStep("Role query result", {
+      hasData: !!userRole,
+      role: userRole,
+      hasError: !!roleError,
+      errorMsg: roleError?.message
     });
 
     let userTier: "free" | "pro" | "max" = "free";
-    
+
     if (userRole) {
       const roleMap: Record<string, "free" | "pro" | "max"> = {
         "admin": "max", // admin gets full access
@@ -128,7 +128,7 @@ serve(async (req) => {
         "pro": "pro",
         "free": "free"
       };
-      
+
       userTier = roleMap[userRole] || "free";
       logStep("User tier from role", { dbRole: userRole, mappedTier: userTier, requiredTier: featureConfig.tier });
     } else {
@@ -139,10 +139,10 @@ serve(async (req) => {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      userTier = subscription?.status === "active" 
+      userTier = subscription?.status === "active"
         ? (subscription.stripe_product_id?.includes("max") ? "max" : "pro")
         : "free";
-      
+
       logStep("User tier from subscription", { userTier, requiredTier: featureConfig.tier });
     }
 
@@ -170,9 +170,9 @@ serve(async (req) => {
 
       if (usage && usage.ai_requests_this_month >= featureConfig.monthlyLimit) {
         return new Response(
-          JSON.stringify({ 
-            error: "Monthly AI limit reached. Upgrade to Max AI for unlimited requests.", 
-            requiresUpgrade: true 
+          JSON.stringify({
+            error: "Monthly AI limit reached. Upgrade to Max AI for unlimited requests.",
+            requiresUpgrade: true
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 429 }
         );
@@ -208,13 +208,13 @@ Format as clear, professional terms. Reference actual company name, customer nam
       case "quote_summary":
         systemPrompt = `You are a professional business writer. Generate a compelling 2-3 sentence executive summary for this quote.
 
-The summary should:
-- Highlight the key value proposition
-- Mention the total investment amount
-- Create urgency and excitement
-- Be customer-focused (what's in it for them)
+ The summary should:
+ - Highlight the key value proposition
+ - Create urgency and excitement
+ - Be customer-focused (what's in it for them)
+ - DO NOT mention specific prices, totals, or investment amounts (these are displayed elsewhere)
 
-Keep it concise, professional, and persuasive. This will be the first thing customers see.`;
+ Keep it concise, professional, and persuasive. This will be the first thing customers see.`;
         break;
       case "followup_message":
         systemPrompt = `You are a sales expert specializing in follow-up communications. Generate a personalized follow-up message for this quote.
@@ -335,7 +335,8 @@ Required JSON format:
 {
   "title": "Professional quote title (max 60 characters)",
   "notes": "Professional terms and conditions (3-4 paragraphs)",
-  "summary": "Executive summary (2-3 sentences highlighting key value and total investment)",
+  "summary": "Executive summary (2-3 sentences highlighting key value, do NOT mention price)",
+  "clientName": "Extracted client name from description (or empty string)",
   "suggestedItems": [
     {
       "itemId": "id from catalog",
@@ -365,7 +366,7 @@ Other Rules:
 - Calculate total = quantity * price
 - Suggest 3-8 relevant items based on project scope
 - Make notes specific to the project (reference actual details)
-- Summary should mention total value and key deliverables
+- Summary should highlight value and deliverables. Do NOT mention specific prices or totals.
 - ALWAYS include min_quantity from catalog when calculating quantities`;
         break;
       case "item_recommendations":
@@ -501,7 +502,7 @@ Be specific and actionable. Reference actual quote items, quantities, and prices
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: errorMessage });
-    
+
     // Log failed attempt with full error details server-side only
     try {
       const authHeader = req.headers.get("Authorization");
@@ -523,8 +524,8 @@ Be specific and actionable. Reference actual quote items, quantities, and prices
 
     // Return sanitized error to client
     const isDevelopment = Deno.env.get('ENVIRONMENT') === 'development';
-    const clientError = isDevelopment 
-      ? errorMessage 
+    const clientError = isDevelopment
+      ? errorMessage
       : 'An error occurred while processing your request. Please try again.';
 
     return new Response(
