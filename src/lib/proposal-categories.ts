@@ -148,13 +148,21 @@ function inferCategoryFromItemName(itemName: string): string {
  * ENHANCED: Now infers category from item name if category is missing
  */
 export const normalizeCategory = (category?: string, itemName?: string): string => {
-  // If no category provided, try to infer from item name
-  if (!category) {
+  // Check for generic categories that should trigger inference
+  const isGeneric = !category ||
+    category.trim() === '' ||
+    category.toLowerCase().trim() === 'other' ||
+    category.toLowerCase().trim() === 'uncategorized';
+
+  if (isGeneric) {
     if (itemName) {
       const inferred = inferCategoryFromItemName(itemName);
-      console.log(`[normalizeCategory] Inferred "${inferred}" from item name: "${itemName}"`);
-      return inferred;
+      if (inferred !== 'Other') {
+        console.log(`[normalizeCategory] Upgraded generic "${category}" to "${inferred}" based on item: "${itemName}"`);
+        return inferred;
+      }
     }
+    // If inference fails or no item name, return 'Other' (or the original generic term if preferred, but 'Other' is standard)
     return 'Other';
   }
 

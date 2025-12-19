@@ -602,9 +602,9 @@ function InvestmentSummarySlide({
                     </div>
 
                     {/* Items List */}
-                    <div className="space-y-4 pl-2">
+                    <div className="space-y-2 pl-2">
                       {items.map((item: any, itemIdx: number) => (
-                        <div key={itemIdx} className="group flex justify-between items-start gap-4">
+                        <div key={itemIdx} className="group flex justify-between items-center gap-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
@@ -616,17 +616,11 @@ function InvestmentSummarySlide({
                                 </span>
                               )}
                             </div>
-
-                            {(item.enhancedDescription || item.description) && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed max-w-prose">
-                                {item.enhancedDescription || item.description}
-                              </p>
-                            )}
                           </div>
 
                           {/* Price Display (Only if Itemized) */}
                           {pricingMode === 'itemized' && (
-                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap pt-0.5">
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                               {formatCurrency(item.total)}
                             </div>
                           )}

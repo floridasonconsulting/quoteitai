@@ -228,6 +228,9 @@ export default function NewQuote() {
         executiveSummary,
         showPricing,
         pricingMode, // Save pricing mode
+        createdAt: existingQuote?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        userId: user?.id || '',
       };
 
       await updateQuote(user?.id, editQuoteId, updatedQuote, queueChange);
@@ -299,7 +302,6 @@ export default function NewQuote() {
         showPricing,
         sentDate: new Date().toISOString(),
         createdAt: existingQuote?.createdAt || new Date().toISOString(),
-        createdAt: editQuoteId ? undefined : new Date().toISOString(), // Only set on create
         updatedAt: new Date().toISOString(),
         userId: user?.id || '',
         pricingMode, // Save pricing mode
