@@ -164,8 +164,15 @@ export async function saveSettings(
         if (error.message?.includes("industry") || error.message?.includes("show_proposal_images") || error.code === 'PGRST204') {
           console.warn('[DB Service] ⚠️ Industry or ShowImages column missing in database. Retrying save without them...');
 
-          // Create a copy without the industry and show_proposal_images fields
-          const { industry, show_proposal_images, ...resilientSettings } = dbSettings as any;
+          // Create a copy without the industry, show_proposal_images, and visual fields
+          const {
+            industry,
+            show_proposal_images,
+            default_cover_image,
+            default_header_image,
+            visual_rules,
+            ...resilientSettings
+          } = dbSettings as any;
 
           const { data: retryData, error: retryError } = await supabase
             .from('company_settings')
