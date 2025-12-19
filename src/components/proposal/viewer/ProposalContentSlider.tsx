@@ -197,7 +197,9 @@ function HeroSlide({
       className="h-full flex items-center justify-center p-8 md:p-16 relative overflow-y-auto"
       style={{
         backgroundImage: section.backgroundImage
-          ? `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.6)), url(${section.backgroundImage})`
+          ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient')
+            ? `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.6)), ${section.backgroundImage}`
+            : `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.6)), url(${section.backgroundImage})`)
           : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', // Unified professional dark theme
         backgroundSize: "cover",
         backgroundPosition: "center",
@@ -268,7 +270,9 @@ function TextSlide({
       <div className="relative w-full h-32 md:h-40 flex-shrink-0"
         style={{
           backgroundImage: section.backgroundImage
-            ? `url(${section.backgroundImage})`
+            ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient')
+              ? section.backgroundImage
+              : `url(${section.backgroundImage})`)
             : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
           backgroundSize: "cover",
           backgroundPosition: "center",
@@ -361,6 +365,31 @@ function InvestmentSummarySlide({
     }).format(amount);
   };
 
+  const touchStartY = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY.current === null) return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const currentY = e.touches[0].clientY;
+    const diff = touchStartY.current - currentY;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+
+    const isAtTop = scrollTop <= 0;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+    if (diff > 0 && !isAtBottom) {
+      e.stopPropagation();
+    } else if (diff < 0 && !isAtTop) {
+      e.stopPropagation();
+    }
+  };
+
   // Handle wheel events intelligently - only stop propagation when we can actually scroll
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     const container = scrollContainerRef.current;
@@ -400,7 +429,9 @@ function InvestmentSummarySlide({
       <div className="relative w-full h-32 md:h-40 flex-shrink-0"
         style={{
           backgroundImage: section.backgroundImage
-            ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url(${section.backgroundImage})`
+            ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient')
+              ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), ${section.backgroundImage}`
+              : `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url(${section.backgroundImage})`)
             : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
           backgroundSize: "cover",
           backgroundPosition: "center",
@@ -435,7 +466,9 @@ function InvestmentSummarySlide({
       <div
         ref={scrollContainerRef}
         onWheel={handleWheel}
-        className="flex-1 overflow-y-auto w-full custom-scrollbar"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        className="flex-1 overflow-y-auto w-full custom-scrollbar touch-pan-y"
       >
         <div className="max-w-6xl mx-auto p-4 md:p-8 pb-32">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
@@ -583,7 +616,9 @@ function LegalSlide({
       <div className="relative w-full h-32 md:h-40 flex-shrink-0"
         style={{
           backgroundImage: section.backgroundImage
-            ? `url(${section.backgroundImage})`
+            ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient')
+              ? section.backgroundImage
+              : `url(${section.backgroundImage})`)
             : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
           backgroundSize: "cover",
           backgroundPosition: "center",

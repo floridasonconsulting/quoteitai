@@ -65,14 +65,44 @@ export function CategoryGroupSection({
     itemsWithImages: categoryGroup.items.filter(i => i.imageUrl).length,
   });
 
+  const touchStartY = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY.current === null) return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const currentY = e.touches[0].clientY;
+    const diff = touchStartY.current - currentY;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+
+    const isAtTop = scrollTop <= 0;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+    // If scrolling down (content moving up) AND not at bottom -> Stop Swiper
+    if (diff > 0 && !isAtBottom) {
+      e.stopPropagation();
+    }
+    // If scrolling up (content moving down) AND not at top -> Stop Swiper
+    else if (diff < 0 && !isAtTop) {
+      e.stopPropagation();
+    }
+  };
+
   return (
     <div className="h-full w-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Hero Title Banner - REDUCED HEIGHT */}
       <div
-        className="relative h-[40vh] md:h-[50vh] flex items-center justify-center overflow-hidden"
+        className="relative h-[30vh] md:h-[50vh] flex items-center justify-center overflow-hidden flex-shrink-0"
         style={{
           background: backgroundImage
-            ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url(${backgroundImage})`
+            ? (backgroundImage.startsWith('linear-gradient') || backgroundImage.startsWith('radial-gradient')
+              ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), ${backgroundImage}`
+              : `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url(${backgroundImage})`)
             : "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
           backgroundSize: "cover",
           backgroundPosition: "center",
@@ -120,8 +150,10 @@ export function CategoryGroupSection({
 
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto custom-scrollbar"
+        className="flex-1 overflow-y-auto custom-scrollbar touch-pan-y"
         onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
       >
         <div className="max-w-5xl mx-auto p-4 md:p-8 pb-16">
           {/* Items Grid - TIGHTER SPACING */}
@@ -139,23 +171,30 @@ export function CategoryGroupSection({
                 )}
               >
                 {/* Item Image - REDUCED SIZE */}
-                {item.imageUrl && item.imageUrl.startsWith('http') && (
+                {item.imageUrl && (
                   <div className="flex-shrink-0 w-full md:w-32 h-32 md:h-32 relative group/img">
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="w-full h-full object-cover rounded-lg shadow-sm"
-                      loading="lazy"
-                      onError={(e) => {
-                        console.error('[CategoryGroupSection] Image failed to load:', {
-                          itemName: item.name,
-                          imageUrl: item.imageUrl,
-                          error: 'Load failed'
-                        });
-                        // Hide broken image gracefully
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
+                    {item.imageUrl.startsWith('http') ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="w-full h-full object-cover rounded-lg shadow-sm"
+                        loading="lazy"
+                        onError={(e) => {
+                          console.error('[CategoryGroupSection] Image failed to load:', {
+                            itemName: item.name,
+                            imageUrl: item.imageUrl,
+                            error: 'Load failed'
+                          });
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div
+                        className="w-full h-full rounded-lg shadow-sm"
+                        style={{ background: item.imageUrl }}
+                      />
+                    )}
+
                     {isOwner && (
                       <button
                         onClick={() => onEditItemImage?.(item.name, item.imageUrl)}

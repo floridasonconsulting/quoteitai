@@ -47,7 +47,9 @@ export function ProposalCover({
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{
         backgroundImage: coverImage
-          ? `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.7)), url(${coverImage})`
+          ? (coverImage.startsWith('linear-gradient') || coverImage.startsWith('radial-gradient')
+            ? `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.7)), ${coverImage}`
+            : `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.7)), url(${coverImage})`)
           : 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)', // Premium deep slate mesh-style gradient
         backgroundSize: "cover",
         backgroundPosition: "center",
