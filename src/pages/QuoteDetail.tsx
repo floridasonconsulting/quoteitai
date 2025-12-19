@@ -18,6 +18,8 @@ import { FollowUpMessageAI } from '@/components/FollowUpMessageAI';
 import { SendQuoteDialog, EmailContent } from '@/components/SendQuoteDialog';
 import { rateLimiter } from '@/lib/rate-limiter';
 import { transformQuoteToProposal } from '@/lib/proposal-transformation';
+import { SOWGeneratorAI } from '@/components/SOWGeneratorAI';
+import { FollowUpScheduler } from '@/components/FollowUpScheduler';
 
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -25,17 +27,17 @@ export default function QuoteDetail() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { queueChange } = useSyncManager();
-  
+
   const [quote, setQuote] = useState<Quote | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [settings, setSettings] = useState<CompanySettings | null>(null);
-  
+
   const [loading, setLoading] = useState(true);
   const [followUpDialogOpen, setFollowUpDialogOpen] = useState(false);
   const [shareLink, setShareLink] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
-  
+
   const mainContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -63,7 +65,7 @@ export default function QuoteDetail() {
       ]);
 
       const foundQuote = quotes.find(q => q.id === id);
-      
+
       if (!foundQuote) {
         navigate('/404');
         return;
@@ -74,7 +76,7 @@ export default function QuoteDetail() {
       setQuote(foundQuote);
       setCustomer(foundCustomer || null);
       setSettings(loadedSettings);
-      
+
       // Generate share link if token exists
       if (foundQuote.shareToken) {
         const url = `${window.location.origin}/quotes/public/${foundQuote.shareToken}`;
@@ -94,7 +96,7 @@ export default function QuoteDetail() {
 
   const handleDelete = async () => {
     if (!quote || !confirm('Are you sure you want to delete this quote?')) return;
-    
+
     await deleteQuote(user?.id, quote.id, queueChange);
     toast({
       title: 'Quote deleted',
@@ -111,7 +113,7 @@ export default function QuoteDetail() {
       if (!quote.shareToken) {
         const { data, error } = await supabase
           .from('quotes')
-          .update({ 
+          .update({
             shared_at: new Date().toISOString(),
           })
           .eq('id', quote.id)
@@ -156,7 +158,7 @@ export default function QuoteDetail() {
 
   const handleEmail = async () => {
     if (!quote) return;
-    
+
     if (!customer?.email) {
       toast({
         title: 'Customer email missing',
@@ -165,48 +167,48 @@ export default function QuoteDetail() {
       });
       return;
     }
-    
+
     // Open send dialog
     setSendDialogOpen(true);
   };
 
   const handleEditContent = () => {
     if (!quote) return;
-    navigate('/quotes/new', { 
-      state: { 
+    navigate('/quotes/new', {
+      state: {
         editQuote: quote,
-        editMode: true 
+        editMode: true
       },
-      replace: false 
+      replace: false
     });
   };
 
   const handleCustomizeDesign = () => {
     if (!quote) return;
     const proposalData = transformQuoteToProposal(quote, customer || undefined, settings || undefined);
-    navigate('/proposal-editor', { 
-      state: { proposalData } 
+    navigate('/proposal-editor', {
+      state: { proposalData }
     });
   };
 
   const handlePreview = async () => {
     if (!quote) return;
-    
+
     // ✅ FIX: Load settings if not already loaded
     if (!settings && user?.id) {
       const loadedSettings = await getSettings(user.id);
       setSettings(loadedSettings);
     }
-    
+
     // Check if share token exists
     let token = quote.shareToken;
-    
+
     // If no share token, generate one
     if (!token) {
       try {
         const { data, error } = await supabase
           .from('quotes')
-          .update({ 
+          .update({
             shared_at: new Date().toISOString(),
           })
           .eq('id', quote.id)
@@ -215,7 +217,7 @@ export default function QuoteDetail() {
 
         if (error) throw error;
         token = data.share_token;
-        
+
         // Update local state
         const url = `${window.location.origin}/quotes/public/${encodeURIComponent(token)}`;
         setShareLink(url);
@@ -230,7 +232,7 @@ export default function QuoteDetail() {
         return;
       }
     }
-    
+
     // Open preview in new tab with owner bypass parameter - CRITICAL: URL-encode the token
     const previewUrl = `${window.location.origin}/quotes/public/${encodeURIComponent(token)}?owner=true`;
     window.open(previewUrl, '_blank');
@@ -259,7 +261,7 @@ export default function QuoteDetail() {
         // Since we re-fetch/update state in handleGenerate, shareLink state might lag slightly in this closure
         // Ideally handleGenerateShareLink returns the URL.
         if (quote.shareToken) {
-             currentShareLink = `${window.location.origin}/quotes/public/${quote.shareToken}`;
+          currentShareLink = `${window.location.origin}/quotes/public/${quote.shareToken}`;
         }
       }
 
@@ -269,7 +271,7 @@ export default function QuoteDetail() {
         sentDate: new Date().toISOString(),
         executiveSummary: emailContent.includeSummary ? emailContent.customSummary : quote.executiveSummary,
       }, queueChange);
-      
+
       // Update local state
       setQuote(updatedQuote);
 
@@ -311,12 +313,12 @@ export default function QuoteDetail() {
         }
       } catch (emailError) {
         console.error('Failed to send email via edge function:', emailError);
-        
+
         // Fallback to mailto
-        const summarySection = emailContent.includeSummary && emailContent.customSummary 
+        const summarySection = emailContent.includeSummary && emailContent.customSummary
           ? `\n\nExecutive Summary:\n${emailContent.customSummary}\n`
           : '';
-        
+
         const subject = encodeURIComponent(emailContent.subject);
         const body = encodeURIComponent(
           `${emailContent.greeting}\n\n` +
@@ -326,9 +328,9 @@ export default function QuoteDetail() {
           (emailContent.includeShareLink && currentShareLink ? `View online: ${currentShareLink}\n\n` : '') +
           emailContent.closingText
         );
-        
+
         window.location.href = `mailto:${customer.email}?subject=${subject}&body=${body}`;
-        
+
         toast({
           title: 'Opening email client',
           description: 'Email service unavailable. Opening your default email client instead.',
@@ -347,9 +349,9 @@ export default function QuoteDetail() {
 
   if (loading) {
     return (
-      <div 
-        className="flex items-center justify-center min-h-[60vh]" 
-        role="status" 
+      <div
+        className="flex items-center justify-center min-h-[60vh]"
+        role="status"
         aria-live="polite"
       >
         <p className="text-muted-foreground">Loading quote details...</p>
@@ -372,16 +374,16 @@ export default function QuoteDetail() {
   };
 
   return (
-    <div 
-      className="space-y-6 max-w-4xl mx-auto overflow-x-hidden" 
+    <div
+      className="space-y-6 max-w-4xl mx-auto overflow-x-hidden"
       ref={mainContentRef}
       tabIndex={-1}
       aria-label="Quote details page"
     >
       <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => navigate('/quotes')}
           aria-label="Go back to quotes list"
         >
@@ -393,8 +395,8 @@ export default function QuoteDetail() {
             Quote #{quote.quoteNumber}
           </p>
         </div>
-        <Badge 
-          variant="outline" 
+        <Badge
+          variant="outline"
           className={getStatusColor(quote.status)}
           aria-label={`Quote status: ${quote.status}`}
         >
@@ -404,7 +406,7 @@ export default function QuoteDetail() {
 
       {/* Primary Actions Toolbar */}
       <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Quote actions">
-        <Button 
+        <Button
           onClick={handleEditContent}
           aria-label="Edit quote content"
         >
@@ -412,7 +414,7 @@ export default function QuoteDetail() {
           Edit Content
         </Button>
 
-        <Button 
+        <Button
           variant="outline"
           onClick={handlePreview}
           aria-label="Preview and Print"
@@ -422,8 +424,8 @@ export default function QuoteDetail() {
         </Button>
 
         {!shareLink ? (
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={handleGenerateShareLink}
             aria-label="Generate shareable link for this quote"
           >
@@ -431,8 +433,8 @@ export default function QuoteDetail() {
             Generate Share Link
           </Button>
         ) : (
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={handleCopyShareLink}
             aria-label={copied ? "Share link copied to clipboard" : "Copy share link to clipboard"}
             aria-live="polite"
@@ -445,16 +447,16 @@ export default function QuoteDetail() {
             {copied ? 'Copied!' : 'Copy Link'}
           </Button>
         )}
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           onClick={handleEmail}
           aria-label="Send quote via email"
         >
           <Mail className="mr-2 h-4 w-4" aria-hidden="true" />
           Email
         </Button>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           onClick={() => setFollowUpDialogOpen(true)}
           aria-label="Schedule follow-up reminder"
         >
@@ -462,8 +464,8 @@ export default function QuoteDetail() {
           Follow Up
         </Button>
         <FollowUpMessageAI quote={quote} customer={customer} />
-        <Button 
-          variant="destructive" 
+        <Button
+          variant="destructive"
           onClick={handleDelete}
           aria-label="Delete this quote permanently"
         >
@@ -521,7 +523,7 @@ export default function QuoteDetail() {
               )}
               <div>
                 <p className="text-sm text-muted-foreground">Total</p>
-                <p 
+                <p
                   className="font-bold text-xl text-primary"
                   aria-label={`Quote total: ${formatCurrency(quote.total)}`}
                 >
@@ -551,8 +553,8 @@ export default function QuoteDetail() {
         <CardContent>
           <div className="space-y-3" role="list" aria-label="Quote line items">
             {quote.items.map((item, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="p-3 border rounded-lg"
                 role="listitem"
                 aria-label={`Item ${index + 1}: ${item.name}`}
@@ -579,7 +581,7 @@ export default function QuoteDetail() {
           <Separator className="my-4" />
           <div className="flex justify-between items-center" role="region" aria-label="Quote total">
             <p className="text-lg font-bold">Total</p>
-            <p 
+            <p
               className="text-2xl font-bold text-primary"
               aria-label={`Total amount: ${formatCurrency(quote.total)}`}
             >
@@ -588,6 +590,12 @@ export default function QuoteDetail() {
           </div>
         </CardContent>
       </Card>
+
+      {/* AI SOW Generator - Business tier feature */}
+      <SOWGeneratorAI quote={quote} companyName={settings?.name} />
+
+      {/* Automated Follow-up Scheduler */}
+      <FollowUpScheduler quote={quote} companyName={settings?.name} />
 
       <SendQuoteDialog
         open={sendDialogOpen}

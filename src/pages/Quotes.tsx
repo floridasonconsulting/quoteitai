@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Search, FileText, Calendar, Trash2, Bell, X, Bug } from 'lucide-react';
+import { Plus, Search, FileText, Calendar, Trash2, Bell, X, Bug, FileSpreadsheet } from 'lucide-react';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -8,10 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { getQuotes, deleteQuote, clearAllQuotes, updateQuote } from '@/lib/db-service';
+import { getQuotes, deleteQuote, clearAllQuotes, updateQuote, getItems } from '@/lib/db-service';
 import { getCustomers } from '@/lib/db-service';
 import { getQuoteAge } from '@/lib/quote-utils';
-import { Quote, QuoteAge, Customer } from '@/types';
+import { Quote, QuoteAge, Customer, Item } from '@/types';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -20,6 +20,7 @@ import { useSyncManager } from '@/hooks/useSyncManager';
 import { useOptimisticList } from '@/hooks/useOptimisticList';
 import { supabase } from '@/integrations/supabase/client';
 import { debugQuoteStorage, nuclearClearAllQuotes } from '@/lib/debug-quotes';
+import { BatchQuoteDialog } from '@/components/BatchQuoteDialog';
 
 export default function Quotes() {
   const navigate = useNavigate();
@@ -41,6 +42,7 @@ export default function Quotes() {
   } = useOptimisticList<Quote>([], optimisticOptions);
 
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [items, setItemsList] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -48,6 +50,7 @@ export default function Quotes() {
   const [selectedQuotes, setSelectedQuotes] = useState<string[]>([]);
   const [notificationFilter, setNotificationFilter] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState<string>('');
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
 
   const loadQuotes = useCallback(async (forceRefresh = false) => {
     if (!user?.id) {
@@ -60,14 +63,16 @@ export default function Quotes() {
 
     try {
       const options = { forceRefresh };
-      const [quotesData, customersData] = await Promise.all([
+      const [quotesData, customersData, itemsData] = await Promise.all([
         getQuotes(user.id, options),
-        getCustomers(user.id, options)
+        getCustomers(user.id, options),
+        getItems(user.id, options)
       ]);
 
       console.log(`[Quotes] Loaded ${quotesData.length} quotes`);
       setQuotes(quotesData);
       setCustomers(customersData);
+      setItemsList(itemsData);
       setSelectedQuotes([]);
     } catch (error) {
       console.error('[Quotes] Error loading quotes:', error);
@@ -340,6 +345,14 @@ export default function Quotes() {
             >
               <Bug className="h-4 w-4" />
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => setBatchDialogOpen(true)}
+              title="Generate multiple quotes from CSV"
+            >
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Batch Quotes
+            </Button>
             <Button size="lg" onClick={() => navigate('/quotes/new')}>
               <Plus className="mr-2 h-5 w-5" />
               Create Quote
@@ -579,6 +592,19 @@ export default function Quotes() {
         </Card>
 
       </div>
+
+      {/* Batch Quote Generation Dialog */}
+      <BatchQuoteDialog
+        isOpen={batchDialogOpen}
+        onClose={() => setBatchDialogOpen(false)}
+        items={items}
+        customers={customers}
+        onBatchComplete={(newQuotes) => {
+          setQuotes(prev => [...prev, ...newQuotes]);
+          loadQuotes();
+          toast.success(`${newQuotes.length} quotes generated!`);
+        }}
+      />
     </PullToRefresh >
   );
 }

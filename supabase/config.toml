@@ -23,3 +23,12 @@ verify_jwt = true
 
 [functions.update-quote-status]
 verify_jwt = false
+
+[functions.quickbooks-callback]
+verify_jwt = false
+
+[functions.stripe-connect]
+verify_jwt = true
+
+[functions.process-scheduled-followups]
+verify_jwt = false

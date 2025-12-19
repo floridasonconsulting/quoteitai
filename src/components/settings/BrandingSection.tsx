@@ -223,6 +223,91 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
             </>
           )}
         </div>
+
+        {/* Custom Favicon (Max AI Tier Only) */}
+        <div className="space-y-3 pt-4 border-t">
+          <Label htmlFor="favicon-upload">Custom Favicon</Label>
+
+          {!isMaxAITier && (
+            <Alert>
+              <Crown className="h-4 w-4" />
+              <AlertDescription>
+                Custom favicon is available exclusively for Max AI tier subscribers.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {isMaxAITier && (
+            <>
+              {(settings as any).customFavicon && (
+                <div className="mb-3 flex items-center gap-4">
+                  <img
+                    src={(settings as any).customFavicon}
+                    alt="Custom favicon"
+                    className="h-8 w-8 object-contain border rounded"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await onUpdate({ customFavicon: undefined } as any);
+                        toast.success("Favicon removed");
+                      } catch (e) {
+                        toast.error("Failed to remove favicon");
+                      }
+                    }}
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Remove Favicon
+                  </Button>
+                </div>
+              )}
+              <div>
+                <input
+                  type="file"
+                  accept="image/x-icon,image/png,image/svg+xml"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 1 * 1024 * 1024) {
+                      toast.error("Favicon must be less than 1MB");
+                      return;
+                    }
+                    try {
+                      const fileExt = file.name.split('.').pop();
+                      const fileName = `${user?.id}/favicon.${fileExt}`;
+                      const { error: uploadError } = await supabase.storage
+                        .from('company-logos')
+                        .upload(fileName, file, { upsert: true });
+                      if (uploadError) throw uploadError;
+                      const { data: { publicUrl } } = supabase.storage
+                        .from('company-logos')
+                        .getPublicUrl(fileName);
+                      await onUpdate({ customFavicon: publicUrl } as any);
+                      toast.success("Favicon uploaded");
+                    } catch (err) {
+                      toast.error("Failed to upload favicon");
+                    }
+                  }}
+                  className="hidden"
+                  id="favicon-upload"
+                />
+                <label htmlFor="favicon-upload">
+                  <Button variant="outline" asChild>
+                    <span>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Favicon
+                    </span>
+                  </Button>
+                </label>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Recommended: ICO, PNG, or SVG, 32x32 or 64x64 pixels
+                </p>
+              </div>
+            </>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
