@@ -152,12 +152,17 @@ export function transformQuoteToProposal(
     console.log(`  - Was Normalized: ${originalCategory !== normalizedCat}`);
     console.log(`  - Group Size: ${currentGroup.length + 1}`);
 
-    // UNIVERSAL IMAGE RESOLUTION: Check database FIRST, then smart fallback
-    // ONLY if images are enabled in settings
+    // UNIVERSAL IMAGE RESOLUTION:
+    // 1. Visual Override (User edited in Proposal Viewer)
+    // 2. Database Image (From Item Catalog)
+    // 3. Smart Fallback (Visual Rules / Category / Theme Gradient)
     const itemOverride = visuals?.itemImages?.[item.name] || visuals?.sectionBackgrounds?.[`item_${item.name}`];
 
+    // Check override OR database image
+    const effectiveImageUrl = itemOverride || item.imageUrl;
+
     const smartItemImage = showImages
-      ? getSmartItemImage(item.name, item.category, itemOverride, activeSettings.proposalTheme, activeSettings)
+      ? getSmartItemImage(item.name, item.category, effectiveImageUrl, activeSettings.proposalTheme, activeSettings)
       : undefined;
 
     console.log('[Transformation] Processing item with SMART RESOLUTION:', {

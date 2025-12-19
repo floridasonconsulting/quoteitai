@@ -455,6 +455,7 @@ export default function NewQuote() {
           {!isEditMode && items.length > 0 && (
             <FullQuoteGenerationAI
               items={items}
+              customers={customers}
               onQuoteGenerated={handleQuoteGenerated}
             />
           )}

@@ -3,7 +3,8 @@ import { CategoryGroup, ProposalItem } from "@/types/proposal";
 import { cn } from "@/lib/utils";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Edit3 } from "lucide-react";
+import { Edit3, ImageOff } from "lucide-react";
+import { useState } from "react";
 
 // Helper to generate consistent colors from strings
 function stringToColor(str: string) {
@@ -13,6 +14,49 @@ function stringToColor(str: string) {
   }
   const c = (hash & 0x00ffffff).toString(16).toUpperCase();
   return '#' + '00000'.substring(0, 6 - c.length) + c;
+}
+
+function ItemImage({ item, isOwner, onEdit }: { item: ProposalItem, isOwner?: boolean, onEdit: () => void }) {
+  const [hasError, setHasError] = useState(false);
+  const showFallback = hasError || !item.imageUrl?.startsWith('http');
+
+  return (
+    <div className="flex-shrink-0 w-full md:w-32 h-32 md:h-32 relative group/img">
+      {!showFallback ? (
+        <img
+          src={item.imageUrl}
+          alt={item.name}
+          className="w-full h-full object-cover rounded-lg shadow-sm"
+          loading="lazy"
+          onError={() => setHasError(true)}
+        />
+      ) : (
+        <div
+          className="w-full h-full rounded-lg shadow-sm flex items-center justify-center bg-gray-100 dark:bg-gray-800"
+          style={{
+            background: item.imageUrl && (item.imageUrl.includes('gradient') || item.imageUrl.startsWith('#'))
+              ? item.imageUrl
+              : `linear-gradient(135deg, ${stringToColor(item.name)}40 0%, ${stringToColor(item.name)}10 100%)`
+          }}
+        >
+          {!item.imageUrl?.includes('gradient') && (
+            <span className="text-2xl font-bold opacity-30 uppercase">
+              {item.name.substring(0, 2)}
+            </span>
+          )}
+        </div>
+      )}
+
+      {isOwner && (
+        <button
+          onClick={onEdit}
+          className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center rounded-lg"
+        >
+          <Edit3 className="w-5 h-5 text-white" />
+        </button>
+      )}
+    </div>
+  );
 }
 
 interface CategoryGroupSectionProps {
@@ -187,49 +231,10 @@ export function CategoryGroupSection({
               >
                 {/* Item Image - REDUCED SIZE */}
                 {item.imageUrl && (
-                  <div className="flex-shrink-0 w-full md:w-32 h-32 md:h-32 relative group/img">
-                    {item.imageUrl.startsWith('http') ? (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.name}
-                        className="w-full h-full object-cover rounded-lg shadow-sm"
-                        loading="lazy"
-                        onError={(e) => {
-                          console.error('[CategoryGroupSection] Image failed to load:', {
-                            itemName: item.name,
-                            imageUrl: item.imageUrl,
-                            error: 'Load failed'
-                          });
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <div
-                        className="w-full h-full rounded-lg shadow-sm flex items-center justify-center bg-gray-100 dark:bg-gray-800"
-                        style={{
-                          background: item.imageUrl && (item.imageUrl.includes('gradient') || item.imageUrl.startsWith('#'))
-                            ? item.imageUrl
-                            : `linear-gradient(135deg, ${stringToColor(item.name)}40 0%, ${stringToColor(item.name)}10 100%)`
-                        }}
-                      >
-                        {!item.imageUrl?.includes('gradient') && (
-                          <span className="text-2xl font-bold opacity-30 uppercase">
-                            {item.name.substring(0, 2)}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {isOwner && (
-                      <button
-                        onClick={() => onEditItemImage?.(item.name, item.imageUrl)}
-                        className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center rounded-lg"
-                      >
-                        <Edit3 className="w-5 h-5 text-white" />
-                      </button>
-                    )}
-                  </div>
+                  <ItemImage item={item} isOwner={isOwner} onEdit={() => onEditItemImage?.(item.name, item.imageUrl)} />
                 )}
+
+
 
                 {/* If no image and is owner, show a placeholder edit trigger */}
                 {!item.imageUrl && isOwner && (
@@ -296,6 +301,6 @@ export function CategoryGroupSection({
           </motion.div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

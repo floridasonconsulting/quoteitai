@@ -579,22 +579,35 @@ function InvestmentSummarySlide({
                       <table className="w-full text-left">
                         <thead className="hidden md:table-header-group">
                           <tr className="text-[10px] uppercase tracking-widest text-gray-400 font-bold">
-                            <th className="pb-2 pr-4">Description</th>
-                            <th className="pb-2 text-right">Investment</th>
+                            <th className="pb-2 pr-4">Item Details</th>
+                            {/* <th className="pb-2 text-right">Investment</th> */}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                           {items.map((item, itemIdx) => (
                             <tr key={itemIdx} className="group">
                               <td className="py-2.5 pr-4">
-                                <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors leading-tight">{item.name}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug break-words">{item.enhancedDescription || item.description}</p>
+                                <div className="flex justify-between items-baseline">
+                                  <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors leading-tight">
+                                    {item.name}
+                                  </p>
+                                  {/* Optional: Show quantity if relevant */}
+                                  {item.quantity > 1 && (
+                                    <span className="text-[10px] bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-500 font-mono">
+                                      x{item.quantity}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug line-clamp-2 mt-0.5">
+                                  {item.enhancedDescription || item.description}
+                                </p>
                               </td>
-                              <td className="py-2.5 text-right align-top whitespace-nowrap">
+                              {/* Hiding individual item price as requested */}
+                              {/* <td className="py-2.5 text-right align-top whitespace-nowrap">
                                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                   {formatCurrency(item.total)}
                                 </span>
-                              </td>
+                              </td> */}
                             </tr>
                           ))}
                         </tbody>
@@ -625,10 +638,12 @@ function InvestmentSummarySlide({
                         <span className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Project Subtotal</span>
                         <span className="text-gray-900 dark:text-white font-bold">{formatCurrency(section.subtotal || 0)}</span>
                       </div>
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Estimated Tax</span>
-                        <span className="text-gray-900 dark:text-white font-bold">{formatCurrency(section.tax || 0)}</span>
-                      </div>
+                      {section.tax > 0 && (
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Estimated Tax</span>
+                          <span className="text-gray-900 dark:text-white font-bold">{formatCurrency(section.tax || 0)}</span>
+                        </div>
+                      )}
                       <div className="h-px bg-gray-100 dark:bg-gray-800 w-full" />
                       <div className="flex justify-between items-center pt-1">
                         <span className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tighter">Total Amount</span>

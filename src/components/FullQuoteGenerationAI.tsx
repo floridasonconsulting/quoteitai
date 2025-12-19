@@ -8,10 +8,11 @@ import { AIButton } from './AIButton';
 import { AIUpgradeDialog } from './AIUpgradeDialog';
 import { Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
-import { Item, QuoteItem } from '@/types';
+import { Item, QuoteItem, Customer } from '@/types';
 
 interface FullQuoteGenerationAIProps {
   items: Item[];
+  customers: Customer[]; // NEW: Pass customers for matching
   onQuoteGenerated: (data: {
     title: string;
     notes: string;
@@ -21,7 +22,39 @@ interface FullQuoteGenerationAIProps {
   }) => void;
 }
 
-export function FullQuoteGenerationAI({ items, onQuoteGenerated }: FullQuoteGenerationAIProps) {
+// Simple Levenshtein distance for fuzzy matching
+const levenshteinDistance = (a: string, b: string) => {
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+
+  const matrix = [];
+
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+
+  return matrix[b.length][a.length];
+};
+
+export function FullQuoteGenerationAI({ items, customers, onQuoteGenerated }: FullQuoteGenerationAIProps) {
   const { userRole } = useAuth();
   const [projectDescription, setProjectDescription] = useState('');
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
@@ -33,19 +66,47 @@ export function FullQuoteGenerationAI({ items, onQuoteGenerated }: FullQuoteGene
         const parsed = JSON.parse(content);
 
         // INTELLIGENT CUSTOMER MATCHING
+        // INTELLIGENT CUSTOMER MATCHING
+        let matchedCustomerId = undefined;
         if (parsed.clientName && parsed.clientName.trim() !== '') {
-          // We need to fetch customers to match
-          // Since we can't use async in this synchronous callback easily without side effects, 
-          // we'll fire and forget the matching inside the async scope, 
-          // OR we can make this onSuccess handler async if useAI allows it (it usually doesn't await).
-          // BUT, we have to call onQuoteGenerated.
-          // Let's try to do it:
+          const targetName = parsed.clientName.toLowerCase();
 
-          import('@/lib/db-service').then(async ({ getCustomers }) => {
-            const customers = await getCustomers(userRole === 'admin' ? undefined : undefined); // user ID is handled by service usually, or we need user.id
-            // Wait, getCustomers(userId). user is in hook.
-            // We need to access user from context inside this callback.
-          });
+          // 1. Exact/Contains match
+          const exactMatch = customers.find(c =>
+            c.name.toLowerCase().includes(targetName) ||
+            targetName.includes(c.name.toLowerCase())
+          );
+
+          if (exactMatch) {
+            matchedCustomerId = exactMatch.id;
+          } else {
+            // 2. Fuzzy match
+            let bestMatch: Customer | null = null;
+            let minDistance = Infinity;
+
+            customers.forEach(c => {
+              const distance = levenshteinDistance(c.name.toLowerCase(), targetName);
+              // Threshold: roughly 40% difference allowed or max 3-4 chars
+              const threshold = Math.max(3, Math.floor(c.name.length * 0.4));
+
+              if (distance < minDistance && distance <= threshold) {
+                minDistance = distance;
+                bestMatch = c;
+              }
+            });
+
+            if (bestMatch) {
+              matchedCustomerId = (bestMatch as Customer).id;
+            }
+          }
+
+          // If customer found, assign it
+          if (matchedCustomerId) {
+            parsed.customerId = matchedCustomerId;
+            console.log(`[AI] Matched customer "${parsed.clientName}" to ${(matchedCustomerId)}`);
+          } else {
+            console.log(`[AI] No matching customer found for "${parsed.clientName}"`);
+          }
         }
 
         // RE-PLAN: The hook onSuccess is standard function. I can make it async or use .then().
@@ -101,7 +162,7 @@ Please return a JSON object with:
 {
   "title": "Professional quote title (max 60 chars)",
   "notes": "Professional terms and conditions",
-  "summary": "2-3 sentence executive summary highlighting value",
+  "summary": "2-3 sentence executive summary highlighting value. IMPORTANT: Do NOT include pricing, costs, or total investment figures.",
   "clientName": "Extracted client name from description (or empty string)",
   "suggestedItems": [
     {

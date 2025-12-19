@@ -55,7 +55,7 @@ export function QuoteSummaryAI({ quote, customer, onSummaryGenerated }: QuoteSum
       customerName: sanitizedCustomerName,
       quoteTitle: sanitizedTitle,
       itemCount,
-      total,
+      // total, // REMOVED to prevent hallucination
       items: quote.items.map(item => ({
         name: sanitizeForAI(item.name, 100),
         quantity: item.quantity,
@@ -70,7 +70,7 @@ Items: ${itemCount} items
 
 Key Items: ${quote.items.slice(0, 3).map(i => sanitizeForAI(i.name, 50)).join(', ')}
 
-Create a professional, compelling summary that highlights the value and scope of this project. Do NOT include dollar amounts or totals.`;
+Create a professional, compelling summary that highlights the value and scope of this project. IMPORTANT: Do NOT include specific pricing, dollar amounts, or total investment figures in the summary. Focus strictly on the value provided.`;
 
     const result = await summaryAI.generate(prompt, context);
 
