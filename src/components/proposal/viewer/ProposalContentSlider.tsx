@@ -101,7 +101,7 @@ export function ProposalContentSlider({
         style={{ height: '100%', width: '100%' }}
       >
         {processedSections.map((section, index) => (
-          <SwiperSlide key={`${section.id}-${index}`} className="!h-full !w-full flex items-center justify-center bg-background">
+          <SwiperSlide key={`${section.id}-${index}`}>
             <div className="w-full h-full relative flex flex-col">
               <SlideContent
                 section={section}

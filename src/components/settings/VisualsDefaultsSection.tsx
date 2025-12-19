@@ -36,7 +36,7 @@ export function VisualsDefaultsSection({ settings, onUpdate }: VisualsDefaultsSe
             setIsUploading(field);
             const fileExt = file.name.split('.').pop();
             const fileName = `${user.id}/${uuidv4()}.${fileExt}`;
-            const bucket = 'item-images'; // Reusing item-images bucket for efficiency
+            const bucket = 'company-logos'; // Using existing public bucket to avoid "Bucket not found" errors
 
             const { error: uploadError } = await supabase.storage
                 .from(bucket)
