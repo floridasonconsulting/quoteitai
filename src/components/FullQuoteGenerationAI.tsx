@@ -151,24 +151,39 @@ export function FullQuoteGenerationAI({ items, customers, onQuoteGenerated }: Fu
       min_quantity: item.minQuantity || 1 // NEW: Include minimum quantity for AI
     }));
 
-    const prompt = `Generate a complete quote for the following project:
+    const prompt = `You are an expert quote generator. Generate a complete quote JSON for this project.
 
-Project Description: ${projectDescription}
+PROJECT DESCRIPTION:
+${projectDescription}
 
-Available Items Catalog:
+AVAILABLE ITEMS CATALOG:
 ${JSON.stringify(itemsCatalog, null, 2)}
 
-Please return a JSON object with:
+CRITICAL INSTRUCTIONS:
+1. CLIENT NAME EXTRACTION: Look carefully for any person's name or business name in the project description. Examples:
+   - "Pool remodel for John Smith" → clientName: "John Smith"
+   - "Quote for Johnsons residence" → clientName: "Johnson"
+   - "Project at 123 Main St for Mike's Pools" → clientName: "Mike's Pools"
+   - If NO name is found, set clientName to ""
+
+2. EXECUTIVE SUMMARY RULES - THIS IS CRITICAL:
+   - The summary MUST NOT contain ANY dollar amounts, prices, totals, or cost references
+   - DO NOT write things like "$50,000", "investment of", "total cost", "pricing", etc.
+   - ONLY describe the scope, value proposition, and project highlights
+   - Example GOOD: "This comprehensive pool renovation will transform your backyard into a resort-style oasis with premium finishes."
+   - Example BAD: "This $45,000 investment includes..." ← NEVER DO THIS
+
+3. Return ONLY valid JSON with this exact structure:
 {
-  "title": "Professional quote title (max 60 chars)",
-  "notes": "Professional terms and conditions",
-  "summary": "2-3 sentence executive summary highlighting value. CRITICAL RULE: You must NOT mention any specific prices, costs, or total dollar amounts in this summary. Keep it focused on value and scope.",
-  "clientName": "Extracted client name from description. If a name is mentioned (e.g. 'for John Smith'), extract 'John Smith'. If no name is found, return empty string.",
+  "title": "Professional project title (max 60 chars)",
+  "notes": "Professional terms and conditions for the work",
+  "summary": "2-3 sentences about scope and value. NO PRICES OR DOLLAR AMOUNTS.",
+  "clientName": "Extracted name from description or empty string if none found",
   "suggestedItems": [
     {
-      "itemId": "item id from catalog",
-      "name": "item name",
-      "description": "item description (refined)",
+      "itemId": "exact item id from catalog",
+      "name": "item name from catalog",
+      "description": "enhanced item description",
       "quantity": 1,
       "price": 100,
       "total": 100,
