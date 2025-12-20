@@ -30,9 +30,9 @@ const FEATURE_CONFIG = {
   followup_message: { tier: "pro", monthlyLimit: 30 },
   discount_justification: { tier: "pro", monthlyLimit: 50 },
   email_draft: { tier: "pro", monthlyLimit: null }, // unlimited
-  scope_of_work: { tier: "pro", monthlyLimit: 25 },
 
   // Max Tier Features
+  scope_of_work: { tier: "max", monthlyLimit: null },
   full_quote_generation: { tier: "max", monthlyLimit: null },
   item_recommendations: { tier: "max", monthlyLimit: null },
   pricing_optimization: { tier: "max", monthlyLimit: null },
@@ -123,9 +123,8 @@ serve(async (req) => {
 
     if (userRole) {
       const roleMap: Record<string, "free" | "pro" | "max"> = {
-        "admin": "max", // admin gets full access
+        "admin": "max",
         "max": "max",
-        "business": "pro",
         "pro": "pro",
         "free": "free"
       };

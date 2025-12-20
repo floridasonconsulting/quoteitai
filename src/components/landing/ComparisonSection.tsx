@@ -12,9 +12,8 @@ export function ComparisonSection() {
     <section
       id="comparison"
       ref={section.ref}
-      className={`py-16 transition-all duration-700 ${
-        section.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-      }`}
+      className={`py-16 transition-all duration-700 ${section.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}
     >
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
@@ -91,7 +90,7 @@ export function ComparisonSection() {
                     <tr className="bg-primary/5">
                       <td className="py-4 px-4 font-semibold">Starting Price (5-person team)</td>
                       <td className="text-center py-4 px-4">
-                        <div className="text-2xl font-bold text-primary">$29/mo</div>
+                        <div className="text-2xl font-bold text-primary">$49/mo</div>
                         <div className="text-xs text-muted-foreground">Flat rate</div>
                       </td>
                       <td className="text-center py-4 px-4 text-muted-foreground">
@@ -109,18 +108,18 @@ export function ComparisonSection() {
                         <div className="text-sm font-medium text-success">Base</div>
                       </td>
                       <td className="text-center py-4 px-4">
-                        <div className="text-xl font-bold text-success">Save $1,380</div>
+                        <div className="text-xl font-bold text-success">Save $1,140</div>
                       </td>
                       <td className="text-center py-4 px-4">
-                        <div className="text-xl font-bold text-success">Save $11,652</div>
+                        <div className="text-xl font-bold text-success">Save $11,412</div>
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
               <div className="mt-8 text-center space-y-4">
-                <p className="text-2xl font-bold text-primary">Save $1,380-$11,652/year compared to competitors</p>
-                <p className="text-sm text-muted-foreground">No per-user fees • No setup costs • QuickBooks & Stripe included • Full AI features</p>
+                <p className="text-2xl font-bold text-primary">Save $1,140-$11,412/year compared to competitors</p>
+                <p className="text-sm text-muted-foreground">Up to 5 team members included • No setup costs • QuickBooks & Stripe included • Full AI features</p>
                 <Button size="lg" onClick={() => navigate("/auth")}>
                   Start Free Trial
                   <ArrowRight className="ml-2 h-4 w-4" />

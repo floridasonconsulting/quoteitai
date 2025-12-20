@@ -8,7 +8,7 @@ interface AIUpgradeDialogProps {
   isOpen: boolean;
   onClose: () => void;
   featureName: AIFeatureType;
-  requiredTier: 'pro' | 'business' | 'max';
+  requiredTier: 'pro' | 'max';
 }
 
 const FEATURE_BENEFITS: Record<AIFeatureType, {
@@ -98,11 +98,6 @@ const FEATURE_BENEFITS: Record<AIFeatureType, {
     description: 'Generate detailed, professional SOW documents in seconds',
     benefits: ['Comprehensive scope definitions', 'Clear project boundaries', 'Legal-ready language']
   },
-  rfp_response_matching: {
-    name: 'AI RFP Matching',
-    description: 'Match your items and services to RFP requirements automatically',
-    benefits: ['Increase win rate', 'Precise requirement mapping', 'Save hours of manual review']
-  },
   content_generation: {
     name: 'AI Content Generation',
     description: 'Generate custom content and marketing copy for your proposals',
@@ -113,18 +108,13 @@ const FEATURE_BENEFITS: Record<AIFeatureType, {
 const TIER_INFO = {
   pro: {
     name: 'Pro',
-    price: '$9.99/month',
-    features: ['50 AI requests per month', 'All basic AI features', 'Priority support', 'Advanced analytics']
-  },
-  business: {
-    name: 'Business',
-    price: '$29.99/month',
-    features: ['Unlimited AI requests', 'Advanced analytics & insights', 'Customer lifetime value analysis', 'Win rate tracking', 'Revenue forecasting', 'Priority support']
+    price: '$29/month',
+    features: ['50 AI requests per month', 'Enhanced automation', 'Priority support', 'QuickBooks & Stripe']
   },
   max: {
     name: 'Max AI',
-    price: '$19.99/month',
-    features: ['Unlimited AI requests', 'All AI features unlocked', 'Premium support', 'Advanced automation', 'Custom AI models']
+    price: '$49/month',
+    features: ['Unlimited AI requests', 'Teams of up to 5', 'Shared Item Catalog', 'SOW Generator', 'Manager dashboard']
   }
 };
 

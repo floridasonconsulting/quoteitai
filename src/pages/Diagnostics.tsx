@@ -37,7 +37,7 @@ interface SystemState {
 }
 
 export default function Diagnostics() {
-  const { user, userRole } = useAuth();
+  const { user, userRole, organizationId } = useAuth();
   const { isOnline, isSyncing, pendingCount, failedCount } = useSyncManager();
   const { getActiveOperations } = useLoadingState();
   const [events, setEvents] = useState<DiagnosticEvent[]>([]);
@@ -54,7 +54,7 @@ export default function Diagnostics() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [aiTestResult, setAiTestResult] = useState<unknown>(null);
   const [aiTesting, setAiTesting] = useState(false);
-  
+
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastSyncTime = storageCache.get("last-sync-time");
 
@@ -99,7 +99,7 @@ export default function Diagnostics() {
       // Check 3: Database template (only if user exists and it's been >10s since last check)
       let dbTemplate = systemState.dbTemplate;
       if (user?.id && (!systemState.dbTemplate || refreshKey > 0)) {
-        const settings = await getSettings(user.id);
+        const settings = await getSettings(user.id, organizationId);
         dbTemplate = settings.proposalTemplate;
       }
 
@@ -164,19 +164,19 @@ export default function Diagnostics() {
     const dataStr = JSON.stringify(events, null, 2);
     const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
     const exportFileDefaultName = `diagnostics-${Date.now()}.json`;
-    
+
     const linkElement = document.createElement("a");
     linkElement.setAttribute("href", dataUri);
     linkElement.setAttribute("download", exportFileDefaultName);
     linkElement.click();
-    
+
     addEvent("info", "db", "Events exported", { count: events.length });
   };
 
   const handleRefresh = async () => {
     setRefreshKey(prev => prev + 1);
     addEvent("info", "db", "Diagnostic refresh triggered", null);
-    
+
     // Force immediate system check
     await performSystemCheck();
   };
@@ -184,7 +184,7 @@ export default function Diagnostics() {
   const handleTestAIAccess = async () => {
     setAiTesting(true);
     setAiTestResult(null);
-    
+
     try {
       const { data, error } = await supabase.functions.invoke("ai-assist", {
         body: {
@@ -397,7 +397,7 @@ export default function Diagnostics() {
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  ⚠️ {inFlightCount} requests are currently in-flight. 
+                  ⚠️ {inFlightCount} requests are currently in-flight.
                   If this persists for more than 10 seconds, there may be a deadlock.
                 </AlertDescription>
               </Alert>
@@ -406,7 +406,7 @@ export default function Diagnostics() {
                   <div key={key} className="mb-3 p-2 border-l-2 border-yellow-500 bg-muted/50">
                     <div className="font-mono text-xs font-semibold">{key}</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Age: {typeof value === "object" && value && "startTime" in value ? `${Date.now() - (value as {startTime: number}).startTime}ms` : "unknown"}
+                      Age: {typeof value === "object" && value && "startTime" in value ? `${Date.now() - (value as { startTime: number }).startTime}ms` : "unknown"}
                     </div>
                   </div>
                 ))}
@@ -437,29 +437,29 @@ export default function Diagnostics() {
               {aiTesting ? "Testing..." : "Test AI Access"}
             </Button>
           </div>
-          
+
           {aiTestResult && (
             <Alert variant={
-              typeof aiTestResult === "object" && aiTestResult && "success" in aiTestResult && (aiTestResult as {success: boolean}).success
+              typeof aiTestResult === "object" && aiTestResult && "success" in aiTestResult && (aiTestResult as { success: boolean }).success
                 ? "default"
                 : "destructive"
             }>
               <AlertDescription>
                 <div className="space-y-2">
                   <div className="font-semibold">
-                    {typeof aiTestResult === "object" && aiTestResult && "success" in aiTestResult && (aiTestResult as {success: boolean}).success
+                    {typeof aiTestResult === "object" && aiTestResult && "success" in aiTestResult && (aiTestResult as { success: boolean }).success
                       ? "✓ AI Access Granted"
                       : "✗ AI Access Denied"}
                   </div>
                   {typeof aiTestResult === "object" && aiTestResult && "error" in aiTestResult && (
-                    <div className="text-sm">Error: {String((aiTestResult as {error: unknown}).error)}</div>
+                    <div className="text-sm">Error: {String((aiTestResult as { error: unknown }).error)}</div>
                   )}
                   {typeof aiTestResult === "object" && aiTestResult && "requiresUpgrade" in aiTestResult && (
                     <div className="text-sm">Upgrade to Pro or Max tier required</div>
                   )}
-                  {typeof aiTestResult === "object" && aiTestResult && "success" in aiTestResult && (aiTestResult as {success: boolean}).success && "content" in aiTestResult && (
+                  {typeof aiTestResult === "object" && aiTestResult && "success" in aiTestResult && (aiTestResult as { success: boolean }).success && "content" in aiTestResult && (
                     <div className="text-xs text-muted-foreground mt-2">
-                      Content length: {String((aiTestResult as {content?: string}).content)?.length || 0} chars
+                      Content length: {String((aiTestResult as { content?: string }).content)?.length || 0} chars
                     </div>
                   )}
                 </div>
@@ -543,14 +543,13 @@ export default function Diagnostics() {
             ) : (
               <div className="space-y-2">
                 {events.map(event => (
-                  <div 
-                    key={event.id} 
-                    className={`p-3 border-l-4 rounded ${
-                      event.type === "critical" ? "border-red-700 bg-red-50 dark:bg-red-950" :
-                      event.type === "error" ? "border-red-500 bg-red-50 dark:bg-red-950" :
-                      event.type === "warning" ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950" :
-                      "border-blue-500 bg-blue-50 dark:bg-blue-950"
-                    }`}
+                  <div
+                    key={event.id}
+                    className={`p-3 border-l-4 rounded ${event.type === "critical" ? "border-red-700 bg-red-50 dark:bg-red-950" :
+                        event.type === "error" ? "border-red-500 bg-red-50 dark:bg-red-950" :
+                          event.type === "warning" ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950" :
+                            "border-blue-500 bg-blue-50 dark:bg-blue-950"
+                      }`}
                   >
                     <div className="flex items-start gap-2">
                       {getEventIcon(event.type)}

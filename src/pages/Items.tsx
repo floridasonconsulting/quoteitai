@@ -21,7 +21,7 @@ import { ItemsTable } from '@/components/items/ItemsTable';
 import { ItemForm, type FormData } from '@/components/items/ItemForm';
 
 export default function Items() {
-  const { user } = useAuth();
+  const { user, organizationId } = useAuth();
   const { queueChange, pauseSync, resumeSync } = useSyncManager();
   const { startLoading, stopLoading } = useLoadingState();
   const [loading, setLoading] = useState(true);
@@ -38,10 +38,10 @@ export default function Items() {
   // Memoize optimistic options
   const optimisticOptions = useMemo(() => ({
     entityName: 'Item',
-    onAdd: (item: Item) => addItem(user?.id, item, queueChange),
-    onUpdate: (item: Item) => updateItem(user?.id, item.id, item, queueChange),
+    onAdd: (item: Item) => addItem(user?.id, organizationId, item, queueChange),
+    onUpdate: (item: Item) => updateItem(user?.id, organizationId, item.id, item, queueChange),
     onDelete: (id: string) => deleteItem(user?.id, id, queueChange)
-  }), [user?.id, queueChange]);
+  }), [user?.id, organizationId, queueChange]);
 
   const {
     items,
@@ -77,7 +77,7 @@ export default function Items() {
         setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
       );
 
-      const dataPromise = getItems(user?.id, { forceRefresh });
+      const dataPromise = getItems(user?.id, organizationId, { forceRefresh });
       const data = await Promise.race([dataPromise, timeoutPromise]);
 
       setItems(data);
@@ -193,7 +193,7 @@ export default function Items() {
             ? basePrice + (basePrice * markup / 100)
             : basePrice + markup;
 
-          promises.push(updateItem(user?.id, itemId, {
+          promises.push(updateItem(user?.id, organizationId, itemId, {
             markup,
             markupType,
             finalPrice

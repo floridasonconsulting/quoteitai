@@ -19,7 +19,7 @@ import { storageCache } from "@/lib/storage-cache";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, userRole } = useAuth();
+  const { user, loading: authLoading, userRole, isAdmin, isMaxAITier, organizationId } = useAuth();
   const { startLoading, stopLoading } = useLoadingState();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +40,7 @@ export default function Dashboard() {
   const [customers, setCustomers] = useState<Customer[]>([]);
 
   // Determine if user has advanced tier (Business/Max/Admin)
-  const hasAdvancedTier = userRole === "business" || userRole === "max" || userRole === "admin";
+  const hasAdvancedTier = userRole === "max" || userRole === "admin";
 
   useEffect(() => {
     if (user && !hasLoadedData.current) {
@@ -83,19 +83,19 @@ export default function Dashboard() {
 
     try {
       const [quotesData, customersData, itemsData] = await Promise.all([
-        getQuotes(user?.id),
-        getCustomers(user?.id),
-        getItems(user?.id)
+        getQuotes(user?.id, organizationId, isAdmin || isMaxAITier),
+        getCustomers(user?.id, organizationId, isAdmin || isMaxAITier),
+        getItems(user?.id, organizationId)
       ]);
-      
+
       const pendingValue = quotesData
         .filter(q => q.status === "sent")
         .reduce((sum, q) => sum + q.total, 0);
 
       const sentQuotes = quotesData.filter(q => q.status === "sent" || q.status === "accepted" || q.status === "declined");
       const acceptedQuotes = quotesData.filter(q => q.status === "accepted");
-      const acceptanceRate = sentQuotes.length > 0 
-        ? (acceptedQuotes.length / sentQuotes.length) * 100 
+      const acceptanceRate = sentQuotes.length > 0
+        ? (acceptedQuotes.length / sentQuotes.length) * 100
         : 0;
 
       const avgQuoteValue = quotesData.length > 0
@@ -103,7 +103,7 @@ export default function Dashboard() {
         : 0;
 
       const totalRevenue = acceptedQuotes.reduce((sum, q) => sum + q.total, 0);
-      
+
       const declinedValue = quotesData
         .filter(q => q.status === "declined")
         .reduce((sum, q) => sum + q.total, 0);
@@ -127,7 +127,7 @@ export default function Dashboard() {
         setError(null);
         setLoading(false);
       });
-      
+
       clearTimeout(timeoutId);
       stopLoading(operationId);
     } catch (error) {
@@ -155,11 +155,11 @@ export default function Dashboard() {
     try {
       // Clear all storage cache entries
       storageCache.clear();
-      
+
       // Also clear any legacy direct localStorage entries
       localStorage.removeItem("sync-queue");
       localStorage.removeItem("failed-sync-queue");
-      
+
       if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
         const messageChannel = new MessageChannel();
         navigator.serviceWorker.controller.postMessage(
@@ -167,16 +167,16 @@ export default function Dashboard() {
           [messageChannel.port2]
         );
       }
-      
+
       hasLoadedData.current = false;
       setRetryCount(0);
       setError(null);
-      
+
       toast({
         title: "Cache cleared",
         description: "All cached data has been cleared. Reloading...",
       });
-      
+
       setTimeout(() => {
         loadData();
       }, 500);
@@ -225,34 +225,34 @@ export default function Dashboard() {
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map(i => (
-             <Card key={i}>
+            <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <Skeleton className="h-4 w-24"/>
-                  <Skeleton className="h-4 w-4"/>
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
               </CardHeader>
               <CardContent>
-                  <Skeleton className="h-8 w-20 mb-1"/>
-                  <Skeleton className="h-3 w-40"/>
+                <Skeleton className="h-8 w-20 mb-1" />
+                <Skeleton className="h-3 w-40" />
               </CardContent>
             </Card>
           ))}
         </div>
         <Card>
-            <CardHeader>
-                <Skeleton className="h-6 w-48 mb-2"/>
-                <Skeleton className="h-4 w-80"/>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[1,2,3,4].map(i => (
-                <div key={i} className="space-y-2 p-3">
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-4 w-24"/>
-                    <Skeleton className="h-6 w-12"/>
-                  </div>
-                  <Skeleton className="h-2 w-full"/>
+          <CardHeader>
+            <Skeleton className="h-6 w-48 mb-2" />
+            <Skeleton className="h-4 w-80" />
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="space-y-2 p-3">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-6 w-12" />
                 </div>
-              ))}
-            </CardContent>
+                <Skeleton className="h-2 w-full" />
+              </div>
+            ))}
+          </CardContent>
         </Card>
       </div>
     );
@@ -275,8 +275,8 @@ export default function Dashboard() {
           <Button variant="outline" onClick={handleFullReset}>
             Clear Cache & Reset
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => window.location.reload()}
           >
             Force Reload Page
@@ -313,7 +313,7 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-            <div 
+            <div
               className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
               onClick={() => navigate("/quotes?status=sent&age=fresh")}
             >
@@ -324,14 +324,14 @@ export default function Dashboard() {
                 </Badge>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-success transition-all"
-                  style={{ width: `${(agingSummary.fresh / Math.max(1, quotes.filter(q=>q.status === 'sent').length)) * 100}%` }}
+                  style={{ width: `${(agingSummary.fresh / Math.max(1, quotes.filter(q => q.status === 'sent').length)) * 100}%` }}
                 />
               </div>
             </div>
 
-            <div 
+            <div
               className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
               onClick={() => navigate("/quotes?status=sent&age=warm")}
             >
@@ -342,14 +342,14 @@ export default function Dashboard() {
                 </Badge>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-warning transition-all"
-                  style={{ width: `${(agingSummary.warm / Math.max(1, quotes.filter(q=>q.status === 'sent').length)) * 100}%` }}
+                  style={{ width: `${(agingSummary.warm / Math.max(1, quotes.filter(q => q.status === 'sent').length)) * 100}%` }}
                 />
               </div>
             </div>
 
-            <div 
+            <div
               className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
               onClick={() => navigate("/quotes?status=sent&age=aging")}
             >
@@ -360,14 +360,14 @@ export default function Dashboard() {
                 </Badge>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-destructive transition-all"
-                  style={{ width: `${(agingSummary.aging / Math.max(1, quotes.filter(q=>q.status === 'sent').length)) * 100}%` }}
+                  style={{ width: `${(agingSummary.aging / Math.max(1, quotes.filter(q => q.status === 'sent').length)) * 100}%` }}
                 />
               </div>
             </div>
 
-            <div 
+            <div
               className="space-y-2 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
               onClick={() => navigate("/quotes?status=sent&age=stale")}
             >
@@ -378,9 +378,9 @@ export default function Dashboard() {
                 </Badge>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-destructive transition-all"
-                  style={{ width: `${(agingSummary.stale / Math.max(1, quotes.filter(q=>q.status === 'sent').length)) * 100}%` }}
+                  style={{ width: `${(agingSummary.stale / Math.max(1, quotes.filter(q => q.status === 'sent').length)) * 100}%` }}
                 />
               </div>
             </div>

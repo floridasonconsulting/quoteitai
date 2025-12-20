@@ -40,7 +40,7 @@ export function Layout({ children }: LayoutProps) {
     const loadSettings = async () => {
       if (user?.id) {
         try {
-          const userSettings = await getSettings(user.id);
+          const userSettings = await getSettings(user.id, organizationId);
           if (userSettings.logo) {
             setCompanyLogo(userSettings.logo);
           }
@@ -96,7 +96,7 @@ export function Layout({ children }: LayoutProps) {
               >
                 <Bell className="h-5 w-5" aria-hidden="true" />
                 {unreadCount > 0 && (
-                  <Badge 
+                  <Badge
                     className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
                     aria-label={`${unreadCount} unread notifications`}
                   >
@@ -151,7 +151,7 @@ export function Layout({ children }: LayoutProps) {
                 >
                   <Bell className="h-4 w-4" aria-hidden="true" />
                   {unreadCount > 0 && (
-                    <Badge 
+                    <Badge
                       className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-[10px]"
                       aria-label={`${unreadCount} unread notifications`}
                     >
@@ -183,7 +183,7 @@ export function Layout({ children }: LayoutProps) {
                 </Button>
               </div>
             </div>
-            
+
             {/* Row 2: Help + Sync Status */}
             <div className="flex items-center justify-between gap-2">
               <Button
@@ -203,8 +203,8 @@ export function Layout({ children }: LayoutProps) {
       </header>
 
       {/* Main Content */}
-      <main 
-        id="main-content" 
+      <main
+        id="main-content"
         className="flex-1 px-4 py-6 md:ml-64 overflow-x-hidden max-w-full"
         role="main"
         aria-label="Main content"
@@ -213,7 +213,7 @@ export function Layout({ children }: LayoutProps) {
       </main>
 
       {/* Bottom Navigation (Mobile) */}
-      <nav 
+      <nav
         className="fixed bottom-0 left-0 right-0 z-50 md:hidden border-t bg-card"
         role="navigation"
         aria-label="Mobile navigation"
@@ -244,7 +244,7 @@ export function Layout({ children }: LayoutProps) {
       </nav>
 
       {/* Desktop Navigation */}
-      <nav 
+      <nav
         className="hidden md:block fixed left-0 top-14 bottom-0 w-64 border-r bg-card"
         role="navigation"
         aria-label="Main navigation"

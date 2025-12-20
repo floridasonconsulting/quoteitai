@@ -69,7 +69,7 @@ export async function importCustomersFromCSV(
         }
       }
 
-      await addCustomer(userId, customer as Customer);
+      await addCustomer(userId, null, customer as Customer);
       result.success++;
     } catch (error) {
       result.failed++;
@@ -257,7 +257,7 @@ export async function importItemsFromCSV(
         allFields: Object.keys(newItem)
       });
 
-      await addItem(userId, newItem);
+      await addItem(userId, null, newItem);
       result.success++;
       console.log(`[CSV Import] ✓ Successfully imported: ${newItem.name}`);
     } catch (error) {
@@ -378,7 +378,7 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
       delete (quote as Partial<Quote & { customerId: string }>).customerId;
 
       console.log(`[Import] Adding quote: ${quote.quoteNumber} - ${quote.title}`);
-      await addQuote(userId, quote as Quote);
+      await addQuote(userId, null, quote as Quote);
       console.log(`[Import] Successfully added quote: ${quote.quoteNumber}`);
       result.success++;
     } catch (error) {
@@ -410,7 +410,7 @@ export async function importCompanySettingsFromCSV(csvContent: string, userId: s
     }
   }
 
-  await saveSettings(userId, settings as CompanySettings);
+  await saveSettings(userId, null, settings as CompanySettings);
 }
 
 export function validateItemsCSV(csvContent: string): { valid: boolean; errors: string[] } {
@@ -560,13 +560,13 @@ export async function importAllData(file: File): Promise<void> {
     }
 
     if (settings) {
-      await saveSettings(userId, settings);
+      await saveSettings(userId, null, settings);
     }
 
     if (customers && Array.isArray(customers)) {
       for (const customer of customers) {
         try {
-          await addCustomer(userId, customer);
+          await addCustomer(userId, null, customer);
         } catch (error) {
           console.warn('[Import] Failed to import customer:', customer.name, error);
         }
@@ -576,7 +576,7 @@ export async function importAllData(file: File): Promise<void> {
     if (items && Array.isArray(items)) {
       for (const item of items) {
         try {
-          await addItem(userId, item);
+          await addItem(userId, null, item);
         } catch (error) {
           console.warn('[Import] Failed to import item:', item.name, error);
         }
@@ -586,7 +586,7 @@ export async function importAllData(file: File): Promise<void> {
     if (quotes && Array.isArray(quotes)) {
       for (const quote of quotes) {
         try {
-          await addQuote(userId, quote);
+          await addQuote(userId, null, quote);
         } catch (error) {
           console.warn('[Import] Failed to import quote:', quote.quoteNumber, error);
         }

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Check, Loader2, Sparkles, Zap, Building2, Gift } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 // Updated pricing structure with new tiers
 const SUBSCRIPTION_TIERS = {
@@ -25,9 +25,7 @@ const SUBSCRIPTION_TIERS = {
       'Branded Quote Emails',
       'QuickBooks Integration',
       'Stripe Payment Integration',
-      'AI Quote Titles & Descriptions',
-      'AI Terms & Conditions Generator',
-      'AI Executive Summaries',
+      'AI Quote generation tools',
       'AI Follow-up Messages',
       'Cloud sync across devices',
       'Priority support',
@@ -47,77 +45,40 @@ const SUBSCRIPTION_TIERS = {
       'Priority email support',
     ],
   },
-  business_monthly: {
-    name: 'Business',
-    price: '$79/month',
-    priceId: 'price_business_monthly_new', // New tier - needs Stripe setup
-    productId: 'prod_business_new',
-    description: 'For established businesses',
+  max_monthly: {
+    name: 'Max AI',
+    price: '$49/month',
+    priceId: 'price_max_monthly_new', // New consolidated price
+    productId: 'prod_max_new',
+    description: 'Advanced AI & Team Automation',
     popular: false,
     features: [
       'Everything in Pro, plus:',
       'Unlimited quotes per month',
-      'Unlimited team members',
-      'Advanced analytics dashboard',
-      'White-label branding options',
-      'API access for CRM integrations',
-      'Advanced AI features',
+      'Up to 5 team members included',
+      'Manager dashboard & review',
+      'Shared Item Catalog & Settings',
+      'Unlimited AI generation requests',
       'AI Scope of Work (SOW) drafting',
+      'AI-powered full quote generation',
       'AI Item Recommendations',
       'AI Pricing Optimization',
-      'Priority support',
-      'Dedicated account manager',
-    ],
-  },
-  business_annual: {
-    name: 'Business Annual',
-    price: '$790/year',
-    savings: 'Save $158',
-    priceId: 'price_business_annual_new',
-    productId: 'prod_business_annual_new',
-    description: 'Best value for Business tier',
-    features: [
-      'Everything in Business Monthly',
-      '2 months free',
-      'Dedicated onboarding session',
-      'Priority 24/7 support',
-    ],
-  },
-  max_monthly: {
-    name: 'Max AI',
-    price: '$149/month',
-    priceId: 'price_1SPTGQFe05N9s8ojREGE4yhs',
-    productId: 'prod_TMBdc6WfCWbNVm',
-    description: 'Enterprise-grade AI automation',
-    popular: false,
-    features: [
-      'Everything in Business, plus:',
-      'Unlimited AI generation requests',
-      'AI-powered full quote generation',
-      'AI competitive analysis',
-      'AI customer insights & behavior prediction',
-      'Custom AI training on your data',
-      'Advanced email automation',
-      'RFP response matching (coming soon)',
-      'Smart content library',
-      'White-label + custom domain',
-      'Dedicated account manager',
-      '24/7 priority support',
-      'Custom integrations',
+      'AI Competitive Analysis',
+      'White-label branding options',
     ],
   },
   max_annual: {
     name: 'Max AI Annual',
-    price: '$1,490/year',
-    savings: 'Save $298',
-    priceId: 'price_1SPTGQFe05N9s8ojtcXQuj1p',
-    productId: 'prod_TMBd1KM25jZncG',
-    description: 'Best value for Max AI',
+    price: '$490/year',
+    savings: 'Save $98',
+    priceId: 'price_max_annual_new',
+    productId: 'prod_max_annual_new',
+    description: 'Best value for teams',
     features: [
       'Everything in Max AI Monthly',
       '2 months free',
-      'Quarterly strategy sessions',
-      'Custom feature development',
+      'Priority 24/7 support',
+      'Advanced analytics dashboard',
     ],
   },
 };
@@ -214,7 +175,7 @@ export default function Subscription() {
             <CardTitle>Current Subscription</CardTitle>
             <CardDescription>
               Your subscription is active
-              {subscription.subscription_end && 
+              {subscription.subscription_end &&
                 ` until ${new Date(subscription.subscription_end).toLocaleDateString()}`
               }
             </CardDescription>

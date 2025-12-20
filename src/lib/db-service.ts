@@ -44,7 +44,7 @@ interface SyncChange {
 }
 
 // Wrap getSettings to check IndexedDB first (async for proper data retrieval)
-export const getSettings = async (userId: string): Promise<CompanySettings> => {
+export const getSettings = async (userId: string, organizationId: string | null = null): Promise<CompanySettings> => {
   console.log('[db-service] getSettings called with userId:', userId);
 
   // Try IndexedDB first if supported
@@ -68,6 +68,7 @@ export const getSettings = async (userId: string): Promise<CompanySettings> => {
 
 export async function saveSettings(
   userId: string,
+  organizationId: string | null,
   settings: CompanySettings,
   queueChange?: (change: SyncChange) => void
 ): Promise<void> {
@@ -112,6 +113,7 @@ export async function saveSettings(
     // CRITICAL: Build the database object with proper field mapping
     const dbSettings = {
       user_id: userId,
+      organization_id: organizationId,
       name: settings.name || '',
       address: settings.address || '',
       city: settings.city || '',
@@ -161,14 +163,40 @@ export async function saveSettings(
 
     if (navigator.onLine) {
       // Use upsert with proper conflict resolution
-      const { data, error } = await supabase
-        .from('company_settings')
-        .upsert(dbSettings, {
-          onConflict: 'user_id',
-          ignoreDuplicates: false
-        })
-        .select()
-        .single();
+      let query = supabase.from('company_settings').select('*');
+
+      if (organizationId) {
+        query = query.eq('organization_id', organizationId);
+      } else {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data: supabaseSettings, error: selectError } = await query.maybeSingle();
+
+      if (selectError) {
+        console.error('[DB Service] ❌ Supabase select error:', selectError);
+        throw selectError;
+      }
+
+      let upsertResult;
+      if (supabaseSettings) {
+        // Record exists, perform an update
+        upsertResult = await supabase
+          .from('company_settings')
+          .update(dbSettings)
+          .eq(organizationId ? 'organization_id' : 'user_id', organizationId || userId)
+          .select()
+          .single();
+      } else {
+        // Record does not exist, perform an insert
+        upsertResult = await supabase
+          .from('company_settings')
+          .insert(dbSettings)
+          .select()
+          .single();
+      }
+
+      const { data, error } = upsertResult;
 
       if (error) {
         console.error('[DB Service] ❌ Supabase upsert error:', error);
@@ -216,7 +244,7 @@ export async function saveSettings(
       const { data: verifyData, error: verifyError } = await supabase
         .from('company_settings')
         .select('name, email, terms, industry, license, insurance, show_proposal_images')
-        .eq('user_id', userId)
+        .eq(organizationId ? 'organization_id' : 'user_id', organizationId || userId)
         .single();
 
       if (verifyError) {

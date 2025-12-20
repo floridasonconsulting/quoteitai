@@ -22,6 +22,8 @@ const firstLoadMap = new Map<string, boolean>();
  */
 export async function getCustomers(
   userId: string | undefined,
+  organizationId: string | null = null,
+  isAdminOrOwner: boolean = false,
   options?: { forceRefresh?: boolean }
 ): Promise<Customer[]> {
   if (!userId) {
@@ -113,12 +115,15 @@ export async function getCustomers(
       return cacheManager.coalesce(`customers-${userId}`, async () => {
         console.log(`[CustomerService] Fetching from Supabase for user ${userId}`);
         try {
-          const dbQueryPromise = Promise.resolve(
-            supabase
-              .from('customers')
-              .select('*')
-              .eq('user_id', userId)
-          );
+          let query = supabase.from('customers').select('*');
+
+          if (isAdminOrOwner && organizationId) {
+            query = query.eq('organization_id', organizationId);
+          } else {
+            query = query.eq('user_id', userId);
+          }
+
+          const dbQueryPromise = Promise.resolve(query);
 
           const { data, error } = await withTimeout(dbQueryPromise, 15000);
 
@@ -204,10 +209,11 @@ export async function getCustomers(
  */
 export async function addCustomer(
   userId: string | undefined,
+  organizationId: string | null,
   customer: Customer,
   queueChange?: (change: QueueChange) => void
 ): Promise<Customer> {
-  const customerWithUser = { ...customer, user_id: userId } as Customer;
+  const customerWithUser = { ...customer, user_id: userId, organization_id: organizationId } as Customer;
 
   // Save to IndexedDB first if supported
   if (isIndexedDBSupported()) {
@@ -256,6 +262,7 @@ export async function addCustomer(
  */
 export async function updateCustomer(
   userId: string | undefined,
+  organizationId: string | null,
   id: string,
   updates: Partial<Customer>,
   queueChange?: (change: QueueChange) => void

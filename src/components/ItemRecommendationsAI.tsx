@@ -27,8 +27,7 @@ interface ItemRecommendationsAIProps {
 }
 
 export function ItemRecommendationsAI({ currentItems, availableItems, onAddItem }: ItemRecommendationsAIProps) {
-  const { user } = useAuth();
-  const userRole = user?.role;
+  const { userRole } = useAuth();
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [upgradeInfo, setUpgradeInfo] = useState<{ requiredTier: 'pro' | 'max' } | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendedItem[]>([]);

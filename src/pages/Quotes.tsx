@@ -27,7 +27,7 @@ export default function Quotes() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { dueFollowUpIds } = useNotifications();
-  const { user } = useAuth();
+  const { user, isAdmin, isMaxAITier, organizationId } = useAuth();
   const { queueChange, clearQueue } = useSyncManager();
 
   // Optimistic Options
@@ -67,9 +67,9 @@ export default function Quotes() {
     try {
       const options = { forceRefresh };
       const [quotesData, customersData, itemsData] = await Promise.all([
-        getQuotes(user.id, options),
-        getCustomers(user.id, options),
-        getItems(user.id, options)
+        getQuotes(user.id, organizationId, isAdmin || isMaxAITier, options),
+        getCustomers(user.id, organizationId, isAdmin || isMaxAITier, options),
+        getItems(user.id, organizationId, options)
       ]);
 
       console.log(`[Quotes] Loaded ${quotesData.length} quotes`);
@@ -220,7 +220,7 @@ export default function Quotes() {
       setBulkStatus(''); // Reset dropdown
 
       // 2. Perform updates
-      const promises = idsToUpdate.map(id => updateQuote(user?.id, id, { status: newStatus }, queueChange));
+      const promises = idsToUpdate.map(id => updateQuote(user?.id, organizationId, id, { status: newStatus }, queueChange));
       await Promise.all(promises);
 
       toast.success(`Updated status to ${newStatus} for ${idsToUpdate.length} quote${idsToUpdate.length > 1 ? 's' : ''}`);

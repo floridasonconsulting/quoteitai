@@ -25,7 +25,7 @@ export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isAdmin, isMaxAITier, organizationId } = useAuth();
   const { queueChange } = useSyncManager();
 
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -59,9 +59,9 @@ export default function QuoteDetail() {
   const loadData = async () => {
     try {
       const [quotes, customers, loadedSettings] = await Promise.all([
-        getQuotes(user?.id),
-        getCustomers(user?.id),
-        getSettings(user?.id)
+        getQuotes(user?.id, organizationId, isAdmin || isMaxAITier),
+        getCustomers(user?.id, organizationId, isAdmin || isMaxAITier),
+        getSettings(user?.id, organizationId)
       ]);
 
       const foundQuote = quotes.find(q => q.id === id);
@@ -196,7 +196,7 @@ export default function QuoteDetail() {
 
     // ✅ FIX: Load settings if not already loaded
     if (!settings && user?.id) {
-      const loadedSettings = await getSettings(user.id);
+      const loadedSettings = await getSettings(user.id, organizationId);
       setSettings(loadedSettings);
     }
 
@@ -266,7 +266,7 @@ export default function QuoteDetail() {
       }
 
       // Update quote status and executive summary
-      const updatedQuote = await updateQuote(user?.id, quote.id, {
+      const updatedQuote = await updateQuote(user?.id, organizationId, quote.id, {
         status: 'sent',
         sentDate: new Date().toISOString(),
         executiveSummary: emailContent.includeSummary ? emailContent.customSummary : quote.executiveSummary,

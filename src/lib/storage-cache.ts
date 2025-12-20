@@ -18,7 +18,7 @@ class StorageCache {
   constructor() {
     this.cache = new Map();
     this.pendingWrites = new Map();
-    
+
     // Clear expired cache entries every 5 minutes
     setInterval(() => this.clearExpiredEntries(), 300000);
   }
@@ -44,7 +44,7 @@ class StorageCache {
       }
 
       const parsed = parser ? parser(value) : JSON.parse(value) as T;
-      
+
       // Store in cache
       this.cache.set(key, {
         data: parsed,
@@ -108,7 +108,7 @@ class StorageCache {
    */
   remove(key: string): void {
     this.cache.delete(key);
-    
+
     const pending = this.pendingWrites.get(key);
     if (pending) {
       clearTimeout(pending);
@@ -130,6 +130,20 @@ class StorageCache {
   }
 
   /**
+   * Clears everything - memory cache and all localStorage
+   */
+  clear(): void {
+    this.cache.clear();
+    this.pendingWrites.forEach(timeout => clearTimeout(timeout));
+    this.pendingWrites.clear();
+    try {
+      localStorage.clear();
+    } catch (error) {
+      console.error("Failed to clear localStorage:", error);
+    }
+  }
+
+  /**
    * Invalidates a specific cache entry, forcing next read from localStorage
    */
   invalidate(key: string): void {
@@ -145,8 +159,8 @@ class StorageCache {
       const cached = this.cache.get(key);
       if (cached) {
         try {
-          const serialized = typeof cached.data === "string" 
-            ? cached.data 
+          const serialized = typeof cached.data === "string"
+            ? cached.data
             : JSON.stringify(cached.data);
           localStorage.setItem(key, serialized);
         } catch (error) {
@@ -173,7 +187,7 @@ class StorageCache {
    */
   private handleQuotaExceeded<T>(key: string, value: T): void {
     console.warn("Attempting to free up localStorage space...");
-    
+
     // Strategy 1: Remove expired cache entries from localStorage
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
@@ -196,7 +210,7 @@ class StorageCache {
       console.log("Successfully wrote after cleanup");
     } catch (retryError) {
       console.error("Failed to write even after cleanup. localStorage is critically full.");
-      
+
       // Last resort: Show user warning
       if (typeof window !== "undefined") {
         console.warn(
@@ -221,7 +235,7 @@ class StorageCache {
     });
 
     keysToDelete.forEach(key => this.cache.delete(key));
-    
+
     if (keysToDelete.length > 0) {
       console.log(`Cleared ${keysToDelete.length} expired cache entries`);
     }

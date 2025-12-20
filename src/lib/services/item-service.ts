@@ -19,6 +19,7 @@ import { syncStorage } from '../sync-storage';
  */
 export async function getItems(
   userId: string | undefined,
+  organizationId: string | null = null,
   options?: { forceRefresh?: boolean }
 ): Promise<Item[]> {
   if (!userId) {
@@ -84,11 +85,15 @@ export async function getItems(
     return cacheManager.coalesce(`items-${userId}`, async () => {
       try {
         const startTime = performance.now();
-        const { data, error } = await supabase
-          .from('items')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
+        let query = supabase.from('items').select('*');
+
+        if (organizationId) {
+          query = query.eq('organization_id', organizationId);
+        } else {
+          query = query.eq('user_id', userId);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         apiTracker.track(
           'items.select',
@@ -171,6 +176,7 @@ export async function getItems(
  */
 export async function addItem(
   userId: string | undefined,
+  organizationId: string | null,
   item: Item,
   queueChange?: (change: QueueChange) => void
 ): Promise<Item> {
@@ -193,6 +199,7 @@ export async function addItem(
   const itemWithUser = {
     ...item,
     user_id: userId,
+    organization_id: organizationId,
     finalPrice
   } as Item;
 
@@ -266,6 +273,7 @@ export async function addItem(
  */
 export async function updateItem(
   userId: string | undefined,
+  organizationId: string | null,
   id: string,
   updates: Partial<Item>,
   queueChange?: (change: QueueChange) => void

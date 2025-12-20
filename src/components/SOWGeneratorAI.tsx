@@ -19,8 +19,7 @@ interface SOWGeneratorAIProps {
 }
 
 export function SOWGeneratorAI({ quote, companyName, onSaveToQuote, onSuccess }: SOWGeneratorAIProps) {
-    const { user } = useAuth();
-    const userRole = user?.role;
+    const { userRole } = useAuth();
     const [generatedSOW, setGeneratedSOW] = useState<string | null>(null);
     const [additionalContext, setAdditionalContext] = useState('');
     const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
@@ -40,7 +39,7 @@ export function SOWGeneratorAI({ quote, companyName, onSaveToQuote, onSuccess }:
         },
         onUpgradeRequired: () => {
             // If user is admin/max but backend says upgrade, it's a limit/service issue, not a tier issue
-            const normalizedRole = user?.role?.toLowerCase();
+            const normalizedRole = userRole?.toLowerCase();
             if (normalizedRole === 'admin' || normalizedRole === 'max') {
                 console.warn('[SOW] Backend requested upgrade for authorized user:', normalizedRole);
                 toast.error('Generation blocked by service limits', {
@@ -55,11 +54,11 @@ export function SOWGeneratorAI({ quote, companyName, onSaveToQuote, onSuccess }:
     const handleGenerate = async () => {
         // SOW is a Business+ feature
         // Case-insensitive check for robustness
-        const normalizedRole = user?.role?.toLowerCase();
+        const normalizedRole = userRole?.toLowerCase();
 
         console.log('[SOWUserCheck] Current role:', normalizedRole);
 
-        if (normalizedRole !== 'pro' && normalizedRole !== 'business' && normalizedRole !== 'max' && normalizedRole !== 'admin') {
+        if (normalizedRole !== 'max' && normalizedRole !== 'admin') {
             console.log('[SOWUserCheck] Role insufficient, showing upgrade dialog');
             setShowUpgradeDialog(true);
             return;
@@ -154,8 +153,8 @@ FORMATTING RULES:
                     <CardTitle className="flex items-center gap-2">
                         <FileText className="h-5 w-5 text-blue-500" />
                         AI Scope of Work Generator
-                        {userRole !== 'business' && userRole !== 'max' && userRole !== 'admin' && (
-                            <span className="text-xs font-normal text-muted-foreground ml-2">(Business+)</span>
+                        {userRole !== 'max' && userRole !== 'admin' && (
+                            <span className="text-xs font-normal text-muted-foreground ml-2">(Max AI)</span>
                         )}
                     </CardTitle>
                     <CardDescription>
@@ -232,7 +231,7 @@ FORMATTING RULES:
                 isOpen={showUpgradeDialog}
                 onClose={() => setShowUpgradeDialog(false)}
                 featureName="scope_of_work"
-                requiredTier="business"
+                requiredTier="max"
             />
         </>
     );

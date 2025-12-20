@@ -42,6 +42,7 @@ import { ProposalThemeSelector } from "@/components/settings/ProposalThemeSelect
 import { VisualsDefaultsSection } from "@/components/settings/VisualsDefaultsSection";
 import { CacheManagementSection } from '@/components/settings/CacheManagementSection';
 import { PerformanceDashboard } from '@/components/PerformanceDashboard';
+import { TeamManagement } from "@/components/TeamManagement";
 import { VisualRule } from "@/types";
 
 // Helper to safely parse visual rules from JSON or object
@@ -59,7 +60,7 @@ const parseVisualRules = (rules: any): VisualRule[] => {
 export default function Settings() {
   const navigate = useNavigate();
   const { themeMode } = useTheme();
-  const { user, userRole, isAdmin, isMaxAITier, updateUserRole, checkUserRole, subscription, refreshSubscription } = useAuth();
+  const { user, userRole, isAdmin, isMaxAITier, organizationId, updateUserRole, checkUserRole, subscription, refreshSubscription } = useAuth();
   const { queueChange, pauseSync, resumeSync, isOnline, isSyncing, pendingCount, failedCount } = useSyncManager();
 
   const [loading, setLoading] = useState(true);
@@ -196,7 +197,7 @@ export default function Settings() {
       });
 
       // Save settings with sync queue
-      await saveSettings(user.id, updatedSettings, queueChange as any);
+      await saveSettings(user.id, organizationId, updatedSettings, queueChange as any);
 
       // Update local state
       setSettings(updatedSettings);
@@ -447,6 +448,8 @@ export default function Settings() {
           />
 
           <AccountSection />
+
+          <TeamManagement />
         </TabsContent>
 
         {/* PROPOSALS TAB */}

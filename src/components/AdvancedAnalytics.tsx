@@ -9,11 +9,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AIUpgradeDialog } from './AIUpgradeDialog';
-import { 
-  TrendingUp, 
+import {
+  TrendingUp,
   TrendingDown,
-  DollarSign, 
-  Users, 
+  DollarSign,
+  Users,
   Target,
   Calendar,
   Download,
@@ -37,7 +37,7 @@ interface AdvancedAnalyticsProps {
 
 export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers }: AdvancedAnalyticsProps) {
   const navigate = useNavigate();
-  const { user, userRole } = useAuth();
+  const { user, userRole, isAdmin, isMaxAITier, organizationId } = useAuth();
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [timeRange, setTimeRange] = useState<'30' | '90' | '365' | 'all'>('90');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -80,18 +80,18 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
     setIsRefreshing(true);
     try {
       // Use props if provided, otherwise fetch from the database service
-      const liveQuotes = propQuotes || await getQuotes(user.id);
-      const liveCustomers = propCustomers || await getCustomers(user.id);
-      
-      console.log('AdvancedAnalytics: Loaded data from db-service', { 
-        quotesCount: liveQuotes.length, 
-        customersCount: liveCustomers.length 
+      const liveQuotes = propQuotes || await getQuotes(user.id, organizationId, isAdmin || isMaxAITier);
+      const liveCustomers = propCustomers || await getCustomers(user.id, organizationId, isAdmin || isMaxAITier);
+
+      console.log('AdvancedAnalytics: Loaded data from db-service', {
+        quotesCount: liveQuotes.length,
+        customersCount: liveCustomers.length
       });
-      
+
       setQuotes(liveQuotes);
       setCustomers(liveCustomers);
       setLastRefresh(new Date());
-      
+
       // Only show toast if explicitly requested (manual refresh)
       if (showToast) {
         toast.success('Analytics data refreshed', {
@@ -109,42 +109,21 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
     }
   }, [user, propQuotes, propCustomers]);
 
-  // Initial load and auto-refresh setup
-  useEffect(() => {
-    if (userRole === 'business' || userRole === 'max' || userRole === 'admin') {
-      // Silent load on mount (no toast)
-      loadLiveData(false);
-      
-      // Auto-refresh every 5 minutes (silent, no toast)
-      const refreshInterval = setInterval(() => {
-        loadLiveData(false);
-      }, 5 * 60 * 1000);
-
-      return () => clearInterval(refreshInterval);
-    }
-  }, [userRole, loadLiveData]);
-
   // Recalculate analytics when data or time range changes
-  useEffect(() => {
-    if (userRole === 'business' || userRole === 'max' || userRole === 'admin') {
-      calculateAnalytics();
-    }
-  }, [quotes, customers, timeRange, userRole]);
-
-  const calculateAnalytics = () => {
+  const calculateAnalytics = useCallback(() => {
     const now = new Date();
     const daysAgo = timeRange === 'all' ? Infinity : parseInt(timeRange);
     const cutoffDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
 
-    const filteredQuotes = timeRange === 'all' 
-      ? quotes 
-      : quotes.filter(q => new Date(q.createdAt || q.date) >= cutoffDate);
+    const filteredQuotes = timeRange === 'all'
+      ? quotes
+      : quotes.filter(q => new Date(q.createdAt) >= cutoffDate);
 
     // Revenue by month calculation
     const monthlyData: Record<string, { revenue: number; quotes: number }> = {};
     filteredQuotes.forEach(quote => {
       if (quote.status === 'accepted') {
-        const month = new Date(quote.createdAt || quote.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+        const month = new Date(quote.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
         if (!monthlyData[month]) {
           monthlyData[month] = { revenue: 0, quotes: 0 };
         }
@@ -226,11 +205,11 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
     const acceptedQuotes = filteredQuotes.filter(q => q.status === 'accepted');
     const averageTimeToClose = acceptedQuotes.length > 0
       ? acceptedQuotes.reduce((sum, q) => {
-          const sent = new Date(q.createdAt || q.date);
-          const accepted = new Date(q.updatedAt || q.date);
-          const days = Math.abs((accepted.getTime() - sent.getTime()) / (1000 * 60 * 60 * 24));
-          return sum + days;
-        }, 0) / acceptedQuotes.length
+        const sent = new Date(q.createdAt);
+        const accepted = new Date(q.updatedAt);
+        const days = Math.abs((accepted.getTime() - sent.getTime()) / (1000 * 60 * 60 * 24));
+        return sum + days;
+      }, 0) / acceptedQuotes.length
       : 0;
 
     // Customer lifetime value
@@ -251,9 +230,36 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
       conversionFunnel,
       averageTimeToClose,
       customerLifetimeValue,
-      monthOverMonthGrowth
+      monthOverMonthGrowth,
+      periodComparison: {
+        revenue: { current: 0, previous: 0, change: 0 },
+        quotes: { current: 0, previous: 0, change: 0 },
+        customers: { current: 0, previous: 0, change: 0 }
+      }
     });
-  };
+  }, [quotes, customers, timeRange]);
+
+  // Initial load and auto-refresh setup
+  useEffect(() => {
+    if (userRole === 'max' || userRole === 'admin') {
+      // Silent load on mount (no toast)
+      loadLiveData(false);
+
+      // Auto-refresh every 5 minutes (silent, no toast)
+      const refreshInterval = setInterval(() => {
+        loadLiveData(false);
+      }, 5 * 60 * 1000);
+
+      return () => clearInterval(refreshInterval);
+    }
+  }, [userRole, loadLiveData]);
+
+  // Recalculate analytics when data or time range changes
+  useEffect(() => {
+    if (userRole === 'max' || userRole === 'admin') {
+      calculateAnalytics();
+    }
+  }, [quotes, customers, timeRange, userRole, calculateAnalytics]);
 
   const handleRefresh = () => {
     // Manual refresh shows toast
@@ -261,7 +267,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
   };
 
   const handleExport = () => {
-    if (userRole !== 'business' && userRole !== 'max' && userRole !== 'admin') {
+    if (userRole !== 'max' && userRole !== 'admin') {
       setShowUpgradeDialog(true);
       return;
     }
@@ -329,13 +335,13 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
     : 0;
 
   const timeSinceRefresh = Math.floor((new Date().getTime() - lastRefresh.getTime()) / 1000 / 60);
-  const refreshText = timeSinceRefresh < 1 
-    ? 'Just now' 
-    : timeSinceRefresh < 60 
-      ? `${timeSinceRefresh}m ago` 
+  const refreshText = timeSinceRefresh < 1
+    ? 'Just now'
+    : timeSinceRefresh < 60
+      ? `${timeSinceRefresh}m ago`
       : `${Math.floor(timeSinceRefresh / 60)}h ago`;
 
-  if (userRole !== 'business' && userRole !== 'max' && userRole !== 'admin') {
+  if (userRole !== 'max' && userRole !== 'admin') {
     return (
       <>
         <Card className="border-dashed">
@@ -343,7 +349,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-primary" />
               Advanced Analytics
-              <Badge variant="secondary" className="ml-auto">Business</Badge>
+              <Badge variant="secondary" className="ml-auto">Max AI</Badge>
             </CardTitle>
             <CardDescription>
               Unlock detailed analytics, revenue trends, and customer insights
@@ -353,7 +359,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
             <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg mb-4">
               <AlertCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
               <div className="text-sm space-y-1">
-                <p className="font-medium">Available in Business and Max AI tiers:</p>
+                <p className="font-medium">Available in Max AI tier:</p>
                 <ul className="list-disc list-inside text-muted-foreground space-y-1">
                   <li>Real-time revenue trends</li>
                   <li>Customer lifetime value analysis</li>
@@ -366,7 +372,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
               </div>
             </div>
             <Button onClick={() => setShowUpgradeDialog(true)} className="w-full">
-              Upgrade to Business
+              Upgrade to Max AI
             </Button>
           </CardContent>
         </Card>
@@ -375,7 +381,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
           isOpen={showUpgradeDialog}
           onClose={() => setShowUpgradeDialog(false)}
           featureName="advanced_analytics"
-          requiredTier="business"
+          requiredTier="max"
         />
       </>
     );
@@ -470,8 +476,8 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
                 {/* MoM Growth Card */}
                 <Card className={cn(
                   "transition-all hover:shadow-lg card-hover-lift cursor-pointer",
-                  analytics.monthOverMonthGrowth >= 0 
-                    ? "bg-success/5 border-success/20" 
+                  analytics.monthOverMonthGrowth >= 0
+                    ? "bg-success/5 border-success/20"
                     : "bg-destructive/5 border-destructive/20"
                 )}>
                   <CardHeader className="pb-3">
@@ -628,7 +634,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
                       const total = Object.values(analytics.conversionFunnel).reduce((sum, v) => sum + v, 0);
                       const percentage = total > 0 ? (count / total) * 100 : 0;
                       const stageColors = colors[stage as keyof typeof colors];
-                      
+
                       return (
                         <div key={stage} className="space-y-2 group hover:bg-muted/30 p-3 rounded-lg transition-colors">
                           <div className="flex items-center justify-between">
@@ -643,7 +649,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
                             </Badge>
                           </div>
                           <div className="h-3 bg-muted rounded-full overflow-hidden">
-                            <div 
+                            <div
                               className={cn("h-full transition-all duration-500 animate-fill", stageColors.bg)}
                               style={{ width: `${percentage}%` }}
                             />
@@ -669,8 +675,8 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
                         const avgRevenue = analytics.revenueByMonth.reduce((s, m) => s + m.revenue, 0) / analytics.revenueByMonth.length;
                         const isAboveAvg = month.revenue >= avgRevenue;
                         return (
-                          <div 
-                            key={idx} 
+                          <div
+                            key={idx}
                             className={cn(
                               "flex items-center justify-between p-3 border rounded-lg transition-all hover:shadow-md card-hover-lift",
                               isAboveAvg ? "bg-success/5 border-success/20" : "bg-muted/20"
@@ -711,7 +717,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
-                            <div 
+                            <div
                               className={cn("h-full transition-all duration-500", getWinRateColor(segment.winRate))}
                               style={{ width: `${segment.winRate}%` }}
                             />
@@ -737,8 +743,8 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
                   <ScrollArea className="h-96 pr-4">
                     <div className="space-y-3">
                       {analytics.topCustomers.map((customer, idx) => (
-                        <div 
-                          key={idx} 
+                        <div
+                          key={idx}
                           className={cn(
                             "flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-all card-hover-lift",
                             idx < 3 && "bg-gradient-to-r from-primary/5 to-transparent border-primary/20"
@@ -781,8 +787,8 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
                     <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                       <span className="text-sm font-medium">Average Quote Value</span>
                       <span className="font-bold">
-                        ${(analytics.revenueByMonth.reduce((sum, m) => sum + m.revenue, 0) / 
-                           Math.max(1, analytics.revenueByMonth.reduce((sum, m) => sum + m.quotes, 0))).toFixed(0)}
+                        ${(analytics.revenueByMonth.reduce((sum, m) => sum + m.revenue, 0) /
+                          Math.max(1, analytics.revenueByMonth.reduce((sum, m) => sum + m.quotes, 0))).toFixed(0)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-success/10 rounded-lg border border-success/20">
@@ -814,8 +820,8 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
                     </div>
                     <div className={cn(
                       "p-4 border rounded-lg card-hover-lift",
-                      analytics.monthOverMonthGrowth >= 0 
-                        ? "bg-success/10 border-success/20" 
+                      analytics.monthOverMonthGrowth >= 0
+                        ? "bg-success/10 border-success/20"
                         : "bg-destructive/10 border-destructive/20"
                     )}>
                       <p className={cn(
@@ -847,7 +853,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
         isOpen={showUpgradeDialog}
         onClose={() => setShowUpgradeDialog(false)}
         featureName="advanced_analytics"
-        requiredTier="business"
+        requiredTier="max"
       />
     </>
   );

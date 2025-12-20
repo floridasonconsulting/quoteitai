@@ -266,7 +266,7 @@ const CompletionStep = () => (
 );
 
 export function OnboardingWizard() {
-  const { user } = useAuth();
+  const { user, organizationId } = useAuth();
   const location = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -348,7 +348,7 @@ export function OnboardingWizard() {
       try {
         console.log("[OnboardingWizard] Local flags missing. Verifying with database...");
         // Check DB settings (non-blocking verification)
-        const dbSettings = await getSettings(user.id);
+        const dbSettings = await getSettings(user.id, organizationId);
 
         if (dbSettings && (dbSettings.onboardingCompleted || (dbSettings.name && dbSettings.email))) {
           console.log("[OnboardingWizard] ✓ Database confirms onboarding complete. Restoring local flags...");
@@ -456,7 +456,7 @@ export function OnboardingWizard() {
 
       // Step 3: Get existing settings (non-blocking)
       console.log("[OnboardingWizard] Step 3: Fetching existing settings...");
-      const existingSettings = await getSettings(user.id);
+      const existingSettings = await getSettings(user.id, organizationId);
 
       // Step 4: Merge with new onboarding data
       const updatedSettings = {
@@ -472,7 +472,7 @@ export function OnboardingWizard() {
       console.log("[OnboardingWizard] Step 4: Saving settings...");
 
       // Step 5: Save to storage
-      await saveSettings(user.id, updatedSettings);
+      await saveSettings(user.id, organizationId, updatedSettings);
       console.log("[OnboardingWizard] ✓ Settings saved successfully");
 
       // Step 6: Handle import option

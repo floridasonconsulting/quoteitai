@@ -36,7 +36,7 @@ export default function NewQuote() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isAdmin, isMaxAITier, organizationId } = useAuth();
   const { queueChange } = useSyncManager();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -113,9 +113,9 @@ export default function NewQuote() {
   const loadData = async () => {
     setLoading(true);
     const [customersData, itemsData, settingsData] = await Promise.all([
-      getCustomers(user?.id),
-      getItems(user?.id),
-      getSettings(user?.id),
+      getCustomers(user?.id, organizationId, isAdmin || isMaxAITier),
+      getItems(user?.id, organizationId),
+      getSettings(user?.id, organizationId),
     ]);
 
     setCustomers(customersData);
@@ -140,7 +140,7 @@ export default function NewQuote() {
     }
     // Fallback: Load quote for editing if id is provided (old method)
     else if (id) {
-      const quotes = await getQuotes(user?.id);
+      const quotes = await getQuotes(user?.id, organizationId, isAdmin || isMaxAITier);
       const quoteToEdit = quotes.find(q => q.id === id);
       if (quoteToEdit) {
         console.log('[NewQuote] Loading quote from URL params:', quoteToEdit);
@@ -242,7 +242,7 @@ export default function NewQuote() {
     }
 
     if (isEditMode && editQuoteId) { // CRITICAL: Use editQuoteId instead of id
-      const quotes = await getQuotes(user?.id);
+      const quotes = await getQuotes(user?.id, organizationId, isAdmin || isMaxAITier);
       const existingQuote = quotes.find(q => q.id === editQuoteId);
       const updatedQuote: Quote = {
         id: editQuoteId, // CRITICAL: Use stored editQuoteId
@@ -299,7 +299,7 @@ export default function NewQuote() {
         scopeOfWork, // Save current SOW
       };
 
-      await addQuote(user?.id, quote, queueChange);
+      await addQuote(user?.id, organizationId, quote, queueChange);
 
       // Save Follow-up Schedule
       if (followUpSchedule.status === 'active') {
@@ -337,7 +337,7 @@ export default function NewQuote() {
     const finalSummary = emailContent.includeSummary ? emailContent.customSummary : undefined;
 
     if (isEditMode && editQuoteId) { // CRITICAL: Use editQuoteId instead of id
-      const quotes = await getQuotes(user?.id);
+      const quotes = await getQuotes(user?.id, organizationId, isAdmin || isMaxAITier);
       const existingQuote = quotes.find(q => q.id === editQuoteId);
       const updatedQuote: Quote = {
         id: editQuoteId, // CRITICAL: Use stored editQuoteId
@@ -397,7 +397,7 @@ export default function NewQuote() {
         scopeOfWork, // Save current SOW
       };
 
-      await addQuote(user?.id, quote, queueChange);
+      await addQuote(user?.id, organizationId, quote, queueChange);
 
       // Save Follow-up Schedule
       if (followUpSchedule.status === 'active') {

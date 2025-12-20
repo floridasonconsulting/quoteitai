@@ -38,6 +38,8 @@ function deduplicateQuotes(quotes: Quote[]): Quote[] {
  */
 export async function getQuotes(
   userId: string | undefined,
+  organizationId: string | null = null,
+  isAdminOrOwner: boolean = false,
   options?: { forceRefresh?: boolean }
 ): Promise<Quote[]> {
   if (!userId) {
@@ -90,12 +92,16 @@ export async function getQuotes(
     // 3. Fetch from Supabase
     return cacheManager.coalesce(`quotes-${userId}`, async () => {
       try {
+        let query = supabase.from('quotes').select('*');
+
+        if (isAdminOrOwner && organizationId) {
+          query = query.eq('organization_id', organizationId);
+        } else {
+          query = query.eq('user_id', userId);
+        }
+
         const { data, error } = await withTimeout(
-          Promise.resolve(supabase
-            .from('quotes')
-            .select('*')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false })),
+          Promise.resolve(query.order('created_at', { ascending: false })),
           15000
         );
 
@@ -213,10 +219,11 @@ export async function getQuote(userId: string, id: string): Promise<Quote | null
  */
 export async function addQuote(
   userId: string | undefined,
+  organizationId: string | null,
   quote: Quote,
   queueChange?: (change: QueueChange) => void
 ): Promise<Quote> {
-  const quoteWithUser = { ...quote, userId } as Quote;
+  const quoteWithUser = { ...quote, userId, organizationId } as any;
 
   // 1. Save to IndexedDB immediately for UI responsiveness
   if (isIndexedDBSupported() && userId) {
@@ -277,6 +284,7 @@ export async function addQuote(
  */
 export async function updateQuote(
   userId: string | undefined,
+  organizationId: string | null,
   id: string,
   updates: Partial<Quote>,
   queueChange?: (change: QueueChange) => void

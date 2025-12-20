@@ -17,7 +17,7 @@ import { ProposalVisuals } from "@/types/proposal";
 export default function QuotePreview() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, organizationId } = useAuth();
   const [quote, setQuote] = useState<Quote | null>(null);
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,7 +39,7 @@ export default function QuotePreview() {
         // Load quote and settings in parallel
         const [quoteData, settingsData] = await Promise.all([
           getQuote(user.id, id),
-          getSettings(user.id)
+          getSettings(user.id, organizationId)
         ]);
 
         if (!quoteData) {

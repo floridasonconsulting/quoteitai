@@ -22,8 +22,7 @@ export function QuoteSummaryAI({ quote, customer, onSummaryGenerated, currentSum
   const [internalSummary, setInternalSummary] = useState(quote.executiveSummary || '');
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [requiredTier, setRequiredTier] = useState<'pro' | 'max'>('pro');
-  const { user } = useAuth();
-  const userRole = user?.role; // Fix userRole access
+  const { userRole } = useAuth();
 
   // Use props if provided, otherwise internal state
   const summaryValue = currentSummary !== undefined ? currentSummary : internalSummary;

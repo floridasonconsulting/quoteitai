@@ -19,7 +19,6 @@ export type AIFeatureType =
   | 'follow_up_suggestions'
   | 'customer_insights'
   | 'competitive_analysis'
-  | 'rfp_response_matching'
   | 'content_generation'
   | 'advanced_analytics';
 
@@ -51,7 +50,6 @@ const FEATURE_RATE_LIMIT_MAP: Record<AIFeatureType, string> = {
   follow_up_suggestions: 'ai-follow-up',
   customer_insights: 'ai-assist',
   competitive_analysis: 'ai-assist',
-  rfp_response_matching: 'ai-assist',
   content_generation: 'ai-assist',
   advanced_analytics: 'ai-assist',
 };

@@ -27,15 +27,15 @@ const pricingPlans = [
     period: "per month",
     oldPrice: "$49-99/mo competitors",
     annualPrice: "$290/year (save $58)",
-    description: "For growing businesses - 40% cheaper than PandaDoc",
+    description: "For growing solo businesses",
     features: [
       "50 quotes per month",
-      "✨ QuickBooks Integration",
-      "✨ Stripe Payment Integration",
+      "QuickBooks Integration",
+      "Stripe Payment Integration",
       "Professional HTML email automation",
       "Editable email templates",
-      "AI quote generation",
-      "AI terms & conditions",
+      "AI quote generation tools",
+      "AI follow-up messages",
       "Cloud sync across devices",
       "Priority support"
     ],
@@ -44,51 +44,28 @@ const pricingPlans = [
     savings: "Save $240/year vs PandaDoc"
   },
   {
-    name: "Business",
-    price: "$79",
+    name: "Max AI",
+    price: "$49",
     period: "per month",
-    oldPrice: "$200+/mo competitors",
-    annualPrice: "$790/year (save $158)",
-    description: "For established businesses - 60% cheaper than ServiceTitan",
+    oldPrice: "$150+/mo for teams",
+    annualPrice: "$490/year (save $98)",
+    description: "Best for teams of up to 5 people",
     features: [
       "Everything in Pro, plus:",
       "Unlimited quotes",
-      "Unlimited team members (no per-seat fees)",
+      "Up to 5 team members included",
+      "Manager dashboard & review",
+      "Shared Item Catalog & Settings",
       "✨ AI Scope of Work drafting",
+      "✨ AI-powered full quote generation",
       "✨ AI item recommendations",
       "✨ AI pricing optimization",
       "Advanced analytics",
-      "White-label branding options",
-      "API access",
-      "Dedicated account manager"
-    ],
-    cta: "Start Business Trial",
-    highlighted: false,
-    savings: "Save $1,452/year vs ServiceTitan"
-  },
-  {
-    name: "Max AI",
-    price: "$149",
-    period: "per month",
-    oldPrice: "$300+/mo competitors",
-    annualPrice: "$1,490/year (save $298)",
-    description: "Enterprise AI automation - 50% cheaper than competitors with AI",
-    features: [
-      "Everything in Business, plus:",
-      "Unlimited AI generation",
-      "AI full quote generation",
-      "AI competitive analysis",
-      "AI customer insights",
-      "Custom AI training",
-      "RFP response matching",
-      "Smart content library",
-      "White-label + custom domain",
-      "24/7 priority support",
-      "Custom integrations"
+      "White-label branding"
     ],
     cta: "Start Max AI Trial",
     highlighted: false,
-    savings: "Save $1,812/year vs competitors"
+    savings: "Save $1,200+/year vs Proposify"
   }
 ];
 
@@ -100,9 +77,8 @@ export function PricingSection() {
     <section
       id="pricing"
       ref={section.ref}
-      className={`py-16 bg-muted/30 transition-all duration-700 ${
-        section.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-      }`}
+      className={`py-16 bg-muted/30 transition-all duration-700 ${section.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}
     >
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
@@ -115,11 +91,9 @@ export function PricingSection() {
           {pricingPlans.map((plan, idx) => (
             <Card
               key={idx}
-              className={`hover-scale transition-all duration-500 flex flex-col ${
-                plan.highlighted ? "border-primary shadow-lg md:scale-105" : ""
-              } ${
-                section.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-              }`}
+              className={`hover-scale transition-all duration-500 flex flex-col ${plan.highlighted ? "border-primary shadow-lg md:scale-105" : ""
+                } ${section.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+                }`}
               style={{
                 transitionDelay: section.isVisible ? `${idx * 100}ms` : "0ms"
               }}

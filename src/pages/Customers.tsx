@@ -22,7 +22,7 @@ import { CustomersTable } from '@/components/customers/CustomersTable';
 import { useOptimisticList } from '@/hooks/useOptimisticList';
 
 export default function Customers() {
-  const { user } = useAuth();
+  const { user, isAdmin, isMaxAITier, organizationId } = useAuth();
   const { queueChange, pauseSync, resumeSync } = useSyncManager();
   const { startLoading, stopLoading } = useLoadingState();
 
@@ -51,10 +51,10 @@ export default function Customers() {
   // Memoize the options for useOptimisticList to prevent re-initialization
   const optimisticOptions = useMemo(() => ({
     entityName: 'Customer',
-    onAdd: (customer: Customer) => addCustomer(user?.id, customer, queueChange),
-    onUpdate: (customer: Customer) => updateCustomer(user?.id, customer.id, customer, queueChange),
+    onAdd: (customer: Customer) => addCustomer(user?.id, organizationId, customer, queueChange),
+    onUpdate: (customer: Customer) => updateCustomer(user?.id, organizationId, customer.id, customer, queueChange),
     onDelete: (id: string) => deleteCustomer(user?.id, id, queueChange)
-  }), [user?.id]);
+  }), [user?.id, organizationId, queueChange]);
 
   const {
     items: customers,
@@ -95,7 +95,7 @@ export default function Customers() {
         setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
       );
 
-      const dataPromise = getCustomers(user.id, { forceRefresh });
+      const dataPromise = getCustomers(user.id, organizationId, isAdmin || isMaxAITier, { forceRefresh });
       const data = await Promise.race([dataPromise, timeoutPromise]);
 
       console.log('[Customers] ✓ Received data from getCustomers');

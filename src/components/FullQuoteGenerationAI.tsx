@@ -217,7 +217,7 @@ CRITICAL INSTRUCTIONS:
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-purple-500" />
             AI Full Quote Generation
-            {(userRole === 'free' || userRole === 'pro') && (
+            {(userRole !== 'max' && userRole !== 'admin') && (
               <span className="text-xs font-normal text-muted-foreground">(Max AI)</span>
             )}
           </CardTitle>

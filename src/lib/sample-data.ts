@@ -1,7 +1,6 @@
-import { Quote, Customer, Item, CompanySettings } from '@/types';
-import { addCustomer, addItem, addQuote, getCustomers, getItems } from './db-service';
+import { Quote, Customer, Item, CompanySettings, QuoteItem } from '@/types';
+import { addCustomer, addItem, addQuote, getCustomers, getItems, saveSettings } from './db-service';
 import { generateQuoteNumber } from './quote-utils';
-import { saveSettings } from './db-service';
 
 // Helper to calculate date X days ago
 const daysAgo = (days: number): string => {
@@ -34,10 +33,10 @@ export const generateSampleData = async (
     console.error('Sample data generation failed: No user ID provided');
     throw new Error('You must be logged in to generate sample data. Please sign in first.');
   }
-  
+
   console.log('🚨 GENERATE SAMPLE DATA TRIGGERED 🚨');
   console.log('User ID:', userId);
-  console.trace('Sample Data Generation Trace'); // This will show us WHO called it in the console
+  console.trace('Sample Data Generation Trace');
 
   let customersAddedToDb = 0;
   let customersFailedToDb = 0;
@@ -46,9 +45,10 @@ export const generateSampleData = async (
   let quotesAdded = 0;
 
   try {
-    // Generate field worker customers - homeowners, property managers, real estate companies
+    // Generate field worker customers
     const sampleCustomers: Omit<Customer, 'id' | 'createdAt'>[] = [
       {
+        userId,
         name: 'The Johnson Family',
         email: 'sarah.johnson@email.com',
         phone: '(555) 123-4567',
@@ -58,6 +58,7 @@ export const generateSampleData = async (
         zip: '80202',
       },
       {
+        userId,
         name: 'Martinez Property Management',
         email: 'david@martinezpm.com',
         phone: '(555) 234-5678',
@@ -67,6 +68,7 @@ export const generateSampleData = async (
         zip: '80012',
       },
       {
+        userId,
         name: 'Highland Realty Group',
         email: 'info@highlandrealty.com',
         phone: '(555) 345-6789',
@@ -76,6 +78,7 @@ export const generateSampleData = async (
         zip: '80226',
       },
       {
+        userId,
         name: 'The Chen Residence',
         email: 'mchen@email.com',
         phone: '(555) 456-7890',
@@ -85,6 +88,7 @@ export const generateSampleData = async (
         zip: '80301',
       },
       {
+        userId,
         name: 'Westside Apartments LLC',
         email: 'management@westsideapts.com',
         phone: '(555) 567-8901',
@@ -94,6 +98,7 @@ export const generateSampleData = async (
         zip: '80204',
       },
       {
+        userId,
         name: 'Thompson Home Renovations',
         email: 'john@thompsonreno.com',
         phone: '(555) 678-9012',
@@ -103,6 +108,7 @@ export const generateSampleData = async (
         zip: '80120',
       },
       {
+        userId,
         name: 'Garcia Family Home',
         email: 'garcia.family@email.com',
         phone: '(555) 789-0123',
@@ -112,6 +118,7 @@ export const generateSampleData = async (
         zip: '80002',
       },
       {
+        userId,
         name: 'Summit Commercial Properties',
         email: 'contact@summitcommercial.com',
         phone: '(555) 890-1234',
@@ -121,6 +128,7 @@ export const generateSampleData = async (
         zip: '80203',
       },
       {
+        userId,
         name: 'The Anderson Estate',
         email: 'anderson.estate@email.com',
         phone: '(555) 901-2345',
@@ -130,6 +138,7 @@ export const generateSampleData = async (
         zip: '80111',
       },
       {
+        userId,
         name: 'Downtown Retail Center',
         email: 'facilities@dtretail.com',
         phone: '(555) 012-3456',
@@ -139,6 +148,7 @@ export const generateSampleData = async (
         zip: '80202',
       },
       {
+        userId,
         name: 'Riverside Townhomes HOA',
         email: 'hoa@riversidetownhomes.com',
         phone: '(555) 123-7890',
@@ -148,6 +158,7 @@ export const generateSampleData = async (
         zip: '80229',
       },
       {
+        userId,
         name: 'Miller Small Business',
         email: 'owner@millersb.com',
         phone: '(555) 234-8901',
@@ -161,7 +172,7 @@ export const generateSampleData = async (
     // Insert customers into database
     const customerInserts = sampleCustomers.map(async (customer) => {
       try {
-        await addCustomer(userId, customer as Customer);
+        await addCustomer(userId, null, customer as Customer);
         customersAddedToDb++;
       } catch (error) {
         customersFailedToDb++;
@@ -169,10 +180,10 @@ export const generateSampleData = async (
     });
     await Promise.all(customerInserts);
 
-    // Generate field worker service items - plumbing, electrical, handyman, home rehab
+    // Generate field worker service items
     const sampleItems: Omit<Item, 'id' | 'createdAt'>[] = [
-      // Plumbing Services
       {
+        userId,
         name: 'Drain Cleaning',
         description: 'Professional drain cleaning and unclogging',
         category: 'Plumbing',
@@ -183,6 +194,7 @@ export const generateSampleData = async (
         units: 'Service Call',
       },
       {
+        userId,
         name: 'Pipe Repair',
         description: 'Repair leaking or damaged pipes',
         category: 'Plumbing',
@@ -193,6 +205,7 @@ export const generateSampleData = async (
         units: 'Hour',
       },
       {
+        userId,
         name: 'Fixture Installation',
         description: 'Install sinks, faucets, toilets, or showers',
         category: 'Plumbing',
@@ -203,6 +216,7 @@ export const generateSampleData = async (
         units: 'Each',
       },
       {
+        userId,
         name: 'Water Heater Service',
         description: 'Water heater repair, maintenance, or replacement',
         category: 'Plumbing',
@@ -212,9 +226,8 @@ export const generateSampleData = async (
         finalPrice: 405,
         units: 'Service Call',
       },
-      
-      // Electrical Services
       {
+        userId,
         name: 'Outlet Installation',
         description: 'Install new electrical outlets or replace existing',
         category: 'Electrical',
@@ -225,6 +238,7 @@ export const generateSampleData = async (
         units: 'Each',
       },
       {
+        userId,
         name: 'Panel Upgrade',
         description: 'Upgrade electrical panel for increased capacity',
         category: 'Electrical',
@@ -235,6 +249,7 @@ export const generateSampleData = async (
         units: 'Project',
       },
       {
+        userId,
         name: 'Lighting Installation',
         description: 'Install interior or exterior lighting fixtures',
         category: 'Electrical',
@@ -245,6 +260,7 @@ export const generateSampleData = async (
         units: 'Hour',
       },
       {
+        userId,
         name: 'Circuit Breaker Repair',
         description: 'Diagnose and repair circuit breaker issues',
         category: 'Electrical',
@@ -254,9 +270,8 @@ export const generateSampleData = async (
         finalPrice: 195,
         units: 'Service Call',
       },
-      
-      // Handyman Services
       {
+        userId,
         name: 'Drywall Repair',
         description: 'Patch and repair drywall holes and damage',
         category: 'Handyman',
@@ -267,6 +282,7 @@ export const generateSampleData = async (
         units: 'Hour',
       },
       {
+        userId,
         name: 'Interior Painting',
         description: 'Professional interior painting services',
         category: 'Handyman',
@@ -277,6 +293,7 @@ export const generateSampleData = async (
         units: 'Hour',
       },
       {
+        userId,
         name: 'Carpentry Services',
         description: 'Custom carpentry and trim work',
         category: 'Handyman',
@@ -287,6 +304,7 @@ export const generateSampleData = async (
         units: 'Hour',
       },
       {
+        userId,
         name: 'Door/Window Installation',
         description: 'Install or replace doors and windows',
         category: 'Handyman',
@@ -297,6 +315,7 @@ export const generateSampleData = async (
         units: 'Each',
       },
       {
+        userId,
         name: 'Deck Repair',
         description: 'Repair and maintain wooden decks',
         category: 'Handyman',
@@ -306,9 +325,8 @@ export const generateSampleData = async (
         finalPrice: 98,
         units: 'Hour',
       },
-      
-      // Home Rehab Materials
       {
+        userId,
         name: 'Laminate Flooring',
         description: 'Premium laminate flooring materials',
         category: 'Materials',
@@ -319,6 +337,7 @@ export const generateSampleData = async (
         units: 'Sq Ft',
       },
       {
+        userId,
         name: 'Kitchen Countertops',
         description: 'Granite or quartz countertop materials',
         category: 'Materials',
@@ -329,6 +348,7 @@ export const generateSampleData = async (
         units: 'Sq Ft',
       },
       {
+        userId,
         name: 'Cabinet Refacing Kit',
         description: 'Complete cabinet refacing materials',
         category: 'Materials',
@@ -339,6 +359,7 @@ export const generateSampleData = async (
         units: 'Set',
       },
       {
+        userId,
         name: 'Light Fixtures',
         description: 'Modern residential light fixtures',
         category: 'Materials',
@@ -348,9 +369,8 @@ export const generateSampleData = async (
         finalPrice: 112,
         units: 'Each',
       },
-      
-      // Freelance/Hourly Services
       {
+        userId,
         name: 'General Labor',
         description: 'General handyman and helper services',
         category: 'Labor',
@@ -361,6 +381,7 @@ export const generateSampleData = async (
         units: 'Hour',
       },
       {
+        userId,
         name: 'Project Consultation',
         description: 'On-site consultation and estimate',
         category: 'Consulting',
@@ -371,6 +392,7 @@ export const generateSampleData = async (
         units: 'Hour',
       },
       {
+        userId,
         name: 'Emergency Call-Out',
         description: 'After-hours or emergency service call',
         category: 'Services',
@@ -385,7 +407,7 @@ export const generateSampleData = async (
     // Insert items into database
     const itemInserts = sampleItems.map(async (item) => {
       try {
-        await addItem(userId, item as Item);
+        await addItem(userId, null, item as Item);
         itemsAddedToDb++;
       } catch (error) {
         itemsFailedToDb++;
@@ -400,7 +422,6 @@ export const generateSampleData = async (
     if (insertedCustomers.length === 0 || insertedItems.length === 0) {
       console.warn('No customers or items found - skipping quote generation');
     } else {
-      // Generate 18 sample quotes with proper age distribution
       const quoteResults = {
         fresh: 0,
         warm: 0,
@@ -423,11 +444,11 @@ export const generateSampleData = async (
             quantity: qty,
             price: item.finalPrice,
             total: qty * item.finalPrice,
-          };
-        }).filter(Boolean);
+          } as QuoteItem;
+        }).filter(Boolean) as QuoteItem[];
       };
 
-      // Fresh quotes (0-7 days sent)
+      // Fresh quotes
       const freshQuotes = [
         {
           customerName: 'The Johnson Family',
@@ -443,30 +464,9 @@ export const generateSampleData = async (
           daysAgo: 4,
           status: 'sent' as const,
         },
-        {
-          customerName: 'The Chen Residence',
-          title: 'Bathroom Remodel',
-          items: createQuoteItems(['Fixture Installation', 'Drywall Repair', 'Interior Painting'], [2, 3, 8]),
-          daysAgo: 6,
-          status: 'sent' as const,
-        },
-        {
-          customerName: 'Westside Apartments LLC',
-          title: 'Deck Staining',
-          items: createQuoteItems(['Deck Repair', 'General Labor'], [4, 8]),
-          daysAgo: 7,
-          status: 'sent' as const,
-        },
-        {
-          customerName: 'Garcia Family Home',
-          title: 'Kitchen Fixture Install',
-          items: createQuoteItems(['Lighting Installation', 'Light Fixtures'], [3, 4]),
-          daysAgo: 5,
-          status: 'sent' as const,
-        },
       ];
 
-      // Warm quotes (8-14 days sent)
+      // Warm quotes
       const warmQuotes = [
         {
           customerName: 'Highland Realty Group',
@@ -475,30 +475,9 @@ export const generateSampleData = async (
           daysAgo: 9,
           status: 'sent' as const,
         },
-        {
-          customerName: 'Thompson Home Renovations',
-          title: 'Flooring Installation',
-          items: createQuoteItems(['Laminate Flooring', 'General Labor'], [250, 16]),
-          daysAgo: 11,
-          status: 'sent' as const,
-        },
-        {
-          customerName: 'Summit Commercial Properties',
-          title: 'Exterior Painting',
-          items: createQuoteItems(['Interior Painting', 'General Labor'], [20, 12]),
-          daysAgo: 13,
-          status: 'sent' as const,
-        },
-        {
-          customerName: 'The Anderson Estate',
-          title: 'Drywall Repair',
-          items: createQuoteItems(['Drywall Repair', 'Interior Painting'], [6, 4]),
-          daysAgo: 14,
-          status: 'sent' as const,
-        },
       ];
 
-      // Aging quotes (15-30 days sent)
+      // Aging quotes
       const agingQuotes = [
         {
           customerName: 'Downtown Retail Center',
@@ -507,30 +486,9 @@ export const generateSampleData = async (
           daysAgo: 18,
           status: 'sent' as const,
         },
-        {
-          customerName: 'Riverside Townhomes HOA',
-          title: 'Gutter Cleaning',
-          items: createQuoteItems(['General Labor', 'Emergency Call-Out'], [4, 1]),
-          daysAgo: 22,
-          status: 'sent' as const,
-        },
-        {
-          customerName: 'Miller Small Business',
-          title: 'Water Heater Replacement',
-          items: createQuoteItems(['Water Heater Service', 'Pipe Repair'], [1, 3]),
-          daysAgo: 26,
-          status: 'accepted' as const,
-        },
-        {
-          customerName: 'Westside Apartments LLC',
-          title: 'Appliance Repair',
-          items: createQuoteItems(['Outlet Installation', 'General Labor'], [3, 2]),
-          daysAgo: 29,
-          status: 'sent' as const,
-        },
       ];
 
-      // Stale quotes (31+ days sent)
+      // Stale quotes
       const staleQuotes = [
         {
           customerName: 'Highland Realty Group',
@@ -539,23 +497,9 @@ export const generateSampleData = async (
           daysAgo: 35,
           status: 'sent' as const,
         },
-        {
-          customerName: 'Martinez Property Management',
-          title: 'Pool Maintenance',
-          items: createQuoteItems(['General Labor', 'Emergency Call-Out'], [8, 1]),
-          daysAgo: 42,
-          status: 'sent' as const,
-        },
-        {
-          customerName: 'Thompson Home Renovations',
-          title: 'Kitchen Remodel',
-          items: createQuoteItems(['Kitchen Countertops', 'Cabinet Refacing Kit', 'General Labor'], [35, 1, 24]),
-          daysAgo: 50,
-          status: 'declined' as const,
-        },
       ];
 
-      // Draft quotes (no sent date)
+      // Draft quotes
       const draftQuotes = [
         {
           customerName: 'The Chen Residence',
@@ -564,16 +508,8 @@ export const generateSampleData = async (
           daysAgo: null,
           status: 'draft' as const,
         },
-        {
-          customerName: 'Garcia Family Home',
-          title: 'Outdoor Lighting Installation',
-          items: createQuoteItems(['Lighting Installation', 'Light Fixtures', 'Outlet Installation'], [6, 8, 4]),
-          daysAgo: null,
-          status: 'draft' as const,
-        },
       ];
 
-      // Insert all quotes
       const allQuoteGroups = [
         { quotes: freshQuotes, category: 'fresh' },
         { quotes: warmQuotes, category: 'warm' },
@@ -596,11 +532,12 @@ export const generateSampleData = async (
             const total = subtotal + tax;
 
             const quote: Omit<Quote, 'id' | 'createdAt'> = {
+              userId,
               quoteNumber: generateQuoteNumber(),
               customerId: customer.id,
               customerName: customer.name,
               title: quoteData.title,
-              items: quoteData.items as QuoteItem[],
+              items: quoteData.items,
               subtotal,
               tax,
               total,
@@ -611,9 +548,8 @@ export const generateSampleData = async (
               updatedAt: new Date().toISOString(),
             };
 
-            await addQuote(userId, quote as Quote);
+            await addQuote(userId, null, quote as Quote);
             (quoteResults as Record<string, number>)[group.category]++;
-            console.log(`[Sample Data] Created ${group.category} quote:`, quote.quoteNumber, quote.title);
           } catch (error) {
             console.error(`Failed to create ${group.category} quote:`, error);
             quoteResults.failed++;
@@ -622,17 +558,7 @@ export const generateSampleData = async (
       }
 
       quotesAdded = quoteResults.fresh + quoteResults.warm + quoteResults.aging + quoteResults.stale + quoteResults.draft;
-      
-      console.log('Sample quotes generation results:', quoteResults);
     }
-
-    console.log('Sample data generation results:', { 
-      customersAddedToDb, 
-      customersFailedToDb,
-      itemsAddedToDb, 
-      itemsFailedToDb,
-      quotesAdded,
-    });
 
   } catch (error) {
     console.error('Error generating sample data:', error);
@@ -642,7 +568,7 @@ export const generateSampleData = async (
   // Save company settings if requested
   let companySettingsAdded = false;
   if (includeCompanySettings) {
-    await saveSettings(userId, sampleCompanySettings, () => {});
+    await saveSettings(userId, null, sampleCompanySettings, () => { });
     companySettingsAdded = true;
   }
 

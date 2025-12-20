@@ -11,8 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Quote, Customer } from '@/types';
 import { cn, formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
-import { getQuotes } from '@/lib/storage';
-import { toast } from 'sonner';
+import { getQuotes } from '@/lib/db-service';
+import { toast } from 'sonner'; import { useAuth } from '@/contexts/AuthContext';
 import { scheduleFollowUpNotification, requestNotificationPermission } from '@/lib/notifications';
 
 interface FollowUpDialogProps {
@@ -29,6 +29,7 @@ const MESSAGE_TEMPLATES = {
 };
 
 export function FollowUpDialog({ open, onOpenChange, quote, customer }: FollowUpDialogProps) {
+  const { user, organizationId, isAdmin, isMaxAITier } = useAuth();
   const [followUpDate, setFollowUpDate] = useState<Date | undefined>(
     quote.followUpDate ? new Date(quote.followUpDate) : undefined
   );
@@ -41,7 +42,8 @@ export function FollowUpDialog({ open, onOpenChange, quote, customer }: FollowUp
       return;
     }
 
-    const quotes = getQuotes();
+    if (!user?.id) return;
+    const quotes = await getQuotes(user.id, organizationId, isAdmin || isMaxAITier);
     const updatedQuotes = quotes.map(q =>
       q.id === quote.id
         ? { ...q, followUpDate: followUpDate.toISOString() }

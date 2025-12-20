@@ -9,7 +9,7 @@ import { getQuotes } from '@/lib/services/quote-service';
  * from Supabase on initial load.
  */
 export function useCacheWarmup() {
-    const { user } = useAuth();
+    const { user, organizationId, isAdmin, isMaxAITier } = useAuth();
     // Use a ref to ensure we only warm up once per session/mount
     const hasWarmedUp = useRef(false);
 
@@ -27,11 +27,12 @@ export function useCacheWarmup() {
                 // and hit the network, which the Service Worker will then cache.
                 const startTime = performance.now();
 
-                await Promise.all([
-                    getCustomers(user.id, { forceRefresh: true }),
-                    getItems(user.id, { forceRefresh: true }),
-                    getQuotes(user.id, { forceRefresh: true }),
-                ]);
+                const promises = [
+                    getCustomers(user.id, organizationId, isAdmin || isMaxAITier, { forceRefresh: true }),
+                    getItems(user.id, organizationId, { forceRefresh: true }),
+                    getQuotes(user.id, organizationId, isAdmin || isMaxAITier, { forceRefresh: true }),
+                ];
+                await Promise.all(promises);
 
                 const duration = performance.now() - startTime;
                 console.log(`✅ [CacheWarmup] Cache warmup complete in ${duration.toFixed(0)}ms`);
