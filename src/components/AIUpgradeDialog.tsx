@@ -8,7 +8,7 @@ interface AIUpgradeDialogProps {
   isOpen: boolean;
   onClose: () => void;
   featureName: AIFeatureType;
-  requiredTier: 'pro' | 'max';
+  requiredTier: 'pro' | 'max' | 'business' | 'max_ai';
 }
 
 const FEATURE_BENEFITS: Record<AIFeatureType, {
@@ -108,13 +108,23 @@ const FEATURE_BENEFITS: Record<AIFeatureType, {
 const TIER_INFO = {
   pro: {
     name: 'Pro',
-    price: '$29/month',
-    features: ['50 AI requests per month', 'Enhanced automation', 'Priority support', 'QuickBooks & Stripe']
+    price: '$49/month',
+    features: ['3 Users included', '$15/mo per extra user', 'QuickBooks & Stripe Sync', 'AI Executive Summaries']
+  },
+  business: {
+    name: 'Business',
+    price: '$99/month',
+    features: ['10 Users included', '$10/mo per extra user', 'AI SOW Drafting', 'Priority Support']
+  },
+  max_ai: {
+    name: 'Max AI',
+    price: '$249/month',
+    features: ['Unlimited Users', 'Full White-label', 'Custom AI Training', 'Dedicated Account Manager']
   },
   max: {
     name: 'Max AI',
-    price: '$49/month',
-    features: ['Unlimited AI requests', 'Teams of up to 5', 'Shared Item Catalog', 'SOW Generator', 'Manager dashboard']
+    price: '$249/month',
+    features: ['Unlimited AI requests', 'Full White-label', 'SOW Generator']
   }
 };
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Users, UserPlus, Mail, Shield, ShieldCheck, X } from 'lucide-react';
+import { useOrganizationSeats } from '@/hooks/useOrganizationSeats';
+import { UpgradeModal } from './UpgradeModal';
 
 interface TeamMember {
     id: string;
@@ -22,8 +25,11 @@ export function TeamManagement() {
     const [inviteEmail, setInviteEmail] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isInviting, setIsInviting] = useState(false);
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const { used: seatsUsed, limit: seatLimit, tier: currentTier, loading: seatsLoading } = useOrganizationSeats(organizationId);
+    const navigate = useNavigate();
 
-    const isOwner = userRole === 'max' || userRole === 'admin'; // For now, Max users are owners
+    const isOwner = userRole === 'max' || userRole === 'admin';
 
     useEffect(() => {
         if (organizationId) {
@@ -34,23 +40,19 @@ export function TeamManagement() {
     const fetchMembers = async () => {
         setIsLoading(true);
         try {
+            // Fetch all profiles in the same organization
             const { data, error } = await supabase
-                .from('memberships' as any)
-                .select(`
-          user_id,
-          role,
-          created_at,
-          profiles:user_id (email)
-        `)
+                .from('profiles')
+                .select('id, email, role, created_at')
                 .eq('organization_id', organizationId);
 
             if (error) throw error;
 
             const formattedMembers: TeamMember[] = data.map((m: any) => ({
-                id: m.user_id,
-                email: m.profiles?.email || 'Unknown',
-                role: m.role,
-                joined_at: m.created_at
+                id: m.id,
+                email: m.email || 'Unknown',
+                role: m.role as 'owner' | 'member',
+                joined_at: m.created_at || new Date().toISOString()
             }));
 
             setMembers(formattedMembers);
@@ -65,29 +67,38 @@ export function TeamManagement() {
     const handleInvite = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!inviteEmail) return;
-        if (members.length >= 5) {
-            toast.error('Team limit reached (Max 5 members)');
+
+        // Pre-validation using the hook
+        if (seatsUsed >= seatLimit && currentTier !== 'max_ai') {
+            setShowUpgradeModal(true);
             return;
         }
 
         setIsInviting(true);
         try {
-            // In a real app, this would call an Edge Function to create an invite and send an email
-            // For now, we'll simulate the invite process or use a simplified direct member addition if the user exists
             toast.info('Sending invitation to ' + inviteEmail);
 
-            const { data, error } = await supabase.functions.invoke('invite-team-member', {
+            const { data, error } = await supabase.functions.invoke('invite-user', {
                 body: { email: inviteEmail, organizationId }
             });
 
-            if (error) throw error;
+            if (error) {
+                // Check if it's a seat limit error
+                if (error.message?.includes('ERR_SEAT_LIMIT_REACHED')) {
+                    setShowUpgradeModal(true);
+                } else {
+                    throw error;
+                }
+                return;
+            }
 
             toast.success('Invitation sent!');
             setInviteEmail('');
             fetchMembers();
         } catch (error) {
             console.error('Error inviting member:', error);
-            toast.error('Failed to send invitation');
+            const errorMessage = error instanceof Error ? error.message : 'Failed to send invitation';
+            toast.error(errorMessage);
         } finally {
             setIsInviting(false);
         }
@@ -100,10 +111,13 @@ export function TeamManagement() {
         }
 
         try {
+            // Removing a member now means setting their organization_id to null 
+            // and optionally resetting their role (or deleting the profile if preferred)
+            // For now, let's keep it consistent with the user's intent: remove from org.
             const { error } = await supabase
-                .from('memberships' as any)
-                .delete()
-                .eq('user_id', memberId)
+                .from('profiles')
+                .update({ organization_id: null, role: 'member' } as any)
+                .eq('id', memberId)
                 .eq('organization_id', organizationId);
 
             if (error) throw error;
@@ -116,35 +130,37 @@ export function TeamManagement() {
         }
     };
 
-    if (userRole !== 'max' && userRole !== 'admin') {
+    const isPro = userRole === 'pro' || userRole === 'business' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
+
+    if (!isPro) {
         return (
             <Card className="border-dashed">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Users className="h-5 w-5 text-primary" />
                         Team Management
-                        <Badge variant="secondary" className="ml-auto">Max AI</Badge>
+                        <Badge variant="secondary" className="ml-auto">Pro / Business</Badge>
                     </CardTitle>
                     <CardDescription>
-                        Upgrade to Max AI to build your team and collaborate on quotes.
+                        Upgrade to Pro or Business to build your team and collaborate.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg mb-4">
                         <ShieldCheck className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                         <div className="text-sm space-y-1">
-                            <p className="font-medium">Max AI Team Benefits:</p>
+                            <p className="font-medium">Team Benefits:</p>
                             <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                                <li>Include up to 5 team members</li>
+                                <li><strong>Pro ($49/mo)</strong>: 3 Users included, $15/mo per extra</li>
+                                <li><strong>Business ($99/mo)</strong>: 10 Users included, AI SOW Drafting</li>
+                                <li><strong>Max AI ($249/mo)</strong>: Unlimited Users, Custom AI Training</li>
                                 <li>Shared item catalog and company settings</li>
-                                <li>Private quotes and customers per representative</li>
                                 <li>Owner visibility for all team data</li>
-                                <li>Centralized billing</li>
                             </ul>
                         </div>
                     </div>
-                    <Button variant="outline" className="w-full" onClick={() => toast.info('Redirecting to subscription...')}>
-                        Upgrade to Max AI
+                    <Button variant="outline" className="w-full" onClick={() => navigate('/settings?tab=subscription')}>
+                        View Pricing
                     </Button>
                 </CardContent>
             </Card>
@@ -161,11 +177,11 @@ export function TeamManagement() {
                             Team Management
                         </CardTitle>
                         <CardDescription>
-                            Manage your team of up to 5 members
+                            Manage your team members and roles
                         </CardDescription>
                     </div>
                     <Badge variant="outline" className="bg-blue-50">
-                        {members.length} / 5 Members
+                        {members.length} Members
                     </Badge>
                 </div>
             </CardHeader>
@@ -180,10 +196,10 @@ export function TeamManagement() {
                                 placeholder="colleague@example.com"
                                 value={inviteEmail}
                                 onChange={(e) => setInviteEmail(e.target.value)}
-                                disabled={members.length >= 5}
+                                disabled={seatsUsed >= seatLimit && currentTier !== 'max_ai'}
                             />
                         </div>
-                        <Button type="submit" disabled={isInviting || !inviteEmail || members.length >= 5}>
+                        <Button type="submit" disabled={isInviting || !inviteEmail || (seatsUsed >= seatLimit && currentTier !== 'max_ai')}>
                             {isInviting ? (
                                 'Inviting...'
                             ) : (
@@ -247,6 +263,11 @@ export function TeamManagement() {
                     </div>
                 </div>
             </CardContent>
+            <UpgradeModal
+                isOpen={showUpgradeModal}
+                tier={currentTier}
+                onClose={() => setShowUpgradeModal(false)}
+            />
         </Card>
     );
 }

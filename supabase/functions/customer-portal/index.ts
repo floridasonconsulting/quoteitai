@@ -52,7 +52,7 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || "http://localhost:3000";
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${origin}/`,
+      return_url: `${origin}/settings/billing`,
     });
     logStep("Customer portal session created", { sessionId: portalSession.id, url: portalSession.url });
 
@@ -63,13 +63,13 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR in customer-portal", { message: errorMessage });
-    
+
     // Return sanitized error to client
     const isDevelopment = Deno.env.get('ENVIRONMENT') === 'development';
-    const clientError = isDevelopment 
-      ? errorMessage 
+    const clientError = isDevelopment
+      ? errorMessage
       : 'Unable to access customer portal. Please try again.';
-    
+
     return new Response(JSON.stringify({ error: clientError }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,

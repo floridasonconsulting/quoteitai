@@ -11,7 +11,7 @@ interface SubscriptionData {
   subscription_end: string | null;
 }
 
-type UserRole = 'admin' | 'free' | 'pro' | 'max';
+type UserRole = 'admin' | 'free' | 'pro' | 'max' | 'starter' | 'business' | 'max_ai';
 
 interface AuthContextType {
   user: User | null;
@@ -21,6 +21,8 @@ interface AuthContextType {
   subscriptionTier: UserRole | null; // Alias for userRole for backward compatibility
   organizationId: string | null;
   isAdmin: boolean;
+  isProTier: boolean;
+  isBusinessTier: boolean;
   isMaxAITier: boolean;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: AuthError | null }>;
@@ -47,7 +49,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const roleCheckInProgress = useRef(false);
 
   const isAdmin = userRole === 'admin';
-  const isMaxAITier = userRole === 'max' || userRole === 'admin';
+  const isProTier = userRole === 'pro' || userRole === 'business' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
+  const isBusinessTier = userRole === 'business' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
+  const isMaxAITier = userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
 
   const checkUserRole = async (sessionToUse?: Session | null) => {
     if (roleCheckInProgress.current) {
@@ -67,40 +71,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     roleCheckInProgress.current = true;
 
     try {
-      // Try to get role via RPC function (direct database call)
-      const rolePromise = supabase.rpc('get_user_role', {
-        _user_id: activeSession.user.id,
-      });
+      // 1. Fetch user role and organization from the profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role, organization_id')
+        .eq('id', activeSession.user.id)
+        .maybeSingle();
 
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Role check timeout")), 3000)
-      );
-
-      const { data, error } = await Promise.race([rolePromise, timeoutPromise]) as { data: unknown, error: AuthError | null };
-
-      if (error) {
-        console.error('[AuthContext] Error fetching user role:', error);
+      if (profileError) {
+        console.error('[AuthContext] Error fetching profile:', profileError);
         setUserRole('free');
         return;
       }
 
-      console.log('[AuthContext] Role fetched:', data);
-
-      // Also fetch organization_id if user has role
-      if (data) {
-        const { data: membershipData } = await supabase
-          .from('memberships' as any)
-          .select('organization_id')
-          .eq('user_id', activeSession.user.id)
-          .maybeSingle();
-
-        if (membershipData) {
-          console.log('[AuthContext] Org ID fetched:', (membershipData as any).organization_id);
-          setOrganizationId((membershipData as any).organization_id);
-        }
+      if (profile) {
+        console.log('[AuthContext] Profile fetched:', profile);
+        setUserRole(profile.role as UserRole);
+        setOrganizationId(profile.organization_id);
+      } else {
+        // Fallback for new users without profiles yet (trigger should create it, but just in case)
+        console.log('[AuthContext] No profile found, using legacy role check or default');
+        const { data: legacyRole } = await supabase.rpc('get_user_role', {
+          _user_id: activeSession.user.id,
+        });
+        setUserRole((legacyRole as UserRole) || 'free');
       }
-
-      setUserRole(data as UserRole);
     } catch (error) {
       console.error('[AuthContext] Error checking user role:', error);
       setUserRole('free');
@@ -425,6 +420,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         subscriptionTier: userRole,
         organizationId,
         isAdmin,
+        isProTier,
+        isBusinessTier,
         isMaxAITier,
         loading,
         signUp,

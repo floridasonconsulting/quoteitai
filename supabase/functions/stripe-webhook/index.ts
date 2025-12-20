@@ -33,31 +33,39 @@ serve(async (req) => {
         const paymentType = session.metadata?.paymentType
         const depositPercentage = session.metadata?.depositPercentage
 
-        if (!quoteId) {
-          console.error('No quoteId in session metadata')
+        if (!quoteId && !session.metadata?.orgId) {
+          console.error('No quoteId or orgId in session metadata')
           break
         }
 
-        // Update quote with payment information
-        const { error: updateError } = await supabase
-          .from('quotes')
-          .update({
-            payment_status: 'paid',
-            payment_amount: session.amount_total ? session.amount_total / 100 : 0,
-            stripe_payment_id: session.payment_intent as string,
-            deposit_percentage: depositPercentage ? parseInt(depositPercentage) : null,
-            paid_at: new Date().toISOString(),
-            status: 'accepted', // Automatically accept quote on payment
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', quoteId)
+        if (quoteId) {
+          // Update quote with payment information
+          const { error: updateError } = await supabase
+            .from('quotes')
+            .update({
+              payment_status: 'paid',
+              payment_amount: session.amount_total ? session.amount_total / 100 : 0,
+              stripe_payment_id: session.payment_intent as string,
+              deposit_percentage: depositPercentage ? parseInt(depositPercentage) : null,
+              paid_at: new Date().toISOString(),
+              status: 'accepted', // Automatically accept quote on payment
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', quoteId)
 
-        if (updateError) {
-          console.error('Failed to update quote:', updateError)
-          throw updateError
+          if (updateError) {
+            console.error('Failed to update quote:', updateError)
+            throw updateError
+          }
+
+          console.log(`Quote ${quoteId} marked as paid (${paymentType})`)
         }
 
-        console.log(`Quote ${quoteId} marked as paid (${paymentType})`)
+        if (session.mode === 'subscription' && session.metadata?.orgId) {
+          const orgId = session.metadata.orgId
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
+          await syncAllowedSeats(supabase, stripe, orgId, subscription)
+        }
 
         // Send confirmation email (optional - call send-quote-notification function)
         try {
@@ -77,10 +85,19 @@ serve(async (req) => {
         break
       }
 
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription
+        const orgId = subscription.metadata?.orgId
+        if (orgId) {
+          await syncAllowedSeats(supabase, stripe, orgId, subscription)
+        }
+        break
+      }
+
       case 'payment_intent.payment_failed': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
         console.error('Payment failed:', paymentIntent.id)
-        
+
         // Optional: Update quote status to indicate payment failure
         // You could add a payment_status = 'failed' field
         break
@@ -105,3 +122,42 @@ serve(async (req) => {
     )
   }
 })
+
+async function syncAllowedSeats(supabase: any, stripe: any, orgId: string, subscription: Stripe.Subscription) {
+  console.log(`Syncing allowed_seats for org ${orgId}`)
+
+  const tier = subscription.metadata?.tier || 'starter'
+  const tierLimits: Record<string, number> = { starter: 1, pro: 3, business: 10, max_ai: 999999 }
+  const includedSeats = tierLimits[tier] || 1
+
+  let overageSeats = 0
+
+  // Sum quantities of items that are NOT the base tier (which is usually quantity 1)
+  // or items specifically tagged as additional seats.
+  for (const item of subscription.items.data) {
+    const isAdditionalSeat = item.metadata?.metered_seats === 'true' ||
+      item.price.product.toString().toLowerCase().includes('seat')
+
+    if (isAdditionalSeat) {
+      overageSeats += (item.quantity || 0)
+    }
+  }
+
+  const totalSeats = includedSeats + overageSeats
+  console.log(`Calculated total seats: ${totalSeats} (${includedSeats} included + ${overageSeats} overage)`)
+
+  const { error } = await supabase
+    .from('organizations')
+    .update({
+      allowed_seats: totalSeats,
+      subscription_tier: tier,
+      stripe_customer_id: subscription.customer as string,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', orgId)
+
+  if (error) {
+    console.error('Failed to sync allowed_seats:', error)
+    throw error
+  }
+}

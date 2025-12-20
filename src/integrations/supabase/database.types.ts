@@ -165,6 +165,36 @@ export type Database = {
         }
         Relationships: []
       }
+      organizations: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          subscription_tier: string | null
+          stripe_customer_id: string | null
+          allowed_seats: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          subscription_tier?: string | null
+          stripe_customer_id?: string | null
+          allowed_seats?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          subscription_tier?: string | null
+          stripe_customer_id?: string | null
+          allowed_seats?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       items: {
         Row: {
           base_price: number
@@ -227,6 +257,8 @@ export type Database = {
           full_name: string | null
           id: string
           updated_at: string | null
+          organization_id: string | null
+          role: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -235,6 +267,8 @@ export type Database = {
           full_name?: string | null
           id: string
           updated_at?: string | null
+          organization_id?: string | null
+          role?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -243,6 +277,8 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string | null
+          organization_id?: string | null
+          role?: string | null
         }
         Relationships: []
       }
