@@ -659,28 +659,26 @@ function InvestmentSummarySlide({
                   </div>
 
                   <div className="p-6 space-y-5">
-                    <div className="space-y-3">
-                      {section.tax > 0 ? (
-                        <>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Project Subtotal</span>
-                            <span className="text-gray-900 dark:text-white font-bold">{formatCurrency(section.subtotal || 0)}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Estimated Tax</span>
-                            <span className="text-gray-900 dark:text-white font-bold">{formatCurrency(section.tax || 0)}</span>
-                          </div>
-                        </>
-                      ) : null}
+                    {section.tax > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Project Subtotal</span>
+                          <span className="text-gray-900 dark:text-white font-bold">{formatCurrency(section.subtotal || 0)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Estimated Tax</span>
+                          <span className="text-gray-900 dark:text-white font-bold">{formatCurrency(section.tax || 0)}</span>
+                        </div>
 
-                      <div className="h-px bg-gray-100 dark:bg-gray-800 w-full" />
-                      <div className="flex justify-between items-center pt-1">
-                        <span className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tighter">
-                          {section.tax > 0 ? "Total Amount" : "Total Investment"}
-                        </span>
-                        <span className="text-xl font-black text-primary tracking-tighter">{formatCurrency(section.total || 0)}</span>
+                        <div className="h-px bg-gray-100 dark:bg-gray-800 w-full" />
+                        <div className="flex justify-between items-center pt-1">
+                          <span className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+                            Total Amount
+                          </span>
+                          <span className="text-xl font-black text-primary tracking-tighter">{formatCurrency(section.total || 0)}</span>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800/50">
                       <p className="text-[10px] leading-relaxed text-blue-700/80 dark:text-blue-300/80 italic text-center">
