@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { AIButton } from './AIButton';
 import { AIUpgradeDialog } from './AIUpgradeDialog';
-import { FileText, Copy, Download } from 'lucide-react';
+import { FileText, Copy, Download, PlusCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Quote } from '@/types';
@@ -15,13 +15,15 @@ interface SOWGeneratorAIProps {
     quote: Quote;
     companyName?: string;
     onSOWGenerated?: (sow: string) => void;
+    onSaveToQuote?: (sow: string) => Promise<void>;
 }
 
-export function SOWGeneratorAI({ quote, companyName, onSOWGenerated }: SOWGeneratorAIProps) {
+export function SOWGeneratorAI({ quote, companyName, onSOWGenerated, onSaveToQuote }: SOWGeneratorAIProps) {
     const { userRole } = useAuth();
     const [additionalContext, setAdditionalContext] = useState('');
     const [generatedSOW, setGeneratedSOW] = useState<string | null>(null);
     const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     const sowAI = useAI('scope_of_work', {
         onSuccess: (content) => {
@@ -183,6 +185,28 @@ Format this as a professional document using markdown. Use clear headings, bulle
                                         <Download className="h-4 w-4 mr-1" />
                                         Download
                                     </Button>
+                                    {onSaveToQuote && (
+                                        <Button
+                                            size="sm"
+                                            onClick={async () => {
+                                                if (!generatedSOW) return;
+                                                setIsSaving(true);
+                                                try {
+                                                    await onSaveToQuote(generatedSOW);
+                                                    toast.success('SOW added to proposal!');
+                                                } catch (e) {
+                                                    toast.error('Failed to save SOW');
+                                                } finally {
+                                                    setIsSaving(false);
+                                                }
+                                            }}
+                                            disabled={isSaving}
+                                            className="bg-blue-600 hover:bg-blue-700"
+                                        >
+                                            <PlusCircle className="h-4 w-4 mr-1" />
+                                            {isSaving ? 'Saving...' : 'Add to Proposal'}
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                             <div className="bg-muted/50 rounded-lg p-4 max-h-96 overflow-y-auto">

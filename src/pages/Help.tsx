@@ -4,15 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { 
-  Search, 
-  BookOpen, 
-  FileText, 
-  Users, 
-  Package, 
-  BarChart3, 
-  Sparkles, 
-  Settings, 
+import {
+  Search,
+  BookOpen,
+  FileText,
+  Users,
+  Package,
+  BarChart3,
+  Sparkles,
+  Settings,
   CreditCard,
   HelpCircle,
   Home,
@@ -64,6 +64,18 @@ const helpCategories = [
       {
         title: "Generating PDF Quotes",
         content: "Click 'Download PDF' on any quote detail page to generate a professional PDF. The PDF includes your company logo, customer information, itemized pricing, subtotal, tax, total, and payment terms."
+      },
+      {
+        title: "Interactive Proposals",
+        content: "Share quotes as interactive proposals using the 'Share Link' button. Customers receive an OTP code via email to securely view. The proposal viewer features magazine-style swipe navigation, category sections with images, investment summary, and accept/decline buttons. Customers can leave comments too!"
+      },
+      {
+        title: "Scope of Work in Proposals",
+        content: "Generate an AI Scope of Work from the quote detail page and click 'Add to Proposal'. The SOW appears as a dedicated slide before the Investment Summary, presenting project details, deliverables, timeline, and acceptance criteria in a professional format."
+      },
+      {
+        title: "Pricing Display Modes",
+        content: "Control how pricing appears in proposals: Itemized (shows all line item prices), Category Totals (shows subtotal per category), or Grand Total Only (hides individual prices, shows only the total). Set this per quote when editing."
       }
     ]
   },
@@ -138,12 +150,24 @@ const helpCategories = [
         content: "When creating or editing a quote, click the AI button next to the title field. The AI analyzes your customer and items to suggest relevant, professional quote titles. Available on Pro and Max AI plans."
       },
       {
+        title: "AI Full Quote Generation",
+        content: "On the New Quote page, describe your project in plain language (e.g., 'I'm at the Johnson residence and we will be installing new equipment...'). AI generates the title, suggests items from your catalog, writes the executive summary, and even extracts the customer name. Tip: Start with 'Customer is [Name]' or 'I'm at the [Name] home' for automatic customer matching. Max AI plan feature."
+      },
+      {
+        title: "AI Scope of Work Generator",
+        content: "On any quote detail page, find the 'AI Scope of Work Generator' section. Click 'Generate Scope of Work' to create a comprehensive SOW document. Once generated, click 'Add to Proposal' to include it as a dedicated slide in your proposal. The SOW appears before the Investment Summary. Business+ plan feature."
+      },
+      {
+        title: "AI Follow-up Messages",
+        content: "The AI generates personalized follow-up emails based on quote staleness. Fresh quotes (0-3 days) get friendly check-ins, warm quotes (4-7 days) address concerns, aging quotes (8-14 days) create urgency, and stale quotes (15+ days) get final outreach with incentives. You can edit the message before sending."
+      },
+      {
         title: "AI Terms & Conditions",
         content: "Click 'Generate' in the terms section to have AI create customized payment terms and conditions based on your quote details. This ensures professional, comprehensive terms. Max AI plan feature."
       },
       {
         title: "AI Usage Limits",
-        content: "Free plan: limited AI features. Pro plan: 50 AI requests per month. Max AI plan: unlimited AI requests. Usage resets monthly. Upgrade in Settings > Subscription to increase your limit."
+        content: "Free plan: limited AI features. Pro plan: 50 AI requests per month. Business/Max AI plan: unlimited AI requests. Usage resets monthly. Upgrade in Settings > Subscription to increase your limit."
       }
     ]
   },
@@ -348,8 +372,8 @@ export default function Help() {
                 // Category Grid View
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {helpCategories.map((category) => (
-                    <Card 
-                      key={category.id} 
+                    <Card
+                      key={category.id}
                       className="hover:shadow-lg transition-shadow cursor-pointer"
                       onClick={() => scrollToCategory(category.id)}
                     >

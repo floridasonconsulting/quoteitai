@@ -339,14 +339,6 @@ export default function Quotes() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              size="sm"
-              onClick={handleDebugStorage}
-              title="Print debug info to console"
-            >
-              <Bug className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
               onClick={() => setBatchDialogOpen(true)}
               title="Generate multiple quotes from CSV"
             >

@@ -59,7 +59,7 @@ export interface ProposalVisuals {
 
 export interface ProposalSection {
   id: string;
-  type: 'hero' | 'text' | 'lineItems' | 'categoryGroup' | 'pricing' | 'legal';
+  type: 'hero' | 'text' | 'lineItems' | 'categoryGroup' | 'pricing' | 'legal' | 'scopeOfWork';
   title?: string;
   subtitle?: string;
   content?: string;

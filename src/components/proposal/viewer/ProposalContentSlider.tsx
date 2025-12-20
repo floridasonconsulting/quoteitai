@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import type { Swiper as SwiperType } from "swiper";
 import type { ProposalSection } from "@/types/proposal";
 import { CategoryGroupSection } from "./CategoryGroupSection";
+import { ScopeOfWorkSlide } from "./ScopeOfWorkSlide";
 import { Button } from "@/components/ui/button";
 import { Edit3 } from "lucide-react";
 
@@ -240,6 +241,8 @@ function SlideContent({
         />;
       case 'legal':
         return <LegalSlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} />;
+      case 'scopeOfWork':
+        return <ScopeOfWorkSlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} />;
       default:
         return null;
     }

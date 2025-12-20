@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { saveSettings, clearDatabaseData, clearSampleData } from "@/lib/db-service";
 import { clearAllData } from "@/lib/storage";
 import {
@@ -420,207 +421,234 @@ export default function Settings() {
         </p>
       </div>
 
-      <div className="space-y-6">
-        <BrandingSection
-          settings={settings}
-          onUpdate={handleUpdateSettings}
-        />
+      <Tabs defaultValue="company" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="company">Company</TabsTrigger>
+          <TabsTrigger value="proposals">Proposals</TabsTrigger>
+          <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          <TabsTrigger value="system">System</TabsTrigger>
+        </TabsList>
 
-        <CompanyInfoSection
-          settings={settings}
-          onUpdate={handleUpdateSettings}
-        />
+        {/* COMPANY TAB */}
+        <TabsContent value="company" className="space-y-6">
+          <BrandingSection
+            settings={settings}
+            onUpdate={handleUpdateSettings}
+          />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Proposal Settings</CardTitle>
-            <CardDescription>
-              Configure your proposal terms and conditions. Proposals now feature secure OTP verification, interactive action bars with comments/accept/reject, and smooth flip-style navigation with mobile swipe gestures.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <ProposalThemeSelector settings={settings} onUpdate={handleUpdateSettings} />
-            <Separator />
-            <TermsSection settings={settings} onUpdate={handleUpdateSettings} />
-          </CardContent>
-        </Card>
+          <CompanyInfoSection
+            settings={settings}
+            onUpdate={handleUpdateSettings}
+          />
 
-        <NotificationPreferencesSection
-          settings={settings as any}
-          onUpdate={handleUpdateSettings as any}
-        />
+          <NotificationPreferencesSection
+            settings={settings as any}
+            onUpdate={handleUpdateSettings as any}
+          />
 
-        <VisualsDefaultsSection
-          settings={settings}
-          onUpdate={handleUpdateSettings}
-        />
+          <AccountSection />
+        </TabsContent>
 
-        <AppearanceSection />
-
-        <AccountSection />
-
-        <IntegrationsSection />
-
-        <DataManagementSection />
-
-        <CacheManagementSection />
-
-        <PerformanceDashboard />
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <RefreshCw className="h-5 w-5" />
-              Data Sync
-            </CardTitle>
-            <CardDescription>
-              Manually sync your local data to the database
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Force sync all local data to the database for cross-device access.
-              </p>
-              <Button
-                onClick={handleManualSync}
-                disabled={syncing || !user}
-                variant="outline"
-                className="w-full"
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-                {syncing ? "Syncing..." : "Sync Data Now"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              System Status
-            </CardTitle>
-            <CardDescription>
-              Monitor connection and sync status
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 grid-cols-3">
-              <div className="rounded-lg border p-3 space-y-1">
-                <p className="text-xs text-muted-foreground">Connection</p>
-                <p className="text-sm font-bold">{isOnline ? "Online" : "Offline"}</p>
-              </div>
-
-              <div className="rounded-lg border p-3 space-y-1">
-                <p className="text-xs text-muted-foreground">Sync Status</p>
-                <p className="text-sm font-bold">{isSyncing ? "Syncing" : "Idle"}</p>
-              </div>
-
-              <div className="rounded-lg border p-3 space-y-1">
-                <p className="text-xs text-muted-foreground">Pending</p>
-                <Badge variant={pendingCount > 0 ? "default" : "secondary"}>{pendingCount}</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {isAdmin && (
-          <Card className="border-primary/50 bg-primary/5">
+        {/* PROPOSALS TAB */}
+        <TabsContent value="proposals" className="space-y-6">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-primary" />
-                Admin Controls
-              </CardTitle>
+              <CardTitle>Proposal Settings</CardTitle>
               <CardDescription>
-                Administrative tools for testing and managing accounts
+                Configure your proposal templates and terms
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-3">
-                <Label>AI Account Tier</Label>
-                <Select value={userRole || "free"} onValueChange={handleRoleChange}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="free">Free Tier</SelectItem>
-                    <SelectItem value="pro">Pro Tier</SelectItem>
-                    <SelectItem value="max">Max Tier</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
+              <ProposalThemeSelector settings={settings} onUpdate={handleUpdateSettings} />
               <Separator />
-
-              <div className="space-y-3">
-                <Label>Sample Data Management</Label>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleImportSampleData}
-                    disabled={importing || !user}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    {importing ? "Importing..." : "Import Sample Data"}
-                  </Button>
-
-                  <Button
-                    onClick={handleClearSampleData}
-                    disabled={clearingSampleData || !user}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    {clearingSampleData ? "Clearing..." : "Clear Sample Data"}
-                  </Button>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-3">
-                <Label>Clear Database & Import</Label>
-                <Button
-                  onClick={handleClearAndImport}
-                  disabled={importing || !user}
-                  variant="secondary"
-                  className="w-full"
-                >
-                  Clear Database & Import Sample Data
-                </Button>
-              </div>
+              <TermsSection settings={settings} onUpdate={handleUpdateSettings} />
             </CardContent>
           </Card>
-        )}
 
-        <Collapsible open={dangerZoneOpen} onOpenChange={setDangerZoneOpen}>
-          <Card className="border-destructive/50 bg-destructive/5">
-            <CardHeader>
-              <CollapsibleTrigger className="flex w-full items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
-                  <CardTitle className="text-destructive">Danger Zone</CardTitle>
+          <VisualsDefaultsSection
+            settings={settings}
+            onUpdate={handleUpdateSettings}
+          />
+
+          <AppearanceSection />
+        </TabsContent>
+
+        {/* INTEGRATIONS TAB */}
+        <TabsContent value="integrations" className="space-y-6">
+          <IntegrationsSection />
+        </TabsContent>
+
+        {/* SYSTEM TAB */}
+        <TabsContent value="system" className="space-y-6">
+          <DataManagementSection />
+
+          {isAdmin && (
+            <>
+              <CacheManagementSection />
+
+              <PerformanceDashboard />
+            </>
+          )}
+
+          {isAdmin && (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <RefreshCw className="h-5 w-5" />
+                    Data Sync
+                  </CardTitle>
+                  <CardDescription>
+                    Manually sync your local data to the database
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      Force sync all local data to the database for cross-device access.
+                    </p>
+                    <Button
+                      onClick={handleManualSync}
+                      disabled={syncing || !user}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                      {syncing ? "Syncing..." : "Sync Data Now"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    System Status
+                  </CardTitle>
+                  <CardDescription>
+                    Monitor connection and sync status
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 grid-cols-3">
+                    <div className="rounded-lg border p-3 space-y-1">
+                      <p className="text-xs text-muted-foreground">Connection</p>
+                      <p className="text-sm font-bold">{isOnline ? "Online" : "Offline"}</p>
+                    </div>
+
+                    <div className="rounded-lg border p-3 space-y-1">
+                      <p className="text-xs text-muted-foreground">Sync Status</p>
+                      <p className="text-sm font-bold">{isSyncing ? "Syncing" : "Idle"}</p>
+                    </div>
+
+                    <div className="rounded-lg border p-3 space-y-1">
+                      <p className="text-xs text-muted-foreground">Pending</p>
+                      <Badge variant={pendingCount > 0 ? "default" : "secondary"}>{pendingCount}</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {isAdmin && (
+            <Card className="border-primary/50 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  Admin Controls
+                </CardTitle>
+                <CardDescription>
+                  Administrative tools for testing and managing accounts
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-3">
+                  <Label>AI Account Tier</Label>
+                  <Select value={userRole || "free"} onValueChange={handleRoleChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="free">Free Tier</SelectItem>
+                      <SelectItem value="pro">Pro Tier</SelectItem>
+                      <SelectItem value="max">Max Tier</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <ChevronDown className="h-5 w-5 text-destructive transition-transform duration-200" />
-              </CollapsibleTrigger>
-              <CardDescription>
-                Irreversible actions that permanently delete your data
-              </CardDescription>
-            </CardHeader>
-            <CollapsibleContent>
-              <CardContent>
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    Critical operations are available through the Data Management section above.
-                    Contact support if you need to permanently delete your account.
-                  </AlertDescription>
-                </Alert>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <Label>Sample Data Management</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleImportSampleData}
+                      disabled={importing || !user}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      {importing ? "Importing..." : "Import Sample Data"}
+                    </Button>
+
+                    <Button
+                      onClick={handleClearSampleData}
+                      disabled={clearingSampleData || !user}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      {clearingSampleData ? "Clearing..." : "Clear Sample Data"}
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <Label>Clear Database & Import</Label>
+                  <Button
+                    onClick={handleClearAndImport}
+                    disabled={importing || !user}
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    Clear Database & Import Sample Data
+                  </Button>
+                </div>
               </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      </div>
+            </Card>
+          )}
+
+          <Collapsible open={dangerZoneOpen} onOpenChange={setDangerZoneOpen}>
+            <Card className="border-destructive/50 bg-destructive/5">
+              <CardHeader>
+                <CollapsibleTrigger className="flex w-full items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                    <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                  </div>
+                  <ChevronDown className="h-5 w-5 text-destructive transition-transform duration-200" />
+                </CollapsibleTrigger>
+                <CardDescription>
+                  Irreversible actions that permanently delete your data
+                </CardDescription>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent>
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      Critical operations are available through the Data Management section above.
+                      Contact support if you need to permanently delete your account.
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

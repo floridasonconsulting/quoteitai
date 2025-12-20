@@ -592,7 +592,16 @@ export default function QuoteDetail() {
       </Card>
 
       {/* AI SOW Generator - Business tier feature */}
-      <SOWGeneratorAI quote={quote} companyName={settings?.name} />
+      <SOWGeneratorAI
+        quote={quote}
+        companyName={settings?.name}
+        onSaveToQuote={async (sow) => {
+          // Save SOW to the quote
+          const updatedQuote = { ...quote, scopeOfWork: sow };
+          await updateQuote(user?.id, quote.id, { scopeOfWork: sow }, queueChange);
+          setQuote(updatedQuote);
+        }}
+      />
 
       {/* Automated Follow-up Scheduler */}
       <FollowUpScheduler quote={quote} companyName={settings?.name} />

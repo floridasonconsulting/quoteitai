@@ -261,7 +261,26 @@ export function transformQuoteToProposal(
     });
   });
 
-  // --- Section C: Financial Summary ---
+  // --- Section C: Scope of Work (if available) ---
+  if (quote.scopeOfWork && quote.scopeOfWork.trim()) {
+    sections.push({
+      id: 'scope-of-work',
+      type: 'scopeOfWork',
+      title: 'Scope of Work',
+      subtitle: quote.title,
+      content: quote.scopeOfWork,
+      backgroundImage: showImages
+        ? getCategoryImage(
+          'Scope of Work',
+          visuals?.sectionBackgrounds?.['scope-of-work'],
+          activeSettings.proposalTheme,
+          activeSettings
+        )
+        : undefined
+    });
+  }
+
+  // --- Section D: Financial Summary ---
   sections.push({
     id: 'financials',
     type: 'lineItems',
