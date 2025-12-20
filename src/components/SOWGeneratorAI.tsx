@@ -57,7 +57,9 @@ export function SOWGeneratorAI({ quote, companyName, onSOWGenerated, onSaveToQuo
             units: item.units || 'units'
         }));
 
-        const prompt = `Generate a professional Scope of Work (SOW) document for the following project:
+        const prompt = `Generate a professional, HUMAN-READABLE Scope of Work (SOW) document for the following project.
+
+CRITICAL: Output ONLY clean, professionally formatted text. Do NOT use JSON, code blocks, or any structured data format. Write it as you would a professional business document.
 
 PROJECT TITLE: ${quote.title}
 CLIENT: ${quote.customerName}
@@ -67,51 +69,42 @@ QUOTE SUMMARY:
 - Total Value: $${quote.total.toLocaleString()}
 - Number of Line Items: ${quote.items.length}
 
-DETAILED LINE ITEMS:
-${JSON.stringify(itemsBreakdown, null, 2)}
+LINE ITEMS TO INCLUDE:
+${itemsBreakdown.map(item => `• ${item.name} (Qty: ${item.quantity} ${item.units}) - ${item.description}`).join('\n')}
 
-${additionalContext ? `ADDITIONAL CONTEXT FROM USER:\n${additionalContext}` : ''}
+${additionalContext ? `ADDITIONAL CONTEXT:\n${additionalContext}` : ''}
 
 EXECUTIVE SUMMARY (if available):
 ${quote.executiveSummary || 'Not provided'}
 
 ---
 
-Generate a comprehensive, professional Scope of Work document with the following sections:
+Generate a comprehensive Scope of Work with these sections:
 
-1. **PROJECT OVERVIEW**
-   - Brief project description
-   - Client and contractor information
-   - Project location/context
+## Project Overview
+Brief description, client info, and project context.
 
-2. **SCOPE OF WORK**
-   - Detailed breakdown of all work to be performed
-   - Group by category when applicable
-   - Include quantities and specifications
+## Scope of Work
+Detailed breakdown of all work to be performed, grouped by category.
 
-3. **DELIVERABLES**
-   - List all tangible outputs/results
-   - Measurable outcomes
+## Deliverables
+List of tangible outputs and measurable outcomes.
 
-4. **TIMELINE & MILESTONES**
-   - Estimated project duration
-   - Key phases and milestones
-   - Dependencies
+## Timeline & Milestones
+Estimated duration, key phases, and milestones.
 
-5. **ACCEPTANCE CRITERIA**
-   - How work will be evaluated
-   - Quality standards
-   - Sign-off requirements
+## Acceptance Criteria
+How work will be evaluated and quality standards.
 
-6. **EXCLUSIONS**
-   - What is NOT included in this scope
-   - Assumptions that must be true
+## Exclusions
+What is NOT included in this scope.
 
-7. **TERMS & CONDITIONS SUMMARY**
-   - Reference to main contract
-   - Change order process
-
-Format this as a professional document using markdown. Use clear headings, bullet points, and proper formatting.`;
+FORMATTING RULES:
+- Use "## " for section headers (exactly as shown above)
+- Use bullet points (• or -) for lists
+- Write in complete, professional sentences
+- NO JSON, NO code blocks, NO technical formatting
+- Write as a READABLE BUSINESS DOCUMENT`;
 
         await sowAI.generate(prompt, { quote, additionalContext });
     };

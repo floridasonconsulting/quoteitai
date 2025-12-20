@@ -16,30 +16,92 @@ interface ScopeOfWorkSlideProps {
 export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkSlideProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-    // Parse SOW content into sections
+    // Convert JSON SOW to readable text
+    const convertJsonToReadable = (jsonContent: any): string => {
+        let readable = '';
+
+        if (jsonContent.projectOverview) {
+            readable += `## Project Overview\n${jsonContent.projectOverview}\n\n`;
+        }
+
+        if (jsonContent.workBreakdown && Array.isArray(jsonContent.workBreakdown)) {
+            readable += `## Scope of Work\n`;
+            jsonContent.workBreakdown.forEach((phase: any) => {
+                readable += `### ${phase.phase || 'Phase'}\n`;
+                if (phase.description) readable += `${phase.description}\n`;
+                if (phase.tasks && Array.isArray(phase.tasks)) {
+                    phase.tasks.forEach((task: string) => readable += `• ${task}\n`);
+                }
+                if (phase.duration) readable += `Duration: ${phase.duration}\n`;
+                readable += '\n';
+            });
+        }
+
+        if (jsonContent.deliverables && Array.isArray(jsonContent.deliverables)) {
+            readable += `## Deliverables\n`;
+            jsonContent.deliverables.forEach((d: string) => readable += `• ${d}\n`);
+            readable += '\n';
+        }
+
+        if (jsonContent.timeline) {
+            readable += `## Timeline & Milestones\n${typeof jsonContent.timeline === 'string' ? jsonContent.timeline : JSON.stringify(jsonContent.timeline)}\n\n`;
+        }
+
+        if (jsonContent.acceptanceCriteria) {
+            readable += `## Acceptance Criteria\n${jsonContent.acceptanceCriteria}\n\n`;
+        }
+
+        if (jsonContent.exclusions && Array.isArray(jsonContent.exclusions)) {
+            readable += `## Exclusions\n`;
+            jsonContent.exclusions.forEach((e: string) => readable += `• ${e}\n`);
+            readable += '\n';
+        }
+
+        return readable.trim();
+    };
+
+    // Parse SOW content - handle both markdown and JSON
     const parseSections = (content: string) => {
         if (!content) return [];
+
+        // Try to detect if content is JSON
+        const trimmed = content.trim();
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+            try {
+                const jsonData = JSON.parse(trimmed);
+                // Convert JSON to markdown-like format
+                content = convertJsonToReadable(jsonData);
+            } catch (e) {
+                // Not valid JSON, continue with original content
+            }
+        }
 
         const sections: { title: string; content: string; icon: string }[] = [];
         const lines = content.split('\n');
         let currentSection = { title: '', content: '', icon: 'document' };
 
         for (const line of lines) {
-            // Check for markdown headers
-            if (line.startsWith('## ') || line.startsWith('# ')) {
+            // Check for markdown headers (## or # or ### or **)
+            if (line.match(/^#{1,3}\s+/) || line.match(/^\*\*[^*]+\*\*$/)) {
                 if (currentSection.title) {
                     sections.push({ ...currentSection });
                 }
-                const title = line.replace(/^#+\s*/, '').trim();
+                const title = line.replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
                 let icon = 'document';
                 if (title.toLowerCase().includes('overview')) icon = 'overview';
                 if (title.toLowerCase().includes('scope')) icon = 'scope';
                 if (title.toLowerCase().includes('deliverable')) icon = 'deliverables';
-                if (title.toLowerCase().includes('timeline')) icon = 'timeline';
-                if (title.toLowerCase().includes('acceptance')) icon = 'acceptance';
+                if (title.toLowerCase().includes('timeline') || title.toLowerCase().includes('milestone')) icon = 'timeline';
+                if (title.toLowerCase().includes('acceptance') || title.toLowerCase().includes('criteria')) icon = 'acceptance';
                 if (title.toLowerCase().includes('exclusion')) icon = 'exclusions';
                 currentSection = { title, content: '', icon };
             } else if (currentSection.title) {
+                currentSection.content += line + '\n';
+            } else if (line.trim()) {
+                // Content before any header - create a general section
+                if (!currentSection.title) {
+                    currentSection = { title: 'Project Overview', content: '', icon: 'overview' };
+                }
                 currentSection.content += line + '\n';
             }
         }
@@ -49,6 +111,14 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkS
         }
 
         return sections;
+    };
+
+    // Format content - convert markdown lists to clean bullets
+    const formatContent = (content: string): string => {
+        return content
+            .replace(/^[-*]\s+/gm, '• ')  // Convert - or * to bullet
+            .replace(/^\d+\.\s+/gm, '• ') // Convert numbered lists to bullets
+            .trim();
     };
 
     const getIcon = (iconType: string) => {

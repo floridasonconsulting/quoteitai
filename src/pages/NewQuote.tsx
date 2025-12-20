@@ -228,6 +228,7 @@ export default function NewQuote() {
         executiveSummary,
         showPricing,
         pricingMode, // Save pricing mode
+        scopeOfWork: existingQuote?.scopeOfWork, // Preserve SOW from existing quote
         createdAt: existingQuote?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         userId: user?.id || '',
@@ -305,6 +306,7 @@ export default function NewQuote() {
         updatedAt: new Date().toISOString(),
         userId: user?.id || '',
         pricingMode, // Save pricing mode
+        scopeOfWork: existingQuote?.scopeOfWork, // Preserve SOW from existing quote
       };
 
       await updateQuote(user?.id, editQuoteId, updatedQuote, queueChange);
