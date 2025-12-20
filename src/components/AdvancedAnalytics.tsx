@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { isDemoModeActive } from '@/contexts/DemoContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -241,7 +242,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
 
   // Initial load and auto-refresh setup
   useEffect(() => {
-    if (userRole === 'max' || userRole === 'admin') {
+    if (userRole === 'max' || userRole === 'admin' || isDemoModeActive()) {
       // Silent load on mount (no toast)
       loadLiveData(false);
 
@@ -256,7 +257,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
 
   // Recalculate analytics when data or time range changes
   useEffect(() => {
-    if (userRole === 'max' || userRole === 'admin') {
+    if (userRole === 'max' || userRole === 'admin' || isDemoModeActive()) {
       calculateAnalytics();
     }
   }, [quotes, customers, timeRange, userRole, calculateAnalytics]);
@@ -267,7 +268,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
   };
 
   const handleExport = () => {
-    if (userRole !== 'max' && userRole !== 'admin') {
+    if (userRole !== 'max' && userRole !== 'admin' && !isDemoModeActive()) {
       setShowUpgradeDialog(true);
       return;
     }
@@ -341,7 +342,7 @@ export function AdvancedAnalytics({ quotes: propQuotes, customers: propCustomers
       ? `${timeSinceRefresh}m ago`
       : `${Math.floor(timeSinceRefresh / 60)}h ago`;
 
-  if (userRole !== 'max' && userRole !== 'admin') {
+  if (userRole !== 'max' && userRole !== 'admin' && !isDemoModeActive()) {
     return (
       <>
         <Card className="border-dashed">

@@ -12,6 +12,8 @@ import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 import { CustomerDB, isIndexedDBSupported } from '../indexed-db';
 import { apiTracker } from '@/lib/api-performance-tracker';
 import { syncStorage } from '../sync-storage';
+import { isDemoModeActive } from '@/contexts/DemoContext';
+import { MOCK_CUSTOMERS } from '../mockData';
 
 // Track if this is the first load for this user session
 const firstLoadMap = new Map<string, boolean>();
@@ -26,6 +28,11 @@ export async function getCustomers(
   isAdminOrOwner: boolean = false,
   options?: { forceRefresh?: boolean }
 ): Promise<Customer[]> {
+  if (isDemoModeActive()) {
+    console.log('[customer-service] (Demo Mode) Returning mock customers');
+    return Promise.resolve(MOCK_CUSTOMERS);
+  }
+
   if (!userId) {
     console.warn('⚠️ No user ID - returning empty array.');
     return [];

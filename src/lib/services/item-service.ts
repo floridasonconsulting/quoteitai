@@ -12,6 +12,8 @@ import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 import { ItemDB, isIndexedDBSupported } from '../indexed-db';
 import { apiTracker } from '@/lib/api-performance-tracker';
 import { syncStorage } from '../sync-storage';
+import { isDemoModeActive } from '@/contexts/DemoContext';
+import { MOCK_ITEMS } from '../mockData';
 
 /**
  * Fetch all items for a user
@@ -22,6 +24,11 @@ export async function getItems(
   organizationId: string | null = null,
   options?: { forceRefresh?: boolean }
 ): Promise<Item[]> {
+  if (isDemoModeActive()) {
+    console.log('[item-service] (Demo Mode) Returning mock items');
+    return Promise.resolve(MOCK_ITEMS);
+  }
+
   if (!userId) {
     console.warn('⚠️ No user ID - using cache for items.');
     const cached = await cacheManager.get<Item[]>('items');

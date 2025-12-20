@@ -15,6 +15,7 @@ import { useGlobalKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { OnboardingWizard } from "@/components/OnboardingWizard";
 import { useCacheWarmup } from "@/hooks/useCacheWarmup";
+import { DemoProvider } from "@/contexts/DemoContext";
 
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -103,10 +104,12 @@ const App = () => (
     <ThemeProvider>
       <TooltipProvider>
         <AuthProvider>
-          <ErrorBoundary>
-            <Sonner />
-            <AppRoutes />
-          </ErrorBoundary>
+          <DemoProvider>
+            <ErrorBoundary>
+              <Sonner />
+              <AppRoutes />
+            </ErrorBoundary>
+          </DemoProvider>
         </AuthProvider>
       </TooltipProvider>
     </ThemeProvider>

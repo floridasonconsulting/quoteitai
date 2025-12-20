@@ -7,7 +7,7 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
   httpClient: Stripe.createFetchHttpClient(),
 })
 
-serve(async (req) => {
+serve(async (req: Request) => {
   const signature = req.headers.get('stripe-signature')
   const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
 
@@ -111,7 +111,7 @@ serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
       status: 200,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Webhook error:', error)
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Webhook failed' }),
@@ -146,14 +146,37 @@ async function syncAllowedSeats(supabase: any, stripe: any, orgId: string, subsc
   const totalSeats = includedSeats + overageSeats
   console.log(`Calculated total seats: ${totalSeats} (${includedSeats} included + ${overageSeats} overage)`)
 
+  // Determine if we should set pro_upgraded_at
+  const isPaidTier = ['pro', 'business', 'max_ai'].includes(tier)
+
+  const updateData: any = {
+    allowed_seats: totalSeats,
+    subscription_tier: tier,
+    stripe_customer_id: subscription.customer as string,
+    updated_at: new Date().toISOString()
+  }
+
+  // Only set pro_upgraded_at if transitioning to a paid tier 
+  // Rationale: We want to catch the FIRST time they upgrade for the welcome sequence
+  if (isPaidTier) {
+    // We update it if it's currently null. 
+    // Since we don't have the current state easily here without a fetch, 
+    // and we want to avoid unnecessary fetches, we can use a clever Supabase update 
+    // or just fetch. Fetching is safer to avoid overwriting.
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('pro_upgraded_at')
+      .eq('id', orgId)
+      .single()
+
+    if (org && !org.pro_upgraded_at) {
+      updateData.pro_upgraded_at = new Date().toISOString()
+    }
+  }
+
   const { error } = await supabase
     .from('organizations')
-    .update({
-      allowed_seats: totalSeats,
-      subscription_tier: tier,
-      stripe_customer_id: subscription.customer as string,
-      updated_at: new Date().toISOString()
-    })
+    .update(updateData)
     .eq('id', orgId)
 
   if (error) {

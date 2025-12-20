@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAI } from '@/hooks/useAI';
+import { useDemoMode } from '@/contexts/DemoContext';
+import { MOCK_SOW_TEMPLATE } from '@/lib/mockData';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -20,10 +22,12 @@ interface SOWGeneratorAIProps {
 
 export function SOWGeneratorAI({ quote, companyName, onSaveToQuote, onSuccess }: SOWGeneratorAIProps) {
     const { userRole } = useAuth();
+    const { isDemoMode } = useDemoMode();
     const [generatedSOW, setGeneratedSOW] = useState<string | null>(null);
     const [additionalContext, setAdditionalContext] = useState('');
     const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isTyping, setIsTyping] = useState(false);
 
     const normalizedRole = userRole?.toLowerCase();
     const sowAI = useAI('scope_of_work', {
@@ -56,6 +60,25 @@ export function SOWGeneratorAI({ quote, companyName, onSaveToQuote, onSuccess }:
         // Case-insensitive check for robustness
 
         console.log('[SOWUserCheck] Current role:', normalizedRole);
+
+        if (isDemoMode) {
+            setIsTyping(true);
+            setGeneratedSOW('');
+
+            const template = MOCK_SOW_TEMPLATE.replace(/\[Project Name\]/g, quote.title);
+            let i = 0;
+            const interval = setInterval(() => {
+                setGeneratedSOW(prev => template.slice(0, i + 1));
+                i++;
+                if (i >= template.length) {
+                    clearInterval(interval);
+                    setIsTyping(false);
+                    toast.success('Professional SOW Generated!');
+                    onSuccess?.(template);
+                }
+            }, 20); // ~50 chars per second
+            return;
+        }
 
         if (normalizedRole !== 'max' && normalizedRole !== 'admin' && normalizedRole !== 'business' && normalizedRole !== 'max_ai') {
             console.log('[SOWUserCheck] Role insufficient, showing upgrade dialog');
@@ -173,10 +196,10 @@ FORMATTING RULES:
 
                     <AIButton
                         onClick={handleGenerate}
-                        isLoading={sowAI.isLoading}
+                        isLoading={sowAI.isLoading || isTyping}
                         className="w-full"
                     >
-                        Generate Scope of Work
+                        {isTyping ? 'AI Intelligence Engine Drafting...' : 'Generate Scope of Work'}
                     </AIButton>
 
                     {generatedSOW && (

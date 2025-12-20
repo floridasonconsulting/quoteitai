@@ -29,6 +29,8 @@ import { useSyncManager } from "@/hooks/useSyncManager";
 import { checkAndMigrateData } from "@/lib/migration-helper";
 import { dispatchDataRefresh } from "@/hooks/useDataRefresh";
 import { supabase } from "@/integrations/supabase/client";
+import { useDemoMode } from "@/contexts/DemoContext";
+import { Switch } from "@/components/ui/switch";
 
 import { CompanyInfoSection } from "@/components/settings/CompanyInfoSection";
 import { BrandingSection } from "@/components/settings/BrandingSection";
@@ -62,6 +64,7 @@ export default function Settings() {
   const navigate = useNavigate();
   const { themeMode } = useTheme();
   const { user, userRole, isAdmin, isMaxAITier, organizationId, updateUserRole, checkUserRole, subscription, refreshSubscription } = useAuth();
+  const { isDemoMode, setDemoMode } = useDemoMode();
   const { queueChange, pauseSync, resumeSync, isOnline, isSyncing, pendingCount, failedCount } = useSyncManager();
 
   const [loading, setLoading] = useState(true);
@@ -627,6 +630,23 @@ export default function Settings() {
                   >
                     Clear Database & Import Sample Data
                   </Button>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">Demo Mode</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Showcase Quote-it AI with professional mock data and branding.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={isDemoMode}
+                      onCheckedChange={setDemoMode}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>

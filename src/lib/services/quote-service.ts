@@ -11,6 +11,8 @@ import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 import { QuoteDB, isIndexedDBSupported } from '../indexed-db';
 import { syncStorage } from '../sync-storage';
+import { isDemoModeActive } from '@/contexts/DemoContext';
+import { MOCK_QUOTES } from '../mockData';
 
 /**
  * Deduplicate quotes by ID (keeps the most recent version)
@@ -42,6 +44,10 @@ export async function getQuotes(
   isAdminOrOwner: boolean = false,
   options?: { forceRefresh?: boolean }
 ): Promise<Quote[]> {
+  if (isDemoModeActive()) {
+    console.log('[quote-service] (Demo Mode) Returning mock quotes');
+    return Promise.resolve(MOCK_QUOTES);
+  }
   if (!userId) {
     console.warn('⚠️ No user ID - using cache for quotes.');
     const cached = await cacheManager.get<Quote[]>('quotes');

@@ -13,6 +13,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { visualsService } from '@/lib/services/visuals-service';
 import { ProposalVisuals, ProposalSection } from '@/types/proposal';
 import { VisualRule } from "@/types";
+import { isDemoModeActive } from '@/contexts/DemoContext';
+import { MOCK_QUOTES, MOCK_CUSTOMERS } from '@/lib/mockData';
 
 // Helper to safely parse visual rules from JSON or object
 const parseVisualRules = (rules: any): VisualRule[] => {
@@ -60,6 +62,13 @@ export default function PublicQuoteView() {
 
   // Check for existing session token or ownership once auth is ready
   useEffect(() => {
+    if (isDemoModeActive()) {
+      console.log('[PublicQuoteView] (Demo Mode) Bypassing auth and loading mock data');
+      setAuthenticated(true);
+      loadDemoData();
+      return;
+    }
+
     if (authLoading) {
       console.log('[PublicQuoteView] Waiting for auth to initialize...');
       return;
@@ -218,6 +227,30 @@ export default function PublicQuoteView() {
       console.error('[PublicQuoteView] Error sending comment:', error);
       throw error;
     }
+  };
+
+  const loadDemoData = () => {
+    const demoQuote = { ...MOCK_QUOTES[0] };
+    setQuote(demoQuote);
+    setCustomer(MOCK_CUSTOMERS[0]);
+    setSettings({
+      name: 'Quote-it Pro Services',
+      address: '123 Enterprise Way',
+      city: 'Innovate City',
+      state: 'CA',
+      zip: '90210',
+      phone: '(800) 555-0199',
+      email: 'pro@quoteit.ai',
+      website: 'www.quoteit.ai',
+      logo: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=2070&auto=format&fit=crop', // Professional blue abstract logo
+      logoDisplayOption: 'both',
+      terms: 'Standard professional service terms apply. All work is guaranteed for 12 months.',
+      proposalTemplate: 'modern',
+      proposalTheme: 'modern-corporate',
+      showProposalImages: true,
+      currency: 'USD',
+    });
+    setLoading(false);
   };
 
   // Load quote data after authentication

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Search, FileText, Calendar, Trash2, Bell, X, Bug, FileSpreadsheet, Sparkles } from 'lucide-react';
+import { Plus, Search, FileText, Calendar, Trash2, Bell, X, Bug, FileSpreadsheet, Sparkles, RefreshCw } from 'lucide-react';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -33,7 +33,7 @@ export default function Quotes() {
   // Optimistic Options
   const optimisticOptions = useMemo(() => ({
     entityName: 'Quote',
-    onDelete: (id: string) => deleteQuote(user?.id, id, queueChange)
+    onDelete: (id: string) => deleteQuote(user?.id, organizationId, id, queueChange)
   }), [user?.id, queueChange]);
 
   const {
@@ -530,6 +530,12 @@ export default function Quotes() {
                             <Badge variant="outline" className={`text-xs whitespace-nowrap ${getStatusColor(quote.status)}`}>
                               {quote.status}
                             </Badge>
+                            {quote.status === 'accepted' && (
+                              <Badge variant="secondary" className="text-xs whitespace-nowrap bg-green-100 text-green-700 border-green-200">
+                                <RefreshCw className="h-3 w-3 mr-1" />
+                                Synced to QuickBooks
+                              </Badge>
+                            )}
                             {quote.status === 'sent' && (
                               <Badge variant="outline" className={`text-xs whitespace-nowrap ${getAgeColor(age)}`}>
                                 {age}
