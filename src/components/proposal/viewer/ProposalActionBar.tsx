@@ -84,7 +84,8 @@ export function ProposalActionBar({
               size="lg"
               onClick={onAccept}
               disabled={isProcessing}
-              className="gap-2 bg-green-600 hover:bg-green-700 text-white shadow-lg"
+              className="gap-2 text-white shadow-lg hover:opacity-90"
+              style={{ backgroundColor: 'var(--theme-primary)' }}
             >
               <CheckCircle className="w-4 h-4" />
               Approve Proposal

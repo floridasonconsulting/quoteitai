@@ -152,7 +152,7 @@ export function ProposalContentSlider({
             width: 8px;
             height: 8px;
             transition: all 0.3s ease;
-            background: rgba(var(--theme-primary), 0.2) !important;
+            background: color-mix(in srgb, var(--theme-primary), transparent 80%) !important;
             opacity: 1 !important;
         }
         .swiper-pagination-bullet-active {

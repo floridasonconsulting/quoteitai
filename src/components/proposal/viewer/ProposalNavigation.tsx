@@ -60,28 +60,25 @@ export function ProposalNavigation({
               onClick={() => onNavigate(section.index)}
               className={cn(
                 "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-200",
-                "hover:bg-gray-100 dark:hover:bg-gray-800",
-                isActive && "bg-primary text-primary-foreground hover:bg-primary/90"
+                "hover:bg-gray-100 dark:hover:bg-gray-800"
               )}
+              style={isActive ? {
+                backgroundColor: 'var(--theme-primary)',
+                color: 'white'
+              } : {}}
               whileHover={{ x: 4 }}
               whileTap={{ scale: 0.98 }}
             >
-              <span className={cn(
-                "flex-shrink-0",
-                isActive ? "text-primary-foreground" : "text-muted-foreground"
-              )}>
+              <span className="flex-shrink-0" style={{ color: isActive ? 'white' : undefined }}>
                 {getIcon(section.type)}
               </span>
-              <span className={cn(
-                "text-sm font-medium",
-                isActive ? "text-primary-foreground" : "text-gray-700 dark:text-gray-300"
-              )}>
+              <span className="text-sm font-medium" style={{ color: isActive ? 'white' : undefined }}>
                 {section.label}
               </span>
               {isActive && (
                 <motion.div
                   layoutId="activeIndicator"
-                  className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-foreground"
+                  className="ml-auto w-1.5 h-1.5 rounded-full bg-white/40"
                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 />
               )}
