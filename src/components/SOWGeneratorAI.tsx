@@ -94,54 +94,45 @@ export function SOWGeneratorAI({ quote, companyName, onSaveToQuote, onSuccess }:
             units: item.units || 'units'
         }));
 
-        const prompt = `Generate a professional, HUMAN-READABLE Scope of Work (SOW) document for the following project.
+        const prompt = `Role: Senior Project Architect and Master Estimator (20+ years experience in high-end trade services and professional consulting).
+Objective: Draft a comprehensive, legally-defensible, and professional "Scope of Work" (SOW) based on the project details provided below.
 
-CRITICAL: Output ONLY clean, professionally formatted text. Do NOT use JSON, code blocks, or any structured data format. Write it as you would a professional business document.
+Tone & Voice:
+- Authoritative & Precise: Use industry-specific terminology (e.g., "Mobilization," "Substantial Completion," "Load-bearing," "Mitigation").
+- Concise: Avoid fluff. Start directly with the professional headers.
+- Risk-Averse: Include language regarding site conditions, safety, and acceptance.
 
-PROJECT TITLE: ${quote.title}
-CLIENT: ${quote.customerName}
-COMPANY: ${companyName || 'Our Company'}
+PROJECT DATA:
+- Title: ${quote.title}
+- Client: ${quote.customerName}
+- Company: ${companyName || 'Our Company'}
+- Total Investment: $${quote.total.toLocaleString()}
 
-QUOTE SUMMARY:
-- Total Value: $${quote.total.toLocaleString()}
-- Number of Line Items: ${quote.items.length}
-
-LINE ITEMS TO INCLUDE:
+ITEM CATALOG (Source of Truth - Use these exact names/descriptions):
 ${itemsBreakdown.map(item => `• ${item.name} (Qty: ${item.quantity} ${item.units}) - ${item.description}`).join('\n')}
 
-${additionalContext ? `ADDITIONAL CONTEXT:\n${additionalContext}` : ''}
+${additionalContext ? `ADDITIONAL CONTEXT & CONSTRAINTS:\n${additionalContext}` : ''}
 
-EXECUTIVE SUMMARY (if available):
-${quote.executiveSummary || 'Not provided'}
+REQUIRED STRUCTURE (Markdown Format using ## for headers):
 
----
+## Executive Summary
+Define the project goal in 2-3 high-level professional sentences.
 
-Generate a comprehensive Scope of Work with these sections:
+## Work Breakdown Structure (WBS)
+Organize the project into logical phases (e.g., Phase 1: Preparation & Mobilization, Phase 2: Execution, Phase 3: Quality Control & Closeout).
 
-## Project Overview
-Brief description, client info, and project context.
-
-## Scope of Work
-Detailed breakdown of all work to be performed, grouped by category.
-
-## Deliverables
-List of tangible outputs and measurable outcomes.
-
-## Timeline & Milestones
-Estimated duration, key phases, and milestones.
-
-## Acceptance Criteria
-How work will be evaluated and quality standards.
+## Included Deliverables
+Be extremely specific about what is being provided based on the Item Catalog. Use bullet points.
 
 ## Exclusions
-What is NOT included in this scope.
+Explicitly state what is NOT included to prevent scope creep (e.g., permits, site prep not listed, hazardous material mitigation).
 
-FORMATTING RULES:
-- Use "## " for section headers (exactly as shown above)
-- Use bullet points (• or -) for lists
-- Write in complete, professional sentences
-- NO JSON, NO code blocks, NO technical formatting
-- Write as a READABLE BUSINESS DOCUMENT`;
+## Acceptance Criteria
+Define exactly what "Done" looks like (e.g., "Site cleared of debris," "Systems tested to manufacturer specs," "Substantial completion sign-off").
+
+GUARDRAILS:
+- If the project seems simple, expand it into a professional standard (e.g., "Fix a roof" becomes "Complete removal and replacement of asphalt shingle roofing system").
+- Output ONLY the professional document. No chat or introductory text.`;
 
         await sowAI.generate(prompt, { quote, additionalContext });
     };
