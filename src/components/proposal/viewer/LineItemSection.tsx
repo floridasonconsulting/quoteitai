@@ -75,53 +75,45 @@ export function LineItemSection({ section }: LineItemSectionProps) {
                 </tr>
               </thead>
               <tbody>
-                {section.items?.map((item, idx) => {
-                  // Helper to truncate description for the breakdown table
-                  const descriptionSource = item.description || item.enhancedDescription || '';
-                  const shortDescription = descriptionSource.length > 120
-                    ? descriptionSource.substring(0, 117) + '...'
-                    : descriptionSource;
-
-                  return (
-                    <tr
-                      key={idx}
-                      style={{
-                        borderBottom: '1px solid var(--theme-border)',
-                      }}
+                {section.items?.map((item, idx) => (
+                  <tr
+                    key={idx}
+                    style={{
+                      borderBottom: '1px solid var(--theme-border)',
+                    }}
+                  >
+                    <td
+                      className="p-4 font-semibold align-top"
+                      style={{ color: 'var(--theme-text-primary)' }}
                     >
-                      <td
-                        className="p-4 font-semibold"
-                        style={{ color: 'var(--theme-text-primary)' }}
-                      >
-                        {item.name}
-                      </td>
-                      <td
-                        className="p-4 text-sm"
-                        style={{ color: 'var(--theme-text-secondary)' }}
-                      >
-                        {shortDescription}
-                      </td>
-                      <td
-                        className="p-4 text-center"
-                        style={{ color: 'var(--theme-text-secondary)' }}
-                      >
-                        {item.quantity}
-                      </td>
-                      <td
-                        className="p-4 text-right font-mono"
-                        style={{ color: 'var(--theme-text-secondary)' }}
-                      >
-                        ${item.price.toLocaleString()}
-                      </td>
-                      <td
-                        className="p-4 text-right font-mono font-semibold"
-                        style={{ color: 'var(--theme-text-primary)' }}
-                      >
-                        ${item.total.toLocaleString()}
-                      </td>
-                    </tr>
-                  );
-                })}
+                      {item.name}
+                    </td>
+                    <td
+                      className="p-4 text-sm whitespace-pre-wrap align-top"
+                      style={{ color: 'var(--theme-text-secondary)' }}
+                    >
+                      {item.description || item.enhancedDescription || ''}
+                    </td>
+                    <td
+                      className="p-4 text-center"
+                      style={{ color: 'var(--theme-text-secondary)' }}
+                    >
+                      {item.quantity}
+                    </td>
+                    <td
+                      className="p-4 text-right font-mono"
+                      style={{ color: 'var(--theme-text-secondary)' }}
+                    >
+                      ${item.price.toLocaleString()}
+                    </td>
+                    <td
+                      className="p-4 text-right font-mono font-semibold"
+                      style={{ color: 'var(--theme-text-primary)' }}
+                    >
+                      ${item.total.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

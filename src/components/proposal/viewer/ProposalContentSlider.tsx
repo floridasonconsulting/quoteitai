@@ -623,9 +623,9 @@ function InvestmentSummarySlide({
                                 {item.name}
                               </span>
                             </div>
-                            {item.description && (
+                            {(item.description || item.enhancedDescription) && (
                               <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">
-                                {item.description}
+                                {item.enhancedDescription || item.description}
                               </p>
                             )}
                             {pricingMode === 'itemized' && item.quantity > 1 && (
