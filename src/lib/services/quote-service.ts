@@ -92,7 +92,7 @@ export async function getQuotes(
     // 3. Fetch from Supabase
     return cacheManager.coalesce(`quotes-${userId}`, async () => {
       try {
-        let query = supabase.from('quotes').select('*');
+        let query = supabase.from('quotes' as any).select('*');
 
         if (isAdminOrOwner && organizationId) {
           query = query.eq('organization_id', organizationId);
@@ -246,7 +246,7 @@ export async function addQuote(
   try {
     const dbQuote = toSnakeCase(quoteWithUser);
     const { data: insertedData, error } = await supabase
-      .from('quotes')
+      .from('quotes' as any)
       .insert(dbQuote as any)
       .select()
       .single();
@@ -326,7 +326,7 @@ export async function updateQuote(
   try {
     const dbUpdates = toSnakeCase(updates);
     const { error } = await supabase
-      .from('quotes')
+      .from('quotes' as any)
       .update(dbUpdates as unknown)
       .eq('id', id)
       .eq('user_id', userId);
@@ -387,7 +387,7 @@ export async function deleteQuote(
   // 3. Delete from Supabase
   try {
     const { error } = await supabase
-      .from('quotes')
+      .from('quotes' as any)
       .delete()
       .eq('id', id)
       .eq('user_id', userId);
@@ -429,7 +429,7 @@ export async function clearAllQuotes(userId: string): Promise<void> {
     // 3. Clear Supabase
     if (navigator.onLine) {
       const { error } = await supabase
-        .from('quotes')
+        .from('quotes' as any)
         .delete()
         .eq('user_id', userId);
 

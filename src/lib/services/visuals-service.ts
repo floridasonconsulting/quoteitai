@@ -7,7 +7,7 @@ export const visualsService = {
    */
   async getVisuals(quoteId: string): Promise<ProposalVisuals | null> {
     const { data, error } = await supabase
-      .from('proposal_visuals')
+      .from('proposal_visuals' as any)
       .select('*')
       .eq('quote_id', quoteId)
       .single();
@@ -73,7 +73,7 @@ export const visualsService = {
     };
 
     const { error } = await supabase
-      .from('proposal_visuals')
+      .from('proposal_visuals' as any)
       .upsert(dbData, { onConflict: 'quote_id' });
 
     if (error) {
@@ -89,20 +89,20 @@ export const visualsService = {
    */
   async saveCoverOverride(quoteId: string, url: string): Promise<void> {
     const { data: existing } = await supabase
-      .from('proposal_visuals')
+      .from('proposal_visuals' as any)
       .select('id')
       .eq('quote_id', quoteId)
       .maybeSingle();
 
     if (existing) {
       await supabase
-        .from('proposal_visuals')
+        .from('proposal_visuals' as any)
         .update({ cover_image: url, updated_at: new Date().toISOString() })
         .eq('id', (existing as any).id);
     } else {
       const userId = await this.getUserId();
       await supabase
-        .from('proposal_visuals')
+        .from('proposal_visuals' as any)
         .insert({
           user_id: userId,
           quote_id: quoteId,
@@ -116,7 +116,7 @@ export const visualsService = {
    */
   async saveSectionImageOverride(quoteId: string, sectionId: string, url: string): Promise<void> {
     const { data: existing } = await supabase
-      .from('proposal_visuals')
+      .from('proposal_visuals' as any)
       .select('id, section_backgrounds')
       .eq('quote_id', quoteId)
       .maybeSingle();
@@ -126,13 +126,13 @@ export const visualsService = {
 
     if (existing) {
       await supabase
-        .from('proposal_visuals')
+        .from('proposal_visuals' as any)
         .update({ section_backgrounds: sectionBackgrounds, updated_at: new Date().toISOString() })
         .eq('id', (existing as any).id);
     } else {
       const userId = await this.getUserId();
       await supabase
-        .from('proposal_visuals')
+        .from('proposal_visuals' as any)
         .insert({
           user_id: userId,
           quote_id: quoteId,
@@ -148,7 +148,7 @@ export const visualsService = {
    */
   async saveItemImageOverride(quoteId: string, itemName: string, url: string): Promise<void> {
     const { data: existing } = await supabase
-      .from('proposal_visuals')
+      .from('proposal_visuals' as any)
       .select('id, item_images, section_backgrounds')
       .eq('quote_id', quoteId)
       .maybeSingle();
@@ -164,7 +164,7 @@ export const visualsService = {
 
     if (existingData) {
       const { error } = await supabase
-        .from('proposal_visuals')
+        .from('proposal_visuals' as any)
         .update(updateData)
         .eq('id', existingData.id);
 
@@ -173,7 +173,7 @@ export const visualsService = {
         const sectionBackgrounds = (existingData?.section_backgrounds as Record<string, string>) || {};
         sectionBackgrounds[`item_${itemName}`] = url;
         const { error: fallbackError } = await supabase
-          .from('proposal_visuals')
+          .from('proposal_visuals' as any)
           .update({ section_backgrounds: sectionBackgrounds, updated_at: new Date().toISOString() })
           .eq('id', existingData.id);
         if (fallbackError) {
@@ -184,7 +184,7 @@ export const visualsService = {
     } else {
       const userId = await this.getUserId();
       const { error } = await supabase
-        .from('proposal_visuals')
+        .from('proposal_visuals' as any)
         .insert({
           user_id: userId,
           quote_id: quoteId,
@@ -195,7 +195,7 @@ export const visualsService = {
         console.warn('[Visuals] Error inserting with item_images, retrying without it:', error.message);
         const sectionBackgrounds = { [`item_${itemName}`]: url };
         const { error: fallbackError } = await supabase
-          .from('proposal_visuals')
+          .from('proposal_visuals' as any)
           .insert({
             user_id: userId,
             quote_id: quoteId,

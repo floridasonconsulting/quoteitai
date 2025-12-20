@@ -163,7 +163,7 @@ export async function saveSettings(
 
     if (navigator.onLine) {
       // Use upsert with proper conflict resolution
-      let query = supabase.from('company_settings').select('*');
+      let query = supabase.from('company_settings' as any).select('*');
 
       if (organizationId) {
         query = query.eq('organization_id', organizationId);
@@ -171,7 +171,7 @@ export async function saveSettings(
         query = query.eq('user_id', userId);
       }
 
-      const { data: supabaseSettings, error: selectError } = await query.maybeSingle();
+      const { data: supabaseSettings, error: selectError } = await (query as any).maybeSingle();
 
       if (selectError) {
         console.error('[DB Service] ❌ Supabase select error:', selectError);
@@ -181,19 +181,19 @@ export async function saveSettings(
       let upsertResult;
       if (supabaseSettings) {
         // Record exists, perform an update
-        upsertResult = await supabase
-          .from('company_settings')
+        upsertResult = await (supabase
+          .from('company_settings' as any)
           .update(dbSettings)
           .eq(organizationId ? 'organization_id' : 'user_id', organizationId || userId)
           .select()
-          .single();
+          .single() as any);
       } else {
         // Record does not exist, perform an insert
-        upsertResult = await supabase
-          .from('company_settings')
+        upsertResult = await (supabase
+          .from('company_settings' as any)
           .insert(dbSettings)
           .select()
-          .single();
+          .single() as any);
       }
 
       const { data, error } = upsertResult;
@@ -215,12 +215,12 @@ export async function saveSettings(
             ...resilientSettings
           } = dbSettings as any;
 
-          const { data: retryData, error: retryError } = await supabase
-            .from('company_settings')
+          const { data: retryData, error: retryError } = await (supabase
+            .from('company_settings' as any)
             .upsert(resilientSettings, {
               onConflict: 'user_id',
               ignoreDuplicates: false
-            })
+            }) as any)
             .select()
             .single();
 
@@ -241,11 +241,11 @@ export async function saveSettings(
       console.log('[DB Service] Supabase returned data:', data ? 'data received' : 'no data');
 
       // Verify the save by reading back
-      const { data: verifyData, error: verifyError } = await supabase
-        .from('company_settings')
+      const { data: verifyData, error: verifyError } = await (supabase
+        .from('company_settings' as any)
         .select('name, email, terms, industry, license, insurance, show_proposal_images')
         .eq(organizationId ? 'organization_id' : 'user_id', organizationId || userId)
-        .single();
+        .single() as any);
 
       if (verifyError) {
         console.error('[DB Service] ❌ Verification failed:', verifyError);

@@ -63,7 +63,7 @@ export async function importCustomersFromCSV(
           result.errors.push(`Line ${i + 1}: Duplicate customer: ${customer.name} (${customer.email})`);
           continue;
         } else if (duplicateStrategy === 'overwrite') {
-          await updateCustomer(userId, existingCustomer.id, customer as Customer);
+          await updateCustomer(userId, null, existingCustomer.id, customer as Customer);
           result.overwritten++;
           continue;
         }
@@ -226,7 +226,7 @@ export async function importItemsFromCSV(
           console.error(`[CSV Import] Duplicate detected: ${item.name}`);
           continue;
         } else if (duplicateStrategy === 'overwrite') {
-          await updateItem(userId, existingItem.id, item as Item);
+          await updateItem(userId, null, existingItem.id, item as Item);
           result.overwritten++;
           console.log(`[CSV Import] Overwritten: ${item.name}`);
           continue;

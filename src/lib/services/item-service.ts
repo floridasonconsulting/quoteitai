@@ -85,7 +85,7 @@ export async function getItems(
     return cacheManager.coalesce(`items-${userId}`, async () => {
       try {
         const startTime = performance.now();
-        let query = supabase.from('items').select('*');
+        let query = supabase.from('items' as any).select('*');
 
         if (organizationId) {
           query = query.eq('organization_id', organizationId);
@@ -240,7 +240,7 @@ export async function addItem(
     console.log('[ItemService] Syncing to Supabase with minQuantity and imageUrl');
 
     const startTime = performance.now();
-    const { error } = await supabase.from('items').insert(dbItem as any);
+    const { error } = await supabase.from('items' as any).insert(dbItem as any);
 
     apiTracker.track(
       'items.insert',
@@ -334,7 +334,7 @@ export async function updateItem(
 
     const startTime = performance.now();
     const { error } = await supabase
-      .from('items')
+      .from('items' as any)
       .update(dbUpdates as unknown)
       .eq('id', id)
       .eq('user_id', userId)
@@ -401,7 +401,7 @@ export async function deleteItem(
   try {
     const startTime = performance.now();
     const { error } = await supabase
-      .from('items')
+      .from('items' as any)
       .delete()
       .eq('id', id)
       .eq('user_id', userId);

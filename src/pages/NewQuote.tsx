@@ -265,7 +265,7 @@ export default function NewQuote() {
         userId: user?.id || '',
       };
 
-      await updateQuote(user?.id, editQuoteId, updatedQuote, queueChange);
+      await updateQuote(user?.id, organizationId, editQuoteId, updatedQuote, queueChange);
 
       // Save Follow-up Schedule
       if (followUpSchedule.status === 'active' || followUpSchedule.id) {
@@ -361,7 +361,7 @@ export default function NewQuote() {
         scopeOfWork: scopeOfWork, // Save current SOW
       };
 
-      await updateQuote(user?.id, editQuoteId, updatedQuote, queueChange);
+      await updateQuote(user?.id, organizationId, editQuoteId, updatedQuote, queueChange);
 
       // Save Follow-up Schedule
       if (followUpSchedule.status === 'active' || followUpSchedule.id) {

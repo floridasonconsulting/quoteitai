@@ -217,7 +217,7 @@ export function TeamManagement() {
                                         <div>
                                             <p className="font-medium">{member.email}</p>
                                             <div className="flex items-center gap-2">
-                                                <Badge variant="ghost" className="h-5 px-1.5 text-xs capitalize">
+                                                <Badge variant="outline" className="h-5 px-1.5 text-xs capitalize">
                                                     {member.role === 'owner' ? (
                                                         <Shield className="h-3 w-3 mr-1 text-blue-500" />
                                                     ) : (

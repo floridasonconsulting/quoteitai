@@ -115,7 +115,7 @@ export async function getCustomers(
       return cacheManager.coalesce(`customers-${userId}`, async () => {
         console.log(`[CustomerService] Fetching from Supabase for user ${userId}`);
         try {
-          let query = supabase.from('customers').select('*');
+          let query = supabase.from('customers' as any).select('*');
 
           if (isAdminOrOwner && organizationId) {
             query = query.eq('organization_id', organizationId);
@@ -238,7 +238,7 @@ export async function addCustomer(
 
   try {
     const dbCustomer = toSnakeCase(customerWithUser);
-    const { error } = await supabase.from('customers').insert(dbCustomer as any);
+    const { error } = await supabase.from('customers' as any).insert(dbCustomer as any);
 
     if (error) {
       console.error('❌ Database insert failed for customer:', error);
@@ -309,7 +309,7 @@ export async function updateCustomer(
   try {
     const dbUpdates = toSnakeCase(updates);
     const { error } = await supabase
-      .from('customers')
+      .from('customers' as any)
       .update(dbUpdates as unknown)
       .eq('id', id)
       .eq('user_id', userId);
@@ -355,7 +355,7 @@ export async function deleteCustomer(
 
   try {
     const { error } = await supabase
-      .from('customers')
+      .from('customers' as any)
       .delete()
       .eq('id', id)
       .eq('user_id', userId);
