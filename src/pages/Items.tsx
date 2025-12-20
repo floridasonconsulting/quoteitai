@@ -246,6 +246,7 @@ export default function Items() {
           units: formData.units,
           minQuantity,
           imageUrl,
+          enhancedDescription: formData.enhancedDescription,
         };
         await optimisticUpdate(updatedItem);
       } else {
@@ -262,6 +263,7 @@ export default function Items() {
           units: formData.units,
           minQuantity,
           imageUrl,
+          enhancedDescription: formData.enhancedDescription,
           createdAt: new Date().toISOString(),
         };
         await optimisticAdd(newItem);
@@ -314,10 +316,11 @@ export default function Items() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Name', 'Description', 'Category', 'Base Price', 'Markup Type', 'Markup', 'Final Price', 'Units'];
+    const headers = ['Name', 'Description', 'Long Description', 'Category', 'Base Price', 'Markup Type', 'Markup', 'Final Price', 'Units'];
     const rows = items.map(item => [
       item.name,
       item.description,
+      item.enhancedDescription || '',
       item.category,
       item.basePrice,
       item.markupType,

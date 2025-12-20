@@ -29,6 +29,7 @@ export interface FormData {
   units: string;
   minQuantity: string;
   imageUrl: string;
+  enhancedDescription: string;
 }
 
 export function ItemForm({ open, onOpenChange, editingItem, onSubmit, existingCategories = [], existingUnits = [] }: ItemFormProps) {
@@ -42,6 +43,7 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit, existingCa
     units: 'Each',
     minQuantity: '1',
     imageUrl: '',
+    enhancedDescription: '',
   });
 
   useEffect(() => {
@@ -56,6 +58,7 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit, existingCa
         units: editingItem.units || 'Each',
         minQuantity: editingItem.minQuantity?.toString() || '1',
         imageUrl: editingItem.imageUrl || '',
+        enhancedDescription: editingItem.enhancedDescription || '',
       });
     } else {
       setFormData({
@@ -68,6 +71,7 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit, existingCa
         units: 'Each',
         minQuantity: '1',
         imageUrl: '',
+        enhancedDescription: '',
       });
     }
   }, [editingItem, open]);
@@ -117,13 +121,29 @@ export function ItemForm({ open, onOpenChange, editingItem, onSubmit, existingCa
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">Short Description (Internal)</Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Detailed description of the item..."
-              rows={3}
+              placeholder="Simple description for internal use and list views..."
+              rows={2}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="enhancedDescription">
+              Long Description (For Proposals)
+              <span className="text-xs text-muted-foreground font-normal ml-2">
+                Preserves formatting and line breaks
+              </span>
+            </Label>
+            <Textarea
+              id="enhancedDescription"
+              value={formData.enhancedDescription}
+              onChange={(e) => setFormData({ ...formData, enhancedDescription: e.target.value })}
+              placeholder="Detailed description that will appear on the proposal's detailed category pages..."
+              rows={5}
             />
           </div>
 

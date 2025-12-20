@@ -77,9 +77,10 @@ export function LineItemSection({ section }: LineItemSectionProps) {
               <tbody>
                 {section.items?.map((item, idx) => {
                   // Helper to truncate description for the breakdown table
-                  const shortDescription = item.description?.length > 120
-                    ? item.description.substring(0, 117) + '...'
-                    : item.description;
+                  const descriptionSource = item.description || item.enhancedDescription || '';
+                  const shortDescription = descriptionSource.length > 120
+                    ? descriptionSource.substring(0, 117) + '...'
+                    : descriptionSource;
 
                   return (
                     <tr

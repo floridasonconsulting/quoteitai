@@ -197,6 +197,7 @@ export default function NewQuote() {
         itemId: item.id,
         name: item.name,
         description: item.description,
+        enhancedDescription: item.enhancedDescription, // NEW: Preserve enhanced description
         category: item.category, // NEW: Copy category from item
         quantity: defaultQuantity,
         price: item.finalPrice,

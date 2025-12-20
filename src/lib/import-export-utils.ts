@@ -147,6 +147,9 @@ export async function importItemsFromCSV(
 
         if (['basePrice', 'finalPrice'].includes(fieldName)) {
           (item as Record<string, unknown>)[fieldName] = parseFloat(value) || 0;
+        } else if (fieldName === 'enhancedDescription' || fieldName === 'Long Description') {
+          (item as Record<string, unknown>)['enhancedDescription'] = value;
+          console.log(`[CSV Import] enhancedDescription set: ${value.substring(0, 50)}...`);
         } else if (fieldName === 'minQuantity') {
           const parsed = parseInt(value, 10);
           const minQty = isNaN(parsed) || parsed < 1 ? 1 : parsed;
@@ -246,6 +249,7 @@ export async function importItemsFromCSV(
         units: item.units as string,
         minQuantity: item.minQuantity as number | undefined,
         imageUrl: item.imageUrl as string | undefined,
+        enhancedDescription: item.enhancedDescription as string | undefined,
         createdAt: new Date().toISOString(),
       };
 
@@ -602,10 +606,11 @@ export async function importAllData(file: File): Promise<void> {
 }
 
 export const exportItemsToCSV = (items: Item[]): string => {
-  const headers = ['Name', 'Description', 'Category', 'Base Price', 'Markup Type', 'Markup', 'Final Price', 'Units', 'Min Quantity', 'Image URL'];
+  const headers = ['Name', 'Description', 'Long Description', 'Category', 'Base Price', 'Markup Type', 'Markup', 'Final Price', 'Units', 'Min Quantity', 'Image URL'];
   const rows = items.map(item => [
     item.name,
     item.description,
+    item.enhancedDescription || '',
     item.category,
     item.basePrice.toString(),
     item.markupType,
