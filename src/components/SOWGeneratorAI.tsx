@@ -14,7 +14,7 @@ import { Quote } from '@/types';
 interface SOWGeneratorAIProps {
     quote: Quote;
     companyName?: string;
-    onSaveToQuote?: () => void;
+    onSaveToQuote?: (content: string) => void | Promise<void>;
     onSuccess?: (content: string) => void;
 }
 
@@ -201,7 +201,7 @@ FORMATTING RULES:
                                                 if (!generatedSOW) return;
                                                 setIsSaving(true);
                                                 try {
-                                                    await onSaveToQuote?.();
+                                                    await onSaveToQuote?.(generatedSOW);
                                                     toast.success('SOW added to proposal!');
                                                 } catch (e) {
                                                     toast.error('Failed to save SOW');

@@ -185,7 +185,7 @@ export default function QuoteDetail() {
 
   const handleCustomizeDesign = () => {
     if (!quote) return;
-    const proposalData = transformQuoteToProposal(quote, customer || undefined, settings || undefined);
+    const proposalData = transformQuoteToProposal(quote, settings || undefined);
     navigate('/proposal-editor', {
       state: { proposalData }
     });
