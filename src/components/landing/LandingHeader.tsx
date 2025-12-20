@@ -12,26 +12,32 @@ export function LandingHeader() {
           <span className="text-xl font-bold">Quote-it AI</span>
         </div>
         <nav className="hidden md:flex gap-6">
-          <button 
-            onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })} 
+          <button
+            onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
             className="text-sm hover:text-primary transition-colors"
           >
             Features
           </button>
-          <button 
-            onClick={() => document.getElementById("integrations")?.scrollIntoView({ behavior: "smooth" })} 
+          <button
+            onClick={() => document.getElementById("integrations")?.scrollIntoView({ behavior: "smooth" })}
             className="text-sm hover:text-primary transition-colors"
           >
             Integrations
           </button>
-          <button 
-            onClick={() => document.getElementById("comparison")?.scrollIntoView({ behavior: "smooth" })} 
+          <button
+            onClick={() => document.getElementById("benefits")?.scrollIntoView({ behavior: "smooth" })}
+            className="text-sm hover:text-primary transition-colors"
+          >
+            Benefits
+          </button>
+          <button
+            onClick={() => document.getElementById("pricing")?.scrollIntoView({ behavior: "smooth" })}
             className="text-sm hover:text-primary transition-colors"
           >
             Pricing
           </button>
-          <button 
-            onClick={() => navigate("/help")} 
+          <button
+            onClick={() => navigate("/help")}
             className="text-sm hover:text-primary transition-colors"
           >
             Help
