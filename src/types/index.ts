@@ -103,6 +103,9 @@ export interface CompanySettings {
   visualRules?: VisualRule[];      // NEW: Keyword mapping rules
   notifyEmailAccepted?: boolean;
   notifyEmailDeclined?: boolean;
+  showFinancing?: boolean;
+  financingText?: string;
+  financingLink?: string;
   onboardingCompleted?: boolean;
 }
 

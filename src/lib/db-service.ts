@@ -136,6 +136,9 @@ export async function saveSettings(
       default_cover_image: settings.defaultCoverImage || null,
       default_header_image: settings.defaultHeaderImage || null,
       visual_rules: settings.visualRules ? JSON.stringify(settings.visualRules) : null,
+      show_financing: settings.showFinancing ?? false,
+      financing_text: settings.financingText || null,
+      financing_link: settings.financingLink || null,
       onboarding_completed: settings.onboardingCompleted ?? false,
       updated_at: new Date().toISOString()
     };
@@ -243,7 +246,7 @@ export async function saveSettings(
       // Verify the save by reading back
       const { data: verifyData, error: verifyError } = await (supabase
         .from('company_settings' as any)
-        .select('name, email, terms, industry, license, insurance, show_proposal_images')
+        .select('name, email, terms, industry, license, insurance, show_proposal_images, show_financing, financing_text, financing_link')
         .eq(organizationId ? 'organization_id' : 'user_id', organizationId || userId)
         .single() as any);
 

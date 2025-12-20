@@ -9,6 +9,9 @@ export interface ProposalSettings {
   secondaryColor?: string;
   currency: string;
   fontFamily?: string;
+  showFinancing?: boolean;
+  financingText?: string;
+  financingLink?: string;
 }
 
 export interface ProposalClient {

@@ -96,6 +96,9 @@ export function transformQuoteToProposal(
       mode: 'light',
       primaryColor: '#000000',
       currency: 'USD',
+      showFinancing: activeSettings.showFinancing,
+      financingText: activeSettings.financingText,
+      financingLink: activeSettings.financingLink,
     },
     client: {
       name: quote.customerName,

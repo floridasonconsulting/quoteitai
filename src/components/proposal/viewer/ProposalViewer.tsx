@@ -326,6 +326,7 @@ export function ProposalViewer({
                   id: name,
                   currentImage: url
                 })}
+                settings={proposalData.settings}
               />
             </div>
 

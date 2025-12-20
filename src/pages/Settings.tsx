@@ -41,6 +41,7 @@ import { IntegrationsSection } from "@/components/settings/IntegrationsSection";
 import { ProposalThemeSelector } from "@/components/settings/ProposalThemeSelector";
 import { VisualsDefaultsSection } from "@/components/settings/VisualsDefaultsSection";
 import { CacheManagementSection } from '@/components/settings/CacheManagementSection';
+import { FinancingSettingsSection } from "@/components/settings/FinancingSettingsSection";
 import { PerformanceDashboard } from '@/components/PerformanceDashboard';
 import { TeamManagement } from "@/components/TeamManagement";
 import { VisualRule } from "@/types";
@@ -148,6 +149,9 @@ export default function Settings() {
           defaultCoverImage: sSettings.default_cover_image || undefined,
           defaultHeaderImage: sSettings.default_header_image || undefined,
           visualRules: sSettings.visual_rules ? parseVisualRules(sSettings.visual_rules) : [],
+          showFinancing: sSettings.show_financing ?? false,
+          financingText: sSettings.financing_text || "",
+          financingLink: sSettings.financing_link || "",
           onboardingCompleted: sSettings.onboarding_completed ?? false,
         };
 
@@ -467,6 +471,11 @@ export default function Settings() {
               <TermsSection settings={settings} onUpdate={handleUpdateSettings} />
             </CardContent>
           </Card>
+
+          <FinancingSettingsSection
+            settings={settings}
+            onUpdate={handleUpdateSettings}
+          />
 
           <VisualsDefaultsSection
             settings={settings}

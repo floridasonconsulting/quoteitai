@@ -7,7 +7,7 @@ import type { ProposalSection } from "@/types/proposal";
 import { CategoryGroupSection } from "./CategoryGroupSection";
 import { ScopeOfWorkSlide } from "./ScopeOfWorkSlide";
 import { Button } from "@/components/ui/button";
-import { Edit3 } from "lucide-react";
+import { Edit3, ExternalLink } from "lucide-react";
 
 // Import Swiper styles
 import "swiper/css";
@@ -21,6 +21,7 @@ interface ProposalContentSliderProps {
   isOwner?: boolean;
   onEditSectionImage?: (sectionId: string, currentUrl?: string) => void;
   onEditItemImage?: (itemName: string, currentUrl?: string) => void;
+  settings?: any;
 }
 
 /**
@@ -34,6 +35,7 @@ export function ProposalContentSlider({
   isOwner,
   onEditSectionImage,
   onEditItemImage,
+  settings,
 }: ProposalContentSliderProps) {
   const swiperRef = useRef<SwiperType | null>(null);
   const [currentIndex, setCurrentIndex] = useState(activeIndex);
@@ -110,6 +112,7 @@ export function ProposalContentSlider({
                 isOwner={isOwner}
                 onEditSectionImage={onEditSectionImage}
                 onEditItemImage={onEditItemImage}
+                settings={settings}
               />
 
               {/* Desktop Visual Hints */}
@@ -212,13 +215,15 @@ function SlideContent({
   isActive,
   isOwner,
   onEditSectionImage,
-  onEditItemImage
+  onEditItemImage,
+  settings,
 }: {
   section: ProposalSection;
   isActive: boolean;
   isOwner?: boolean;
   onEditSectionImage?: (sectionId: string, currentUrl?: string) => void;
   onEditItemImage?: (itemName: string, currentUrl?: string) => void;
+  settings?: any;
 }) {
   const getSlideComponent = () => {
     switch (section.type) {
@@ -238,6 +243,7 @@ function SlideContent({
           section={section}
           isOwner={isOwner}
           onEditImage={(url) => onEditSectionImage?.(section.id, url)}
+          settings={settings}
         />;
       case 'legal':
         return <ScopeOfWorkSlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} />;
@@ -431,13 +437,16 @@ function CategorySlide({
 function InvestmentSummarySlide({
   section,
   isOwner,
-  onEditImage
+  onEditImage,
+  settings
 }: {
   section: ProposalSection,
   isOwner?: boolean,
-  onEditImage?: (url?: string) => void
+  onEditImage?: (url?: string) => void,
+  settings?: any
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const proposalSettings = settings;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -528,7 +537,7 @@ function InvestmentSummarySlide({
 
   return (
     <div className="h-full flex flex-col bg-[#F8FAFC] dark:bg-gray-950 overflow-hidden">
-      {/* ... (Header remains unchanged) ... */}
+      {/* Header Banner */}
       <div className="relative w-full h-32 md:h-40 flex-shrink-0"
         style={{
           backgroundImage: section.backgroundImage
@@ -613,12 +622,17 @@ function InvestmentSummarySlide({
                               <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
                                 {item.name}
                               </span>
-                              {pricingMode === 'itemized' && item.quantity > 1 && (
-                                <span className="text-[10px] font-mono text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 rounded">
-                                  Qty: {item.quantity}
-                                </span>
-                              )}
                             </div>
+                            {item.description && (
+                              <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">
+                                {item.description}
+                              </p>
+                            )}
+                            {pricingMode === 'itemized' && item.quantity > 1 && (
+                              <span className="text-[10px] font-mono text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 rounded mt-1 inline-block">
+                                Qty: {item.quantity}
+                              </span>
+                            )}
                           </div>
 
                           {/* Price Display (Only if Itemized) */}
@@ -646,24 +660,27 @@ function InvestmentSummarySlide({
 
                   <div className="p-6 space-y-5">
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Project Subtotal</span>
-                        <span className="text-gray-900 dark:text-white font-bold">{formatCurrency(section.subtotal || 0)}</span>
-                      </div>
-                      {section.tax > 0 && (
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Estimated Tax</span>
-                          <span className="text-gray-900 dark:text-white font-bold">{formatCurrency(section.tax || 0)}</span>
-                        </div>
-                      )}
+                      {section.tax > 0 ? (
+                        <>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Project Subtotal</span>
+                            <span className="text-gray-900 dark:text-white font-bold">{formatCurrency(section.subtotal || 0)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-gray-500 dark:text-gray-400 font-medium tracking-tight">Estimated Tax</span>
+                            <span className="text-gray-900 dark:text-white font-bold">{formatCurrency(section.tax || 0)}</span>
+                          </div>
+                        </>
+                      ) : null}
+
                       <div className="h-px bg-gray-100 dark:bg-gray-800 w-full" />
                       <div className="flex justify-between items-center pt-1">
-                        <span className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tighter">Total Amount</span>
+                        <span className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+                          {section.tax > 0 ? "Total Amount" : "Total Investment"}
+                        </span>
                         <span className="text-xl font-black text-primary tracking-tighter">{formatCurrency(section.total || 0)}</span>
                       </div>
                     </div>
-
-                    {/* Pricing Display Mode is now controlled in Quote Settings */}
 
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800/50">
                       <p className="text-[10px] leading-relaxed text-blue-700/80 dark:text-blue-300/80 italic text-center">
@@ -671,14 +688,30 @@ function InvestmentSummarySlide({
                       </p>
                     </div>
 
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] text-center">Flexible Financing Available</p>
-                      <div className="flex justify-center gap-2">
-                        <div className="h-0.5 w-6 bg-gray-200 dark:bg-gray-800 rounded-full" />
-                        <div className="h-0.5 w-6 bg-primary/40 rounded-full" />
-                        <div className="h-0.5 w-6 bg-gray-200 dark:bg-gray-800 rounded-full" />
+                    {proposalSettings?.showFinancing && (
+                      <div className="space-y-3 pt-2">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] text-center">
+                          {proposalSettings.financingText || "Flexible Financing Available"}
+                        </p>
+                        {proposalSettings.financingLink && (
+                          <div className="flex justify-center">
+                            <a
+                              href={proposalSettings.financingLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] font-black text-primary hover:underline flex items-center gap-1 uppercase tracking-widest"
+                            >
+                              Apply Now <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
+                        )}
+                        <div className="flex justify-center gap-2">
+                          <div className="h-0.5 w-6 bg-gray-200 dark:bg-gray-800 rounded-full" />
+                          <div className="h-0.5 w-6 bg-primary/40 rounded-full" />
+                          <div className="h-0.5 w-6 bg-gray-200 dark:bg-gray-800 rounded-full" />
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
@@ -693,10 +726,8 @@ function InvestmentSummarySlide({
                 </div>
               </div>
             </div>
-
           </div>
 
-          {/* Footer Note */}
           <div className="mt-12 text-center border-t border-gray-200 dark:border-gray-800 pt-6">
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
               Acceptance of this proposal constitutes a binding agreement
@@ -704,8 +735,6 @@ function InvestmentSummarySlide({
           </div>
         </div>
       </div>
-    </div >
+    </div>
   );
 }
-
-
