@@ -18,7 +18,7 @@ function stringToColor(str: string) {
 
 function ItemImage({ item, isOwner, onEdit }: { item: ProposalItem, isOwner?: boolean, onEdit: () => void }) {
   const [hasError, setHasError] = useState(false);
-  const showFallback = hasError || !item.imageUrl?.startsWith('http');
+  const showFallback = hasError || !item.imageUrl || (!item.imageUrl.startsWith('http') && !item.imageUrl.startsWith('data:'));
 
   return (
     <div className="flex-shrink-0 w-full md:w-32 h-32 md:h-32 relative group/img">
@@ -26,23 +26,26 @@ function ItemImage({ item, isOwner, onEdit }: { item: ProposalItem, isOwner?: bo
         <img
           src={item.imageUrl}
           alt={item.name}
-          className="w-full h-full object-cover rounded-lg shadow-sm"
+          className="w-full h-full object-cover rounded-lg shadow-sm border border-gray-100 dark:border-gray-800"
           loading="lazy"
           onError={() => setHasError(true)}
         />
       ) : (
         <div
-          className="w-full h-full rounded-lg shadow-sm flex items-center justify-center bg-gray-100 dark:bg-gray-800"
+          className="w-full h-full rounded-lg shadow-sm flex items-center justify-center bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700"
           style={{
             background: item.imageUrl && (item.imageUrl.includes('gradient') || item.imageUrl.startsWith('#'))
               ? item.imageUrl
-              : `linear-gradient(135deg, ${stringToColor(item.name)}40 0%, ${stringToColor(item.name)}10 100%)`
+              : `linear-gradient(135deg, ${stringToColor(item.name || '')}20 0%, ${stringToColor(item.name || '')}05 100%)`
           }}
         >
-          {!item.imageUrl?.includes('gradient') && (
-            <span className="text-2xl font-bold opacity-30 uppercase">
-              {item.name.substring(0, 2)}
-            </span>
+          {(!item.imageUrl || (!item.imageUrl.includes('gradient') && !item.imageUrl.startsWith('#'))) && (
+            <div className="flex flex-col items-center justify-center text-center p-2 opacity-50">
+              <ImageOff className="w-6 h-6 mb-1 text-gray-400" />
+              <span className="text-[10px] uppercase font-bold text-gray-400 truncate w-full px-1">
+                {item.name ? item.name.substring(0, 10) : 'No Image'}
+              </span>
+            </div>
           )}
         </div>
       )}

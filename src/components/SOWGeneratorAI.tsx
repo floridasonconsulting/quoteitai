@@ -39,14 +39,28 @@ export function SOWGeneratorAI({ quote, companyName, onSaveToQuote, onSuccess }:
             toast.success('Scope of Work generated successfully!');
         },
         onUpgradeRequired: () => {
+            // If user is admin/max but backend says upgrade, it's a limit/service issue, not a tier issue
+            const normalizedRole = user?.role?.toLowerCase();
+            if (normalizedRole === 'admin' || normalizedRole === 'max') {
+                console.warn('[SOW] Backend requested upgrade for authorized user:', normalizedRole);
+                toast.error('Generation blocked by service limits', {
+                    description: 'As an admin, you should not see this. Please check system status.'
+                });
+                return;
+            }
             setShowUpgradeDialog(true);
         }
     });
 
     const handleGenerate = async () => {
         // SOW is a Business+ feature
-        const userRole = user?.role;
-        if (userRole !== 'business' && userRole !== 'max' && userRole !== 'admin') {
+        // Case-insensitive check for robustness
+        const normalizedRole = user?.role?.toLowerCase();
+
+        console.log('[SOWUserCheck] Current role:', normalizedRole);
+
+        if (normalizedRole !== 'business' && normalizedRole !== 'max' && normalizedRole !== 'admin') {
+            console.log('[SOWUserCheck] Role insufficient, showing upgrade dialog');
             setShowUpgradeDialog(true);
             return;
         }
