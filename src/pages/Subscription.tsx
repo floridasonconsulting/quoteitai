@@ -12,73 +12,36 @@ import React, { useState } from 'react';
 const SUBSCRIPTION_TIERS = {
   pro_monthly: {
     name: 'Pro',
-    price: '$29/month',
-    priceId: 'price_1SPTGFFe05N9s8ojqPOfbsBO', // Will need to be updated in Stripe
-    productId: 'prod_TMBdXO8oZcVkfV',
-    description: 'For growing businesses',
+    price: '$49/month',
+    priceId: 'price_pro_monthly',
+    productId: 'prod_pro',
+    description: 'Includes 3 users',
     popular: true,
     features: [
-      '50 quotes per month',
-      'Unlimited customers & items',
-      'Professional HTML Email Sending',
-      'Editable Email Templates',
-      'Branded Quote Emails',
-      'QuickBooks Integration',
-      'Stripe Payment Integration',
-      'AI Quote generation tools',
+      'Unlimited quotes',
+      '3 Users included',
+      '$15/mo per extra user',
+      'QuickBooks & Stripe sync',
+      'Professional Email Sending',
       'AI Follow-up Messages',
-      'Cloud sync across devices',
       'Priority support',
     ],
   },
-  pro_annual: {
-    name: 'Pro Annual',
-    price: '$290/year',
-    savings: 'Save $58',
-    priceId: 'price_1SPTGPFe05N9s8ojPuL611il',
-    productId: 'prod_TMBdpTblCywgQf',
-    description: 'Best value for Pro tier',
-    features: [
-      'Everything in Pro Monthly',
-      '600 quotes per year',
-      '2 months free',
-      'Priority email support',
-    ],
-  },
-  max_monthly: {
-    name: 'Max AI',
-    price: '$49/month',
-    priceId: 'price_max_monthly_new', // New consolidated price
-    productId: 'prod_max_new',
-    description: 'Advanced AI & Team Automation',
+  business_monthly: {
+    name: 'Business',
+    price: '$99/month',
+    priceId: 'price_business_monthly',
+    productId: 'prod_business',
+    description: 'Includes 10 users',
     popular: false,
     features: [
       'Everything in Pro, plus:',
-      'Unlimited quotes per month',
-      'Up to 5 team members included',
+      '10 Users included',
+      '$10/mo per extra user',
+      '✨ AI Scope of Work drafting',
+      '✨ AI-powered full quote generation',
       'Manager dashboard & review',
-      'Shared Item Catalog & Settings',
-      'Unlimited AI generation requests',
-      'AI Scope of Work (SOW) drafting',
-      'AI-powered full quote generation',
-      'AI Item Recommendations',
-      'AI Pricing Optimization',
-      'AI Competitive Analysis',
-      'White-label branding options',
-    ],
-  },
-  max_annual: {
-    name: 'Max AI Annual',
-    price: '$490/year',
-    savings: 'Save $98',
-    priceId: 'price_max_annual_new',
-    productId: 'prod_max_annual_new',
-    description: 'Best value for teams',
-    features: [
-      'Everything in Max AI Monthly',
-      '2 months free',
-      'Priority 24/7 support',
-      'Advanced analytics dashboard',
+      'Advanced analytics',
     ],
   },
 };
@@ -86,7 +49,6 @@ const SUBSCRIPTION_TIERS = {
 export default function Subscription() {
   const { subscription, refreshSubscription } = useAuth();
   const [loading, setLoading] = useState<string | null>(null);
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
 
   const handleSubscribe = async (priceId: string) => {
     setLoading(priceId);
@@ -130,14 +92,8 @@ export default function Subscription() {
     return subscription?.product_id === productId;
   };
 
-  // Filter tiers based on billing cycle
-  const displayedTiers = Object.entries(SUBSCRIPTION_TIERS).filter(([key]) => {
-    if (billingCycle === 'monthly') {
-      return key.includes('_monthly');
-    } else {
-      return key.includes('_annual');
-    }
-  });
+  // Display all active tiers
+  const displayedTiers = Object.entries(SUBSCRIPTION_TIERS);
 
   return (
     <div className="space-y-6 overflow-x-hidden max-w-full">
@@ -148,26 +104,7 @@ export default function Subscription() {
         </p>
       </div>
 
-      {/* Billing Cycle Toggle */}
-      <div className="flex items-center justify-center gap-4">
-        <Button
-          variant={billingCycle === 'monthly' ? 'default' : 'outline'}
-          onClick={() => setBillingCycle('monthly')}
-        >
-          Monthly
-        </Button>
-        <Button
-          variant={billingCycle === 'annual' ? 'default' : 'outline'}
-          onClick={() => setBillingCycle('annual')}
-          className="relative"
-        >
-          Annual
-          <Badge variant="secondary" className="ml-2 bg-green-600 text-white">
-            <Gift className="h-3 w-3 mr-1" />
-            Save 17%
-          </Badge>
-        </Button>
-      </div>
+      {/* Subscription Status handled automatically */}
 
       {subscription?.subscribed && (
         <Card className="border-primary">
@@ -200,10 +137,14 @@ export default function Subscription() {
           <CardDescription className="text-2xl font-bold">
             $0/forever
           </CardDescription>
-          <p className="text-sm text-muted-foreground mt-2">Perfect for getting started</p>
+          <p className="text-sm text-muted-foreground mt-2">1 User • 5 quotes per month</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <ul className="space-y-2">
+            <li className="flex items-start gap-2 text-sm">
+              <Check className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+              <span>1 User included</span>
+            </li>
             <li className="flex items-start gap-2 text-sm">
               <Check className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
               <span>5 quotes per month</span>
@@ -211,14 +152,6 @@ export default function Subscription() {
             <li className="flex items-start gap-2 text-sm">
               <Check className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
               <span>Basic customer & item management</span>
-            </li>
-            <li className="flex items-start gap-2 text-sm">
-              <Check className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
-              <span>Simple email notifications</span>
-            </li>
-            <li className="flex items-start gap-2 text-sm">
-              <Check className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
-              <span>Standard PDF export</span>
             </li>
             <li className="flex items-start gap-2 text-sm">
               <Check className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
@@ -233,10 +166,10 @@ export default function Subscription() {
 
       {/* Paid Tiers Grid */}
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-        {displayedTiers.map(([key, tier]) => {
+        {displayedTiers.map(([key, tier]: [string, any]) => {
           const isActive = isCurrentPlan(tier.productId);
           const isLoading = loading === tier.priceId;
-          const isPopular = 'popular' in tier && tier.popular;
+          const isPopular = tier.popular;
 
           let icon = Zap;
           if (key.includes('business')) icon = Building2;
@@ -316,7 +249,7 @@ export default function Subscription() {
             <div className="space-y-2">
               <h4 className="font-semibold flex items-center gap-2">
                 <Check className="h-4 w-4 text-success" />
-                Quote-It AI Pro ($29/mo)
+                Quote-It AI Pro ($49/mo)
               </h4>
               <ul className="text-sm text-muted-foreground space-y-1 ml-6">
                 <li>• QuickBooks & Stripe included</li>

@@ -5,15 +5,28 @@ import { CheckCircle2 } from "lucide-react";
 import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
 import { useNavigate } from "react-router-dom";
 
-const pricingPlans = [
+interface PricingPlan {
+  name: string;
+  price: string;
+  period: string;
+  description: string;
+  features: string[];
+  cta: string;
+  highlighted: boolean;
+  oldPrice?: string;
+  annualPrice?: string;
+  savings?: string;
+}
+
+const pricingPlans: PricingPlan[] = [
   {
-    name: "Free",
+    name: "Starter",
     price: "$0",
     period: "forever",
-    description: "Perfect for getting started",
+    description: "Perfect for testing the waters",
     features: [
+      "1 User included",
       "5 quotes per month",
-      "Basic email notifications",
       "Standard PDF export",
       "Customer & item management",
       "Email support"
@@ -23,49 +36,45 @@ const pricingPlans = [
   },
   {
     name: "Pro",
-    price: "$29",
+    price: "$49",
     period: "per month",
-    oldPrice: "$49-99/mo competitors",
-    annualPrice: "$290/year (save $58)",
-    description: "For growing solo businesses",
+    oldPrice: "$99/mo competitors",
+    description: "For small professional teams",
     features: [
-      "50 quotes per month",
+      "3 Users included",
+      "$15/mo per extra user",
+      "Unlimited quotes",
       "QuickBooks Integration",
       "Stripe Payment Integration",
       "Professional HTML email automation",
-      "Editable email templates",
-      "AI quote generation tools",
       "AI follow-up messages",
       "Cloud sync across devices",
       "Priority support"
     ],
     cta: "Start Pro Trial",
     highlighted: true,
-    savings: "Save $240/year vs PandaDoc"
+    savings: "Best for growing teams"
   },
   {
-    name: "Max AI",
-    price: "$49",
+    name: "Business",
+    price: "$99",
     period: "per month",
-    oldPrice: "$150+/mo for teams",
-    annualPrice: "$490/year (save $98)",
-    description: "Best for teams of up to 5 people",
+    oldPrice: "$250+/mo average",
+    description: "Full automation for power users",
     features: [
-      "Everything in Pro, plus:",
+      "10 Users included",
+      "$10/mo per extra user",
       "Unlimited quotes",
-      "Up to 5 team members included",
-      "Manager dashboard & review",
-      "Shared Item Catalog & Settings",
       "✨ AI Scope of Work drafting",
       "✨ AI-powered full quote generation",
-      "✨ AI item recommendations",
-      "✨ AI pricing optimization",
+      "Manager dashboard & review",
+      "Shared Item Catalog & Settings",
       "Advanced analytics",
-      "White-label branding"
+      "Everything in Pro"
     ],
-    cta: "Start Max AI Trial",
+    cta: "Start Business Trial",
     highlighted: false,
-    savings: "Save $1,200+/year vs Proposify"
+    savings: "Maximum efficiency"
   }
 ];
 
