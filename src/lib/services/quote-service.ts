@@ -10,6 +10,7 @@ import { dedupedRequest, withTimeout } from './request-pool-service';
 import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 import { QuoteDB, isIndexedDBSupported } from '../indexed-db';
+import { syncStorage } from '../sync-storage';
 
 /**
  * Deduplicate quotes by ID (keeps the most recent version)
@@ -104,9 +105,12 @@ export async function getQuotes(
         }
 
         const result = data ? data.map(item => toCamelCase(item)) as Quote[] : [];
-        const dedupedResult = deduplicateQuotes(result);
 
-        console.log(`[QuoteService] Fetched ${dedupedResult.length} quotes from Supabase`);
+        // PROTECT LOCAL STATE: Merge with pending changes before updating IndexedDB/Cache
+        const protectedResult = syncStorage.applyPendingChanges(result, 'quotes');
+        const dedupedResult = deduplicateQuotes(protectedResult);
+
+        console.log(`[QuoteService] Fetched ${result.length} from Supabase, protected to ${dedupedResult.length}`);
 
         // Update IndexedDB (Replace all logic to ensure sync)
         if (isIndexedDBSupported()) {

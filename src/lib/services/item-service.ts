@@ -11,6 +11,7 @@ import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 import { ItemDB, isIndexedDBSupported } from '../indexed-db';
 import { apiTracker } from '@/lib/api-performance-tracker';
+import { syncStorage } from '../sync-storage';
 
 /**
  * Fetch all items for a user
@@ -114,23 +115,25 @@ export async function getItems(
 
         const result = data ? data.map(item => toCamelCase(item)) as Item[] : [];
 
+        // PROTECT LOCAL STATE: Merge with pending changes before updating IndexedDB/Cache
+        const dedupedResult = syncStorage.applyPendingChanges(result, 'items');
+
         // Only update IndexedDB if we received data from Supabase
-        // If Supabase returns empty but IndexedDB has data, keep IndexedDB data (offline-created records)
         if (isIndexedDBSupported()) {
           try {
-            if (result.length > 0) {
-              // Sync Supabase data to IndexedDB
-              for (const item of result) {
-                await ItemDB.update({ ...item, user_id: userId } as never);
+            if (dedupedResult.length > 0) {
+              // Clear and sync Supabase data to IndexedDB
+              await ItemDB.clear(userId);
+              for (const item of dedupedResult) {
+                await ItemDB.add({ ...item, user_id: userId } as never);
               }
-              console.log(`[ItemService] Saved ${result.length} items to IndexedDB`);
+              console.log(`[ItemService] Saved ${dedupedResult.length} items to IndexedDB`);
             } else {
               // Supabase returned empty - check if IndexedDB has data
+              // This part should be handled by applyPendingChanges above if it included 'create'
+              // but we'll keep the safety check
               const indexedDBData = await ItemDB.getAll(userId);
               if (indexedDBData && indexedDBData.length > 0) {
-                console.log(`[ItemService] Supabase empty, using ${indexedDBData.length} items from IndexedDB`);
-                // Update cache with IndexedDB data
-                await cacheManager.set('items', indexedDBData);
                 return indexedDBData;
               }
             }
@@ -140,9 +143,9 @@ export async function getItems(
         }
 
         // Update cache
-        await cacheManager.set('items', result);
+        await cacheManager.set('items', dedupedResult);
 
-        return result;
+        return dedupedResult;
       } catch (error) {
         console.error('Error fetching items:', error);
         // Try IndexedDB as fallback
@@ -230,7 +233,7 @@ export async function addItem(
     console.log('[ItemService] Syncing to Supabase with minQuantity and imageUrl');
 
     const startTime = performance.now();
-    const { error } = await supabase.from('items').insert(dbItem as unknown);
+    const { error } = await supabase.from('items').insert(dbItem as any);
 
     apiTracker.track(
       'items.insert',

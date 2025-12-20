@@ -115,11 +115,11 @@ export interface VisualRule {
 }
 
 // For offline sync queue
-export type ChangeData = (Partial<Customer> | Partial<Item> | Partial<Quote> | Partial<CompanySettings>) & { id?: string };
+export type ChangeData = Record<string, any> & { id: string; user_id?: string;[key: string]: any };
 
 export type QueueChange = {
-  type: 'create' | 'update' | 'delete' | 'upsert';
-  table: string;
+  type: 'create' | 'update' | 'delete';
+  table: 'customers' | 'items' | 'quotes' | 'company_settings';
   data: ChangeData;
 };
 

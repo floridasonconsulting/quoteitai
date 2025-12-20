@@ -640,7 +640,9 @@ export default function NewQuote() {
                         userId: user?.id || '',
                       }}
                       companyName={settings?.name}
-                      onSuccess={setScopeOfWork}
+                      onSaveToQuote={(content) => {
+                        setScopeOfWork(content);
+                      }}
                     />
                   </div>
 

@@ -1,16 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { backgroundSync } from '@/lib/background-sync';
 import { toCamelCase, toSnakeCase } from '@/lib/services/transformation-utils';
+import { syncStorage } from '@/lib/sync-storage';
+import { QueueChange } from '@/types';
 
-export interface QueueChange {
-  type: 'create' | 'update' | 'delete';
-  table: 'customers' | 'items' | 'quotes';
-  data: Record<string, unknown>;
-}
-
-const QUEUE_KEY = 'offline-changes-queue';
 const SYNC_INTERVAL = 30000; // 30 seconds
 const MAX_RETRIES = 3;
 
@@ -20,7 +14,6 @@ export function useSyncManager() {
   const [isPaused, setIsPaused] = useState(false);
   const [queueLength, setQueueLength] = useState(0);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  // Track failed sync attempts in session
   const [failedCount, setFailedCount] = useState(0);
 
   const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -41,66 +34,14 @@ export function useSyncManager() {
   }, []);
 
   /**
-   * Get current queue from localStorage
-   */
-  const getQueue = useCallback((): QueueChange[] => {
-    try {
-      const stored = localStorage.getItem(QUEUE_KEY);
-      if (!stored) return [];
-
-      const queue = JSON.parse(stored);
-      return Array.isArray(queue) ? queue : [];
-    } catch (error) {
-      console.error('[SyncManager] Error reading queue:', error);
-      return [];
-    }
-  }, []);
-
-  /**
-   * Save queue to localStorage
-   */
-  const saveQueue = useCallback((queue: QueueChange[]) => {
-    try {
-      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-      setQueueLength(queue.length);
-    } catch (error) {
-      console.error('[SyncManager] Error saving queue:', error);
-    }
-  }, []);
-
-  /**
    * Add change to queue
    */
   const queueChange = useCallback((change: QueueChange) => {
-    const queue = getQueue();
-
-    // CRITICAL: Deduplicate queue - if we're deleting something that was just created, remove both
-    const existingCreateIndex = queue.findIndex(
-      q => q.type === 'create' &&
-        q.table === change.table &&
-        q.data.id === change.data.id
-    );
-
-    if (change.type === 'delete' && existingCreateIndex >= 0) {
-      // Remove the create operation instead of adding a delete
-      console.log('[SyncManager] Removing create operation for deleted item:', change.data.id);
-      queue.splice(existingCreateIndex, 1);
-      saveQueue(queue);
-      return;
-    }
-
-    queue.push(change);
-    saveQueue(queue);
-
-    // Also register with BackgroundSyncManager for better offline support
-    backgroundSync.registerSync({
-      type: change.type,
-      entityType: change.table,
-      data: change.data,
-    });
+    syncStorage.addChange(change);
+    setQueueLength(syncStorage.getQueue().length);
 
     console.log('[SyncManager] Queued change:', change.type, change.table);
-  }, [getQueue, saveQueue]);
+  }, []);
 
   /**
    * Process a single change
@@ -115,14 +56,16 @@ export function useSyncManager() {
       const dataWithUserId = { ...change.data, user_id: user.id };
       const dbData = toSnakeCase(dataWithUserId);
 
+      // Map 'quotes' or 'items' to the specific union expected by supabase.from()
+      const table = change.table as any;
+
       switch (change.type) {
         case 'create': {
           const { error: createError } = await supabase
-            .from(change.table)
+            .from(table)
             .insert(dbData as never);
 
           if (createError) {
-            // If it's a duplicate key error, consider it successful
             if (createError.code === '23505') {
               console.log('[SyncManager] Item already exists, skipping create');
               return true;
@@ -138,7 +81,7 @@ export function useSyncManager() {
           }
 
           const { error: updateError } = await supabase
-            .from(change.table)
+            .from(table)
             .update(dbData as never)
             .eq('id', change.data.id as string)
             .eq('user_id', user.id);
@@ -153,13 +96,12 @@ export function useSyncManager() {
           }
 
           const { error: deleteError } = await supabase
-            .from(change.table)
+            .from(table)
             .delete()
             .eq('id', change.data.id as string)
             .eq('user_id', user.id);
 
           if (deleteError) {
-            // If item doesn't exist, consider delete successful
             if (deleteError.code === 'PGRST116') {
               console.log('[SyncManager] Item already deleted, skipping');
               return true;
@@ -169,7 +111,7 @@ export function useSyncManager() {
           break;
         }
         default:
-          console.error('[SyncManager] Unknown change type:', change.type);
+          console.error('[SyncManager] Unknown change type:', (change as any).type);
           return false;
       }
 
@@ -207,7 +149,7 @@ export function useSyncManager() {
       return;
     }
 
-    const queue = getQueue();
+    const queue = syncStorage.getQueue();
     if (queue.length === 0) {
       return;
     }
@@ -227,7 +169,8 @@ export function useSyncManager() {
     }
 
     // Save only failed changes back to queue
-    saveQueue(failedChanges);
+    syncStorage.saveQueue(failedChanges);
+    setQueueLength(failedChanges.length);
 
     if (failedChanges.length === 0) {
       console.log('[SyncManager] ✅ All changes synced successfully');
@@ -239,28 +182,29 @@ export function useSyncManager() {
 
     syncInProgressRef.current = false;
     setIsSyncing(false);
-  }, [getQueue, saveQueue, processChange]);
+  }, [isPaused, processChange]);
 
   /**
    * Clear the queue
    */
   const clearQueue = useCallback(() => {
-    saveQueue([]);
-    backgroundSync.clearAll();
+    syncStorage.saveQueue([]);
+    setQueueLength(0);
     console.log('[SyncManager] Queue cleared');
-  }, [saveQueue]);
+  }, []);
 
   /**
    * Remove specific items from queue (useful after bulk delete)
    */
   const removeFromQueue = useCallback((table: string, ids: string[]) => {
-    const queue = getQueue();
+    const queue = syncStorage.getQueue();
     const filtered = queue.filter(
       change => !(change.table === table && ids.includes(change.data.id as string))
     );
-    saveQueue(filtered);
+    syncStorage.saveQueue(filtered);
+    setQueueLength(filtered.length);
     console.log(`[SyncManager] Removed ${queue.length - filtered.length} items from queue`);
-  }, [getQueue, saveQueue]);
+  }, []);
 
   /**
    * Setup auto-sync interval
@@ -296,11 +240,10 @@ export function useSyncManager() {
    * Update queue length on mount
    */
   useEffect(() => {
-    const queue = getQueue();
+    const queue = syncStorage.getQueue();
     setQueueLength(queue.length);
-  }, [getQueue]);
+  }, []);
 
-  // Duplicate removed
   const pauseSync = useCallback(() => {
     setIsPaused(true);
     console.log('[SyncManager] Sync paused');
@@ -309,7 +252,6 @@ export function useSyncManager() {
   const resumeSync = useCallback(() => {
     setIsPaused(false);
     console.log('[SyncManager] Sync resumed');
-    // Trigger sync immediately upon resume
     setTimeout(() => syncQueue(), 100);
   }, [syncQueue]);
 
@@ -323,7 +265,6 @@ export function useSyncManager() {
     removeFromQueue,
     pauseSync,
     resumeSync,
-    // Add aliases/extra props expected by consumers
     isOnline,
     pendingCount: queueLength,
     failedCount,

@@ -455,14 +455,6 @@ export default function QuoteDetail() {
           <Mail className="mr-2 h-4 w-4" aria-hidden="true" />
           Email
         </Button>
-        <Button
-          variant="outline"
-          onClick={() => setFollowUpDialogOpen(true)}
-          aria-label="Schedule follow-up reminder"
-        >
-          <Clock className="mr-2 h-4 w-4" aria-hidden="true" />
-          Follow Up
-        </Button>
         <FollowUpMessageAI quote={quote} customer={customer} />
         <Button
           variant="destructive"
@@ -591,20 +583,6 @@ export default function QuoteDetail() {
         </CardContent>
       </Card>
 
-      {/* AI SOW Generator - Business tier feature */}
-      <SOWGeneratorAI
-        quote={quote}
-        companyName={settings?.name}
-        onSaveToQuote={async (sow) => {
-          // Save SOW to the quote
-          const updatedQuote = { ...quote, scopeOfWork: sow };
-          await updateQuote(user?.id, quote.id, { scopeOfWork: sow }, queueChange);
-          setQuote(updatedQuote);
-        }}
-      />
-
-      {/* Automated Follow-up Scheduler */}
-      <FollowUpScheduler quote={quote} companyName={settings?.name} />
 
       <SendQuoteDialog
         open={sendDialogOpen}

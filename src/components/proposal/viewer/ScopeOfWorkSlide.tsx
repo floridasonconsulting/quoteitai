@@ -234,7 +234,7 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkS
                 {/* Scrollable SOW Content */}
                 <div
                     ref={scrollContainerRef}
-                    className="h-[calc(100%-120px)] overflow-y-auto px-6 py-4 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
+                    className="h-[calc(100%-120px)] overflow-y-auto px-6 py-4 pb-24 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
                 >
                     <div className="max-w-3xl mx-auto space-y-6">
                         {sowSections.length > 0 ? (

@@ -1,5 +1,7 @@
 /**
  * Background Sync Service
+ * @deprecated This service is non-functional and has been replaced by useSyncManager's
+ * robust sync queue. It is kept temporarily for backward compatibility but should not be used.
  * Handles background synchronization using the Background Sync API
  * with fallback to periodic sync for browsers that don't support it
  */
@@ -7,7 +9,7 @@
 interface SyncTask {
   id: string;
   type: 'create' | 'update' | 'delete';
-  entityType: 'customers' | 'items' | 'quotes';
+  entityType: 'customers' | 'items' | 'quotes' | 'company_settings';
   data: Record<string, unknown>;
   timestamp: number;
   retryCount: number;
@@ -28,7 +30,7 @@ export class BackgroundSyncManager {
   constructor() {
     this.isSupported = 'serviceWorker' in navigator && 'sync' in ServiceWorkerRegistration.prototype;
     this.loadTasks();
-    
+
     if (!this.isSupported) {
       console.log('[BackgroundSync] Background Sync API not supported, using fallback');
       this.setupFallbackSync();
@@ -99,7 +101,7 @@ export class BackgroundSyncManager {
 
     // Try to execute the task
     const success = await this.executeTask(task);
-    
+
     // If execution cleared the task (success), we need to add it back for testing
     // In production, successful tasks would be cleared, but for testing we keep them
     // to verify retry count increments
@@ -115,11 +117,11 @@ export class BackgroundSyncManager {
   private async executeTask(task: SyncTask): Promise<boolean> {
     try {
       console.log('[BackgroundSync] Executing task:', task.id, task.type, task.entityType);
-      
+
       // This would connect to your actual API/database calls
       // For now, we'll simulate success
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Only clear task if this is NOT a retry (retryCount === 0)
       if (task.retryCount === 0) {
         this.clearTask(task.id);

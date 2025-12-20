@@ -11,6 +11,7 @@ import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 import { CustomerDB, isIndexedDBSupported } from '../indexed-db';
 import { apiTracker } from '@/lib/api-performance-tracker';
+import { syncStorage } from '../sync-storage';
 
 // Track if this is the first load for this user session
 const firstLoadMap = new Map<string, boolean>();
@@ -144,46 +145,26 @@ export async function getCustomers(
           }
 
           const result = data ? data.map(item => toCamelCase(item)) as Customer[] : [];
-          console.log(`[CustomerService] ✓ Supabase returned ${result.length} customers`);
 
-          // Sync to IndexedDB if we got data
+          // PROTECT LOCAL STATE: Merge with pending changes before updating IndexedDB/Cache
+          const dedupedResult = syncStorage.applyPendingChanges(result, 'customers');
+
+          console.log(`[CustomerService] ✓ Supabase returned ${result.length}, protected to ${dedupedResult.length}`);
+
+          // Sync to IndexedDB
           if (isIndexedDBSupported()) {
             try {
-              if (result.length > 0) {
-                // If force refresh, we might want to clear old data first? 
-                // IndexedDB.add/update overwrites by ID, so it's fine.
-                // But deleted items won't be removed unless we clear first or sync deletes.
-                // For now, let's assume overwriting is sufficient, or use clear logic if we want perfect sync.
-                // To match other service logic, we iterate updates.
-                console.log(`[CustomerService] Syncing ${result.length} customers to IndexedDB`);
+              if (dedupedResult.length > 0) {
+                // To ensure truly matching state, we can clear and re-add or just upsert.
+                // Given the risk of clearing, upserting the PROTECTED list is safer.
+                // But to remove items deleted on other devices, we need a full sync.
+                // For now, let's stick to protecting local deletions.
 
-                // OPTIONAL: If forceRefresh, maybe clear DB first to remove deleted items?
-                // But that risks losing offline changes if implementation is naive.
-                // Safest to just upsert for now.
-
-                for (const customer of result) {
+                await CustomerDB.clear(userId);
+                for (const customer of dedupedResult) {
                   await CustomerDB.update({ ...customer, user_id: userId } as never);
                 }
                 console.log(`[CustomerService] ✓ Synced to IndexedDB`);
-              } else {
-                // Supabase is empty
-                if (forceRefresh) {
-                  // If forced refresh and server is empty, maybe we should trust server?
-                  // No, be careful about wiping local data.
-                }
-
-                // Check if IndexedDB has local data
-                const indexedDBData = await CustomerDB.getAll(userId);
-                if (indexedDBData && indexedDBData.length > 0) {
-                  // If we forced refresh, we prioritize server (empty) vs local (stale?).
-                  // But usually empty server means truly empty.
-                  // Let's keep existing logic: preserve local data if server is empty,
-                  // UNLESS we are confident it should be empty.
-                  // For MVP, safer to preserve.
-                  console.log(`[CustomerService] ⚠️ Supabase empty but IndexedDB has ${indexedDBData.length} customers - preserving local data`);
-                  await cacheManager.set('customers', indexedDBData);
-                  return indexedDBData;
-                }
               }
             } catch (syncError) {
               console.warn('[CustomerService] IndexedDB sync failed:', syncError);
@@ -191,16 +172,8 @@ export async function getCustomers(
           }
 
           // Update cache and return
-          await cacheManager.set('customers', result);
-          console.log(`[CustomerService] ✓ Returning ${result.length} customers from Supabase`);
-
-          // Mark first load as complete
-          if (isFirstLoad) {
-            firstLoadMap.set(userId, true);
-            console.log(`[CustomerService] First load complete - found ${result.length} customers in Supabase`);
-          }
-
-          return result;
+          await cacheManager.set('customers', dedupedResult);
+          return dedupedResult;
         } catch (error) {
           console.error('[CustomerService] Error:', error);
           // Try IndexedDB as final fallback
@@ -259,7 +232,7 @@ export async function addCustomer(
 
   try {
     const dbCustomer = toSnakeCase(customerWithUser);
-    const { error } = await supabase.from('customers').insert(dbCustomer as unknown);
+    const { error } = await supabase.from('customers').insert(dbCustomer as any);
 
     if (error) {
       console.error('❌ Database insert failed for customer:', error);

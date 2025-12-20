@@ -59,7 +59,7 @@ export function SOWGeneratorAI({ quote, companyName, onSaveToQuote, onSuccess }:
 
         console.log('[SOWUserCheck] Current role:', normalizedRole);
 
-        if (normalizedRole !== 'business' && normalizedRole !== 'max' && normalizedRole !== 'admin') {
+        if (normalizedRole !== 'pro' && normalizedRole !== 'business' && normalizedRole !== 'max' && normalizedRole !== 'admin') {
             console.log('[SOWUserCheck] Role insufficient, showing upgrade dialog');
             setShowUpgradeDialog(true);
             return;
