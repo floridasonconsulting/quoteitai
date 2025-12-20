@@ -23,6 +23,7 @@ import {
   getThemeGradient,
   Industry
 } from "./proposal-image-library";
+import { getTheme, ProposalTheme as ThemeType } from "./proposal-themes";
 
 /**
  * Transforms a raw Quote object into the new ProposalData structure
@@ -94,7 +95,10 @@ export function transformQuoteToProposal(
     settings: {
       theme: 'modern_scroll',
       mode: 'light',
-      primaryColor: '#000000',
+      primaryColor: getTheme(activeSettings.proposalTheme as any).colors.primary,
+      themeColors: getTheme(activeSettings.proposalTheme as any).colors,
+      themeTypography: getTheme(activeSettings.proposalTheme as any).typography,
+      themeEffects: getTheme(activeSettings.proposalTheme as any).effects,
       currency: 'USD',
       showFinancing: activeSettings.showFinancing,
       financingText: activeSettings.financingText,

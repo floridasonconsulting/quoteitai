@@ -12,6 +12,9 @@ export interface ProposalSettings {
   showFinancing?: boolean;
   financingText?: string;
   financingLink?: string;
+  themeColors?: any;
+  themeTypography?: any;
+  themeEffects?: any;
 }
 
 export interface ProposalClient {

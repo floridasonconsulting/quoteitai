@@ -15,6 +15,7 @@ import { ImageEditDialog } from "./ImageEditDialog";
 import { visualsService } from "@/lib/services/visuals-service";
 import { useToast } from "@/hooks/use-toast";
 import { ProposalVisuals, ProposalData } from "@/types/proposal";
+import { getTheme, getThemeCSSVars } from "@/lib/proposal-themes";
 
 interface ProposalViewerProps {
   quote?: Quote;
@@ -104,6 +105,14 @@ export function ProposalViewer({
     setTheme('light');
   }, [setTheme]);
 
+  // Generate CSS Variables for the selected theme
+  const themeVars = useMemo(() => {
+    if (!proposalData) return {};
+    const themeId = (settings?.proposalTheme as any) || 'modern-corporate';
+    const themeDef = getTheme(themeId);
+    return getThemeCSSVars(themeDef);
+  }, [proposalData, settings?.proposalTheme]);
+
   // Navigation Items Generation
   const navigationItems = useMemo(() => {
     return proposalData.sections.map((section, index) => {
@@ -123,6 +132,7 @@ export function ProposalViewer({
 
   // Handlers
   const handleAccept = async () => {
+    if (!onAccept) return;
     setIsProcessing(true);
     try {
       await onAccept();
@@ -135,6 +145,7 @@ export function ProposalViewer({
   };
 
   const handleDecline = async () => {
+    if (!onDecline) return;
     setIsProcessing(true);
     try {
       await onDecline();
@@ -168,13 +179,6 @@ export function ProposalViewer({
     const quoteId = quote?.id || directProposal?.id;
     if (!quoteId) return;
 
-    console.log("[ProposalViewer] handleUpdateImage triggered:", {
-      type: editImageConfig.type,
-      id: editImageConfig.id,
-      url: url.substring(0, 50) + "...",
-      quoteId
-    });
-
     setIsProcessing(true);
     try {
       if (editImageConfig.type === 'cover') {
@@ -182,7 +186,6 @@ export function ProposalViewer({
       } else if (editImageConfig.type === 'section') {
         await visualsService.saveSectionImageOverride(quoteId, editImageConfig.id, url);
       } else if (editImageConfig.type === 'item') {
-        console.log("[ProposalViewer] Saving item image override:", { itemName: editImageConfig.id, url });
         await visualsService.saveItemImageOverride(quoteId, editImageConfig.id, url);
       }
 
@@ -215,7 +218,7 @@ export function ProposalViewer({
 
   // Render
   return (
-    <div className="h-screen w-full bg-background overflow-hidden font-sans">
+    <div className="h-screen w-full bg-background overflow-hidden font-sans" style={themeVars as any}>
       <AnimatePresence mode="wait">
         {/* STAGE 1: COVER */}
         {stage === 'cover' && (

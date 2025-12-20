@@ -129,7 +129,7 @@ export function ProposalContentSlider({
       {/* Global Custom Navigation Styling */}
       <style>{`
         .swiper-button-next, .swiper-button-prev {
-            color: ${isDesktop ? 'hsl(var(--primary))' : 'white'} !important;
+            color: var(--theme-primary) !important;
             background: ${isDesktop ? 'rgba(255,255,255,0.8)' : 'transparent'};
             width: 44px !important;
             height: 44px !important;
@@ -152,13 +152,13 @@ export function ProposalContentSlider({
             width: 8px;
             height: 8px;
             transition: all 0.3s ease;
-            background: rgba(0,0,0,0.2) !important;
+            background: rgba(var(--theme-primary), 0.2) !important;
             opacity: 1 !important;
         }
         .swiper-pagination-bullet-active {
             width: 24px;
             border-radius: 4px;
-            background: hsl(var(--primary)) !important;
+            background: var(--theme-primary) !important;
         }
       `}</style>
     </div>
@@ -588,7 +588,7 @@ function InvestmentSummarySlide({
             {/* Left: Detailed Scope (Table Style) */}
             <div className="lg:col-span-2 space-y-6">
               <div className="flex items-center gap-3 mb-1">
-                <div className="h-6 w-1 bg-primary rounded-full" />
+                <div className="h-6 w-1 rounded-full" style={{ backgroundColor: 'var(--theme-primary)' }} />
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-wider">Project Scope Breakdown</h3>
               </div>
 
@@ -607,7 +607,7 @@ function InvestmentSummarySlide({
                         {category}
                       </h4>
                       {pricingMode !== 'grand_total' && (
-                        <span className="text-xs font-bold text-primary bg-primary/5 px-2 py-1 rounded">
+                        <span className="text-xs font-bold px-2 py-1 rounded" style={{ color: 'var(--theme-primary)', backgroundColor: 'color-mix(in srgb, var(--theme-primary), transparent 90%)' }}>
                           {formatCurrency(subtotal)}
                         </span>
                       )}
@@ -652,8 +652,8 @@ function InvestmentSummarySlide({
             {/* Right: Investment Summary Card */}
             <div className="lg:col-span-1">
               <div className="sticky top-0 space-y-6">
-                <div className="bg-white dark:bg-gray-900 rounded-[1.5rem] border-2 border-primary/20 shadow-xl overflow-hidden">
-                  <div className="bg-primary p-6 text-center text-white">
+                <div className="bg-white dark:bg-gray-900 rounded-[1.5rem] shadow-xl overflow-hidden" style={{ border: '2px solid color-mix(in srgb, var(--theme-primary), transparent 80%)' }}>
+                  <div className="p-6 text-center text-white" style={{ backgroundColor: 'var(--theme-primary)' }}>
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mb-1">Investment Total</p>
                     <h3 className="text-3xl md:text-4xl font-black tracking-tighter">{formatCurrency(section.total || 0)}</h3>
                   </div>
@@ -675,7 +675,7 @@ function InvestmentSummarySlide({
                           <span className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tighter">
                             Total Amount
                           </span>
-                          <span className="text-xl font-black text-primary tracking-tighter">{formatCurrency(section.total || 0)}</span>
+                          <span className="text-xl font-black tracking-tighter" style={{ color: 'var(--theme-primary)' }}>{formatCurrency(section.total || 0)}</span>
                         </div>
                       </div>
                     )}
@@ -697,7 +697,8 @@ function InvestmentSummarySlide({
                               href={proposalSettings.financingLink}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[10px] font-black text-primary hover:underline flex items-center gap-1 uppercase tracking-widest"
+                              className="text-[10px] font-black hover:underline flex items-center gap-1 uppercase tracking-widest"
+                              style={{ color: 'var(--theme-primary)' }}
                             >
                               Apply Now <ExternalLink className="w-3 h-3" />
                             </a>
@@ -705,7 +706,7 @@ function InvestmentSummarySlide({
                         )}
                         <div className="flex justify-center gap-2">
                           <div className="h-0.5 w-6 bg-gray-200 dark:bg-gray-800 rounded-full" />
-                          <div className="h-0.5 w-6 bg-primary/40 rounded-full" />
+                          <div className="h-0.5 w-6 rounded-full" style={{ backgroundColor: 'color-mix(in srgb, var(--theme-primary), transparent 60%)' }} />
                           <div className="h-0.5 w-6 bg-gray-200 dark:bg-gray-800 rounded-full" />
                         </div>
                       </div>

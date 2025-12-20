@@ -166,7 +166,7 @@ export function CategoryGroupSection({
             ? (backgroundImage.startsWith('linear-gradient') || backgroundImage.startsWith('radial-gradient') || backgroundImage.startsWith('conic-gradient') || backgroundImage.startsWith('url')
               ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), ${backgroundImage}`
               : `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url(${backgroundImage})`)
-            : "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%)",
+            : "linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary, var(--theme-primary)) 100%)",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
@@ -199,10 +199,10 @@ export function CategoryGroupSection({
                 {categoryGroup.displayName || categoryGroup.category}
               </h2>
               {categoryGroup.description && (
-                <div className="h-1 w-12 bg-primary mx-auto my-4 rounded-full" />
+                <div className="h-1 w-12 mx-auto my-4 rounded-full" style={{ backgroundColor: 'var(--theme-primary)' }} />
               )}
               {categoryGroup.description && (
-                <p className="text-sm md:text-lg text-white/90 max-w-2xl mx-auto font-medium leading-relaxed italic opacity-80 decoration-primary/30">
+                <p className="text-sm md:text-lg text-white/90 max-w-2xl mx-auto font-medium leading-relaxed italic opacity-80" style={{ textDecorationColor: 'rgba(var(--theme-primary), 0.3)' }}>
                   {categoryGroup.description}
                 </p>
               )}
@@ -239,8 +239,9 @@ export function CategoryGroupSection({
 
                 {/* If no image and is owner, show a placeholder edit trigger */}
                 {!item.imageUrl && isOwner && (
-                  <div className="flex-shrink-0 w-full md:w-12 h-12 md:h-32 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-primary/50 transition-colors cursor-pointer"
+                  <div className="flex-shrink-0 w-full md:w-12 h-12 md:h-32 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-theme-primary/50 transition-colors cursor-pointer"
                     onClick={() => onEditItemImage?.(item.name)}
+                    style={{ '--hover-border-color': 'var(--theme-primary)' } as any}
                   >
                     <Edit3 className="w-4 h-4 text-gray-400" />
                   </div>
@@ -266,7 +267,7 @@ export function CategoryGroupSection({
                         <span>Unit: {formatCurrency(item.price)}</span>
                       </div>
                       <div className="text-right">
-                        <p className="text-base md:text-lg font-bold text-primary">
+                        <p className="text-base md:text-lg font-bold" style={{ color: 'var(--theme-primary)' }}>
                           {formatCurrency(item.total)}
                         </p>
                       </div>
@@ -296,7 +297,7 @@ export function CategoryGroupSection({
                 <span className="text-xl md:text-2xl font-semibold text-gray-700 dark:text-gray-300">
                   {categoryGroup.displayName} Subtotal
                 </span>
-                <span className="text-2xl md:text-3xl font-bold text-primary">
+                <span className="text-2xl md:text-3xl font-bold" style={{ color: 'var(--theme-primary)' }}>
                   {formatCurrency(categoryGroup.subtotal)}
                 </span>
               </div>
