@@ -29,6 +29,7 @@ export interface ProposalItem {
   name: string;
   description: string;
   enhancedDescription?: string; // NEW: Rich text description for proposals
+  shortDescription?: string; // NEW: Truncated version for summary pages
   quantity: number;
   price: number;
   total: number;

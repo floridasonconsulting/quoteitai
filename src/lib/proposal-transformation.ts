@@ -191,6 +191,9 @@ export function transformQuoteToProposal(
       name: item.name,
       description: item.description,
       enhancedDescription: item.enhancedDescription,
+      shortDescription: (item.enhancedDescription || item.description || '').length > 120
+        ? (item.enhancedDescription || item.description || '').substring(0, 117) + '...'
+        : (item.enhancedDescription || item.description || ''),
       quantity: item.quantity,
       price: item.price,
       total: item.total,
@@ -292,11 +295,15 @@ export function transformQuoteToProposal(
     id: 'financials',
     type: 'lineItems',
     title: 'Investment Summary',
-    items: quote.items.map(i => ({
-      ...i,
-      imageUrl: showImages ? i.imageUrl : undefined,
-      category: normalizeCategory(i.category, i.name) // Pass item name for inference
-    })),
+    items: quote.items.map(i => {
+      const desc = i.enhancedDescription || i.description || '';
+      return {
+        ...i,
+        imageUrl: showImages ? i.imageUrl : undefined,
+        category: normalizeCategory(i.category, i.name),
+        shortDescription: desc.length > 120 ? desc.substring(0, 117) + '...' : desc
+      };
+    }),
     subtotal: quote.subtotal,
     tax: quote.tax,
     total: quote.total,

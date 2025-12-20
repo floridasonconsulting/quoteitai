@@ -53,7 +53,7 @@ export function ProposalContentSlider({
   };
 
   // Detect Desktop View
-  const [isDesktop, setIsDesktop] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(typeof window !== 'undefined' ? window.innerWidth >= 768 : false);
 
   useEffect(() => {
     // Check if window is defined (SSR safety)
@@ -78,7 +78,7 @@ export function ProposalContentSlider({
     <div className="h-full w-full overflow-hidden">
       <Swiper
         modules={[Navigation, Pagination, Keyboard, Mousewheel]}
-        direction="horizontal"
+        direction={isDesktop ? "horizontal" : "vertical"}
         slidesPerView={1}
         centeredSlides={true}
         spaceBetween={0}
@@ -623,9 +623,9 @@ function InvestmentSummarySlide({
                                 {item.name}
                               </span>
                             </div>
-                            {(item.description || item.enhancedDescription) && (
+                            {item.shortDescription && (
                               <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">
-                                {item.enhancedDescription || item.description}
+                                {item.shortDescription}
                               </p>
                             )}
                             {pricingMode === 'itemized' && item.quantity > 1 && (
