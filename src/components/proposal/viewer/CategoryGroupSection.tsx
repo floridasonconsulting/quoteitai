@@ -242,7 +242,7 @@ export function CategoryGroupSection({
                     <h3 className="text-lg md:text-xl font-semibold mb-1 text-gray-900 dark:text-white leading-tight">
                       {item.name}
                     </h3>
-                    <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 mb-2 leading-snug">
+                    <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 mb-2 leading-snug whitespace-pre-wrap">
                       {item.enhancedDescription || item.description}
                     </p>
                   </div>

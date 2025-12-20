@@ -135,6 +135,7 @@ export default function NewQuote() {
       setQuoteItems(editQuote.items);
       setQuoteNotes(editQuote.notes || '');
       setExecutiveSummary(editQuote.executiveSummary || '');
+      setScopeOfWork(editQuote.scopeOfWork || ''); // Load SOW
       setShowPricing(editQuote.showPricing !== false);
       setPricingMode(editQuote.pricingMode || 'category_total');
     }

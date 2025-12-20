@@ -1,20 +1,20 @@
 
-import { ProposalData } from '@/types/proposal';
+import { ProposalData, ProposalSection } from '@/types/proposal';
 
 interface LineItemSectionProps {
-  section: Extract<ProposalData['sections'][0], { type: 'lineItems' }>;
+  section: ProposalSection;
 }
 
 export function LineItemSection({ section }: LineItemSectionProps) {
   return (
-    <div 
+    <div
       className="w-full py-12 px-4"
       style={{
         fontFamily: 'var(--theme-font-body)',
       }}
     >
       <div className="max-w-5xl mx-auto">
-        <h2 
+        <h2
           className="text-3xl font-bold mb-8 text-center"
           style={{
             color: 'var(--theme-text-primary)',
@@ -24,8 +24,8 @@ export function LineItemSection({ section }: LineItemSectionProps) {
         >
           {section.title}
         </h2>
-        
-        <div 
+
+        <div
           className="rounded-xl overflow-hidden"
           style={{
             backgroundColor: 'var(--theme-surface)',
@@ -35,38 +35,38 @@ export function LineItemSection({ section }: LineItemSectionProps) {
         >
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-              <thead 
+              <thead
                 style={{
                   backgroundColor: 'var(--theme-surface)',
                   borderBottom: '2px solid var(--theme-border)',
                 }}
               >
                 <tr>
-                  <th 
+                  <th
                     className="p-4 text-xs uppercase tracking-wider font-semibold"
                     style={{ color: 'var(--theme-text-muted)' }}
                   >
                     Item
                   </th>
-                  <th 
+                  <th
                     className="p-4 text-xs uppercase tracking-wider font-semibold"
                     style={{ color: 'var(--theme-text-muted)' }}
                   >
                     Description
                   </th>
-                  <th 
+                  <th
                     className="p-4 text-xs uppercase tracking-wider font-semibold text-center"
                     style={{ color: 'var(--theme-text-muted)' }}
                   >
                     Qty
                   </th>
-                  <th 
+                  <th
                     className="p-4 text-xs uppercase tracking-wider font-semibold text-right"
                     style={{ color: 'var(--theme-text-muted)' }}
                   >
                     Price
                   </th>
-                  <th 
+                  <th
                     className="p-4 text-xs uppercase tracking-wider font-semibold text-right"
                     style={{ color: 'var(--theme-text-muted)' }}
                   >
@@ -75,45 +75,52 @@ export function LineItemSection({ section }: LineItemSectionProps) {
                 </tr>
               </thead>
               <tbody>
-                {section.items.map((item, idx) => (
-                  <tr 
-                    key={idx}
-                    style={{
-                      borderBottom: '1px solid var(--theme-border)',
-                    }}
-                  >
-                    <td 
-                      className="p-4 font-semibold"
-                      style={{ color: 'var(--theme-text-primary)' }}
+                {section.items?.map((item, idx) => {
+                  // Helper to truncate description for the breakdown table
+                  const shortDescription = item.description?.length > 120
+                    ? item.description.substring(0, 117) + '...'
+                    : item.description;
+
+                  return (
+                    <tr
+                      key={idx}
+                      style={{
+                        borderBottom: '1px solid var(--theme-border)',
+                      }}
                     >
-                      {item.name}
-                    </td>
-                    <td 
-                      className="p-4 text-sm"
-                      style={{ color: 'var(--theme-text-secondary)' }}
-                    >
-                      {item.description}
-                    </td>
-                    <td 
-                      className="p-4 text-center"
-                      style={{ color: 'var(--theme-text-secondary)' }}
-                    >
-                      {item.quantity}
-                    </td>
-                    <td 
-                      className="p-4 text-right font-mono"
-                      style={{ color: 'var(--theme-text-secondary)' }}
-                    >
-                      ${item.price.toLocaleString()}
-                    </td>
-                    <td 
-                      className="p-4 text-right font-mono font-semibold"
-                      style={{ color: 'var(--theme-text-primary)' }}
-                    >
-                      ${item.total.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
+                      <td
+                        className="p-4 font-semibold"
+                        style={{ color: 'var(--theme-text-primary)' }}
+                      >
+                        {item.name}
+                      </td>
+                      <td
+                        className="p-4 text-sm"
+                        style={{ color: 'var(--theme-text-secondary)' }}
+                      >
+                        {shortDescription}
+                      </td>
+                      <td
+                        className="p-4 text-center"
+                        style={{ color: 'var(--theme-text-secondary)' }}
+                      >
+                        {item.quantity}
+                      </td>
+                      <td
+                        className="p-4 text-right font-mono"
+                        style={{ color: 'var(--theme-text-secondary)' }}
+                      >
+                        ${item.price.toLocaleString()}
+                      </td>
+                      <td
+                        className="p-4 text-right font-mono font-semibold"
+                        style={{ color: 'var(--theme-text-primary)' }}
+                      >
+                        ${item.total.toLocaleString()}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
