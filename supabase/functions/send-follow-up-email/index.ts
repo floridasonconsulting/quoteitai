@@ -50,34 +50,37 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("RESEND_API_KEY is not configured");
     }
 
-    // Test mode detection
-    const isTestMode = Deno.env.get("ENVIRONMENT") !== "production";
-    const resendAccountEmail = Deno.env.get("RESEND_ACCOUNT_EMAIL");
-    
-    let recipientEmail = customerEmail;
-    let testWarning = "";
+    // Check environment and test mode
+    const environment = Deno.env.get('ENVIRONMENT') || 'development';
+    const isProduction = environment === 'production' || environment === 'prod';
+    const resendAccountEmail = Deno.env.get('RESEND_ACCOUNT_EMAIL');
+
+    // Test mode logic
+    const resendTestMode = Deno.env.get('RESEND_TEST_MODE') === 'true';
     const actualRecipient = customerEmail;
-    
-    if (isTestMode && resendAccountEmail) {
-      const domain = customerEmail.split("@")[1];
-      const resendDomain = resendAccountEmail.split("@")[1];
-      
-      if (!domain || domain !== resendDomain) {
-        recipientEmail = resendAccountEmail;
+
+    // Default to test mode if not explicitly in production and we have an account email
+    const isTestMode = resendTestMode || (!isProduction && !!resendAccountEmail);
+    const recipientEmailFinal = (isTestMode && resendAccountEmail) ? resendAccountEmail : customerEmail;
+
+    let testWarning = "";
+    if (isTestMode) {
+      console.warn(`⚠️ Resend testing mode active (Env: ${environment})`);
+      if (resendAccountEmail && customerEmail !== resendAccountEmail) {
         testWarning = `<div style="background: #fff3cd; border: 1px solid #ffc107; padding: 12px; margin-bottom: 20px; border-radius: 4px; color: #856404;">
           <strong>⚠️ Test Mode:</strong> This email was originally intended for ${customerEmail}
         </div>`;
-        console.log(`Test mode: Redirecting email from ${customerEmail} to ${resendAccountEmail}`);
+        console.warn(`⚠️ Redirecting email from ${customerEmail} to ${resendAccountEmail}`);
       }
     }
 
     // Build quote reference section if included
     let quoteReferenceSection = "";
     if (includeQuoteReference && quoteNumber) {
-      const formattedTotal = quoteTotal 
-        ? `$${quoteTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+      const formattedTotal = quoteTotal
+        ? `$${quoteTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
         : "";
-      
+
       const viewButton = quoteShareLink ? `
         <table role="presentation" style="margin: 20px 0;">
           <tr>
@@ -139,8 +142,8 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    const fromEmail = Deno.env.get('FROM_EMAIL_ADDRESS') || `${companyName} <notifications@resend.dev>`;
-    
+    const fromEmail = Deno.env.get('RESEND_FROM_EMAIL') || Deno.env.get('FROM_EMAIL_ADDRESS') || `${companyName} <notifications@resend.dev>`;
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -149,7 +152,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         from: fromEmail,
-        to: [recipientEmail],
+        to: [recipientEmailFinal],
         subject: isTestMode ? `[Test Mode] ${subject}` : subject,
         html: htmlContent,
       }),
@@ -158,12 +161,12 @@ const handler = async (req: Request): Promise<Response> => {
     if (!response.ok) {
       const errorData = await response.text();
       console.error('Resend API error:', errorData);
-      
+
       if (errorData.includes('validation_error') || errorData.includes('verify a domain')) {
         console.warn('⚠️ Domain not verified with Resend. To send emails to all recipients, verify your domain at https://resend.com/domains');
         throw new Error('Email domain not verified. Emails can only be sent to verified addresses. Please verify your domain at resend.com/domains');
       }
-      
+
       throw new Error(`Failed to send email: ${response.status} ${errorData}`);
     }
 
@@ -171,8 +174,8 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Follow-up email sent successfully:', result);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: 'Follow-up email sent successfully',
         emailId: result.id,
         testMode: isTestMode,
@@ -189,7 +192,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: unknown) {
     console.error("Error in send-follow-up-email function:", error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: 'Failed to send follow-up email',
         details: error instanceof Error ? error.message : 'Unknown error'
       }),

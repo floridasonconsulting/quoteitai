@@ -31,7 +31,7 @@ serve(async (req) => {
   }
 
   try {
-    const {
+    let {
       customerEmail,
       customerName,
       subject,
@@ -56,15 +56,15 @@ serve(async (req) => {
       try {
         const logoUrl = new URL(companyLogo);
         const ALLOWED_DOMAINS = ['supabase.co', 'quoteit.ai', 'localhost'];
-        const isAllowed = ALLOWED_DOMAINS.some(domain => 
+        const isAllowed = ALLOWED_DOMAINS.some(domain =>
           logoUrl.hostname === domain || logoUrl.hostname.endsWith(`.${domain}`)
         );
-        
+
         if (!isAllowed) {
           console.warn(`⚠️ Rejected logo URL from disallowed domain: ${logoUrl.hostname}`);
           throw new Error(`Logo URL domain not allowed: ${logoUrl.hostname}`);
         }
-        
+
         // Only allow HTTPS (except localhost for development)
         if (logoUrl.protocol !== 'https:' && !logoUrl.hostname.includes('localhost')) {
           throw new Error('Only HTTPS URLs are allowed for logos');
@@ -81,14 +81,27 @@ serve(async (req) => {
       throw new Error('RESEND_API_KEY not configured');
     }
 
-    // Check if we're in Resend testing mode
-    const resendAccountEmail = Deno.env.get('RESEND_ACCOUNT_EMAIL') || 'ahill005@gmail.com';
+    // Check environment and test mode
+    const environment = Deno.env.get('ENVIRONMENT') || 'development';
+    const isProduction = environment === 'production' || environment === 'prod';
+    const resendAccountEmail = Deno.env.get('RESEND_ACCOUNT_EMAIL');
+
+    // Test mode logic: if not production AND a test account is set, redirect
+    // OR if no verified domain is available (indicated by another toggle maybe)
+    const resendTestMode = Deno.env.get('RESEND_TEST_MODE') === 'true';
     const actualRecipient = customerEmail;
-    const isTestMode = customerEmail !== resendAccountEmail;
-    
+
+    // Default to test mode if not explicitly in production and we have an account email
+    const isTestMode = resendTestMode || (!isProduction && !!resendAccountEmail);
+    const recipientEmail = (isTestMode && resendAccountEmail) ? resendAccountEmail : customerEmail;
+
     if (isTestMode) {
-      console.warn(`⚠️ Resend testing mode: Redirecting email from ${customerEmail} to ${resendAccountEmail}`);
-      console.warn(`💡 To send to all recipients, verify your domain at https://resend.com/domains`);
+      console.warn(`⚠️ Resend testing mode active (Env: ${environment})`);
+      if (resendAccountEmail) {
+        console.warn(`⚠️ Redirecting email from ${customerEmail} to ${resendAccountEmail}`);
+      } else {
+        console.warn(`⚠️ No RESEND_ACCOUNT_EMAIL set. Attempting to send to ${customerEmail} anyway (may fail if domain not verified)`);
+      }
     }
 
     const testModeNotice = isTestMode ? `
@@ -224,9 +237,9 @@ serve(async (req) => {
       </html>
     `;
 
-    const fromEmail = Deno.env.get('FROM_EMAIL_ADDRESS') || 'Quote-it AI <notifications@resend.dev>';
-    const recipientEmail = isTestMode ? resendAccountEmail : customerEmail;
-    
+    const fromEmail = Deno.env.get('RESEND_FROM_EMAIL') || Deno.env.get('FROM_EMAIL_ADDRESS') || 'Quote-it AI <notifications@resend.dev>';
+    const recipientEmailFinal = isTestMode && resendAccountEmail ? resendAccountEmail : customerEmail;
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -235,7 +248,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: fromEmail,
-        to: [recipientEmail],
+        to: [recipientEmailFinal],
         subject: isTestMode ? `[Test Mode] ${subject}` : subject,
         html: htmlContent,
       }),
@@ -244,12 +257,12 @@ serve(async (req) => {
     if (!response.ok) {
       const errorData = await response.text();
       console.error('Resend API error:', errorData);
-      
+
       if (errorData.includes('validation_error') || errorData.includes('verify a domain')) {
         console.warn('⚠️ Domain not verified with Resend. To send emails to all recipients, verify your domain at https://resend.com/domains');
         throw new Error('Email domain not verified. Emails can only be sent to verified addresses. Please verify your domain at resend.com/domains');
       }
-      
+
       throw new Error(`Failed to send email: ${response.status} ${errorData}`);
     }
 
@@ -257,29 +270,29 @@ serve(async (req) => {
     console.log('Email sent successfully:', result);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: 'Email sent successfully',
         emailId: result.id,
         testMode: isTestMode,
         actualRecipient: isTestMode ? actualRecipient : undefined,
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
 
   } catch (error) {
     console.error('Error sending quote email:', error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: 'Failed to send quote email',
         details: error instanceof Error ? error.message : 'Unknown error'
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

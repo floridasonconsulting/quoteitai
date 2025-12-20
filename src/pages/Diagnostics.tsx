@@ -54,6 +54,8 @@ export default function Diagnostics() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [aiTestResult, setAiTestResult] = useState<unknown>(null);
   const [aiTesting, setAiTesting] = useState(false);
+  const [emailTestResult, setEmailTestResult] = useState<unknown>(null);
+  const [emailTesting, setEmailTesting] = useState(false);
 
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastSyncTime = storageCache.get("last-sync-time");
@@ -229,6 +231,47 @@ export default function Diagnostics() {
       toast.error("AI test failed: " + errorMessage);
     } finally {
       setAiTesting(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    setEmailTesting(true);
+    setEmailTestResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-quote-email", {
+        body: {
+          customerEmail: user?.email || "test@example.com",
+          customerName: "Diagnostic Test User",
+          subject: "Diagnostic Email Test",
+          greeting: "Hello Admin,",
+          bodyText: "This is a test email sent from the System Diagnostics page to verify Edge Function connectivity and Resend configuration.",
+          closingText: "End of diagnostic test.",
+          includeSummary: false,
+          includeShareLink: false,
+          quoteNumber: "TEST-001",
+          quoteTitle: "Diagnostic Test Quote",
+          quoteTotal: 123.45
+        }
+      });
+
+      if (error) {
+        setEmailTestResult({ success: false, error: error.message });
+        toast.error("Email test failed: " + error.message);
+      } else {
+        setEmailTestResult(data);
+        if (data.success) {
+          toast.success("Email test successful! Check your inbox (or test redirect).");
+        } else {
+          toast.error("Email test failed: " + (data.details || "Unknown error"));
+        }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      setEmailTestResult({ success: false, error: errorMessage });
+      toast.error("Email test failed: " + errorMessage);
+    } finally {
+      setEmailTesting(false);
     }
   };
 
@@ -469,6 +512,61 @@ export default function Diagnostics() {
         </CardContent>
       </Card>
 
+      {/* Email Service Testing */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CheckCircle className="h-5 w-5" />
+            Email Service Connectivity
+          </CardTitle>
+          <CardDescription>Test Edge Function email delivery and Resend configuration</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Verify Resend Integration</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Sends a test quote email to your account email: <strong>{user?.email}</strong>
+              </p>
+            </div>
+            <Button onClick={handleTestEmail} disabled={emailTesting} size="sm">
+              {emailTesting ? "Sending..." : "Send Test Email"}
+            </Button>
+          </div>
+
+          {emailTestResult && (
+            <Alert variant={
+              typeof emailTestResult === "object" && emailTestResult && "success" in emailTestResult && (emailTestResult as { success: boolean }).success
+                ? "default"
+                : "destructive"
+            }>
+              <AlertDescription>
+                <div className="space-y-2">
+                  <div className="font-semibold">
+                    {typeof emailTestResult === "object" && emailTestResult && "success" in emailTestResult && (emailTestResult as { success: boolean }).success
+                      ? "✓ Email Function Responded"
+                      : "✗ Email Function Failed"}
+                  </div>
+                  {typeof emailTestResult === "object" && emailTestResult && "testMode" in emailTestResult && (emailTestResult as { testMode: boolean }).testMode && (
+                    <div className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">
+                      ⚠️ Test Mode Active: Email redirected to {String((emailTestResult as { actualRecipient?: string }).actualRecipient || "account owner")}
+                    </div>
+                  )}
+                  {typeof emailTestResult === "object" && emailTestResult && "error" in emailTestResult && (
+                    <div className="text-sm">Error: {String((emailTestResult as { error: unknown }).error)}</div>
+                  )}
+                  {typeof emailTestResult === "object" && emailTestResult && "details" in emailTestResult && (
+                    <div className="text-xs mt-1 bg-muted p-2 rounded truncate max-w-full font-mono">
+                      {String((emailTestResult as { details: string }).details)}
+                    </div>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Storage State */}
       <Card>
         <CardHeader>
@@ -546,9 +644,9 @@ export default function Diagnostics() {
                   <div
                     key={event.id}
                     className={`p-3 border-l-4 rounded ${event.type === "critical" ? "border-red-700 bg-red-50 dark:bg-red-950" :
-                        event.type === "error" ? "border-red-500 bg-red-50 dark:bg-red-950" :
-                          event.type === "warning" ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950" :
-                            "border-blue-500 bg-blue-50 dark:bg-blue-950"
+                      event.type === "error" ? "border-red-500 bg-red-50 dark:bg-red-950" :
+                        event.type === "warning" ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950" :
+                          "border-blue-500 bg-blue-50 dark:bg-blue-950"
                       }`}
                   >
                     <div className="flex items-start gap-2">

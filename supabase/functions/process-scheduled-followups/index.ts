@@ -128,12 +128,18 @@ ${settings?.name || 'The Team'}`;
                 // Send the follow-up email using existing function
                 const { error: sendError } = await supabase.functions.invoke("send-follow-up-email", {
                     body: {
-                        to: customer.email,
+                        customerEmail: customer.email,
+                        customerName: customer.name,
                         subject,
-                        message,
-                        quoteUrl,
-                        companyName: settings?.name,
-                        quoteId: quote.id,
+                        greeting: "Hello " + (customer.name || 'there') + ",",
+                        bodyText: message.split('\n\n').slice(1, -2).join('\n\n'), // Try to extract body if possible, or just send full message
+                        closingText: "Best regards,",
+                        companyName: settings?.name || 'The Team',
+                        includeQuoteReference: true,
+                        quoteNumber: quote.quote_number,
+                        quoteTitle: quote.title,
+                        quoteTotal: quote.total,
+                        quoteShareLink: quoteUrl,
                     },
                 });
 

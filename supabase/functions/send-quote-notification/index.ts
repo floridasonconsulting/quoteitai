@@ -33,25 +33,33 @@ serve(async (req) => {
       throw new Error('RESEND_API_KEY not configured');
     }
 
-    // Check if we're in Resend testing mode
-    // In testing mode, Resend only allows sending to the account owner's email
-    const resendAccountEmail = Deno.env.get('RESEND_ACCOUNT_EMAIL') || 'ahill005@gmail.com';
+    // Check environment and test mode
+    const environment = Deno.env.get('ENVIRONMENT') || 'development';
+    const isProduction = environment === 'production' || environment === 'prod';
+    const resendAccountEmail = Deno.env.get('RESEND_ACCOUNT_EMAIL');
+
+    // Test mode logic
+    const resendTestMode = Deno.env.get('RESEND_TEST_MODE') === 'true';
     const actualRecipient = email;
-    const isTestMode = email !== resendAccountEmail;
-    
-    // If email is not the Resend account owner, log warning and use account owner email
+
+    // Default to test mode if not explicitly in production and we have an account email
+    const isTestMode = resendTestMode || (!isProduction && !!resendAccountEmail);
+    const recipientEmailFinal = (isTestMode && resendAccountEmail) ? resendAccountEmail : email;
+
     if (isTestMode) {
-      console.warn(`⚠️ Resend testing mode: Redirecting email from ${email} to ${resendAccountEmail}`);
-      console.warn(`💡 To send to all recipients, verify your domain at https://resend.com/domains`);
+      console.warn(`⚠️ Resend testing mode active (Env: ${environment})`);
+      if (resendAccountEmail) {
+        console.warn(`⚠️ Redirecting email from ${email} to ${resendAccountEmail}`);
+      }
     }
 
     // Prepare email content
-    const subject = isTestMode 
+    const subject = isTestMode
       ? `[Test Mode] Quote #${quoteNumber} has been ${status}`
       : `Quote #${quoteNumber} has been ${status}`;
     const actionColor = status === 'accepted' ? '#10b981' : '#ef4444';
     const actionText = status === 'accepted' ? 'Accepted' : 'Declined';
-    
+
     const testModeNotice = isTestMode ? `
       <tr>
         <td style="padding: 20px 40px;">
@@ -68,7 +76,7 @@ serve(async (req) => {
         </td>
       </tr>
     ` : '';
-    
+
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -169,11 +177,11 @@ serve(async (req) => {
     `;
 
     // Get from email address (use environment variable or default)
-    const fromEmail = Deno.env.get('FROM_EMAIL_ADDRESS') || 'Quote-it AI <notifications@resend.dev>';
-    
+    const fromEmail = Deno.env.get('RESEND_FROM_EMAIL') || Deno.env.get('FROM_EMAIL_ADDRESS') || 'Quote-it AI <notifications@resend.dev>';
+
     // Send email via Resend (use account owner email in test mode)
-    const recipientEmail = isTestMode ? resendAccountEmail : email;
-    
+    const recipientEmail = isTestMode && resendAccountEmail ? resendAccountEmail : email;
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -191,13 +199,13 @@ serve(async (req) => {
     if (!response.ok) {
       const errorData = await response.text();
       console.error('Resend API error:', errorData);
-      
+
       // Check if it's a domain verification error
       if (errorData.includes('validation_error') || errorData.includes('verify a domain')) {
         console.warn('⚠️ Domain not verified with Resend. To send emails to all recipients, verify your domain at https://resend.com/domains');
         throw new Error('Email domain not verified. Emails can only be sent to verified addresses. Please verify your domain at resend.com/domains');
       }
-      
+
       throw new Error(`Failed to send email: ${response.status} ${errorData}`);
     }
 
@@ -211,7 +219,7 @@ serve(async (req) => {
 
     await supabase
       .from('notifications')
-      .update({ 
+      .update({
         email_sent: true,
         email_sent_at: new Date().toISOString()
       })
@@ -221,27 +229,27 @@ serve(async (req) => {
       .limit(1);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: 'Email sent successfully',
-        emailId: result.id 
+        emailId: result.id
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
 
   } catch (error) {
     console.error('Error sending email notification:', error);
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: 'Failed to send email notification',
         details: error instanceof Error ? error.message : 'Unknown error'
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
