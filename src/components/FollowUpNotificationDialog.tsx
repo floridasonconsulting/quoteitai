@@ -1,159 +1,122 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Sparkles, Send, Edit3, Clock, AlertCircle } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAI } from '@/hooks/useAI';
+import { Quote, Customer } from '@/types';
 import { toast } from 'sonner';
-import { Quote } from '@/types';
+import { Loader2, Mail, Send, Sparkles, RefreshCw } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FollowUpNotificationDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    quote: Quote;
-    companyName?: string;
-    customerEmail?: string;
-    onSend: (subject: string, message: string) => Promise<void>;
+    quote: Quote | null;
+    customer: Customer | null;
 }
-
-type QuoteStaleness = 'fresh' | 'warm' | 'aging' | 'stale';
-
-function getQuoteStaleness(quote: Quote): { status: QuoteStaleness; daysSince: number } {
-    const sentDate = quote.sentDate ? new Date(quote.sentDate) : new Date(quote.createdAt);
-    const now = new Date();
-    const daysSince = Math.floor((now.getTime() - sentDate.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (daysSince <= 3) return { status: 'fresh', daysSince };
-    if (daysSince <= 7) return { status: 'warm', daysSince };
-    if (daysSince <= 14) return { status: 'aging', daysSince };
-    return { status: 'stale', daysSince };
-}
-
-const STALENESS_CONFIG: Record<QuoteStaleness, { label: string; color: string; tone: string }> = {
-    fresh: {
-        label: 'Fresh',
-        color: 'bg-green-500',
-        tone: 'friendly check-in with value reminder'
-    },
-    warm: {
-        label: 'Warm',
-        color: 'bg-yellow-500',
-        tone: 'professional follow-up addressing potential concerns'
-    },
-    aging: {
-        label: 'Aging',
-        color: 'bg-orange-500',
-        tone: 'creating urgency with limited availability messaging'
-    },
-    stale: {
-        label: 'Stale',
-        color: 'bg-red-500',
-        tone: 'final outreach with deadline and potential incentive'
-    }
-};
 
 export function FollowUpNotificationDialog({
     isOpen,
     onClose,
     quote,
-    companyName,
-    customerEmail,
-    onSend
+    customer
 }: FollowUpNotificationDialogProps) {
-    const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
-    const [isEditing, setIsEditing] = useState(false);
+    const [subject, setSubject] = useState('');
+    const [greeting, setGreeting] = useState('');
+    const [closingText, setClosingText] = useState('Best regards');
+    const [includeQuoteReference, setIncludeQuoteReference] = useState(true);
     const [isSending, setIsSending] = useState(false);
 
-    const stalenessInfo = getQuoteStaleness(quote);
-    const config = STALENESS_CONFIG[stalenessInfo.status];
-
-    const followUpAI = useAI('followup_message', {
+    const { generate, isLoading } = useAI('followup_message', {
         onSuccess: (content) => {
-            // Parse subject and message from AI response
-            const lines = content.split('\n');
-            let parsedSubject = '';
-            let parsedMessage = '';
-            let inMessage = false;
-
-            for (const line of lines) {
-                if (line.toLowerCase().startsWith('subject:')) {
-                    parsedSubject = line.replace(/^subject:\s*/i, '').trim();
-                } else if (line.toLowerCase().startsWith('message:') || inMessage) {
-                    inMessage = true;
-                    if (line.toLowerCase().startsWith('message:')) {
-                        parsedMessage = line.replace(/^message:\s*/i, '').trim() + '\n';
-                    } else {
-                        parsedMessage += line + '\n';
-                    }
-                }
-            }
-
-            // Fallback parsing
-            if (!parsedSubject && !parsedMessage) {
-                const parts = content.split('\n\n');
-                parsedSubject = parts[0]?.replace(/^subject:\s*/i, '').trim() || 'Following Up on Your Quote';
-                parsedMessage = parts.slice(1).join('\n\n').trim() || content;
-            }
-
-            setSubject(parsedSubject || 'Following Up on Your Quote');
-            setMessage(parsedMessage.trim() || content);
-        },
-        onUpgradeRequired: () => {
-            toast.error('AI follow-up generation requires a paid plan');
+            setMessage(content);
         }
     });
 
     useEffect(() => {
-        if (isOpen && !message) {
-            generateAIMessage();
+        if (isOpen && quote) {
+            setSubject(`Following Up: ${quote.title}`);
+            setGreeting(`Hi ${quote.customerName},`);
+            if (!message && !isLoading) {
+                handleGenerate();
+            }
         }
-    }, [isOpen]);
+    }, [isOpen, quote]);
 
-    const generateAIMessage = async () => {
-        const prompt = `Generate a professional follow-up email for a ${stalenessInfo.status} quote.
+    const handleGenerate = async () => {
+        if (!quote) return;
 
-CONTEXT:
-- Quote Title: ${quote.title}
-- Customer: ${quote.customerName}
-- Total Value: $${quote.total.toLocaleString()}
-- Days Since Sent: ${stalenessInfo.daysSince}
-- Quote Status: ${quote.status}
-- Company Name: ${companyName || 'Our Company'}
+        const prompt = `Generate a professional and friendly follow-up message for ${quote.customerName}. 
+    Reference their quote: "${quote.title}" (#${quote.quoteNumber}) for $${quote.total.toLocaleString()}.
+    
+    Make it concise and helpful. Ask if they have any questions or need more information to move forward.
+    
+    Do NOT include subject lines or signatures, just the message body.`;
 
-TONE REQUIREMENT: ${config.tone}
-
-STALENESS STRATEGY:
-${stalenessInfo.status === 'fresh' ? '- Friendly, casual check-in\n- Remind of key benefits\n- Offer to answer questions' : ''}
-${stalenessInfo.status === 'warm' ? '- Show understanding they may be busy\n- Address common objections\n- Highlight unique value proposition' : ''}
-${stalenessInfo.status === 'aging' ? '- Create subtle urgency\n- Mention limited availability/capacity\n- Offer to schedule a quick call' : ''}
-${stalenessInfo.status === 'stale' ? '- Final professional outreach\n- Consider offering a small incentive\n- Set a soft deadline\n- Leave door open for future' : ''}
-
-Generate in this EXACT format:
-Subject: [compelling subject line]
-Message: [professional email body with greeting, 2-3 paragraphs, and sign-off]
-
-The message should be warm but professional, not pushy. Goal: help close the deal.`;
-
-        await followUpAI.generate(prompt, { quote, staleness: stalenessInfo });
+        await generate(prompt, {
+            quoteId: quote.id,
+            customerName: quote.customerName,
+            total: quote.total,
+            status: quote.status
+        });
     };
 
     const handleSend = async () => {
-        if (!subject.trim() || !message.trim()) {
-            toast.error('Please provide both subject and message');
-            return;
-        }
+        if (!quote || !message.trim()) return;
 
         setIsSending(true);
         try {
-            await onSend(subject, message);
-            toast.success('Follow-up sent successfully!');
+            // 1. Fetch company settings for branding
+            const { data: settings } = await supabase
+                .from('company_settings')
+                .select('name, logo')
+                .single();
+
+            // 2. Build share link if needed
+            let shareLink = undefined;
+            if (includeQuoteReference && quote.shareToken) {
+                shareLink = `${window.location.origin}/quote/view/${quote.shareToken}`;
+            }
+
+            // 3. Call edge function
+            const { error: emailError } = await supabase.functions.invoke('send-follow-up-email', {
+                body: {
+                    customerEmail: customer?.email || '',
+                    customerName: quote.customerName,
+                    subject: subject,
+                    greeting: greeting,
+                    bodyText: message,
+                    closingText: closingText,
+                    companyName: settings?.name || 'Our Company',
+                    companyLogo: settings?.logo,
+                    includeQuoteReference: includeQuoteReference,
+                    quoteNumber: quote.quoteNumber,
+                    quoteTitle: quote.title,
+                    quoteTotal: quote.total,
+                    quoteShareLink: shareLink,
+                }
+            });
+
+            if (emailError) throw emailError;
+
+            // 4. Update quote with follow-up date
+            const { error: updateError } = await supabase
+                .from('quotes')
+                .update({ follow_up_date: new Date().toISOString() })
+                .eq('id', quote.id);
+
+            if (updateError) throw updateError;
+
+            toast.success('Follow-up message sent successfully');
             onClose();
+            setMessage('');
         } catch (error) {
-            toast.error('Failed to send follow-up');
+            console.error('Error sending follow-up:', error);
+            toast.error('Failed to send follow-up message. Please try again or use the manual follow-up option.');
         } finally {
             setIsSending(false);
         }
@@ -161,99 +124,120 @@ The message should be warm but professional, not pushy. Goal: help close the dea
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Clock className="h-5 w-5 text-blue-500" />
-                        Time to Follow Up!
+                        <Sparkles className="h-5 w-5 text-blue-500" />
+                        AI Follow-up Assistant
                     </DialogTitle>
                     <DialogDescription>
-                        AI has generated a personalized message based on the quote's staleness
+                        Draft a personalized follow-up for <strong>{quote?.customerName}</strong>.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4">
-                    {/* Quote Info Bar */}
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div>
-                            <p className="font-medium">{quote.title}</p>
-                            <p className="text-sm text-muted-foreground">{quote.customerName}</p>
+                <div className="py-4 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="subject">Subject Line</Label>
+                            <Input
+                                id="subject"
+                                value={subject}
+                                onChange={(e) => setSubject(e.target.value)}
+                                placeholder="Email subject"
+                            />
                         </div>
-                        <div className="text-right">
-                            <Badge className={`${config.color} text-white`}>
-                                {config.label} ({stalenessInfo.daysSince} days)
-                            </Badge>
-                            <p className="text-sm font-semibold mt-1">${quote.total.toLocaleString()}</p>
+                        <div className="space-y-2">
+                            <Label htmlFor="greeting">Greeting</Label>
+                            <Input
+                                id="greeting"
+                                value={greeting}
+                                onChange={(e) => setGreeting(e.target.value)}
+                                placeholder="Hi there,"
+                            />
                         </div>
                     </div>
 
-                    {/* AI Loading State */}
-                    {followUpAI.isLoading && (
-                        <div className="flex items-center justify-center p-8">
-                            <Sparkles className="h-6 w-6 text-purple-500 animate-pulse mr-2" />
-                            <span className="text-muted-foreground">AI is crafting your message...</span>
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <Label htmlFor="message">Message Body</Label>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleGenerate}
+                                disabled={isLoading}
+                                className="h-8 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                                <RefreshCw className={`h-3 w-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+                                {isLoading ? 'Generating...' : 'Regenerate'}
+                            </Button>
                         </div>
-                    )}
-
-                    {/* Subject & Message */}
-                    {!followUpAI.isLoading && (
-                        <>
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="subject">Subject Line</Label>
-                                    {!isEditing && (
-                                        <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
-                                            <Edit3 className="h-3 w-3 mr-1" />
-                                            Edit
-                                        </Button>
-                                    )}
-                                </div>
-                                <Input
-                                    id="subject"
-                                    value={subject}
-                                    onChange={(e) => setSubject(e.target.value)}
-                                    disabled={!isEditing}
-                                    className={!isEditing ? 'bg-muted' : ''}
-                                />
+                        {isLoading && !message ? (
+                            <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed rounded-lg bg-muted/30">
+                                <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-2" />
+                                <p className="text-sm text-muted-foreground italic">Crafting personalized message...</p>
                             </div>
+                        ) : (
+                            <Textarea
+                                id="message"
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
+                                placeholder="Type your follow-up message here..."
+                                className="min-h-[200px] leading-relaxed font-sans"
+                            />
+                        )}
+                    </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="message">Message</Label>
-                                <Textarea
-                                    id="message"
-                                    value={message}
-                                    onChange={(e) => setMessage(e.target.value)}
-                                    disabled={!isEditing}
-                                    rows={8}
-                                    className={!isEditing ? 'bg-muted' : ''}
-                                />
-                            </div>
+                    <div className="flex items-start space-x-2 border rounded-lg p-3 bg-muted/50">
+                        <Checkbox
+                            id="includeQuote"
+                            checked={includeQuoteReference}
+                            onCheckedChange={(checked) => setIncludeQuoteReference(checked as boolean)}
+                            className="mt-1"
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                            <label
+                                htmlFor="includeQuote"
+                                className="text-sm font-medium cursor-pointer"
+                            >
+                                Include Quote Data
+                            </label>
+                            <p className="text-xs text-muted-foreground">
+                                Adds quote details and a link to view the proposal online.
+                            </p>
+                        </div>
+                    </div>
 
-                            {customerEmail && (
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <AlertCircle className="h-4 w-4" />
-                                    Will be sent to: {customerEmail}
-                                </div>
-                            )}
-                        </>
-                    )}
+                    <div className="space-y-2">
+                        <Label htmlFor="closing">Closing</Label>
+                        <Input
+                            id="closing"
+                            value={closingText}
+                            onChange={(e) => setClosingText(e.target.value)}
+                            placeholder="Best regards"
+                        />
+                    </div>
                 </div>
 
-                <DialogFooter className="gap-2 sm:gap-0">
-                    <Button variant="outline" onClick={() => generateAIMessage()} disabled={followUpAI.isLoading}>
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        Regenerate
-                    </Button>
-                    <Button variant="outline" onClick={onClose}>
-                        Later
+                <DialogFooter className="flex gap-2 pt-4 border-t">
+                    <Button variant="outline" onClick={onClose} disabled={isSending}>
+                        Cancel
                     </Button>
                     <Button
                         onClick={handleSend}
-                        disabled={isSending || followUpAI.isLoading || !message}
-                        className="bg-green-600 hover:bg-green-700"
+                        disabled={isLoading || isSending || !message.trim()}
+                        className="bg-blue-600 hover:bg-blue-700"
                     >
-                        <Send className="h-4 w-4 mr-2" />
-                        {isSending ? 'Sending...' : 'Send Now'}
+                        {isSending ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Sending...
+                            </>
+                        ) : (
+                            <>
+                                <Mail className="mr-2 h-4 w-4" />
+                                Send Email
+                            </>
+                        )}
                     </Button>
                 </DialogFooter>
             </DialogContent>

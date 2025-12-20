@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Search, FileText, Calendar, Trash2, Bell, X, Bug, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search, FileText, Calendar, Trash2, Bell, X, Bug, FileSpreadsheet, Sparkles } from 'lucide-react';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -21,6 +21,7 @@ import { useOptimisticList } from '@/hooks/useOptimisticList';
 import { supabase } from '@/integrations/supabase/client';
 import { debugQuoteStorage, nuclearClearAllQuotes } from '@/lib/debug-quotes';
 import { BatchQuoteDialog } from '@/components/BatchQuoteDialog';
+import { FollowUpNotificationDialog } from '@/components/FollowUpNotificationDialog';
 
 export default function Quotes() {
   const navigate = useNavigate();
@@ -51,6 +52,8 @@ export default function Quotes() {
   const [notificationFilter, setNotificationFilter] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState<string>('');
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [followUpQuote, setFollowUpQuote] = useState<Quote | null>(null);
+  const [followUpDialogOpen, setFollowUpDialogOpen] = useState(false);
 
   const loadQuotes = useCallback(async (forceRefresh = false) => {
     if (!user?.id) {
@@ -532,11 +535,28 @@ export default function Quotes() {
                                 {age}
                               </Badge>
                             )}
+                          </div>
+                          <div className="flex items-center gap-2">
                             {dueFollowUpIds.includes(quote.id) && (
                               <Badge variant="default" className="text-xs whitespace-nowrap bg-warning text-warning-foreground">
                                 <Bell className="h-3 w-3 mr-1" />
                                 Follow-up Due
                               </Badge>
+                            )}
+                            {(dueFollowUpIds.includes(quote.id) || age === 'stale' || age === 'aging') && quote.status === 'sent' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFollowUpQuote(quote);
+                                  setFollowUpDialogOpen(true);
+                                }}
+                              >
+                                <Sparkles className="h-3 w-3 mr-1" />
+                                AI Follow-up
+                              </Button>
                             )}
                           </div>
                         </div>
@@ -596,6 +616,15 @@ export default function Quotes() {
           loadQuotes();
           toast.success(`${newQuotes.length} quotes generated!`);
         }}
+      />
+      <FollowUpNotificationDialog
+        isOpen={followUpDialogOpen}
+        onClose={() => {
+          setFollowUpDialogOpen(false);
+          setFollowUpQuote(null);
+        }}
+        quote={followUpQuote}
+        customer={customers.find(c => c.id === followUpQuote?.customerId) || null}
       />
     </PullToRefresh >
   );
