@@ -129,27 +129,16 @@ export function CategoryGroupSection({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!e.touches || e.touches.length === 0) return;
-    if (touchStartY.current === null) return;
+    // SIMPLIFIED: Remove complex calculations - let native scrolling handle smoothness
+    // Only prevent Swiper takeover when content is actually scrollable
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const currentY = e.touches[0].clientY;
-    const diff = touchStartY.current - currentY;
     const { scrollTop, scrollHeight, clientHeight } = container;
+    const canScroll = scrollHeight > clientHeight;
 
-    // Safety check for scroll dimensions
-    if (scrollHeight <= clientHeight) return;
-
-    const isAtTop = scrollTop <= 0;
-    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-
-    // If scrolling down (content moving up) AND not at bottom -> Stop Swiper
-    if (diff > 0 && !isAtBottom) {
-      e.stopPropagation();
-    }
-    // If scrolling up (content moving down) AND not at top -> Stop Swiper
-    else if (diff < 0 && !isAtTop) {
+    // If container has scrollable content and we're somewhere in the middle, stop propagation
+    if (canScroll && scrollTop > 5 && scrollTop < scrollHeight - clientHeight - 5) {
       e.stopPropagation();
     }
   };
@@ -220,11 +209,8 @@ export function CategoryGroupSection({
           {/* Items Grid - TIGHTER SPACING */}
           <div className="space-y-4 mb-6">
             {categoryGroup.items.map((item, idx) => (
-              <motion.div
+              <div
                 key={idx}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05, duration: 0.4 }}
                 className={cn(
                   "flex flex-col gap-3 bg-gray-50 dark:bg-gray-900 p-4 md:p-5 rounded-xl shadow-sm",
                   "hover:shadow-md transition-shadow duration-300 border border-gray-200 dark:border-gray-800",
@@ -281,7 +267,7 @@ export function CategoryGroupSection({
                     </div>
                   )}
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
 

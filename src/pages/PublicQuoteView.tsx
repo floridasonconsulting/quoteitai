@@ -363,6 +363,7 @@ export default function PublicQuoteView() {
         userId: quoteData.user_id,
         showPricing: quoteData.show_pricing ?? true,
         pricingMode: (quoteData as any).pricing_mode || 'category_total', // Load pricing mode
+        scopeOfWork: (quoteData as any).scope_of_work, // NEW: AI SOW for proposals
       };
 
       console.log('[PublicQuoteView] ✅ Quote formatted. Item count:', formattedQuote.items.length);
