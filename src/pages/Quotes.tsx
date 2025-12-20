@@ -272,7 +272,7 @@ export default function Quotes() {
         // Better: Manual optimistic update for bulk, then execute promises
         setQuotes(prev => prev.filter(q => !idsToDelete.includes(q.id)));
 
-        const promises = idsToDelete.map(id => deleteQuote(user?.id, id, queueChange));
+        const promises = idsToDelete.map(id => deleteQuote(user?.id, organizationId, id, queueChange));
         await Promise.all(promises);
 
         toast.success(`Deleted ${idsToDelete.length} quote${idsToDelete.length > 1 ? 's' : ''}`);

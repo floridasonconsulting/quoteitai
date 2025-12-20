@@ -15,6 +15,7 @@ export type DuplicateStrategy = 'skip' | 'overwrite' | 'error';
 export async function importCustomersFromCSV(
   csvContent: string,
   userId: string,
+  organizationId: string | null = null,
   duplicateStrategy: DuplicateStrategy = 'skip'
 ): Promise<ImportResult> {
   const lines = csvContent
@@ -31,7 +32,7 @@ export async function importCustomersFromCSV(
   const result: ImportResult = { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: [] };
 
   const { getCustomers, updateCustomer } = await import('./db-service');
-  const existingCustomers = await getCustomers(userId);
+  const existingCustomers = await getCustomers(userId, organizationId);
 
   for (let i = 1; i < lines.length; i++) {
     try {
@@ -63,13 +64,13 @@ export async function importCustomersFromCSV(
           result.errors.push(`Line ${i + 1}: Duplicate customer: ${customer.name} (${customer.email})`);
           continue;
         } else if (duplicateStrategy === 'overwrite') {
-          await updateCustomer(userId, null, existingCustomer.id, customer as Customer);
+          await updateCustomer(userId, organizationId, existingCustomer.id, customer as Customer);
           result.overwritten++;
           continue;
         }
       }
 
-      await addCustomer(userId, null, customer as Customer);
+      await addCustomer(userId, organizationId, customer as Customer);
       result.success++;
     } catch (error) {
       result.failed++;
@@ -88,6 +89,7 @@ export async function importCustomersFromCSV(
 export async function importItemsFromCSV(
   csvContent: string,
   userId: string,
+  organizationId: string | null = null,
   duplicateStrategy: DuplicateStrategy = 'skip'
 ): Promise<ImportResult> {
   const lines = csvContent
@@ -109,7 +111,7 @@ export async function importItemsFromCSV(
   const result: ImportResult = { success: 0, failed: 0, skipped: 0, overwritten: 0, errors: [] };
 
   const { getItems, updateItem } = await import('./db-service');
-  const existingItems = await getItems(userId);
+  const existingItems = await getItems(userId, organizationId);
 
   for (let i = 1; i < lines.length; i++) {
     try {
@@ -229,7 +231,7 @@ export async function importItemsFromCSV(
           console.error(`[CSV Import] Duplicate detected: ${item.name}`);
           continue;
         } else if (duplicateStrategy === 'overwrite') {
-          await updateItem(userId, null, existingItem.id, item as Item);
+          await updateItem(userId, organizationId, existingItem.id, item as Item);
           result.overwritten++;
           console.log(`[CSV Import] Overwritten: ${item.name}`);
           continue;
@@ -261,7 +263,7 @@ export async function importItemsFromCSV(
         allFields: Object.keys(newItem)
       });
 
-      await addItem(userId, null, newItem);
+      await addItem(userId, organizationId, newItem);
       result.success++;
       console.log(`[CSV Import] ✓ Successfully imported: ${newItem.name}`);
     } catch (error) {
@@ -281,7 +283,11 @@ export async function importItemsFromCSV(
   return result;
 }
 
-export async function importQuotesFromCSV(csvContent: string, userId: string): Promise<ImportResult> {
+export async function importQuotesFromCSV(
+  csvContent: string,
+  userId: string,
+  organizationId: string | null = null
+): Promise<ImportResult> {
   const lines = csvContent
     .trim()
     .split(/\r?\n|\r/)
@@ -299,8 +305,8 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
   console.log(`[Import] Starting quote import with ${lines.length - 1} rows`);
 
   const { getQuotes, getCustomers } = await import('./db-service');
-  const existingQuotes = await getQuotes(userId);
-  const existingCustomers = await getCustomers(userId);
+  const existingQuotes = await getQuotes(userId, organizationId);
+  const existingCustomers = await getCustomers(userId, organizationId);
 
   console.log(`[Import] Found ${existingQuotes.length} existing quotes`);
   console.log(`[Import] Found ${existingCustomers.length} existing customers for mapping`);
@@ -382,7 +388,7 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
       delete (quote as Partial<Quote & { customerId: string }>).customerId;
 
       console.log(`[Import] Adding quote: ${quote.quoteNumber} - ${quote.title}`);
-      await addQuote(userId, null, quote as Quote);
+      await addQuote(userId, organizationId, quote as Quote);
       console.log(`[Import] Successfully added quote: ${quote.quoteNumber}`);
       result.success++;
     } catch (error) {
@@ -401,7 +407,11 @@ export async function importQuotesFromCSV(csvContent: string, userId: string): P
   return result;
 }
 
-export async function importCompanySettingsFromCSV(csvContent: string, userId: string): Promise<void> {
+export async function importCompanySettingsFromCSV(
+  csvContent: string,
+  userId: string,
+  organizationId: string | null = null
+): Promise<void> {
   const lines = csvContent.trim().split('\n');
   const settings: Partial<CompanySettings> = {};
 
@@ -414,7 +424,7 @@ export async function importCompanySettingsFromCSV(csvContent: string, userId: s
     }
   }
 
-  await saveSettings(userId, null, settings as CompanySettings);
+  await saveSettings(userId, organizationId, settings as CompanySettings);
 }
 
 export function validateItemsCSV(csvContent: string): { valid: boolean; errors: string[] } {

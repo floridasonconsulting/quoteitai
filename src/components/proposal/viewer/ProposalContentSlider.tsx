@@ -76,7 +76,7 @@ export function ProposalContentSlider({
     <div className="h-full w-full overflow-hidden">
       <Swiper
         modules={[Navigation, Pagination, Keyboard, Mousewheel]}
-        direction={isDesktop ? "horizontal" : "vertical"}
+        direction="horizontal"
         slidesPerView={1}
         centeredSlides={true}
         spaceBetween={0}

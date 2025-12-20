@@ -179,6 +179,51 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkS
         }
     };
 
+    const touchStartY = useRef<number | null>(null);
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (!e.touches || e.touches.length === 0) return;
+        touchStartY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!e.touches || e.touches.length === 0) return;
+        if (touchStartY.current === null) return;
+
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        const currentY = e.touches[0].clientY;
+        const diff = touchStartY.current - currentY;
+        const { scrollTop, scrollHeight, clientHeight } = container;
+
+        if (scrollHeight <= clientHeight) return;
+
+        const isAtTop = scrollTop <= 0;
+        const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+        if (diff > 0 && !isAtBottom) {
+            e.stopPropagation();
+        } else if (diff < 0 && !isAtTop) {
+            e.stopPropagation();
+        }
+    };
+
+    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        const { scrollTop, scrollHeight, clientHeight } = container;
+        const isScrollingUp = e.deltaY < 0;
+        const isScrollingDown = e.deltaY > 0;
+
+        const isAtTop = scrollTop <= 0;
+        const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+        if ((isScrollingDown && !isAtBottom) || (isScrollingUp && !isAtTop)) {
+            e.stopPropagation();
+        }
+    };
+
     const sowSections = parseSections(section.content || '');
 
     return (
@@ -234,7 +279,10 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkS
                 {/* Scrollable SOW Content */}
                 <div
                     ref={scrollContainerRef}
-                    className="h-[calc(100%-120px)] overflow-y-auto px-6 py-4 pb-24 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
+                    onWheel={handleWheel}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    className="h-[calc(100%-120px)] overflow-y-auto px-6 py-4 pb-24 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent touch-pan-y"
                 >
                     <div className="max-w-3xl mx-auto space-y-6">
                         {sowSections.length > 0 ? (

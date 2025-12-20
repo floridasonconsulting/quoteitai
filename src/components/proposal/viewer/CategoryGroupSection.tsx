@@ -132,16 +132,26 @@ export function CategoryGroupSection({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    // SIMPLIFIED: Remove complex calculations - let native scrolling handle smoothness
-    // Only prevent Swiper takeover when content is actually scrollable
+    if (!e.touches || e.touches.length === 0) return;
+    if (touchStartY.current === null) return;
+
     const container = scrollContainerRef.current;
     if (!container) return;
 
+    const currentY = e.touches[0].clientY;
+    const diff = touchStartY.current - currentY;
     const { scrollTop, scrollHeight, clientHeight } = container;
-    const canScroll = scrollHeight > clientHeight;
 
-    // If container has scrollable content and we're somewhere in the middle, stop propagation
-    if (canScroll && scrollTop > 5 && scrollTop < scrollHeight - clientHeight - 5) {
+    // Safety check for scroll dimensions
+    if (scrollHeight <= clientHeight) return;
+
+    const isAtTop = scrollTop <= 0;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+    // Only prevent Swiper navigation if we're scrolling within bounds
+    if (diff > 0 && !isAtBottom) {
+      e.stopPropagation();
+    } else if (diff < 0 && !isAtTop) {
       e.stopPropagation();
     }
   };

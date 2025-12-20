@@ -88,7 +88,9 @@ export async function getItems(
         let query = supabase.from('items' as any).select('*');
 
         if (organizationId) {
-          query = query.eq('organization_id', organizationId);
+          // Fetch items belonging to the organization OR created by the user
+          // This prevents "lost" items during the migration to organization IDs
+          query = query.or(`organization_id.eq.${organizationId},user_id.eq.${userId}`);
         } else {
           query = query.eq('user_id', userId);
         }
@@ -333,11 +335,18 @@ export async function updateItem(
     console.log('[ItemService] Syncing update to Supabase with minQuantity and imageUrl');
 
     const startTime = performance.now();
-    const { error } = await supabase
+    let query = supabase
       .from('items' as any)
       .update(dbUpdates as unknown)
-      .eq('id', id)
-      .eq('user_id', userId)
+      .eq('id', id);
+
+    // If not in an organization context, strictly enforce user_id matching
+    // If in an organization, allow RLS to handle permission (to allow owner/admin updates)
+    if (!organizationId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { error } = await query
       .select()
       .single();
 
@@ -368,6 +377,7 @@ export async function updateItem(
  */
 export async function deleteItem(
   userId: string | undefined,
+  organizationId: string | null,
   id: string,
   queueChange?: (change: QueueChange) => void
 ): Promise<void> {
@@ -400,11 +410,18 @@ export async function deleteItem(
 
   try {
     const startTime = performance.now();
-    const { error } = await supabase
+    let query = supabase
       .from('items' as any)
       .delete()
-      .eq('id', id)
-      .eq('user_id', userId);
+      .eq('id', id);
+
+    // If not in an organization context, strictly enforce user_id matching
+    // If in an organization, allow RLS to handle permission (to allow owner/admin deletes)
+    if (!organizationId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { error } = await query;
 
     apiTracker.track(
       'items.delete',

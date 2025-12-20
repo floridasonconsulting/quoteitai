@@ -155,7 +155,7 @@ export default function Items() {
         setSelectedItems([]);
 
         // Perform deletions
-        const promises = deletedIds.map(id => deleteItem(user?.id, id, queueChange));
+        const promises = deletedIds.map(id => deleteItem(user?.id, organizationId, id, queueChange));
         await Promise.all(promises);
 
         toast.success(`Deleted ${deletedIds.length} item${deletedIds.length > 1 ? 's' : ''}`);

@@ -94,8 +94,10 @@ export async function getQuotes(
       try {
         let query = supabase.from('quotes' as any).select('*');
 
-        if (isAdminOrOwner && organizationId) {
-          query = query.eq('organization_id', organizationId);
+        if (organizationId) {
+          // Fetch quotes belonging to the organization OR created by the user
+          // This prevents "lost" quotes during the migration to organization IDs
+          query = query.or(`organization_id.eq.${organizationId},user_id.eq.${userId}`);
         } else {
           query = query.eq('user_id', userId);
         }
@@ -325,11 +327,18 @@ export async function updateQuote(
   // 3. Update Supabase
   try {
     const dbUpdates = toSnakeCase(updates);
-    const { error } = await supabase
+    let query = supabase
       .from('quotes' as any)
       .update(dbUpdates as unknown)
-      .eq('id', id)
-      .eq('user_id', userId);
+      .eq('id', id);
+
+    // If not in an organization context, strictly enforce user_id matching
+    // If in an organization, allow RLS to handle permission (to allow owner/admin updates)
+    if (!organizationId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { error } = await query;
 
     if (error) throw error;
 
@@ -347,6 +356,7 @@ export async function updateQuote(
  */
 export async function deleteQuote(
   userId: string | undefined,
+  organizationId: string | null,
   id: string,
   queueChange?: (change: QueueChange) => void
 ): Promise<void> {
@@ -386,11 +396,18 @@ export async function deleteQuote(
 
   // 3. Delete from Supabase
   try {
-    const { error } = await supabase
+    let query = supabase
       .from('quotes' as any)
       .delete()
-      .eq('id', id)
-      .eq('user_id', userId);
+      .eq('id', id);
+
+    // If not in an organization context, strictly enforce user_id matching
+    // If in an organization, allow RLS to handle permission (to allow owner/admin deletes)
+    if (!organizationId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { error } = await query;
 
     if (error) throw error;
 
@@ -405,7 +422,10 @@ export async function deleteQuote(
 /**
  * Clear ALL quotes for a user (Testing/Debug/Nuclear)
  */
-export async function clearAllQuotes(userId: string): Promise<void> {
+export async function clearAllQuotes(
+  userId: string,
+  organizationId: string | null = null
+): Promise<void> {
   console.log(`[QuoteService] ========== CLEARING ALL QUOTES ==========`);
 
   try {

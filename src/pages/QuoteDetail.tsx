@@ -97,7 +97,7 @@ export default function QuoteDetail() {
   const handleDelete = async () => {
     if (!quote || !confirm('Are you sure you want to delete this quote?')) return;
 
-    await deleteQuote(user?.id, quote.id, queueChange);
+    await deleteQuote(user?.id, organizationId, quote.id, queueChange);
     toast({
       title: 'Quote deleted',
       description: 'The quote has been successfully deleted.',

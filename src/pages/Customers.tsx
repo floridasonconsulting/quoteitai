@@ -53,7 +53,7 @@ export default function Customers() {
     entityName: 'Customer',
     onAdd: (customer: Customer) => addCustomer(user?.id, organizationId, customer, queueChange),
     onUpdate: (customer: Customer) => updateCustomer(user?.id, organizationId, customer.id, customer, queueChange),
-    onDelete: (id: string) => deleteCustomer(user?.id, id, queueChange)
+    onDelete: (id: string) => deleteCustomer(user?.id, organizationId, id, queueChange)
   }), [user?.id, organizationId, queueChange]);
 
   const {
