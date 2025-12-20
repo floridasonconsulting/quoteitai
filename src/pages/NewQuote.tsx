@@ -19,6 +19,14 @@ import { QuoteItemsSection } from '@/components/quote-form/QuoteItemsSection';
 import { ItemCatalogSidebar } from '@/components/quote-form/ItemCatalogSidebar';
 import { QuoteSummarySidebar } from '@/components/quote-form/QuoteSummarySidebar';
 import { CustomItemDialog } from '@/components/quote-form/CustomItemDialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { SOWGeneratorAI } from '@/components/SOWGeneratorAI';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { FollowUpSettings } from '@/components/quote-form/FollowUpSettings';
+import { FollowUpSchedule } from '@/types';
+import { getFollowUpSchedule, saveFollowUpSchedule } from '@/lib/services/follow-up-service';
 
 interface LocationState {
   editQuote?: Quote;
@@ -40,6 +48,12 @@ export default function NewQuote() {
   const [quoteTitle, setQuoteTitle] = useState('');
   const [quoteNotes, setQuoteNotes] = useState('');
   const [executiveSummary, setExecutiveSummary] = useState('');
+  const [scopeOfWork, setScopeOfWork] = useState(''); // NEW: SOW State
+  const [followUpSchedule, setFollowUpSchedule] = useState<Partial<FollowUpSchedule>>({
+    status: 'paused',
+    scheduleType: 'one_time',
+    maxFollowUps: 3
+  });
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
   const [showPricing, setShowPricing] = useState(true);
   const [pricingMode, setPricingMode] = useState<'itemized' | 'category_total' | 'grand_total'>('category_total');
@@ -137,8 +151,25 @@ export default function NewQuote() {
         setQuoteItems(quoteToEdit.items);
         setQuoteNotes(quoteToEdit.notes || '');
         setExecutiveSummary(quoteToEdit.executiveSummary || '');
+        setScopeOfWork(quoteToEdit.scopeOfWork || ''); // Load SOW
         setShowPricing(quoteToEdit.showPricing !== false);
         setPricingMode(quoteToEdit.pricingMode || 'category_total');
+
+        // Load Follow-up Schedule
+        try {
+          const schedule = await getFollowUpSchedule(quoteToEdit.id);
+          if (schedule) {
+            setFollowUpSchedule(schedule);
+          } else {
+            setFollowUpSchedule({
+              status: 'paused',
+              scheduleType: 'one_time',
+              maxFollowUps: 3
+            });
+          }
+        } catch (err) {
+          console.error('Failed to load follow-up schedule', err);
+        }
       } else {
         toast.error('Quote not found');
         navigate('/quotes');
@@ -228,13 +259,23 @@ export default function NewQuote() {
         executiveSummary,
         showPricing,
         pricingMode, // Save pricing mode
-        scopeOfWork: existingQuote?.scopeOfWork, // Preserve SOW from existing quote
+        scopeOfWork: scopeOfWork, // Save current SOW
         createdAt: existingQuote?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         userId: user?.id || '',
       };
 
       await updateQuote(user?.id, editQuoteId, updatedQuote, queueChange);
+
+      // Save Follow-up Schedule
+      if (followUpSchedule.status === 'active' || followUpSchedule.id) {
+        await saveFollowUpSchedule({
+          ...followUpSchedule,
+          quoteId: editQuoteId,
+          userId: user?.id || ''
+        });
+      }
+
       toast.success('Quote updated');
     } else {
       const quote: Quote = {
@@ -255,9 +296,20 @@ export default function NewQuote() {
         updatedAt: new Date().toISOString(),
         userId: user?.id || '',
         pricingMode, // Save pricing mode
+        scopeOfWork, // Save current SOW
       };
 
       await addQuote(user?.id, quote, queueChange);
+
+      // Save Follow-up Schedule
+      if (followUpSchedule.status === 'active') {
+        await saveFollowUpSchedule({
+          ...followUpSchedule,
+          quoteId: quote.id,
+          userId: user?.id || ''
+        });
+      }
+
       toast.success('Quote saved as draft');
     }
     navigate('/quotes');
@@ -306,10 +358,20 @@ export default function NewQuote() {
         updatedAt: new Date().toISOString(),
         userId: user?.id || '',
         pricingMode, // Save pricing mode
-        scopeOfWork: existingQuote?.scopeOfWork, // Preserve SOW from existing quote
+        scopeOfWork: scopeOfWork, // Save current SOW
       };
 
       await updateQuote(user?.id, editQuoteId, updatedQuote, queueChange);
+
+      // Save Follow-up Schedule
+      if (followUpSchedule.status === 'active' || followUpSchedule.id) {
+        await saveFollowUpSchedule({
+          ...followUpSchedule,
+          quoteId: editQuoteId,
+          userId: user?.id || ''
+        });
+      }
+
       await generatePDF(updatedQuote);
       toast.success('Quote updated and sent');
     } else {
@@ -332,9 +394,20 @@ export default function NewQuote() {
         updatedAt: new Date().toISOString(),
         userId: user?.id || '',
         pricingMode, // Save pricing mode
+        scopeOfWork, // Save current SOW
       };
 
       await addQuote(user?.id, quote, queueChange);
+
+      // Save Follow-up Schedule
+      if (followUpSchedule.status === 'active') {
+        await saveFollowUpSchedule({
+          ...followUpSchedule,
+          quoteId: quote.id,
+          userId: user?.id || ''
+        });
+      }
+
       await generatePDF(quote);
       toast.success('Quote sent successfully');
     }
@@ -469,61 +542,132 @@ export default function NewQuote() {
             />
           )}
 
-          <QuoteBasicInfo
-            customers={customers}
-            selectedCustomerId={selectedCustomerId}
-            onCustomerChange={setSelectedCustomerId}
-            quoteTitle={quoteTitle}
-            onTitleChange={setQuoteTitle}
-            quoteNotes={quoteNotes}
-            onNotesChange={setQuoteNotes}
-            quoteItems={quoteItems}
-            subtotal={subtotal}
-            total={total}
-            settings={settings}
-            showPricing={showPricing}
-            onShowPricingChange={setShowPricing}
-            pricingMode={pricingMode}
-            onPricingModeChange={setPricingMode}
-            onTitleGenerate={async (p) => { await titleAI.generate(p); }}
-            onNotesGenerate={async (p) => { await notesAI.generate(p); }}
-            titleAILoading={titleAI.isLoading}
-            notesAILoading={notesAI.isLoading}
-          />
+          {/* Main Form Content with Tabs */}
+          <Tabs defaultValue="details" className="w-full">
+            <TabsList className="w-full grid w-full grid-cols-3 mb-6">
+              <TabsTrigger value="details">Quote Details</TabsTrigger>
+              <TabsTrigger value="sow">Scope of Work</TabsTrigger>
+              <TabsTrigger value="automation">Automation</TabsTrigger>
+            </TabsList>
 
-          {/* Executive Summary Section */}
-          {quoteItems.length > 0 && selectedCustomerId && (
-            <QuoteSummaryAI
-              quote={{
-                id: editQuoteId || '', // CRITICAL: Use editQuoteId or empty string
-                quoteNumber: generateQuoteNumber(),
-                customerId: selectedCustomerId,
-                customerName: selectedCustomer?.name || '',
-                title: quoteTitle,
-                items: quoteItems,
-                subtotal,
-                tax,
-                total,
-                status: 'draft',
-                notes: quoteNotes,
-                executiveSummary,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                userId: user?.id || '',
-              }}
-              customer={selectedCustomer}
-              onSummaryGenerated={(summary) => setExecutiveSummary(summary)}
-            />
-          )}
+            <TabsContent value="details" className="space-y-6">
+              <QuoteBasicInfo
+                customers={customers}
+                selectedCustomerId={selectedCustomerId}
+                onCustomerChange={setSelectedCustomerId}
+                quoteTitle={quoteTitle}
+                onTitleChange={setQuoteTitle}
+                quoteNotes={quoteNotes}
+                onNotesChange={setQuoteNotes}
+                quoteItems={quoteItems}
+                subtotal={subtotal}
+                total={total}
+                settings={settings}
+                showPricing={showPricing}
+                onShowPricingChange={setShowPricing}
+                pricingMode={pricingMode}
+                onPricingModeChange={setPricingMode}
+                onTitleGenerate={async (p) => { await titleAI.generate(p); }}
+                onNotesGenerate={async (p) => { await notesAI.generate(p); }}
+                titleAILoading={titleAI.isLoading}
+                notesAILoading={notesAI.isLoading}
+              />
 
-          <QuoteItemsSection
-            quoteItems={quoteItems}
-            availableItems={items}
-            onUpdateQuantity={updateItemQuantity}
-            onRemoveItem={removeItem}
-            onAddItem={(item) => setQuoteItems([...quoteItems, item])}
-            onOpenCustomItemDialog={() => setIsItemDialogOpen(true)}
-          />
+              {/* Executive Summary Section */}
+              {quoteItems.length > 0 && selectedCustomerId && (
+                <QuoteSummaryAI
+                  quote={{
+                    id: editQuoteId || '',
+                    quoteNumber: generateQuoteNumber(),
+                    customerId: selectedCustomerId,
+                    customerName: selectedCustomer?.name || '',
+                    title: quoteTitle,
+                    items: quoteItems,
+                    subtotal,
+                    tax,
+                    total,
+                    status: 'draft',
+                    notes: quoteNotes,
+                    executiveSummary,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    userId: user?.id || '',
+                  }}
+                  customer={selectedCustomer}
+                  onSummaryGenerated={setExecutiveSummary}
+                  currentSummary={executiveSummary}
+                  onSummaryChange={setExecutiveSummary}
+                />
+              )}
+
+              <QuoteItemsSection
+                quoteItems={quoteItems}
+                availableItems={items}
+                onUpdateQuantity={updateItemQuantity}
+                onRemoveItem={removeItem}
+                onAddItem={addItemToQuote}
+                onOpenCustomItemDialog={() => setIsItemDialogOpen(true)}
+              />
+            </TabsContent>
+
+            <TabsContent value="sow">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Scope of Work</CardTitle>
+                  <CardDescription>
+                    Generate a professional Scope of Work document using AI, or write it manually.
+                    This content will be displayed as a dedicated slide in the proposal.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <SOWGeneratorAI
+                      quote={{
+                        id: editQuoteId || '',
+                        quoteNumber: generateQuoteNumber(),
+                        customerId: selectedCustomerId,
+                        customerName: selectedCustomer?.name || '',
+                        title: quoteTitle,
+                        items: quoteItems,
+                        subtotal,
+                        tax,
+                        total,
+                        status: 'draft',
+                        notes: quoteNotes,
+                        executiveSummary,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        userId: user?.id || '',
+                      }}
+                      companyName={settings?.name}
+                      onSuccess={setScopeOfWork}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="sow-content">Content Editor</Label>
+                    <Textarea
+                      id="sow-content"
+                      value={scopeOfWork}
+                      onChange={(e) => setScopeOfWork(e.target.value)}
+                      placeholder="Scope of work content will appear here..."
+                      className="min-h-[500px] font-mono text-sm leading-relaxed"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Tip: Use Markdown formatting (## for headers, • for lists) to style your document.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="automation">
+              <FollowUpSettings
+                schedule={followUpSchedule}
+                onChange={setFollowUpSchedule}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Sidebar - Item Catalog & Summary */}

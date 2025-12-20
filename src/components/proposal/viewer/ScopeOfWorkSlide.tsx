@@ -1,6 +1,6 @@
 import { ProposalSection } from '@/types/proposal';
 import { Button } from '@/components/ui/button';
-import { Edit3, FileText, CheckCircle, Clock, Target, ListChecks, Ban } from 'lucide-react';
+import { Edit3, FileText, CheckCircle, Clock, Target, ListChecks, Ban, DollarSign, ShieldCheck, Scale, AlertTriangle } from 'lucide-react';
 import { useRef } from 'react';
 
 interface ScopeOfWorkSlideProps {
@@ -20,17 +20,34 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkS
     const convertJsonToReadable = (jsonContent: any): string => {
         let readable = '';
 
+        // Helper to formatting values safely
+        const formatValue = (val: any): string => {
+            if (typeof val === 'string') return val;
+            if (typeof val === 'number') return val.toString();
+            if (Array.isArray(val)) return val.map(formatValue).join(', ');
+            if (typeof val === 'object' && val !== null) {
+                // If it's an object with 'description' or 'name', use that
+                if (val.description) return val.description;
+                if (val.name) return val.name;
+                // Fallback to values
+                return Object.values(val).map(formatValue).join(' - ');
+            }
+            return '';
+        };
+
         if (jsonContent.projectOverview) {
-            readable += `## Project Overview\n${jsonContent.projectOverview}\n\n`;
+            readable += `## Project Overview\n${formatValue(jsonContent.projectOverview)}\n\n`;
         }
 
         if (jsonContent.workBreakdown && Array.isArray(jsonContent.workBreakdown)) {
             readable += `## Scope of Work\n`;
             jsonContent.workBreakdown.forEach((phase: any) => {
-                readable += `### ${phase.phase || 'Phase'}\n`;
+                const phaseName = phase.phase || phase.title || phase.name || 'Phase';
+                readable += `### ${phaseName}\n`;
                 if (phase.description) readable += `${phase.description}\n`;
+
                 if (phase.tasks && Array.isArray(phase.tasks)) {
-                    phase.tasks.forEach((task: string) => readable += `• ${task}\n`);
+                    phase.tasks.forEach((task: any) => readable += `• ${formatValue(task)}\n`);
                 }
                 if (phase.duration) readable += `Duration: ${phase.duration}\n`;
                 readable += '\n';
@@ -39,21 +56,36 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkS
 
         if (jsonContent.deliverables && Array.isArray(jsonContent.deliverables)) {
             readable += `## Deliverables\n`;
-            jsonContent.deliverables.forEach((d: string) => readable += `• ${d}\n`);
+            jsonContent.deliverables.forEach((d: any) => readable += `• ${formatValue(d)}\n`);
             readable += '\n';
         }
 
         if (jsonContent.timeline) {
-            readable += `## Timeline & Milestones\n${typeof jsonContent.timeline === 'string' ? jsonContent.timeline : JSON.stringify(jsonContent.timeline)}\n\n`;
+            readable += `## Timeline & Milestones\n`;
+            const timeline = jsonContent.timeline;
+            if (typeof timeline === 'string') {
+                readable += `${timeline}\n\n`;
+            } else if (typeof timeline === 'object') {
+                if (timeline.startDate) readable += `**Start Date:** ${timeline.startDate}\n`;
+                if (timeline.completionDate) readable += `**Completion:** ${timeline.completionDate}\n`;
+
+                if (timeline.milestones && Array.isArray(timeline.milestones)) {
+                    timeline.milestones.forEach((m: any) => {
+                        const date = m.date ? ` (${m.date})` : '';
+                        readable += `• ${m.name || m.description}${date}\n`;
+                    });
+                }
+                readable += '\n';
+            }
         }
 
         if (jsonContent.acceptanceCriteria) {
-            readable += `## Acceptance Criteria\n${jsonContent.acceptanceCriteria}\n\n`;
+            readable += `## Acceptance Criteria\n${formatValue(jsonContent.acceptanceCriteria)}\n\n`;
         }
 
         if (jsonContent.exclusions && Array.isArray(jsonContent.exclusions)) {
             readable += `## Exclusions\n`;
-            jsonContent.exclusions.forEach((e: string) => readable += `• ${e}\n`);
+            jsonContent.exclusions.forEach((e: any) => readable += `• ${formatValue(e)}\n`);
             readable += '\n';
         }
 
@@ -88,19 +120,28 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkS
                 }
                 const title = line.replace(/^#+\s*/, '').replace(/\*\*/g, '').trim();
                 let icon = 'document';
+
+                // SOW Keywords
                 if (title.toLowerCase().includes('overview')) icon = 'overview';
                 if (title.toLowerCase().includes('scope')) icon = 'scope';
                 if (title.toLowerCase().includes('deliverable')) icon = 'deliverables';
                 if (title.toLowerCase().includes('timeline') || title.toLowerCase().includes('milestone')) icon = 'timeline';
                 if (title.toLowerCase().includes('acceptance') || title.toLowerCase().includes('criteria')) icon = 'acceptance';
                 if (title.toLowerCase().includes('exclusion')) icon = 'exclusions';
+
+                // Terms Keywords
+                if (title.toLowerCase().includes('payment') || title.toLowerCase().includes('cost') || title.toLowerCase().includes('billing')) icon = 'payment';
+                if (title.toLowerCase().includes('warranty') || title.toLowerCase().includes('guarantee')) icon = 'warranty';
+                if (title.toLowerCase().includes('liability') || title.toLowerCase().includes('insurance')) icon = 'liability';
+                if (title.toLowerCase().includes('legal') || title.toLowerCase().includes('contract') || title.toLowerCase().includes('termination')) icon = 'legal';
+
                 currentSection = { title, content: '', icon };
             } else if (currentSection.title) {
                 currentSection.content += line + '\n';
             } else if (line.trim()) {
                 // Content before any header - create a general section
                 if (!currentSection.title) {
-                    currentSection = { title: 'Project Overview', content: '', icon: 'overview' };
+                    currentSection = { title: section.type === 'legal' ? 'Terms' : 'Project Overview', content: '', icon: section.type === 'legal' ? 'legal' : 'overview' };
                 }
                 currentSection.content += line + '\n';
             }
@@ -129,6 +170,11 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkS
             case 'timeline': return <Clock className="w-5 h-5" />;
             case 'acceptance': return <CheckCircle className="w-5 h-5" />;
             case 'exclusions': return <Ban className="w-5 h-5" />;
+            // Terms Icons
+            case 'payment': return <DollarSign className="w-5 h-5" />;
+            case 'warranty': return <ShieldCheck className="w-5 h-5" />;
+            case 'liability': return <AlertTriangle className="w-5 h-5" />;
+            case 'legal': return <Scale className="w-5 h-5" />;
             default: return <FileText className="w-5 h-5" />;
         }
     };
@@ -168,11 +214,15 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkS
                 <div className="text-center py-6 border-b border-white/20">
                     <div className="flex justify-center mb-3">
                         <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl">
-                            <FileText className="w-8 h-8 text-white" />
+                            {section.type === 'legal' ? (
+                                <Scale className="w-8 h-8 text-white" />
+                            ) : (
+                                <FileText className="w-8 h-8 text-white" />
+                            )}
                         </div>
                     </div>
                     <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
-                        {section.title || 'Scope of Work'}
+                        {section.title || (section.type === 'legal' ? 'Terms & Conditions' : 'Scope of Work')}
                     </h2>
                     {section.subtitle && (
                         <p className="text-white/70 mt-2">
@@ -209,7 +259,7 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkS
                         ) : (
                             <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
                                 <pre className="text-white/80 text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                                    {section.content || 'No scope of work content available.'}
+                                    {section.content || 'No content available.'}
                                 </pre>
                             </div>
                         )}

@@ -122,3 +122,20 @@ export type QueueChange = {
   table: string;
   data: ChangeData;
 };
+
+export interface FollowUpSchedule {
+  id: string;
+  userId: string;
+  quoteId: string;
+  scheduleType: 'one_time' | 'recurring';
+  frequencyDays?: number | null;
+  maxFollowUps: number;
+  followUpsSent: number;
+  nextSendAt: string;
+  lastSentAt?: string | null;
+  status: 'active' | 'paused' | 'completed' | 'cancelled';
+  subjectTemplate?: string | null;
+  messageTemplate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -23,11 +23,12 @@ interface RecommendedItem {
 interface ItemRecommendationsAIProps {
   currentItems: QuoteItem[];
   availableItems: Item[];
-  onAddItem: (item: QuoteItem) => void;
+  onAddItem: (item: Item) => void;
 }
 
 export function ItemRecommendationsAI({ currentItems, availableItems, onAddItem }: ItemRecommendationsAIProps) {
-  const { userRole } = useAuth();
+  const { user } = useAuth();
+  const userRole = user?.role;
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [upgradeInfo, setUpgradeInfo] = useState<{ requiredTier: 'pro' | 'max' } | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendedItem[]>([]);
@@ -108,14 +109,19 @@ Provide 3-5 item recommendations in JSON format:
   };
 
   const handleAddRecommendation = (rec: RecommendedItem) => {
-    const newItem: QuoteItem = {
-      itemId: crypto.randomUUID(),
+    // Create an object that matches the Item interface
+    const newItem: Item = {
+      id: crypto.randomUUID(), // New ID for the custom item
       name: rec.name,
       description: rec.description,
-      quantity: 1,
-      price: rec.price,
-      total: rec.price,
-      units: rec.units || 'each'
+      category: 'Recommended',
+      basePrice: rec.price,
+      markup: 0,
+      markupType: 'fixed',
+      finalPrice: rec.price,
+      units: rec.units || 'each',
+      minQuantity: 1,
+      createdAt: new Date().toISOString()
     };
     onAddItem(newItem);
     toast.success(`Added ${rec.name} to quote`);

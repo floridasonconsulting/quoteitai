@@ -240,7 +240,7 @@ function SlideContent({
           onEditImage={(url) => onEditSectionImage?.(section.id, url)}
         />;
       case 'legal':
-        return <LegalSlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} />;
+        return <ScopeOfWorkSlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} />;
       case 'scopeOfWork':
         return <ScopeOfWorkSlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} />;
       default:
@@ -708,64 +708,4 @@ function InvestmentSummarySlide({
   );
 }
 
-/**
- * Slide Component: Legal/Terms
- */
-function LegalSlide({
-  section,
-  isOwner,
-  onEditImage
-}: {
-  section: ProposalSection,
-  isOwner?: boolean,
-  onEditImage?: (url?: string) => void
-}) {
-  return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
-      {/* Consistent Header Banner */}
-      <div className="relative w-full h-32 md:h-40 flex-shrink-0"
-        style={{
-          backgroundImage: section.backgroundImage
-            ? (section.backgroundImage.startsWith('linear-gradient') || section.backgroundImage.startsWith('radial-gradient') || section.backgroundImage.startsWith('conic-gradient') || section.backgroundImage.startsWith('url')
-              ? section.backgroundImage
-              : `url(${section.backgroundImage})`)
-            : 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%)',
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
 
-        {/* Owner Action */}
-        {isOwner && (
-          <div className="absolute top-4 right-4 z-50">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onEditImage?.(section.backgroundImage)}
-              className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/20 rounded-full font-bold uppercase tracking-wider text-[10px]"
-            >
-              <Edit3 className="w-3 h-3 mr-2" />
-              Edit Header Image
-            </Button>
-          </div>
-        )}
-
-        <div className="absolute inset-0 flex items-center justify-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-white">{section.title || "Terms & Conditions"}</h2>
-        </div>
-      </div>
-
-      <div className="flex-1 p-8 md:p-16 overflow-y-auto">
-        <div className="max-w-4xl mx-auto pb-24">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-8 md:p-12 border border-gray-100 dark:border-gray-800">
-            <div className="prose prose-base dark:prose-invert max-w-none">
-              <p className="whitespace-pre-wrap text-base leading-relaxed text-gray-700 dark:text-gray-300">
-                {section.terms || section.content}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}

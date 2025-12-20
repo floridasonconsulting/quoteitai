@@ -14,18 +14,25 @@ interface QuoteSummaryAIProps {
   quote: Quote;
   customer: Customer | null;
   onSummaryGenerated?: (summary: string) => void;
+  currentSummary?: string;
+  onSummaryChange?: (summary: string) => void;
 }
 
-export function QuoteSummaryAI({ quote, customer, onSummaryGenerated }: QuoteSummaryAIProps) {
-  const [summary, setSummary] = useState(quote.executiveSummary || '');
+export function QuoteSummaryAI({ quote, customer, onSummaryGenerated, currentSummary, onSummaryChange }: QuoteSummaryAIProps) {
+  const [internalSummary, setInternalSummary] = useState(quote.executiveSummary || '');
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [requiredTier, setRequiredTier] = useState<'pro' | 'max'>('pro');
-  const { userRole } = useAuth();
+  const { user } = useAuth();
+  const userRole = user?.role; // Fix userRole access
+
+  // Use props if provided, otherwise internal state
+  const summaryValue = currentSummary !== undefined ? currentSummary : internalSummary;
 
   const summaryAI = useAI('quote_summary', {
     onSuccess: (content) => {
-      setSummary(content);
-      onSummaryGenerated?.(content);
+      setInternalSummary(content); // Update internal
+      onSummaryGenerated?.(content); // Legacy callback
+      onSummaryChange?.(content); // Controlled callback
     },
     onUpgradeRequired: (tier) => {
       setRequiredTier(tier);
@@ -34,8 +41,9 @@ export function QuoteSummaryAI({ quote, customer, onSummaryGenerated }: QuoteSum
   });
 
   const handleSummaryChange = (value: string) => {
-    setSummary(value);
+    setInternalSummary(value);
     onSummaryGenerated?.(value);
+    onSummaryChange?.(value);
   };
 
   const generateSummary = async () => {
@@ -83,7 +91,7 @@ Create a professional, compelling summary that highlights the value and scope of
 
   return (
     <>
-      {!summary && !summaryAI.isLoading ? (
+      {!summaryValue && !summaryAI.isLoading ? (
         <Card className="border-dashed">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -115,7 +123,7 @@ Create a professional, compelling summary that highlights the value and scope of
           </CardHeader>
           <CardContent className="space-y-3">
             <Textarea
-              value={summary}
+              value={summaryValue}
               onChange={(e) => handleSummaryChange(e.target.value)}
               rows={4}
               className="resize-none"
@@ -134,7 +142,7 @@ Create a professional, compelling summary that highlights the value and scope of
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  navigator.clipboard.writeText(summary);
+                  navigator.clipboard.writeText(summaryValue);
                 }}
               >
                 Copy

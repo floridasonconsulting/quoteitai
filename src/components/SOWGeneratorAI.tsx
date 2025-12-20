@@ -14,14 +14,15 @@ import { Quote } from '@/types';
 interface SOWGeneratorAIProps {
     quote: Quote;
     companyName?: string;
-    onSOWGenerated?: (sow: string) => void;
-    onSaveToQuote?: (sow: string) => Promise<void>;
+    onSaveToQuote?: () => void;
+    onSuccess?: (content: string) => void;
 }
 
-export function SOWGeneratorAI({ quote, companyName, onSOWGenerated, onSaveToQuote }: SOWGeneratorAIProps) {
-    const { userRole } = useAuth();
-    const [additionalContext, setAdditionalContext] = useState('');
+export function SOWGeneratorAI({ quote, companyName, onSaveToQuote, onSuccess }: SOWGeneratorAIProps) {
+    const { user } = useAuth();
+    const userRole = user?.role;
     const [generatedSOW, setGeneratedSOW] = useState<string | null>(null);
+    const [additionalContext, setAdditionalContext] = useState('');
     const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -34,7 +35,7 @@ export function SOWGeneratorAI({ quote, companyName, onSOWGenerated, onSaveToQuo
                 .trim();
 
             setGeneratedSOW(cleanedContent);
-            onSOWGenerated?.(cleanedContent);
+            onSuccess?.(cleanedContent); // Call parent handler
             toast.success('Scope of Work generated successfully!');
         },
         onUpgradeRequired: () => {
@@ -44,6 +45,7 @@ export function SOWGeneratorAI({ quote, companyName, onSOWGenerated, onSaveToQuo
 
     const handleGenerate = async () => {
         // SOW is a Business+ feature
+        const userRole = user?.role;
         if (userRole !== 'business' && userRole !== 'max' && userRole !== 'admin') {
             setShowUpgradeDialog(true);
             return;
@@ -185,7 +187,7 @@ FORMATTING RULES:
                                                 if (!generatedSOW) return;
                                                 setIsSaving(true);
                                                 try {
-                                                    await onSaveToQuote(generatedSOW);
+                                                    await onSaveToQuote?.();
                                                     toast.success('SOW added to proposal!');
                                                 } catch (e) {
                                                     toast.error('Failed to save SOW');

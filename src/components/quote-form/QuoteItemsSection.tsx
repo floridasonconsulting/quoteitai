@@ -11,7 +11,7 @@ interface QuoteItemsSectionProps {
   availableItems: Item[];
   onUpdateQuantity: (itemId: string, quantity: number) => void;
   onRemoveItem: (itemId: string) => void;
-  onAddItem: (item: QuoteItem) => void;
+  onAddItem: (item: Item) => void;
   onOpenCustomItemDialog: () => void;
 }
 
@@ -49,8 +49,8 @@ export function QuoteItemsSection({
         ) : (
           <div className="space-y-3">
             {quoteItems.map(item => (
-              <div 
-                key={item.itemId} 
+              <div
+                key={item.itemId}
                 className="flex flex-col gap-3 p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors"
               >
                 {/* Item Info Row - Always full width */}
@@ -108,7 +108,7 @@ export function QuoteItemsSection({
                       <span className="text-sm text-muted-foreground whitespace-nowrap">{item.units}</span>
                     )}
                   </div>
-                  
+
                   <div className="text-right">
                     <p className="font-semibold text-base">{formatCurrency(item.total)}</p>
                     <p className="text-xs text-muted-foreground whitespace-nowrap">{formatCurrency(item.price)} each</p>
