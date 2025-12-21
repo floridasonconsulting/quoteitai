@@ -21,8 +21,9 @@ Deno.serve(async (req) => {
         // QuickBooks OAuth credentials from environment
         const clientId = Deno.env.get("QUICKBOOKS_CLIENT_ID");
         const clientSecret = Deno.env.get("QUICKBOOKS_CLIENT_SECRET");
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")?.replace(/\/+$/, "");
         const redirectUri = Deno.env.get("QUICKBOOKS_REDIRECT_URI") ||
-            `${Deno.env.get("SUPABASE_URL")}/functions/v1/quickbooks-callback`;
+            `${supabaseUrl}/functions/v1/quickbooks-callback`;
 
         if (!clientId || !clientSecret) {
             console.error("QuickBooks credentials not configured");

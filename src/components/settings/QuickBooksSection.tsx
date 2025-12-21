@@ -93,7 +93,9 @@ export function QuickBooksSection() {
 
     // QuickBooks OAuth URL
     const clientId = import.meta.env.VITE_QUICKBOOKS_CLIENT_ID;
-    const redirectUri = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/quickbooks-callback`;
+    // Clean up Supabase URL to ensure no trailing slash (prevents // in redirect_uri)
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/+$/, "");
+    const redirectUri = `${supabaseUrl}/functions/v1/quickbooks-callback`;
 
     if (!clientId) {
       toast.error("QuickBooks is not configured. Please contact support.");
