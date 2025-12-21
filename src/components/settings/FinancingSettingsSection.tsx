@@ -5,12 +5,44 @@ import { Switch } from "@/components/ui/switch";
 import { CompanySettings } from "@/types";
 import { CreditCard, ExternalLink } from "lucide-react";
 
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+
 interface FinancingSettingsSectionProps {
     settings: CompanySettings;
     onUpdate: (updates: Partial<CompanySettings>) => Promise<void>;
 }
 
 export function FinancingSettingsSection({ settings, onUpdate }: FinancingSettingsSectionProps) {
+    const [financingText, setFinancingText] = useState(settings.financingText || "");
+    const [financingLink, setFinancingLink] = useState(settings.financingLink || "");
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Sync with settings when they change externally
+    useEffect(() => {
+        setFinancingText(settings.financingText || "");
+        setFinancingLink(settings.financingLink || "");
+    }, [settings.financingText, settings.financingLink]);
+
+    const hasChanges = financingText !== (settings.financingText || "") ||
+        financingLink !== (settings.financingLink || "");
+
+    const handleSave = async () => {
+        try {
+            setIsSaving(true);
+            await onUpdate({
+                financingText: financingText,
+                financingLink: financingLink
+            });
+            toast.success("Financing settings saved");
+        } catch (error) {
+            console.error("Failed to save financing settings:", error);
+            toast.error("Failed to save financing settings");
+        } finally {
+            setIsSaving(false);
+        }
+    };
     return (
         <Card>
             <CardHeader>
@@ -44,8 +76,8 @@ export function FinancingSettingsSection({ settings, onUpdate }: FinancingSettin
                             <Input
                                 id="financing-text"
                                 placeholder="e.g. Flexible financing available through our partners"
-                                value={settings.financingText || ""}
-                                onChange={(e) => onUpdate({ financingText: e.target.value })}
+                                value={financingText}
+                                onChange={(e) => setFinancingText(e.target.value)}
                             />
                             <p className="text-xs text-muted-foreground">
                                 This text will appear above the financing link on the proposal
@@ -61,14 +93,26 @@ export function FinancingSettingsSection({ settings, onUpdate }: FinancingSettin
                                     className="pl-10"
                                     placeholder="https://your-financing-partner.com"
                                     type="url"
-                                    value={settings.financingLink || ""}
-                                    onChange={(e) => onUpdate({ financingLink: e.target.value })}
+                                    value={financingLink}
+                                    onChange={(e) => setFinancingLink(e.target.value)}
                                 />
                             </div>
                             <p className="text-xs text-muted-foreground">
                                 The website where clients can apply for or learn about financing
                             </p>
                         </div>
+
+                        {hasChanges && (
+                            <div className="flex justify-end pt-2">
+                                <Button
+                                    size="sm"
+                                    onClick={handleSave}
+                                    disabled={isSaving}
+                                >
+                                    {isSaving ? "Saving..." : "Save Financing Info"}
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 )}
             </CardContent>

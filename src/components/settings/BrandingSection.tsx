@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,31 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
   const { user, isMaxAITier } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [primaryColor, setPrimaryColor] = useState(settings.primaryColor || '#4F46E5');
+  const [accentColor, setAccentColor] = useState(settings.accentColor || '#10B981');
+  const [isSavingColors, setIsSavingColors] = useState(false);
+
+  // Sync with settings when they change externally
+  useEffect(() => {
+    setPrimaryColor(settings.primaryColor || '#4F46E5');
+    setAccentColor(settings.accentColor || '#10B981');
+  }, [settings.primaryColor, settings.accentColor]);
+
+  const hasColorChanges = primaryColor !== (settings.primaryColor || '#4F46E5') ||
+    accentColor !== (settings.accentColor || '#10B981');
+
+  const handleApplyColors = async () => {
+    try {
+      setIsSavingColors(true);
+      await onUpdate({ primaryColor, accentColor });
+      toast.success("Branding colors updated");
+    } catch (error) {
+      console.error("Failed to update colors:", error);
+      toast.error("Failed to update colors");
+    } finally {
+      setIsSavingColors(false);
+    }
+  };
 
   const handleLogoDisplayChange = async (value: 'logo' | 'name' | 'both') => {
     try {
@@ -164,14 +189,14 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
                 <Input
                   id="primary-color"
                   type="color"
-                  value={settings.primaryColor || '#4F46E5'}
-                  onChange={(e) => onUpdate({ primaryColor: e.target.value })}
-                  className="w-12 h-10 p-1 bg-transparent"
+                  value={primaryColor}
+                  onChange={(e) => setPrimaryColor(e.target.value)}
+                  className="w-12 h-10 p-1 bg-transparent cursor-pointer"
                 />
                 <Input
                   type="text"
-                  value={settings.primaryColor || '#4F46E5'}
-                  onChange={(e) => onUpdate({ primaryColor: e.target.value })}
+                  value={primaryColor}
+                  onChange={(e) => setPrimaryColor(e.target.value)}
                   placeholder="#4F46E5"
                   className="flex-1 font-mono uppercase"
                 />
@@ -184,20 +209,32 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
                 <Input
                   id="accent-color"
                   type="color"
-                  value={settings.accentColor || '#10B981'}
-                  onChange={(e) => onUpdate({ accentColor: e.target.value })}
-                  className="w-12 h-10 p-1 bg-transparent"
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  className="w-12 h-10 p-1 bg-transparent cursor-pointer"
                 />
                 <Input
                   type="text"
-                  value={settings.accentColor || '#10B981'}
-                  onChange={(e) => onUpdate({ accentColor: e.target.value })}
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
                   placeholder="#10B981"
                   className="flex-1 font-mono uppercase"
                 />
               </div>
             </div>
           </div>
+
+          {hasColorChanges && (
+            <div className="flex justify-end pt-2">
+              <Button
+                size="sm"
+                onClick={handleApplyColors}
+                disabled={isSavingColors}
+              >
+                {isSavingColors ? "Saving..." : "Apply Color Changes"}
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* White-Label Logo Upload (Max AI Tier Only) */}
