@@ -8,7 +8,11 @@ const corsHeaders = {
 
 interface UpdateQuoteStatusRequest {
   shareToken: string;
-  status: 'accepted' | 'declined';
+  status: 'accepted' | 'declined' | 'commented';
+  comment?: string;
+  sectionId?: string;
+  signatureData?: string;
+  signerName?: string;
 }
 
 serve(async (req) => {
@@ -18,7 +22,8 @@ serve(async (req) => {
   }
 
   try {
-    const { shareToken, status }: UpdateQuoteStatusRequest = await req.json();
+    const reqData: UpdateQuoteStatusRequest = await req.json();
+    const { shareToken, status } = reqData;
 
     // Validate input
     if (!shareToken || !status) {
@@ -28,9 +33,9 @@ serve(async (req) => {
       );
     }
 
-    if (status !== 'accepted' && status !== 'declined') {
+    if (status !== 'accepted' && status !== 'declined' && status !== 'commented') {
       return new Response(
-        JSON.stringify({ error: 'Invalid status. Must be "accepted" or "declined"' }),
+        JSON.stringify({ error: 'Invalid status. Must be "accepted", "declined", or "commented"' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -54,17 +59,29 @@ serve(async (req) => {
       );
     }
 
-    // Update quote status
-    const { error: updateError } = await supabase
-      .from('quotes')
-      .update({ 
+    // If status is 'commented', we don't necessarily want to change the quote's primary status
+    // but we might want to track that it was commented on.
+    // For now, let's update the status if it's accepted/declined.
+    if (status === 'accepted' || status === 'declined') {
+      const updatePayload: any = {
         status,
         updated_at: new Date().toISOString(),
-      })
-      .eq('share_token', shareToken);
+      };
 
-    if (updateError) {
-      throw updateError;
+      if (status === 'accepted' && reqData.signatureData) {
+        updatePayload.signature_data = reqData.signatureData;
+        updatePayload.signed_at = new Date().toISOString();
+        updatePayload.signed_by_name = reqData.signerName || 'Client';
+      }
+
+      const { error: updateError } = await supabase
+        .from('quotes')
+        .update(updatePayload)
+        .eq('share_token', shareToken);
+
+      if (updateError) {
+        throw updateError;
+      }
     }
 
     console.log(`Quote status updated: ${shareToken} -> ${status}`);
@@ -77,14 +94,34 @@ serve(async (req) => {
       .single();
 
     if (!detailsError && quoteDetails) {
+      // Handle comment/conversation
+      if (status === 'commented' && reqData.comment) {
+        const { error: convError } = await supabase
+          .from('proposal_conversations')
+          .insert({
+            organization_id: (quoteDetails as any).organization_id,
+            quote_id: quoteDetails.id,
+            section_id: reqData.sectionId || 'general',
+            client_name: quoteDetails.customer_name,
+            client_question: reqData.comment,
+            status: 'pending'
+          });
+
+        if (convError) {
+          console.error('Failed to save conversation:', convError);
+        }
+      }
+
       // Create notification for quote owner
       const { error: notifError } = await supabase
         .from('notifications')
         .insert({
           user_id: quoteDetails.user_id,
           quote_id: quoteDetails.id,
-          type: status === 'accepted' ? 'quote_accepted' : 'quote_declined',
-          message: `Quote #${quoteDetails.quote_number} for ${quoteDetails.customer_name} has been ${status}`,
+          type: status === 'accepted' ? 'quote_accepted' : (status === 'declined' ? 'quote_declined' : 'quote_commented'),
+          message: status === 'commented'
+            ? `New feedback from ${quoteDetails.customer_name} on Quote #${quoteDetails.quote_number}`
+            : `Quote #${quoteDetails.quote_number} for ${quoteDetails.customer_name} has been ${status}`,
           read: false
         });
 
@@ -101,7 +138,7 @@ serve(async (req) => {
         .eq('user_id', quoteDetails.user_id)
         .single();
 
-      const shouldSendEmail = status === 'accepted' 
+      const shouldSendEmail = status === 'accepted'
         ? settings?.notify_email_accepted !== false
         : settings?.notify_email_declined !== false;
 
@@ -147,14 +184,14 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: `Quote ${status} successfully`,
         status,
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
 
@@ -162,9 +199,9 @@ serve(async (req) => {
     console.error('Error updating quote status:', error);
     return new Response(
       JSON.stringify({ error: 'Failed to update quote status' }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

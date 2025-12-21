@@ -484,12 +484,17 @@ export default function PublicQuoteView() {
     }
   };
 
-  const handleAccept = async () => {
+  const handleAccept = async (signatureData?: string, signerName?: string) => {
     if (!quote || !decodedShareToken) return;
 
     try {
       const { error } = await supabase.functions.invoke('update-quote-status', {
-        body: { shareToken: decodedShareToken, status: 'accepted' }
+        body: {
+          shareToken: decodedShareToken,
+          status: 'accepted',
+          signatureData,
+          signerName
+        }
       });
 
       if (error) throw error;
@@ -521,6 +526,7 @@ export default function PublicQuoteView() {
       throw error;
     }
   };
+
 
   // Show loading state
   if (loading || authLoading) {
@@ -581,19 +587,7 @@ export default function PublicQuoteView() {
     <div className="min-h-screen bg-slate-50">
       <ProposalViewer
         quote={quote}
-        settings={settings || {
-          name: '',
-          address: '',
-          city: '',
-          state: '',
-          zip: '',
-          phone: '',
-          email: '',
-          website: '',
-          terms: '',
-          proposalTemplate: 'classic',
-          proposalTheme: 'modern-corporate',
-        }}
+        settings={settings || undefined}
         onAccept={handleAccept}
         onDecline={handleReject}
         onComment={handleComment}

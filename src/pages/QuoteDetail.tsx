@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Trash2, Calendar, Edit, Clock, Link2, Copy, Check, Palette, Eye, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Mail, Trash2, Calendar, Edit, Clock, Link2, Copy, Check, Palette, Eye, BarChart3, FileText, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +39,8 @@ export default function QuoteDetail() {
   const [shareLink, setShareLink] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [isQuickBooksConnected, setIsQuickBooksConnected] = useState(false);
+  const [isSyncingToQB, setIsSyncingToQB] = useState(false);
 
   const mainContentRef = useRef<HTMLDivElement>(null);
 
@@ -78,6 +80,9 @@ export default function QuoteDetail() {
       setQuote(foundQuote);
       setCustomer(foundCustomer || null);
       setSettings(loadedSettings);
+
+      // Determine if QuickBooks is connected
+      setIsQuickBooksConnected(!!loadedSettings?.quickbooks_realm_id);
 
       // Generate share link if token exists
       if (foundQuote.shareToken) {
@@ -395,6 +400,39 @@ export default function QuoteDetail() {
     }
   };
 
+  const handleSyncToQuickBooks = async () => {
+    if (!quote || isSyncingToQB) return;
+
+    setIsSyncingToQB(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('quickbooks-sync', {
+        body: {
+          action: 'push_quote',
+          quoteId: quote.id
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Quote synced to QuickBooks as Invoice #${data.invoiceNumber}`,
+      });
+
+      // Refresh quote data to show updated QB IDs
+      loadData();
+    } catch (error) {
+      console.error("QuickBooks sync failed:", error);
+      toast({
+        title: "Sync failed",
+        description: error.message || "Could not sync to QuickBooks",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSyncingToQB(false);
+    }
+  };
+
   if (loading) {
     return (
       <div
@@ -523,6 +561,24 @@ export default function QuoteDetail() {
           <Mail className="mr-2 h-4 w-4" aria-hidden="true" />
           Email
         </Button>
+
+        {isQuickBooksConnected && (
+          <Button
+            variant="outline"
+            onClick={handleSyncToQuickBooks}
+            disabled={isSyncingToQB || (quote as any).quickbooks_invoice_id}
+            className="border-success/20 text-success hover:bg-success/5"
+            aria-label="Push this quote to QuickBooks"
+          >
+            {isSyncingToQB ? (
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <FileText className="mr-2 h-4 w-4" aria-hidden="true" />
+            )}
+            {(quote as any).quickbooks_invoice_id ? 'Synced to QB' : 'Push to QuickBooks'}
+          </Button>
+        )}
+
         <FollowUpMessageAI quote={quote} customer={customer} />
         <Button
           variant="destructive"
@@ -659,6 +715,6 @@ export default function QuoteDetail() {
         customer={customer}
         onConfirm={handleConfirmSend}
       />
-    </div>
+    </div >
   );
 }

@@ -19,12 +19,17 @@ import { getTheme, getThemeCSSVars } from "@/lib/proposal-themes";
 import { useProposalTelemetry } from "@/hooks/useProposalTelemetry";
 import { ProposalAssistant } from "./ProposalAssistant";
 import { generateClassicPDF, generateModernPDF, generateDetailedPDF } from "@/lib/pdf-generator";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SignatureCapture } from "./SignatureCapture";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ProposalViewerProps {
   quote?: Quote;
   settings?: CompanySettings;
   proposal?: ProposalData;
-  onAccept?: () => Promise<void>;
+  onAccept?: (signatureData?: string, signerName?: string) => Promise<void>;
   onDecline?: () => Promise<void>;
   onComment?: (comment: string) => Promise<void>;
   isReadOnly?: boolean;
@@ -60,6 +65,12 @@ export function ProposalViewer({
     id: string; // sectionId or itemName
     currentImage?: string;
   }>({ isOpen: false, type: 'cover', id: '' });
+  const [acceptDialog, setAcceptDialog] = useState({
+    isOpen: false,
+    signerName: '',
+    agreedToTerms: false,
+    signatureData: ''
+  });
 
   const { toast } = useToast();
 
@@ -145,12 +156,25 @@ export function ProposalViewer({
   // Handlers
   const handleAccept = async () => {
     if (!onAccept) return;
+
+    // If we have a signature, proceed. If not, open dialog.
+    if (!acceptDialog.signatureData) {
+      setAcceptDialog({ ...acceptDialog, isOpen: true });
+      return;
+    }
+
     setIsProcessing(true);
     try {
-      await onAccept();
+      await onAccept(acceptDialog.signatureData, acceptDialog.signerName);
       setSuccessState('accepted');
+      setAcceptDialog({ ...acceptDialog, isOpen: false });
     } catch (error) {
       console.error("Failed to accept:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process acceptance. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -441,6 +465,77 @@ export function ProposalViewer({
           sectionTitle={proposalData.sections[activeSlideIndex]?.title || 'Section'}
         />
       )}
+
+      {/* e-Sign Acceptance Dialog */}
+      <Dialog
+        open={acceptDialog.isOpen}
+        onOpenChange={(open) => setAcceptDialog({ ...acceptDialog, isOpen: open })}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Sign & Accept Proposal</DialogTitle>
+            <DialogDescription>
+              Please enter your name and provide a signature to accept this proposal.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="signerName">Full Name</Label>
+              <Input
+                id="signerName"
+                placeholder="Enter your full name"
+                value={acceptDialog.signerName}
+                onChange={(e) => setAcceptDialog({ ...acceptDialog, signerName: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Signature</Label>
+              <SignatureCapture
+                onSave={(data) => setAcceptDialog({ ...acceptDialog, signatureData: data })}
+                onClear={() => setAcceptDialog({ ...acceptDialog, signatureData: '' })}
+              />
+            </div>
+
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="terms"
+                checked={acceptDialog.agreedToTerms}
+                onCheckedChange={(checked) => setAcceptDialog({ ...acceptDialog, agreedToTerms: checked === true })}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <label
+                  htmlFor="terms"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Confirm acceptance of terms
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  By checking this, you agree to the terms and conditions outlined in this proposal.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAcceptDialog({ ...acceptDialog, isOpen: false })}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleAccept}
+              disabled={!acceptDialog.signerName || !acceptDialog.signatureData || !acceptDialog.agreedToTerms || isProcessing}
+            >
+              {isProcessing ? "Processing..." : "Finish & Accept"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

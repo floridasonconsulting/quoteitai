@@ -61,9 +61,9 @@ export function PullToRefresh({
             ref={containerRef}
             className="relative min-h-screen touch-pan-y"
         >
-            {/* Loading Indicator */}
+            {/* Loading Indicator - Only show on desktop as it can feel "static" on mobile */}
             <div
-                className="absolute w-full flex justify-center items-center pointer-events-none z-10"
+                className="hidden md:flex absolute w-full justify-center items-center pointer-events-none z-10"
                 style={{
                     top: -40, // Start hidden above
                     height: 40,

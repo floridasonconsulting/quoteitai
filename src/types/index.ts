@@ -69,6 +69,9 @@ export interface Quote {
   pricingMode?: 'itemized' | 'category_total' | 'grand_total'; // NEW: Pricing display mode
   scopeOfWork?: string; // NEW: AI-generated Scope of Work for proposals
   organizationId?: string;
+  signatureData?: string;
+  signedAt?: string;
+  signedByName?: string;
 }
 
 export type QuoteAge = 'fresh' | 'warm' | 'aging' | 'stale';
@@ -110,6 +113,12 @@ export interface CompanySettings {
   primaryColor?: string;
   accentColor?: string;
   onboardingCompleted?: boolean;
+  quickbooks_realm_id?: string | null;
+  quickbooks_access_token?: string | null;
+  quickbooks_refresh_token?: string | null;
+  quickbooks_token_expires_at?: string | null;
+  quickbooks_company_name?: string | null;
+  quickbooks_connected_at?: string | null;
 }
 
 // NEW: Interface for Visual Rules

@@ -191,6 +191,52 @@ export function renderTermsAndNotes(
   return yPos;
 }
 
+// Common signature rendering
+export function renderSignature(
+  pdf: jsPDF,
+  quote: Quote,
+  yPos: number
+): number {
+  if (!quote.signatureData) {
+    return yPos;
+  }
+
+  if (yPos > 240) {
+    pdf.addPage();
+    yPos = MARGIN;
+  }
+
+  yPos += SECTION_GAP;
+  pdf.setFont(undefined, "bold");
+  pdf.setFontSize(10);
+  pdf.text("Client Acceptance:", MARGIN, yPos);
+  yPos += 5;
+
+  try {
+    // Add signature image
+    pdf.addImage(quote.signatureData, "PNG", MARGIN, yPos, 50, 20);
+    yPos += 22;
+  } catch (e) {
+    console.error("Error adding signature image to PDF:", e);
+    pdf.setFont(undefined, "italic");
+    pdf.text("[Signature Image]", MARGIN, yPos);
+    yPos += 5;
+  }
+
+  pdf.setFontSize(9);
+  pdf.setFont(undefined, "normal");
+  pdf.text(`Digitally signed by ${quote.signedByName || 'Client'}`, MARGIN, yPos);
+  yPos += 4;
+
+  if (quote.signedAt) {
+    const signedDate = new Date(quote.signedAt).toLocaleString();
+    pdf.text(`Date: ${signedDate}`, MARGIN, yPos);
+    yPos += 5;
+  }
+
+  return yPos;
+}
+
 // Exports for use in proposal-templates.ts
 export { MARGIN, LINE_HEIGHT, SECTION_GAP };
 
@@ -210,20 +256,40 @@ export function generateClassicPDF(
 
   yPos = renderCustomerInfo(pdf, quote, customer, yPos);
   yPos += SECTION_GAP * 2;
-  
+
   pdf.setFontSize(14);
   pdf.setFont(undefined, "bold");
   pdf.text(`Quote #${quote.id}`, MARGIN, yPos);
   yPos += 8;
 
-  const tableHeaders = [["Item", "Description", "Qty", "Price", "Total"]];
-  const tableData = quote.items.map(item => [
-    item.name,
-    item.description,
-    item.quantity.toString(),
-    formatCurrency(item.price, settings.currency),
-    formatCurrency(item.quantity * item.price, settings.currency),
-  ]);
+  const pricingMode = (quote as any).pricingMode || 'itemized';
+
+  let tableHeaders;
+  let tableData;
+
+  if (pricingMode === 'itemized') {
+    tableHeaders = [["Item", "Description", "Qty", "Price", "Total"]];
+    tableData = quote.items.map(item => [
+      item.name,
+      item.description,
+      item.quantity.toString(),
+      formatCurrency(item.price, settings.currency),
+      formatCurrency(item.quantity * item.price, settings.currency),
+    ]);
+  } else {
+    // Group by category for 'category_total' mode
+    const categories = Array.from(new Set(quote.items.map(i => i.category || 'Other')));
+    tableHeaders = [["Category", "Items", "Total"]];
+    tableData = categories.map(cat => {
+      const catItems = quote.items.filter(i => (i.category || 'Other') === cat);
+      const catTotal = catItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+      return [
+        cat,
+        catItems.map(i => i.name).join(", "),
+        formatCurrency(catTotal, settings.currency)
+      ];
+    });
+  }
 
   autoTable(pdf, {
     startY: yPos,
@@ -239,8 +305,9 @@ export function generateClassicPDF(
   pdf.setFont(undefined, "bold");
   pdf.text(`Total: ${formatCurrency(quote.total, settings.currency)}`, 190 - MARGIN, yPos, { align: 'right' });
   yPos += SECTION_GAP * 2;
-  
+
   yPos = renderTermsAndNotes(pdf, quote, settings, yPos);
+  yPos = renderSignature(pdf, quote, yPos);
 
   return pdf.output("blob");
 }
@@ -255,7 +322,7 @@ export function generateModernPDF(
 
   yPos = renderCompanyHeader(pdf, settings, yPos);
   yPos += SECTION_GAP;
-  
+
   pdf.setFontSize(22);
   pdf.setFont(undefined, "bold");
   pdf.text(`QUOTE`, 190, MARGIN + 10, { align: 'right' });
@@ -266,24 +333,45 @@ export function generateModernPDF(
 
   yPos = renderCompanyContact(pdf, settings, yPos);
   yPos += SECTION_GAP;
-  
+
   yPos = renderCustomerInfo(pdf, quote, customer, yPos);
   yPos += SECTION_GAP * 2;
 
-  autoTable(pdf, {
-    startY: yPos,
-    head: [["Item", "Description", "Quantity", "Unit Price", "Line Total"]],
-    body: quote.items.map(item => [
+  const pricingMode = (quote as any).pricingMode || 'itemized';
+  let tableHeaders;
+  let tableData;
+
+  if (pricingMode === 'itemized') {
+    tableHeaders = [["Item", "Description", "Quantity", "Unit Price", "Line Total"]];
+    tableData = quote.items.map(item => [
       item.name,
       item.description,
       item.quantity,
       formatCurrency(item.price, settings.currency),
       formatCurrency(item.quantity * item.price, settings.currency),
-    ]),
+    ]);
+  } else {
+    const categories = Array.from(new Set(quote.items.map(i => i.category || 'Other')));
+    tableHeaders = [["Category", "Included Items", "Total"]];
+    tableData = categories.map(cat => {
+      const catItems = quote.items.filter(i => (i.category || 'Other') === cat);
+      const catTotal = catItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+      return [
+        cat,
+        catItems.map(i => i.name).join(", "),
+        formatCurrency(catTotal, settings.currency)
+      ];
+    });
+  }
+
+  autoTable(pdf, {
+    startY: yPos,
+    head: tableHeaders,
+    body: tableData,
     theme: "grid",
     headStyles: { fillColor: [41, 128, 185] },
   } as UserOptions);
-  
+
   yPos = pdf.lastAutoTable.finalY + SECTION_GAP * 2;
 
   pdf.setFontSize(14);
@@ -292,6 +380,7 @@ export function generateModernPDF(
   yPos += SECTION_GAP * 2;
 
   yPos = renderTermsAndNotes(pdf, quote, settings, yPos);
+  yPos = renderSignature(pdf, quote, yPos);
 
   return pdf.output("blob");
 }
@@ -307,52 +396,74 @@ export function generateDetailedPDF(
   yPos = renderCompanyHeader(pdf, settings, yPos);
   yPos = renderCompanyContact(pdf, settings, yPos);
   yPos += SECTION_GAP * 2;
-  
+
   yPos = renderCustomerInfo(pdf, quote, customer, yPos);
   yPos += SECTION_GAP * 2;
-  
+
   pdf.setFontSize(14);
   pdf.setFont(undefined, "bold");
   pdf.text(`Detailed Quote #${quote.id}`, MARGIN, yPos);
   yPos += 8;
 
-  autoTable(pdf, {
-    startY: yPos,
-    head: [["Item", "Description", "Qty", "Price", "Total"]],
-    body: quote.items.map(item => [
+  const quoteData = quote as any;
+  const subtotal = quoteData.subtotal || 0;
+  const tax = quoteData.tax || 0;
+  const total = quoteData.total || 0;
+
+  const pricingMode = (quote as any).pricingMode || 'itemized';
+  let tableHeaders;
+  let tableData;
+
+  if (pricingMode === 'itemized') {
+    tableHeaders = [["Item", "Description", "Qty", "Price", "Total"]];
+    tableData = quote.items.map(item => [
       item.name,
       item.description,
       item.quantity.toString(),
       formatCurrency(item.price, settings.currency),
       formatCurrency(item.quantity * item.price, settings.currency),
-    ]),
+    ]);
+  } else {
+    const categories = Array.from(new Set(quote.items.map(i => i.category || 'Other')));
+    tableHeaders = [["Category", "Items", "TotalValue"]];
+    tableData = categories.map(cat => {
+      const catItems = quote.items.filter(i => (i.category || 'Other') === cat);
+      const catTotal = catItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+      return [
+        cat,
+        catItems.map(i => i.name).join(", "),
+        formatCurrency(catTotal, settings.currency)
+      ];
+    });
+  }
+
+  autoTable(pdf, {
+    startY: yPos,
+    head: tableHeaders,
+    body: tableData,
     theme: "plain",
   } as UserOptions);
 
   yPos = pdf.lastAutoTable.finalY + SECTION_GAP;
 
-  const subtotal = quote.total;
-  const taxRate = settings.taxRate || 0;
-  const tax = subtotal * (taxRate / 100);
-  const finalTotal = subtotal + tax;
-
   pdf.text(`Subtotal:`, 150, yPos, { align: "right" });
   pdf.text(formatCurrency(subtotal, settings.currency), 190, yPos, { align: "right" });
   yPos += LINE_HEIGHT;
 
-  if (taxRate > 0) {
+  if (tax > 0) {
+    const taxRate = Math.round((tax / subtotal) * 100);
     pdf.text(`Tax (${taxRate}%):`, 150, yPos, { align: "right" });
     pdf.text(formatCurrency(tax, settings.currency), 190, yPos, { align: "right" });
     yPos += LINE_HEIGHT;
   }
-  
-  yPos += 2;
+
   pdf.setFont(undefined, "bold");
   pdf.text(`Total:`, 150, yPos, { align: "right" });
-  pdf.text(formatCurrency(finalTotal, settings.currency), 190, yPos, { align: "right" });
+  pdf.text(formatCurrency(total, settings.currency), 190, yPos, { align: "right" });
   yPos += SECTION_GAP * 2;
-  
+
   yPos = renderTermsAndNotes(pdf, quote, settings, yPos);
+  yPos = renderSignature(pdf, quote, yPos);
 
   return pdf.output("blob");
 }
