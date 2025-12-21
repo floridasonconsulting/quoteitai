@@ -68,6 +68,7 @@ export interface Quote {
   projectDescription?: string; // NEW: For AI visual matching
   pricingMode?: 'itemized' | 'category_total' | 'grand_total'; // NEW: Pricing display mode
   scopeOfWork?: string; // NEW: AI-generated Scope of Work for proposals
+  organizationId?: string;
 }
 
 export type QuoteAge = 'fresh' | 'warm' | 'aging' | 'stale';
@@ -141,6 +142,21 @@ export interface FollowUpSchedule {
   status: 'active' | 'paused' | 'completed' | 'cancelled';
   subjectTemplate?: string | null;
   messageTemplate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProposalConversation {
+  id: string;
+  quoteId: string;
+  sectionId: string;
+  clientName?: string;
+  clientQuestion: string;
+  aiDraftResponse?: string;
+  contractorResponse?: string;
+  status: 'pending' | 'drafted' | 'answered' | 'archived';
+  isClientRead: boolean;
+  isContractorRead: boolean;
   createdAt: string;
   updatedAt: string;
 }

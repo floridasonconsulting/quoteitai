@@ -9,7 +9,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, Users, Zap } from 'lucide-react';
+import { ShieldAlert, Users, Zap, BarChart3 } from 'lucide-react';
 
 interface UpgradeModalProps {
     isOpen: boolean;
@@ -21,9 +21,9 @@ export const UpgradeModal = ({ isOpen, tier, onClose }: UpgradeModalProps) => {
     const navigate = useNavigate();
     const normalizedTier = tier.toLowerCase();
 
-    const overagePrice = normalizedTier === 'pro' ? '$15' : '$10';
-    const nextTier = normalizedTier === 'starter' ? 'Pro' : 'Business';
-    const nextTierLimit = normalizedTier === 'starter' ? '3' : '10';
+    const overagePrice = normalizedTier === 'pro' ? '$25' : '$20';
+    const nextTier = normalizedTier === 'starter' ? 'Pro' : (normalizedTier === 'pro' ? 'Business' : 'Enterprise');
+    const nextTierLimit = normalizedTier === 'starter' ? '2' : (normalizedTier === 'pro' ? '5' : '10');
 
     const handleAddSeat = () => {
         onClose();
@@ -37,57 +37,84 @@ export const UpgradeModal = ({ isOpen, tier, onClose }: UpgradeModalProps) => {
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="p-2 bg-amber-100 rounded-full">
-                            <ShieldAlert className="h-6 w-6 text-amber-600" />
+            <DialogContent className="sm:max-w-[500px] bg-slate-950 border-slate-800 text-white overflow-hidden p-0">
+                {/* Visual Header with "Hill Family" placeholder feel */}
+                <div className="relative h-32 w-full overflow-hidden">
+                    <img
+                        src="https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?q=80&w=2670&auto=format&fit=crop"
+                        alt="Closer's Edge"
+                        className="w-full h-full object-cover opacity-40"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent" />
+                    <div className="absolute top-6 left-6 flex items-center gap-3">
+                        <div className="p-2 bg-indigo-500/20 backdrop-blur-md rounded-xl border border-indigo-500/30">
+                            <Zap className="h-6 w-6 text-indigo-400 fill-indigo-400" />
                         </div>
-                        <DialogTitle className="text-xl font-bold">Seat Limit Reached</DialogTitle>
+                        <h2 className="text-2xl font-black uppercase tracking-tighter">Unlock the "Closer's Edge"</h2>
                     </div>
-                    <DialogDescription className="text-base text-gray-600">
-                        Your <span className="font-semibold text-gray-900 uppercase">{tier}</span> plan includes a specific number of seats.
-                        To add this team member, you can expand your team for just <span className="font-bold text-gray-900">{overagePrice}/mo</span> per seat.
-                    </DialogDescription>
-                </DialogHeader>
-
-                <div className="py-6 space-y-4">
-                    <Button
-                        onClick={handleAddSeat}
-                        className="w-full h-12 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-md"
-                    >
-                        <Users className="mr-2 h-5 w-5" />
-                        Add Seat for {overagePrice}/mo
-                    </Button>
-
-                    {normalizedTier !== 'business' && normalizedTier !== 'max_ai' && (
-                        <div className="relative">
-                            <div className="absolute inset-0 flex items-center">
-                                <span className="w-full border-t border-gray-200" />
-                            </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-white px-2 text-gray-500 font-medium">Or grow with a bigger plan</span>
-                            </div>
-                        </div>
-                    )}
-
-                    {normalizedTier !== 'business' && normalizedTier !== 'max_ai' && (
-                        <Button
-                            variant="outline"
-                            onClick={handleUpgrade}
-                            className="w-full h-12 text-base font-semibold border-2 border-blue-600 text-blue-600 hover:bg-blue-50 transition-all"
-                        >
-                            <Zap className="mr-2 h-5 w-5 text-amber-500 fill-amber-500" />
-                            Upgrade to {nextTier} ({nextTierLimit} Seats)
-                        </Button>
-                    )}
                 </div>
 
-                <DialogFooter>
-                    <Button variant="ghost" onClick={onClose} className="w-full text-gray-400 hover:text-gray-600">
-                        Maybe later
-                    </Button>
-                </DialogFooter>
+                <div className="p-8 space-y-6">
+                    <div className="space-y-4">
+                        <p className="text-slate-300 leading-relaxed">
+                            Your team is currently sending <span className="text-white font-bold text-lg">20+ proposals</span> a month.
+                            At this volume, you aren't just managing quotes—you're managing a high-stakes sales pipeline.
+                        </p>
+
+                        <div className="space-y-4 pt-2">
+                            <div className="flex gap-4 items-start">
+                                <div className="mt-1 p-1 bg-indigo-500/10 rounded-md">
+                                    <BarChart3 className="h-4 w-4 text-indigo-400" />
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="font-bold text-sm tracking-wide uppercase text-indigo-400">Behavioral Intelligence</p>
+                                    <p className="text-xs text-slate-400 leading-normal">Stop guessing. Know exactly when a client is lingering on your 'Investment Summary' or 'Exclusions'.</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4 items-start">
+                                <div className="mt-1 p-1 bg-indigo-500/10 rounded-md">
+                                    <Zap className="h-4 w-4 text-indigo-400" />
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="font-bold text-sm tracking-wide uppercase text-indigo-400">Smart SOW Architect</p>
+                                    <p className="text-xs text-slate-400 leading-normal">Scale your output. Generate technical, professional Scopes of Work in seconds, not hours.</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4 items-start">
+                                <div className="mt-1 p-1 bg-indigo-500/10 rounded-md">
+                                    <Users className="h-4 w-4 text-indigo-400" />
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="font-bold text-sm tracking-wide uppercase text-indigo-400">Team Expansion</p>
+                                    <p className="text-xs text-slate-400 leading-normal">Increase your base to 5 users to keep your entire sales force synced on one platform.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-4 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl">
+                        <p className="text-xs text-slate-300 italic leading-relaxed text-center">
+                            "If these insights help you close just <span className="text-white font-bold">one extra $5,000 project</span> this year,
+                            the Business Tier has already paid for itself 5x over."
+                        </p>
+                    </div>
+
+                    <div className="space-y-3 pt-2">
+                        <Button
+                            onClick={handleUpgrade}
+                            className="w-full h-14 text-base font-black uppercase tracking-widest bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)]"
+                        >
+                            Upgrade to Business — $149/mo
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            onClick={onClose}
+                            className="w-full text-slate-500 hover:text-slate-300 hover:bg-white/5 font-bold uppercase tracking-widest text-[10px]"
+                        >
+                            Maybe later
+                        </Button>
+                    </div>
+                </div>
             </DialogContent>
         </Dialog>
     );

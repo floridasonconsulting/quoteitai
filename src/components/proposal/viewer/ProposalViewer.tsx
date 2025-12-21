@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ProposalVisuals, ProposalData } from "@/types/proposal";
 import { getTheme, getThemeCSSVars } from "@/lib/proposal-themes";
 import { useProposalTelemetry } from "@/hooks/useProposalTelemetry";
+import { ProposalAssistant } from "./ProposalAssistant";
 
 interface ProposalViewerProps {
   quote?: Quote;
@@ -375,6 +376,16 @@ export function ProposalViewer({
         title={`Change ${editImageConfig.type === 'item' ? 'Item' : 'Section'} Image`}
         currentImage={editImageConfig.currentImage}
       />
+
+      {/* Proactive Support Widget */}
+      {!isOwner && proposalData.id && (
+        <ProposalAssistant
+          quoteId={proposalData.id}
+          organizationId={proposalData.organization_id || ''}
+          currentSectionId={activeSectionId}
+          sectionTitle={proposalData.sections[activeSlideIndex]?.title || 'Section'}
+        />
+      )}
     </div>
   );
 }

@@ -61,30 +61,52 @@ serve(async (req) => {
 
         if (countError) throw new Error("Failed to check user count");
 
-        const maxSeats = {
+        const maxBaseSeats = {
             "starter": 1,
-            "pro": 3,
-            "business": 10,
+            "pro": 2,
+            "business": 5,
+            "enterprise": 10,
             "max_ai": 999999
         }[org.subscription_tier as string] || 1;
 
-        let isOverLimit = (userCount || 0) >= maxSeats;
+        const maxTotalSeats = {
+            "starter": 1,
+            "pro": 5, // User #6 triggers Business Upgrade
+            "business": 10, // User #11 triggers Enterprise Upgrade
+            "enterprise": 999999,
+            "max_ai": 999999
+        }[org.subscription_tier as string] || 1;
+
+        const currentSeatCount = userCount || 0;
+        const needsMeteredBilling = currentSeatCount >= maxBaseSeats;
+        const isHardCapped = currentSeatCount >= maxTotalSeats;
 
         // 3. Handle Seat Overage (Stripe Metered Billing)
-        // If over limit, we only proceed if we can bill for it (Pro/Business tiers)
-        if (isOverLimit) {
-            if (org.subscription_tier === "starter" || org.subscription_tier === "max_ai") {
+        if (isHardCapped) {
+            return new Response(
+                JSON.stringify({
+                    error: `Seat limit reached for the ${org.subscription_tier} tier. Please upgrade to unlock more seats.`,
+                    code: "ERR_SEAT_LIMIT_REACHED",
+                    needsUpgrade: true
+                }),
+                { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+        }
+
+        if (needsMeteredBilling) {
+            if (org.subscription_tier === "starter" || org.subscription_tier === "max_ai" || org.subscription_tier === "enterprise") {
+                // Starter and High Tiers don't have metered extras in the same way or are already maxed
                 return new Response(
                     JSON.stringify({ error: "Seat limit reached for this tier.", code: "ERR_SEAT_LIMIT_REACHED" }),
                     { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
                 );
             }
 
-            // If we have Stripe setup and it's a paid tier, we increment usage
+            // If we have Stripe setup and it's a paid tier (Pro/Business), we increment usage
             if (stripe && org.stripe_customer_id) {
-                console.log(`Org ${organizationId} is over limit but on ${org.subscription_tier} tier. Incrementing Stripe usage.`);
+                console.log(`Org ${organizationId} is adding a metered seat (${currentSeatCount + 1}) on ${org.subscription_tier} tier.`);
 
-                // Find the metered subscription item for seats
+                // Find the metered subscription item
                 const subscriptions = await stripe.subscriptions.list({
                     customer: org.stripe_customer_id,
                     status: 'active',
@@ -93,8 +115,6 @@ serve(async (req) => {
 
                 if (subscriptions.data.length > 0) {
                     const subscription = subscriptions.data[0];
-                    // Find item with 'seat' or 'user' in product name or metadata
-                    // NOTE: This logic assumes a specific product naming convention.
                     const seatItem = subscription.items.data.find(item =>
                         item.metadata.metered_seats === 'true' ||
                         item.price.product.toString().toLowerCase().includes('seat')
@@ -106,7 +126,6 @@ serve(async (req) => {
                             action: 'increment',
                         });
                         console.log('Stripe usage record created successfully');
-                        isOverLimit = false; // We can proceed because we've billed for the extra seat
                     } else {
                         console.warn('No seat-based metered item found in Stripe subscription.');
                         return new Response(

@@ -22,32 +22,31 @@ const pricingPlans: PricingPlan[] = [
     name: "Starter",
     price: "$0",
     period: "forever",
-    description: "Perfect for solopreneurs",
+    description: "Perfect for solopreneurs starting their digital journey.",
     seats: "1 Seat included",
     overage: "N/A",
     features: [
       "5 Quotes per month",
       "Standard PDF export",
       "Customer & item management",
-      "Email support"
+      "Basic Item Catalog"
     ],
     cta: "Get Started Free",
     highlighted: false
   },
   {
     name: "Pro",
-    price: "$49",
+    price: "$59",
     period: "per month",
-    description: "For small professional teams",
-    seats: "3 Seats included",
-    overage: "$15/extra seat",
+    description: "Professional teams scaling their closing power.",
+    seats: "2 Seats included",
+    overage: "$25/extra seat (up to 2)",
     features: [
       "Unlimited quotes",
       "QuickBooks & Stripe Sync",
-      "Professional Email Sending",
       "AI Follow-up Messages",
       "Cloud sync across devices",
-      "Priority support"
+      "Priority email support"
     ],
     cta: "Start Pro Trial",
     highlighted: false,
@@ -55,39 +54,40 @@ const pricingPlans: PricingPlan[] = [
   },
   {
     name: "Business",
-    price: "$99",
+    price: "$149",
     period: "per month",
-    description: "The AI Powerhouse",
-    seats: "10 Seats included",
-    overage: "$10/extra seat",
+    description: "The Cinematic Experience. Best value for serious closers.",
+    seats: "5 Seats included",
+    overage: "$20/extra seat (up to 4)",
     features: [
-      "✨ AI Scope of Work Engine",
-      "✨ AI-powered full generation",
-      "Manager dashboard & review",
-      "Advanced analytics",
+      "✨ Behavioral Sales Intelligence",
+      "✨ Hill Family Cinematic Banners",
+      "✨ Dwell-time Heatmaps",
+      "AI-powered full generation",
+      "Manager Audit Dashboard",
       "Everything in Pro"
     ],
     cta: "Start Business Trial",
     highlighted: true,
-    badge: "ENTREPRENEUR'S CHOICE"
+    badge: "BEST VALUE FOR CLOSERS"
   },
   {
-    name: "Max AI",
-    price: "$249",
+    name: "Enterprise",
+    price: "$299",
     period: "per month",
-    description: "Enterprise scale",
-    seats: "Unlimited Seats",
-    overage: "$0 Overage",
+    description: "Maximum horsepower for large service organizations.",
+    seats: "10 Seats included",
+    overage: "Contact for more",
     features: [
-      "White-label branding",
-      "Custom domain support",
-      "API Access (Coming Soon)",
+      "Unrestricted AI Training",
+      "Multi-region organization support",
       "Dedicated account manager",
+      "Custom brand white-labeling",
+      "On-site team training",
       "Everything in Business"
     ],
-    cta: "Go Max AI",
-    highlighted: false,
-    badge: "UNLIMITED"
+    cta: "Contact Sales",
+    highlighted: false
   }
 ];
 
@@ -107,7 +107,7 @@ export function PricingSection() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
           {pricingPlans.map((plan, idx) => (
             <GlassCard
               key={idx}

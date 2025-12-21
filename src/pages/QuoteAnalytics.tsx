@@ -23,7 +23,8 @@ import { Quote } from '@/types';
 import { getQuotes } from '@/lib/db-service';
 import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { UpgradeModal } from '@/components/UpgradeModal';
 
 interface AnalyticsEvent {
     section_id: string;
@@ -36,12 +37,17 @@ interface AnalyticsEvent {
 export default function QuoteAnalytics() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { user, organizationId, isAdmin, isMaxAITier } = useAuth();
+    const { user, organizationId, isAdmin, isBusinessTier, subscriptionTier } = useAuth();
     const { toast } = useToast();
 
     const [quote, setQuote] = useState<Quote | null>(null);
     const [events, setEvents] = useState<AnalyticsEvent[]>([]);
+    const [conversations, setConversations] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+    // Safety check for tier reporting
+    const currentTierLabel = subscriptionTier || 'free';
 
     useEffect(() => {
         if (id) {
@@ -52,7 +58,7 @@ export default function QuoteAnalytics() {
     const loadData = async () => {
         try {
             const [quotesData] = await Promise.all([
-                getQuotes(user?.id, organizationId, isAdmin || isMaxAITier)
+                getQuotes(user?.id, organizationId, isAdmin || isBusinessTier)
             ]);
 
             const foundQuote = quotesData.find(q => q.id === id);
@@ -69,8 +75,17 @@ export default function QuoteAnalytics() {
                 .eq('quote_id', id)
                 .order('viewed_at', { ascending: true });
 
-            if (error) throw error;
             setEvents((telemetry as any) || []);
+
+            // Fetch conversations
+            const { data: convData, error: convError } = await supabase
+                .from('proposal_conversations' as any)
+                .select('*')
+                .eq('quote_id', id)
+                .order('created_at', { ascending: false });
+
+            if (convError) throw convError;
+            setConversations(convData || []);
 
         } catch (error) {
             console.error('Failed to load analytics:', error);
@@ -180,6 +195,34 @@ export default function QuoteAnalytics() {
         }
     };
 
+    const handleSendResponse = async (convId: string, response: string) => {
+        try {
+            const { error } = await supabase
+                .from('proposal_conversations' as any)
+                .update({
+                    contractor_response: response,
+                    status: 'answered'
+                })
+                .eq('id', convId);
+
+            if (error) throw error;
+
+            toast({
+                title: "Response Sent",
+                description: "Your answer has been delivered instantly to the client's proposal view.",
+            });
+
+            loadData();
+        } catch (error) {
+            console.error('Failed to send response:', error);
+            toast({
+                title: "Error",
+                description: "Failed to send response",
+                variant: 'destructive'
+            });
+        }
+    };
+
     const formatMs = (ms: number) => {
         const totalSeconds = Math.floor(ms / 1000);
         const minutes = Math.floor(totalSeconds / 60);
@@ -201,9 +244,19 @@ export default function QuoteAnalytics() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Badge variant="outline" className={`py-1.5 px-4 ${stats.engagementScore > 70 ? 'bg-orange-500/10 text-orange-600 border-orange-200' : 'bg-blue-500/10 text-blue-600 border-blue-200'} font-black uppercase tracking-widest`}>
-                        {stats.engagementScore > 70 ? '🔥 Hot Prospect' : '✨ Warming Up'}
-                    </Badge>
+                    {stats.engagementScore > 30 && !isBusinessTier ? (
+                        <Badge
+                            variant="outline"
+                            className="py-1.5 px-4 bg-orange-500/10 text-orange-600 border-orange-200 font-black uppercase tracking-widest cursor-pointer hover:bg-orange-500/20 transition-all"
+                            onClick={() => setShowUpgradeModal(true)}
+                        >
+                            🔥 High Interest Detected
+                        </Badge>
+                    ) : (
+                        <Badge variant="outline" className={`py-1.5 px-4 ${stats.engagementScore > 70 ? 'bg-orange-500/10 text-orange-600 border-orange-200' : 'bg-blue-500/10 text-blue-600 border-blue-200'} font-black uppercase tracking-widest`}>
+                            {stats.engagementScore > 70 ? '🔥 Hot Prospect' : '✨ Warming Up'}
+                        </Badge>
+                    )}
                     <div className="text-right">
                         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block">Engagement Score</span>
                         <span className="text-2xl font-black text-primary">{stats.engagementScore}%</span>
@@ -258,7 +311,7 @@ export default function QuoteAnalytics() {
                             <BrainCircuit className="h-5 w-5 text-blue-500" />
                             <Badge variant="secondary" className="text-[10px] font-bold">AI Status</Badge>
                         </div>
-                        <div className={`text-2xl font-black ${stats.stickerShock || stats.scopeConcern ? 'text-orange-600' : 'text-green-600'}`}>
+                        <div className={`text-2xl font-black ${stats.stickerShock || stats.scopeConcern ? 'text-orange-600' : 'text-green-600'} ${!isBusinessTier && !isAdmin ? 'blur-[3px]' : ''}`}>
                             {stats.stickerShock || stats.scopeConcern ? 'Intervene' : 'Optimize'}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">Auto-detected concern level</p>
@@ -279,7 +332,28 @@ export default function QuoteAnalytics() {
                                 </div>
                             </div>
                         </CardHeader>
-                        <CardContent className="p-0">
+                        <CardContent className="p-0 relative">
+                            {(!isBusinessTier && !isAdmin) && (
+                                <div className="absolute inset-0 z-20 backdrop-blur-[6px] bg-white/10 flex flex-col items-center justify-center p-8 text-center">
+                                    <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl shadow-2xl max-w-sm space-y-4">
+                                        <div className="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
+                                            <BarChart3 className="w-6 h-6 text-indigo-400" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h3 className="text-white font-black uppercase tracking-tight text-lg">Unlock Closer Insights</h3>
+                                            <p className="text-slate-400 text-xs leading-relaxed">
+                                                See exactly where clients are lingering so you can lead with a "Winning Sales Strategy."
+                                            </p>
+                                        </div>
+                                        <Button
+                                            onClick={() => setShowUpgradeModal(true)}
+                                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest text-[10px]"
+                                        >
+                                            Upgrade to Business
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                             <div className="divide-y divide-[#F1F5F9] dark:divide-gray-800">
                                 {Object.entries(stats.sectionStats).sort((a, b) => b[1] - a[1]).map(([id, time], idx) => {
                                     const percentage = (time / stats.totalTimeMs) * 100;
@@ -354,6 +428,89 @@ export default function QuoteAnalytics() {
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Client Questions & AI Drafts */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-3">
+                            <MessageSquare className="h-6 w-6 text-primary" />
+                            <h2 className="text-xl font-black uppercase tracking-tight">Active Conversations</h2>
+                        </div>
+
+                        {conversations.length === 0 ? (
+                            <Card className="border-dashed border-2">
+                                <CardContent className="py-12 text-center text-muted-foreground">
+                                    <p>No questions from the client yet.</p>
+                                    <p className="text-xs">Incoming questions from the proposal assistant will appear here.</p>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <div className="grid gap-6">
+                                {conversations.map((conv) => (
+                                    <Card key={conv.id} className={`border-none shadow-lg overflow-hidden ${conv.status === 'pending' ? 'ring-2 ring-indigo-500/20' : ''}`}>
+                                        <div className="bg-slate-50 dark:bg-slate-900 border-b p-4 flex justify-between items-center">
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="outline" className="text-[9px] uppercase font-black bg-white">
+                                                    Section: {conv.section_id.replace('cat-', '').replace(/-/g, ' ')}
+                                                </Badge>
+                                                {conv.status === 'pending' && <Badge className="bg-indigo-600 text-[9px] font-black uppercase">Unanswered</Badge>}
+                                            </div>
+                                            <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                                                {new Date(conv.created_at).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <CardContent className="p-6 space-y-4">
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-indigo-500 mb-1">Client Question</p>
+                                                <p className="font-bold text-slate-800 dark:text-slate-200">"{conv.client_question}"</p>
+                                            </div>
+
+                                            <Separator />
+
+                                            {conv.status === 'answered' ? (
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase text-green-500 mb-1">Your Response</p>
+                                                    <p className="text-sm text-slate-600 dark:text-slate-400">{conv.contractor_response}</p>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                                                    <div className="p-4 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl border border-indigo-100 dark:border-indigo-900/50">
+                                                        <div className="flex items-center gap-2 mb-2 text-indigo-600">
+                                                            <BrainCircuit className="w-4 h-4" />
+                                                            <span className="text-[10px] font-black uppercase">AI Recommended Draft</span>
+                                                        </div>
+                                                        <p className="text-sm text-slate-700 dark:text-slate-300 italic mb-4 leading-relaxed">
+                                                            {conv.ai_draft_response || "AI is drafting a response based on your SOW..."}
+                                                        </p>
+                                                        <div className="flex gap-2">
+                                                            <Button
+                                                                size="sm"
+                                                                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase"
+                                                                onClick={() => handleSendResponse(conv.id, conv.ai_draft_response)}
+                                                                disabled={!conv.ai_draft_response}
+                                                            >
+                                                                Approve & Send
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="font-bold text-xs uppercase"
+                                                                onClick={() => {
+                                                                    const resp = window.prompt("Edit Response:", conv.ai_draft_response);
+                                                                    if (resp) handleSendResponse(conv.id, resp);
+                                                                }}
+                                                            >
+                                                                Edit
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Right: AI Closer Toolbox */}
@@ -445,6 +602,12 @@ export default function QuoteAnalytics() {
                     </Card>
                 </div>
             </div>
+
+            <UpgradeModal
+                isOpen={showUpgradeModal}
+                tier={currentTierLabel}
+                onClose={() => setShowUpgradeModal(false)}
+            />
         </div>
     );
 }

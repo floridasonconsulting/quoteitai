@@ -2,6 +2,7 @@ import { LandingHeader } from "@/components/landing/LandingHeader";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { MotionProposalSection } from "@/components/landing/MotionProposalSection";
 import { IntegrationsSection } from "@/components/landing/IntegrationsSection";
+import { ProactiveShowcase } from "@/components/landing/ProactiveShowcase";
 import { FeaturesSection } from "@/components/landing/FeaturesSection";
 import { BenefitsSection } from "@/components/landing/BenefitsSection";
 import { ComparisonSection } from "@/components/landing/ComparisonSection";
@@ -28,6 +29,7 @@ export default function Landing() {
       <main>
         <HeroSection />
         <MotionProposalSection />
+        <ProactiveShowcase />
         <IntegrationsSection />
         <FeaturesSection />
         <BenefitsSection />

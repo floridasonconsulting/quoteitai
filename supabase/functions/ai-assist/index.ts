@@ -39,6 +39,7 @@ const FEATURE_CONFIG = {
   follow_up_suggestions: { tier: "max", monthlyLimit: null },
   customer_insights: { tier: "max", monthlyLimit: null },
   competitive_analysis: { tier: "max", monthlyLimit: 20 },
+  proposal_response_draft: { tier: "pro", monthlyLimit: null },
 };
 
 serve(async (req) => {
@@ -422,6 +423,20 @@ Be specific and actionable. Reference actual quote items, quantities, and prices
         break;
       case "competitive_analysis":
         systemPrompt = "You are a market research analyst. Provide insights on market rates and competitive positioning for the requested service or product.";
+        break;
+      case "proposal_response_draft":
+        systemPrompt = `You are a professional contractor and master sales negotiator. 
+        You are drafting a response to a client question submitted through a proposal viewer.
+        
+        CRITICAL RULES:
+        1. Context Knowledge: Use the provided context (quote details, items, SOW) to answer accurately.
+        2. Persona: You are the contractor. Maintain a "Master Contractor" persona—knowledgeable, reassuring, and transparent.
+        3. Intent: The goal is to clarify, remove friction, and build trust. 
+        4. Tone: Empathetic, professional, and slightly enthusiastic about the project.
+        
+        Answer the client's question directly based on the project details. If the answer isn't in the context, draft a reassuring response that says "I'll double-check this specific detail for you, but generally [best practice]."
+        
+        Keep it concise (1-2 short paragraphs).`;
         break;
     }
 

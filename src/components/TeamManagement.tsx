@@ -29,7 +29,7 @@ export function TeamManagement() {
     const { used: seatsUsed, limit: seatLimit, tier: currentTier, loading: seatsLoading } = useOrganizationSeats(organizationId);
     const navigate = useNavigate();
 
-    const isOwner = userRole === 'max' || userRole === 'admin';
+    const isOwner = userRole === 'max' || userRole === 'admin' || userRole === 'pro' || userRole === 'business' || userRole === 'enterprise' || userRole === 'max_ai';
 
     useEffect(() => {
         if (organizationId) {
@@ -130,7 +130,7 @@ export function TeamManagement() {
         }
     };
 
-    const isPro = userRole === 'pro' || userRole === 'business' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
+    const isPro = userRole === 'pro' || userRole === 'business' || userRole === 'enterprise' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
 
     if (!isPro) {
         return (
@@ -151,9 +151,10 @@ export function TeamManagement() {
                         <div className="text-sm space-y-1">
                             <p className="font-medium">Team Benefits:</p>
                             <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                                <li><strong>Pro ($49/mo)</strong>: 3 Users included, $15/mo per extra</li>
-                                <li><strong>Business ($99/mo)</strong>: 10 Users included, AI SOW Drafting</li>
-                                <li><strong>Max AI ($249/mo)</strong>: Unlimited Users, Custom AI Training</li>
+                                <li><strong>Starter</strong>: 1 User included.</li>
+                                <li><strong>Pro ($59/mo)</strong>: 2 Users included, $25/mo for seats 3 and 4.</li>
+                                <li><strong>Business ($149/mo)</strong>: 5 Users included, $20/mo for seats 6-9.</li>
+                                <li><strong>Enterprise ($299/mo)</strong>: 10 Users included.</li>
                                 <li>Shared item catalog and company settings</li>
                                 <li>Owner visibility for all team data</li>
                             </ul>

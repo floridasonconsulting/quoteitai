@@ -43,8 +43,9 @@ export const useOrganizationSeats = (orgId: string | null) => {
 
                 const limits: Record<string, number> = {
                     starter: 1,
-                    pro: 3,
-                    business: 10,
+                    pro: 2,
+                    business: 5,
+                    enterprise: 10,
                     max_ai: 9999
                 };
 

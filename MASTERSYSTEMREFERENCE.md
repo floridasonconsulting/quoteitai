@@ -1339,4 +1339,30 @@ When making significant changes to the system:
 
 ---
 
+## Behavioral Sales Experience: The "Proactive Partner" Layer
+
+### Natural Engagement Protocol (Client-Side)
+- **Empathy-First Triggers**: Use behavioral telemetry (dwell time > 60s) to predict user needs. If a user hesitates on a technical or financial section, the UI offers a "Context Tip" or a simple question prompt.
+- **Non-Intrusive Feedback**: UI signals are subtle (pulsing glassmorphic bubbles) in the periphery, avoiding "surveillance" vibes.
+- **Privacy Guardrails**: Never disclose tracking. Frame automated help as "Proactive Customer Success".
+
+### AI Response & Feedback Loop (The "Silent AI" Cycle)
+- **Draft-then-Verify**: All inbound proposal queries trigger an AI-drafted response in the Contractor Dashboard.
+- **Human-in-the-Loop**: The contractor receives a notification with the draft. They can edit, approve, or discard with one tap.
+- **Knowledge Grounding**: AI uses "Long Form Descriptions" and "Investment Summary" from the SOW as the source of truth.
+- **Real-Time Sync**: Contractor responses appear instantly in the client's proposal view via Postgres Realtime.
+
+## Revenue & Scaling Logic: Value-Based Tiering
+
+### Hybrid "Seat-Bucket" Model
+- **Starter (1 Seat)**: Free tier for solopreneurs. Zero marginal cost to system.
+- **Pro ($59/mo - 2 Seats)**: Core collaborative experience. Additional user seats 3 and 4 are charged at **$25/mo per seat** (Metered). Hard-enforce 2-seat limit for base price.
+- **Business ($149/mo - 5 Seats)**: The "AI Partner" tier. Additional user seats 6 through 9 are charged at **$20/mo per seat** (Metered). Hard-enforce 5-seat limit for base price.
+- **Enterprise ($299/mo - 10 Seats)**: Unrestricted Organization management.
+
+### High-Volume Conversion Logic
+- **Feature Gating**: Pro users can see that Interest Level Analytics exist, but the data must be blurred/locked behind the Upgrade Modal to drive "Closer" tier adoption.
+- **ROI Messaging**: All upgrade prompts lead with the "Winning Sales Strategy" narrative—emphasizing that QuoteIt is an investment in higher win rates, not just a software expense.
+- **The "Closer's Edge" Trigger**: Use behavioral telemetry to trigger the Business Tier upgrade when a deal is "hot" (e.g., high dwell time on a proposal).
+
 *This document is the single source of truth for Quote.it AI system architecture and should be referenced for all development decisions.*

@@ -85,6 +85,7 @@ export interface ProposalSection {
 
 export interface ProposalData {
   id: string;
+  organization_id?: string;
   status: ProposalStatus;
   settings: ProposalSettings;
   client: ProposalClient;

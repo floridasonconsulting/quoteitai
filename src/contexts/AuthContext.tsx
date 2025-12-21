@@ -11,7 +11,7 @@ interface SubscriptionData {
   subscription_end: string | null;
 }
 
-type UserRole = 'admin' | 'free' | 'pro' | 'max' | 'starter' | 'business' | 'max_ai';
+type UserRole = 'admin' | 'free' | 'pro' | 'max' | 'starter' | 'business' | 'enterprise' | 'max_ai';
 
 interface AuthContextType {
   user: User | null;
@@ -23,6 +23,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isProTier: boolean;
   isBusinessTier: boolean;
+  isEnterpriseTier: boolean;
   isMaxAITier: boolean;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: AuthError | null }>;
@@ -49,8 +50,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const roleCheckInProgress = useRef(false);
 
   const isAdmin = userRole === 'admin';
-  const isProTier = userRole === 'pro' || userRole === 'business' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
-  const isBusinessTier = userRole === 'business' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
+  const isProTier = userRole === 'pro' || userRole === 'business' || userRole === 'enterprise' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
+  const isBusinessTier = userRole === 'business' || userRole === 'enterprise' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
+  const isEnterpriseTier = userRole === 'enterprise' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
   const isMaxAITier = userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
 
   const checkUserRole = async (sessionToUse?: Session | null) => {
@@ -422,6 +424,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAdmin,
         isProTier,
         isBusinessTier,
+        isEnterpriseTier,
         isMaxAITier,
         loading,
         signUp,

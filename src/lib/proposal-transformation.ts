@@ -91,6 +91,7 @@ export function transformQuoteToProposal(
   // 1. Create Base Proposal Data
   const proposalData: ProposalData = {
     id: quote.id,
+    organization_id: quote.organizationId,
     status: quote.status,
     settings: {
       theme: 'modern_scroll',
