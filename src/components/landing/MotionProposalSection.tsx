@@ -121,7 +121,7 @@ export function MotionProposalSection() {
                             <motion.div
                                 animate={{ y: [0, -10, 0] }}
                                 transition={{ duration: 4, repeat: Infinity }}
-                                className="absolute top-1/2 -right-8 bg-white text-slate-950 p-4 rounded-2xl shadow-2xl border border-slate-200 z-20 hidden md:block"
+                                className="absolute top-1/2 right-6 bg-white text-slate-950 p-4 rounded-2xl shadow-2xl border border-slate-200 z-20 hidden md:block"
                             >
                                 <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
@@ -132,7 +132,7 @@ export function MotionProposalSection() {
                             <motion.div
                                 animate={{ y: [0, 10, 0] }}
                                 transition={{ duration: 5, repeat: Infinity }}
-                                className="absolute bottom-1/4 -left-12 bg-slate-800 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 z-20 hidden md:block"
+                                className="absolute bottom-1/4 left-6 bg-slate-800 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 z-20 hidden md:block"
                             >
                                 <div className="flex items-center gap-3">
                                     <BarChart3 className="w-4 h-4 text-indigo-400" />
