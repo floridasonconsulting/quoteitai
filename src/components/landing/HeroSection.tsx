@@ -1,119 +1,118 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Building2, CreditCard, Sparkles, Mail, DollarSign, ArrowRight, Play } from "lucide-react";
+import { Building2, CreditCard, Sparkles, DollarSign, ArrowRight, Play } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import Autoplay from "embla-carousel-autoplay";
-import { useRef } from "react";
-import { heroScreenshots } from "@/config/landing-media";
-
-const heroFeatures = [
-  { icon: Building2, text: "QuickBooks & Stripe integrated" },
-  { icon: Sparkles, text: "AI-powered SOW drafting" },
-  { icon: Mail, text: "Professional email automation" },
-  { icon: DollarSign, text: "40-80% cheaper than competitors" }
-];
+import { motion } from "framer-motion";
 
 export function HeroSection() {
   const navigate = useNavigate();
-  const plugin = useRef(Autoplay({ delay: 4000, stopOnInteraction: true }));
 
   return (
-    <section className="py-16 bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <div className="container mx-auto px-4">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-8">
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary" className="bg-green-600 text-white">
-                <Building2 className="h-3 w-3 mr-1" />
-                QuickBooks Integrated
-              </Badge>
-              <Badge variant="secondary" className="bg-blue-600 text-white">
-                <CreditCard className="h-3 w-3 mr-1" />
-                Stripe Payments
-              </Badge>
-              <Badge variant="secondary" className="bg-purple-600 text-white">
-                <Sparkles className="h-3 w-3 mr-1" />
-                AI SOW Drafting
-              </Badge>
-            </div>
-            <h1 className="text-4xl md:text-6xl font-bold leading-tight">
-              Create Professional Quotes in{" "}
-              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Seconds
-              </span>
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              The only AI-native quoting platform with <strong>built-in QuickBooks & Stripe integration</strong>. Enterprise intelligence at <strong>40-80% less cost</strong> than PandaDoc, Proposify, or ServiceTitan.
-            </p>
-            <div className="grid grid-cols-2 gap-4">
-              {heroFeatures.map((feature, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <feature.icon className="h-4 w-4 text-primary" />
-                  </div>
-                  <span className="text-sm">{feature.text}</span>
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" onClick={() => navigate("/auth")}>
-                Start Free Trial
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                onClick={() => document.getElementById("screenshots")?.scrollIntoView({ behavior: "smooth" })}
-              >
-                <Play className="mr-2 h-4 w-4" />
-                View Demo
-              </Button>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              No credit card required • 14-day free trial • QuickBooks & Stripe included
-            </p>
-          </div>
-          
-          <div className="relative">
-            <Carousel 
-              plugins={[plugin.current]}
-              className="w-full"
-              onMouseEnter={plugin.current.stop}
-              onMouseLeave={plugin.current.reset}
-            >
-              <CarouselContent>
-                {heroScreenshots.map((screenshot) => (
-                  <CarouselItem key={screenshot.id}>
-                    <div className="space-y-4">
-                      <Badge variant="secondary">{screenshot.badge}</Badge>
-                      <div className="browser-mockup bg-card rounded-lg overflow-hidden shadow-2xl border relative">
-                        <img 
-                          src={screenshot.image} 
-                          alt={screenshot.title}
-                          className="w-full h-auto"
-                          loading={screenshot.id === "dashboard" ? "eager" : "lazy"}
-                          fetchPriority={screenshot.id === "dashboard" ? "high" : "auto"}
-                        />
-                        {screenshot.isGif && (
-                          <div className="absolute top-2 right-2 bg-black/60 rounded-full p-2">
-                            <Play className="h-4 w-4 text-white" />
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg mb-1">{screenshot.title}</h3>
-                        <p className="text-sm text-muted-foreground">{screenshot.description}</p>
-                      </div>
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="hidden md:flex" />
-              <CarouselNext className="hidden md:flex" />
-            </Carousel>
-          </div>
+    <section className="relative pt-24 pb-32 overflow-hidden bg-[#0A0A0A]">
+      {/* Background Glows */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[10%] right-[-5%] w-[30%] h-[30%] bg-secondary/10 blur-[100px] rounded-full" />
+      </div>
+
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="max-w-4xl mx-auto text-center space-y-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex justify-center gap-3"
+          >
+            <Badge className="bg-white/5 backdrop-blur-md border-white/10 text-primary-foreground py-1 px-3">
+              <Sparkles className="h-3.5 w-3.5 mr-2 text-primary" />
+              AI-Native Quoting
+            </Badge>
+            <Badge className="bg-white/5 backdrop-blur-md border-white/10 text-slate-300 py-1 px-3">
+              v1.0 Now Live
+            </Badge>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-5xl md:text-7xl lg:text-8xl font-black leading-[1.1] tracking-tighter text-white"
+          >
+            Draft, Quote, & Win<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-secondary to-primary bg-[length:200%_auto] animate-gradient">
+              At Infinite Speed
+            </span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-lg md:text-2xl text-slate-400 max-w-2xl mx-auto leading-relaxed"
+          >
+            The market-disrupting platform for high-end trade services.
+            Built-in <span className="text-white font-semibold">QuickBooks & Stripe</span> integration.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center pt-4"
+          >
+            <Button size="lg" className="bg-primary text-black hover:bg-primary/90 h-14 px-8 text-lg font-bold shadow-[0_0_20px_rgba(0,255,255,0.4)]" onClick={() => navigate("/auth")}>
+              Start Free Trial
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+            <Button size="lg" variant="outline" className="border-white/10 bg-white/5 backdrop-blur-md text-white hover:bg-white/10 h-14 px-8 text-lg font-semibold" onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}>
+              <Play className="mr-2 h-5 w-5 fill-current" />
+              Watch Demo
+            </Button>
+          </motion.div>
         </div>
+
+        {/* Cinematic Browser Frame */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 40 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+          className="mt-20 relative max-w-6xl mx-auto"
+        >
+          <div className="absolute inset-0 bg-primary/20 blur-[100px] -z-10 rounded-full scale-90 opacity-50" />
+          <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-[#0F0F0F] group hover:border-primary/30 transition-colors duration-500">
+            {/* Top Bar */}
+            <div className="h-10 bg-[#1A1A1A] border-b border-white/5 flex items-center px-4 gap-2">
+              <div className="flex gap-1.5 font-bold">
+                <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50" />
+                <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/50" />
+                <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50" />
+              </div>
+              <div className="mx-auto bg-white/5 rounded-md px-12 py-1 text-[10px] text-slate-500 font-mono tracking-widest uppercase">
+                quoteit.ai / dashboard
+              </div>
+            </div>
+
+            {/* Content Placeholder / Video Area */}
+            <div className="relative aspect-video bg-gradient-to-br from-slate-900 to-black flex items-center justify-center group-hover:bg-slate-900/40 transition-all cursor-pointer">
+              <img
+                src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2426&auto=format&fit=crop"
+                alt="Product Demo"
+                className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all flex items-center justify-center">
+                <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center shadow-[0_0_30px_rgba(0,255,255,0.6)] group-hover:scale-110 transition-transform">
+                  <Play className="h-8 w-8 text-black fill-current" />
+                </div>
+              </div>
+
+              {/* Glowing border effect */}
+              <div className="absolute inset-0 border-2 border-primary/0 group-hover:border-primary/40 rounded-3xl transition-all duration-500 shadow-[inset_0_0_50px_rgba(0,255,255,0)] group-hover:shadow-[inset_0_0_50px_rgba(0,255,255,0.1)]" />
+            </div>
+          </div>
+
+          {/* Subtle reflection below */}
+          <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[80%] h-20 bg-primary/20 blur-[60px] opacity-30 skew-x-12" />
+        </motion.div>
       </div>
     </section>
   );

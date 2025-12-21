@@ -22,17 +22,19 @@ import { ScrollTopButton } from "@/components/landing/ScrollTopButton";
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="dark min-h-screen bg-[#0A0A0A] text-white selection:bg-primary/30 selection:text-primary">
       <LandingHeader />
-      <HeroSection />
-      <IntegrationsSection />
-      <FeaturesSection />
-      <BenefitsSection />
-      <ComparisonSection />
-      <ScreenshotsSection />
-      <WorkflowsSection />
-      <PricingSection />
-      <CTASection />
+      <main>
+        <HeroSection />
+        <IntegrationsSection />
+        <FeaturesSection />
+        <BenefitsSection />
+        <ComparisonSection />
+        <ScreenshotsSection />
+        <WorkflowsSection />
+        <PricingSection />
+        <CTASection />
+      </main>
       <LandingFooter />
       <ScrollTopButton />
     </div>
