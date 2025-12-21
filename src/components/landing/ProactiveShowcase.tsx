@@ -52,7 +52,7 @@ export function ProactiveShowcase() {
 
                     <div className="relative">
                         {/* Visual Simulation Frame */}
-                        <div className="rounded-3xl border border-slate-800 bg-slate-900/50 backdrop-blur-xl p-8 shadow-2xl relative overflow-hidden aspect-[4/3] flex flex-col">
+                        <div className="rounded-2xl md:rounded-3xl border border-slate-800 bg-slate-900/50 backdrop-blur-xl p-4 md:p-8 shadow-2xl relative overflow-hidden aspect-square sm:aspect-[4/3] flex flex-col">
                             {/* Header */}
                             <div className="flex items-center justify-between mb-8">
                                 <div className="flex gap-1.5">
@@ -85,14 +85,14 @@ export function ProactiveShowcase() {
                                     <AnimatePresence>
                                         {step === 1 && (
                                             <motion.div
-                                                initial={{ opacity: 0, x: 200, y: 100 }}
-                                                animate={{ opacity: 1, x: 150, y: 40 }}
+                                                initial={{ opacity: 0, x: 100, y: 100 }}
+                                                animate={{ opacity: 1, x: 40, y: 20 }}
                                                 exit={{ opacity: 0 }}
                                                 className="absolute text-indigo-400 z-50 pointer-events-none"
                                             >
-                                                <MousePointer2 className="w-8 h-8 fill-indigo-400" />
-                                                <span className="ml-5 mt-2 inline-block px-2 py-1 bg-white text-indigo-600 text-[10px] font-bold rounded shadow-lg">
-                                                    Customer lingering... 62s
+                                                <MousePointer2 className="w-6 h-6 md:w-8 md:h-8 fill-indigo-400" />
+                                                <span className="ml-5 mt-2 inline-block px-2 py-1 bg-white text-indigo-600 text-[8px] md:text-[10px] font-bold rounded shadow-lg whitespace-nowrap">
+                                                    Customer lingering...
                                                 </span>
                                             </motion.div>
                                         )}
@@ -107,9 +107,9 @@ export function ProactiveShowcase() {
                                         initial={{ opacity: 0, scale: 0.8, y: 20 }}
                                         animate={{ opacity: 1, scale: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.8, y: 20 }}
-                                        className="absolute bottom-8 right-8 z-20"
+                                        className="absolute bottom-4 right-4 md:bottom-8 md:right-8 z-20"
                                     >
-                                        <GlassCard className="w-64 p-0 shadow-2xl border-indigo-500/50 bg-slate-900 shadow-indigo-500/20">
+                                        <GlassCard className="w-48 md:w-64 p-0 shadow-2xl border-indigo-500/50 bg-slate-900 shadow-indigo-500/20">
                                             <div className="bg-indigo-600 p-3 flex items-center gap-2 text-white">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                                                 <span className="font-bold text-[10px] tracking-tight uppercase">Support Available</span>

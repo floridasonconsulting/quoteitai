@@ -27,7 +27,8 @@ export function ComparisonSection() {
 
         <div className="max-w-6xl mx-auto">
           <GlassCard className="p-0 overflow-hidden border-primary/20">
-            <div className="overflow-x-auto">
+            {/* Desktop View: Table */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-primary/10 bg-primary/5">
@@ -40,42 +41,25 @@ export function ComparisonSection() {
                 <tbody className="divide-y divide-primary/5">
                   <tr>
                     <td className="py-6 px-8 font-bold text-foreground">QuickBooks Integration</td>
-                    <td className="text-center py-6 px-8">
-                      <div className="flex items-center justify-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest bg-primary/10 rounded-full py-1 px-3 w-fit mx-auto border border-primary/20">
-                        <CheckCircle2 className="h-4 w-4" />
-                        Native
-                      </div>
-                    </td>
+                    <td className="text-center py-6 px-8 text-primary font-black uppercase text-[10px] tracking-widest bg-primary/10 rounded-full py-1 px-3 w-fit mx-auto border border-primary/20">Native</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">$79/mo tier</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">$200+/mo</td>
                   </tr>
                   <tr>
                     <td className="py-6 px-8 font-bold text-foreground">Stripe Payment Flow</td>
-                    <td className="text-center py-6 px-8">
-                      <div className="flex items-center justify-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest bg-primary/10 rounded-full py-1 px-3 w-fit mx-auto border border-primary/20">
-                        <CheckCircle2 className="h-4 w-4" />
-                        Integrated
-                      </div>
-                    </td>
+                    <td className="text-center py-6 px-8 text-primary font-black uppercase text-[10px] tracking-widest bg-primary/10 rounded-full py-1 px-3 w-fit mx-auto border border-primary/20">Integrated</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">$49/mo tier</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">Add-on</td>
                   </tr>
                   <tr>
                     <td className="py-6 px-8 font-bold text-foreground">AI SOW Drafting</td>
-                    <td className="text-center py-6 px-8">
-                      <div className="flex items-center justify-center gap-2 text-primary font-black uppercase text-[10px] tracking-widest bg-primary/10 rounded-full py-1 px-3 w-fit mx-auto border border-primary/20">
-                        <Sparkles className="h-4 w-4" />
-                        Extreme
-                      </div>
-                    </td>
+                    <td className="text-center py-6 px-8 text-primary font-black uppercase text-[10px] tracking-widest bg-primary/10 rounded-full py-1 px-3 w-fit mx-auto border border-primary/20">Extreme</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">Not available</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">Manual</td>
                   </tr>
                   <tr>
                     <td className="py-6 px-8 font-bold text-foreground">Per-User License Fees</td>
-                    <td className="text-center py-6 px-8">
-                      <span className="text-primary font-black uppercase text-[10px] tracking-widest bg-primary/10 rounded-full py-1 px-3 w-fit mx-auto border border-primary/20">Hybrid Model</span>
-                    </td>
+                    <td className="text-center py-6 px-8 text-primary font-black uppercase text-[10px] tracking-widest bg-primary/10 rounded-full py-1 px-3 w-fit mx-auto border border-primary/20">Hybrid Model</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">$19-39/user</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">$50-200/user</td>
                   </tr>
@@ -88,22 +72,43 @@ export function ComparisonSection() {
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">$500-1,500</td>
                   </tr>
                   <tr className="bg-primary/5">
-                    <td className="py-8 px-8 font-black text-foreground uppercase tracking-widest text-xs italic">Annual ROI Potential</td>
+                    <td className="py-8 px-8 font-black text-foreground uppercase tracking-widest text-xs italic text-left">Annual ROI Potential</td>
                     <td className="text-center py-8 px-8">
                       <div className="text-2xl font-black text-primary">$59/mo</div>
-                      <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">Flat Rate</div>
                     </td>
                     <td className="text-center py-8 px-8">
                       <div className="text-xl font-bold text-destructive/70">$1,728+/yr</div>
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mt-1">Scaling Costs</div>
                     </td>
                     <td className="text-center py-8 px-8">
                       <div className="text-xl font-bold text-destructive/70">$12,000+/yr</div>
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40 mt-1">High Orbit</div>
                     </td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile View: Vertical Comparison Cards */}
+            <div className="md:hidden divide-y divide-primary/5">
+              {[
+                { label: "QB Integration", qit: "Native", legacy: "$79-$200/mo" },
+                { label: "Stripe Flow", qit: "Integrated", legacy: "Add-on fees" },
+                { label: "AI SOW Drafting", qit: "Extreme", legacy: "Manual" },
+                { label: "User Fees", qit: "Hybrid", legacy: "$19-$200/user" },
+                { label: "Setup Time", qit: "Instant", legacy: "Days / Weeks" },
+                { label: "Annual Cost", qit: "$59/mo", legacy: "$1.7k-$12k+" },
+              ].map((row, i) => (
+                <div key={i} className="p-6 flex items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{row.label}</p>
+                    <p className="text-xs font-bold text-muted-foreground/50">Industry Standard: {row.legacy}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-primary font-black uppercase text-[10px] tracking-widest bg-primary/10 rounded-full py-1.5 px-4 border border-primary/20">
+                      {row.qit}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="p-12 bg-success/5 border-t border-success/10 text-center">
@@ -125,7 +130,6 @@ export function ComparisonSection() {
             </div>
           </GlassCard>
         </div>
-      </div>
     </section>
   );
 }

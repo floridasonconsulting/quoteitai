@@ -10,9 +10,10 @@ export function MotionProposalSection() {
         offset: ["start end", "end start"],
     });
 
-    const x = useTransform(scrollYProgress, [0, 1], [0, -200]);
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const x = useTransform(scrollYProgress, [0, 1], [0, isMobile ? -50 : -200]);
     const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
-    const scale = useTransform(scrollYProgress, [0, 0.2], [0.8, 1]);
+    const scale = useTransform(scrollYProgress, [0, 0.2], [isMobile ? 0.95 : 0.8, 1]);
 
     return (
         <section ref={containerRef} className="py-32 overflow-hidden bg-slate-950 text-white relative">
@@ -79,7 +80,7 @@ export function MotionProposalSection() {
                     <div className="flex-1 w-full relative">
                         <motion.div
                             style={{ opacity, scale, y: x }}
-                            className="relative aspect-[3/4] md:aspect-[4/5] bg-slate-900 rounded-[2.5rem] border border-slate-800 shadow-2xl overflow-hidden group"
+                            className="relative aspect-[3/4] md:aspect-[4/5] lg:aspect-[4/5] bg-slate-900 rounded-[2rem] md:rounded-[2.5rem] border border-slate-800 shadow-2xl overflow-hidden group"
                         >
                             {/* Proposal Mockup Content */}
                             <div className="absolute inset-x-0 top-0 h-48 md:h-64 overflow-hidden">
@@ -111,21 +112,21 @@ export function MotionProposalSection() {
                                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total Investment</p>
                                         <p className="text-3xl font-black text-indigo-400">$64,250.00</p>
                                     </div>
-                                    <div className="h-12 w-32 bg-indigo-500 rounded-2xl flex items-center justify-center font-black uppercase tracking-widest text-xs">
+                                    <div className="h-10 w-28 md:h-12 md:w-32 bg-indigo-500 rounded-xl md:rounded-2xl flex items-center justify-center font-black uppercase tracking-widest text-[10px]">
                                         Sign Now
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Floating Behavioral Badges */}
+                            {/* Floating Behavioral Badges - Adjusted for mobile */}
                             <motion.div
                                 animate={{ y: [0, -10, 0] }}
                                 transition={{ duration: 4, repeat: Infinity }}
-                                className="absolute top-1/2 right-6 bg-white text-slate-950 p-4 rounded-2xl shadow-2xl border border-slate-200 z-20 hidden md:block"
+                                className="absolute top-1/2 right-4 md:right-6 bg-white text-slate-950 p-2 md:p-4 rounded-xl md:rounded-2xl shadow-2xl border border-slate-200 z-20 scale-90 md:scale-100"
                             >
                                 <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                                    <p className="text-[10px] font-black uppercase">Live: Client is viewing Scope</p>
+                                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-red-500 animate-ping" />
+                                    <p className="text-[8px] md:text-[10px] font-black uppercase">Live Viewing</p>
                                 </div>
                             </motion.div>
 
