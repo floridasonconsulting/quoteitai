@@ -18,7 +18,7 @@ const bentoFeatures = [
     icon: Sparkles,
     title: "AI SOW Engine v1.0",
     description: "The market-disrupting engine that drafts legally-defensible, 3-phase Scope of Work documents in 15 seconds. Built for high-end trade professionals.",
-    span: "lg:col-span-3 lg:row-span-2",
+    span: "lg:col-span-4 lg:row-span-2",
     badge: "FLAGSHIP",
   },
   {
@@ -32,19 +32,19 @@ const bentoFeatures = [
     icon: Zap,
     title: "Rapid Win Sequence",
     description: "Automated 72-hour email retention logic that chases leads so you don't have to.",
-    span: "lg:col-span-1 lg:row-span-1",
+    span: "lg:col-span-2 lg:row-span-1",
   },
   {
     icon: BarChart3,
     title: "Precision Analytics",
     description: "Live pipeline valuation and win-rate tracking with zero configuration.",
-    span: "lg:col-span-1 lg:row-span-1",
+    span: "lg:col-span-2 lg:row-span-1",
   },
   {
     icon: ShieldCheck,
     title: "Risk Mitigation",
     description: "AI-generated exclusions and acceptance criteria to prevent scope creep.",
-    span: "lg:col-span-1 lg:row-span-1",
+    span: "lg:col-span-2 lg:row-span-1",
   },
   {
     icon: Package,
@@ -55,8 +55,8 @@ const bentoFeatures = [
   {
     icon: Users,
     title: "Team Bucket Model",
-    description: "Scalable seat-based licensing designed for growing service teams.",
-    span: "lg:col-span-3 lg:row-span-1",
+    description: "Scalable seat-based licensing designed for growing service teams. Manage enterprise-level complexity with a simple, high-performance interface.",
+    span: "lg:col-span-6 lg:row-span-1",
   }
 ];
 
@@ -77,12 +77,12 @@ export function FeaturesSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 auto-rows-[200px] gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 auto-rows-[220px] gap-6">
           {bentoFeatures.map((feature, idx) => (
             <GlassCard
               key={idx}
               delay={idx * 0.1}
-              className={`${feature.span} flex flex-col justify-between group overflow-hidden`}
+              className={`${feature.span} flex flex-col justify-between group overflow-hidden p-8`}
             >
               <div className="relative z-10">
                 <div className="h-12 w-12 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/20 group-hover:border-primary/40 transition-all duration-500">

@@ -74,7 +74,7 @@ export function ComparisonSection() {
                   <tr>
                     <td className="py-6 px-8 font-bold text-foreground">Per-User License Fees</td>
                     <td className="text-center py-6 px-8">
-                      <span className="text-success font-black uppercase text-xs tracking-widest">$0</span>
+                      <span className="text-primary font-black uppercase text-[10px] tracking-widest bg-primary/10 rounded-full py-1 px-3 w-fit mx-auto border border-primary/20">Hybrid Model</span>
                     </td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">$19-39/user</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">$50-200/user</td>
@@ -90,7 +90,7 @@ export function ComparisonSection() {
                   <tr className="bg-primary/5">
                     <td className="py-8 px-8 font-black text-foreground uppercase tracking-widest text-xs italic">Annual ROI Potential</td>
                     <td className="text-center py-8 px-8">
-                      <div className="text-2xl font-black text-primary">$49/mo</div>
+                      <div className="text-2xl font-black text-primary">$59/mo</div>
                       <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">Flat Rate</div>
                     </td>
                     <td className="text-center py-8 px-8">
@@ -110,7 +110,7 @@ export function ComparisonSection() {
               <div className="mb-8">
                 <span className="text-success font-black uppercase tracking-[0.3em] text-xs mb-4 block">Strategic Advantage</span>
                 <p className="text-3xl md:text-5xl font-black text-foreground tracking-tighter mb-4">
-                  Save up to <span className="text-success">$11,412</span> Per Year
+                  Save up to <span className="text-success">$11,292</span> Per Year
                 </p>
                 <p className="text-muted-foreground font-medium">Reinvest your API tax into actual growth operations.</p>
               </div>

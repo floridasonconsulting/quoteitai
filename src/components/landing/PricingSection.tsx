@@ -70,24 +70,6 @@ const pricingPlans: PricingPlan[] = [
     cta: "Start Business Trial",
     highlighted: true,
     badge: "BEST VALUE FOR CLOSERS"
-  },
-  {
-    name: "Enterprise",
-    price: "$299",
-    period: "per month",
-    description: "Maximum horsepower for large service organizations.",
-    seats: "10 Seats included",
-    overage: "Contact for more",
-    features: [
-      "Unrestricted AI Training",
-      "Multi-region organization support",
-      "Dedicated account manager",
-      "Custom brand white-labeling",
-      "On-site team training",
-      "Everything in Business"
-    ],
-    cta: "Contact Sales",
-    highlighted: false
   }
 ];
 

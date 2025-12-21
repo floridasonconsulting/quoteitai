@@ -34,7 +34,6 @@ export default function Landing() {
         <FeaturesSection />
         <BenefitsSection />
         <ComparisonSection />
-        <ScreenshotsSection />
         <WorkflowsSection />
         <PricingSection />
         <CTASection />
