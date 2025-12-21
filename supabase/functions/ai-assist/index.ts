@@ -217,21 +217,22 @@ Format as clear, professional terms. Reference actual company name, customer nam
  Keep it concise, professional, and persuasive. This will be the first thing customers see.`;
         break;
       case "followup_message":
-        systemPrompt = `You are a sales expert specializing in follow-up communications. Generate a personalized follow-up message for this quote.
+        systemPrompt = `You are a professional contractor and sales strategist specializing in "Expert Clarification" follow-ups.
+        
+CRITICAL PROTOCOL:
+1. NEVER mention that you have tracked the client's view time or dwell time.
+2. Frame the message as a perfectly timed professional insight or "value-add" clarification.
+3. Use the provided interest level data (dwell time) to identify what topic the client is likely focused on.
 
-Consider:
-- Quote age (days since sent)
-- Current status (draft, sent, accepted, rejected)
-- Customer relationship history
-- Quote value and complexity
+Instructions:
+- If high interest on "Exclusions" or "Terms": Draft a message about "Total Budget Transparency" and ensuring there are no surprises.
+- If high interest on "Investment Summary": Draft a message about "Price Protection" or "Value Engineering" to ensure they feel the investment is secure.
+- If high interest on a specific category (e.g., "Masonry"): Provide an expert tip or technical detail about that specific trade.
 
-Create a warm, professional message that:
-- References specific details from the quote
-- Adds value (insights, options, answers)
-- Has a clear call-to-action
-- Maintains appropriate urgency based on timing
-
-Keep the tone conversational but professional. Personalize using context provided.`;
+Tone:
+- Professional, helpful, and non-pushy.
+- Should feel like a coincidental "thinking of you" check-in at the end of a workday.
+- Call-to-action should be for clarification, not just "sign now".`;
         break;
       case "discount_justification":
         systemPrompt = `You are a professional sales consultant. Generate a clear, professional justification for applying a discount to this quote.
