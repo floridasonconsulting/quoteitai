@@ -32,7 +32,7 @@ export function ComparisonSection() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-primary/10 bg-primary/5">
-                    <th className="text-left py-6 px-8 font-black text-xs uppercase tracking-widest text-muted-foreground">Operational Metric</th>
+                    <th className="text-left py-6 px-8 font-black text-xs uppercase tracking-widest text-muted-foreground">Strategic Feature</th>
                     <th className="text-center py-6 px-8 font-black text-xs uppercase tracking-widest text-primary italic">Quote-it AI</th>
                     <th className="text-center py-6 px-8 font-black text-xs uppercase tracking-widest text-muted-foreground/50">PandaDoc</th>
                     <th className="text-center py-6 px-8 font-black text-xs uppercase tracking-widest text-muted-foreground/50">ServiceTitan</th>
@@ -41,25 +41,25 @@ export function ComparisonSection() {
                 <tbody className="divide-y divide-primary/5">
                   <tr>
                     <td className="py-6 px-8 font-bold text-foreground">QuickBooks Integration</td>
-                    <td className="text-center py-6 px-8 text-primary font-black uppercase text-[10px] tracking-widest bg-primary/10 rounded-full py-1 px-3 w-fit mx-auto border border-primary/20">Native</td>
+                    <td className="text-center py-6 px-8 text-primary font-black uppercase text-[10px] tracking-widest w-fit mx-auto">Native</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">$79/mo tier</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">$200+/mo</td>
                   </tr>
                   <tr>
                     <td className="py-6 px-8 font-bold text-foreground">Stripe Payment Flow</td>
-                    <td className="text-center py-6 px-8 text-primary font-black uppercase text-[10px] tracking-widest bg-primary/10 rounded-full py-1 px-3 w-fit mx-auto border border-primary/20">Integrated</td>
+                    <td className="text-center py-6 px-8 text-primary font-black uppercase text-[10px] tracking-widest w-fit mx-auto">Integrated</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">$49/mo tier</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">Add-on</td>
                   </tr>
                   <tr>
                     <td className="py-6 px-8 font-bold text-foreground">AI SOW Drafting</td>
-                    <td className="text-center py-6 px-8 text-primary font-black uppercase text-[10px] tracking-widest bg-primary/10 rounded-full py-1 px-3 w-fit mx-auto border border-primary/20">Extreme</td>
+                    <td className="text-center py-6 px-8 text-primary font-black uppercase text-[10px] tracking-widest w-fit mx-auto">Standard</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">Not available</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">Manual</td>
                   </tr>
                   <tr>
                     <td className="py-6 px-8 font-bold text-foreground">Per-User License Fees</td>
-                    <td className="text-center py-6 px-8 text-primary font-black uppercase text-[10px] tracking-widest bg-primary/10 rounded-full py-1 px-3 w-fit mx-auto border border-primary/20">Hybrid Model</td>
+                    <td className="text-center py-6 px-8 text-primary font-black uppercase text-[10px] tracking-widest w-fit mx-auto">Hybrid Model</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">$19-39/user</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">$50-200/user</td>
                   </tr>
@@ -72,7 +72,7 @@ export function ComparisonSection() {
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">$500-1,500</td>
                   </tr>
                   <tr className="bg-primary/5">
-                    <td className="py-8 px-8 font-black text-foreground uppercase tracking-widest text-xs italic text-left">Annual ROI Potential</td>
+                    <td className="py-8 px-8 font-black text-foreground uppercase tracking-widest text-xs italic text-left">Economic Analysis</td>
                     <td className="text-center py-8 px-8">
                       <div className="text-2xl font-black text-primary">$59/mo</div>
                     </td>
@@ -92,7 +92,7 @@ export function ComparisonSection() {
               {[
                 { label: "QB Integration", qit: "Native", legacy: "$79-$200/mo" },
                 { label: "Stripe Flow", qit: "Integrated", legacy: "Add-on fees" },
-                { label: "AI SOW Drafting", qit: "Extreme", legacy: "Manual" },
+                { label: "AI SOW Drafting", qit: "Standard", legacy: "Manual" },
                 { label: "User Fees", qit: "Hybrid", legacy: "$19-$200/user" },
                 { label: "Setup Time", qit: "Instant", legacy: "Days / Weeks" },
                 { label: "Annual Cost", qit: "$59/mo", legacy: "$1.7k-$12k+" },
@@ -103,7 +103,7 @@ export function ComparisonSection() {
                     <p className="text-xs font-bold text-muted-foreground/50">Industry Standard: {row.legacy}</p>
                   </div>
                   <div className="text-right">
-                    <div className="text-primary font-black uppercase text-[10px] tracking-widest bg-primary/10 rounded-full py-1.5 px-4 border border-primary/20">
+                    <div className="text-primary font-black uppercase text-[10px] tracking-widest">
                       {row.qit}
                     </div>
                   </div>
@@ -113,7 +113,7 @@ export function ComparisonSection() {
 
             <div className="p-12 bg-success/5 border-t border-success/10 text-center">
               <div className="mb-8">
-                <span className="text-success font-black uppercase tracking-[0.3em] text-xs mb-4 block">Strategic Advantage</span>
+                <span className="text-success font-black uppercase tracking-[0.3em] text-xs mb-4 block">Economic Analysis</span>
                 <p className="text-3xl md:text-5xl font-black text-foreground tracking-tighter mb-4">
                   Save up to <span className="text-success">$11,292</span> Per Year
                 </p>

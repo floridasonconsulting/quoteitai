@@ -10,7 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { saveSettings, clearDatabaseData, clearSampleData } from "@/lib/db-service";
+import { saveSettings, getSettings, clearDatabaseData, clearSampleData } from "@/lib/db-service";
 import { clearAllData } from "@/lib/storage";
 import {
   importCustomersFromCSV,
@@ -113,29 +113,34 @@ export default function Settings() {
     }, timeoutDuration);
 
     try {
-      // CRITICAL: Load from Supabase FIRST to get most up-to-date data
+      // Step 1: Load from local cache FIRST for instant UI
+      console.log('[Settings] Checking local cache...');
+      const localSettings = await getSettings(user.id, organizationId);
+      if (localSettings && (localSettings.name || localSettings.primaryColor)) {
+        console.log('[Settings] ✓ Found settings in local cache');
+        setSettings(prev => ({ ...prev, ...localSettings }));
+      }
+
+      // Step 2: Fetch from Supabase for authoritative data
       console.log('[Settings] Fetching from Supabase...');
-      const { data: supabaseSettings, error } = await supabase
-        .from('company_settings')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      let supabaseResult: any;
+      if (organizationId) {
+        supabaseResult = await supabase.from('company_settings').select('*').eq('organization_id', organizationId).maybeSingle();
+      } else {
+        supabaseResult = await supabase.from('company_settings').select('*').eq('user_id', user.id).maybeSingle();
+      }
+      const { data: supabaseSettings, error } = supabaseResult;
 
       if (error) {
         console.error('[Settings] Supabase fetch error:', error);
-        throw error;
-      }
-
-      if (supabaseSettings) {
+        // Don't throw, just use local data
+      } else if (supabaseSettings) {
         const sSettings = supabaseSettings as any;
         console.log('[Settings] ✓ Loaded settings from Supabase:', {
           name: sSettings.name,
           email: sSettings.email,
-          phone: sSettings.phone,
-          address: sSettings.address,
-          industry: sSettings.industry,
-          termsLength: sSettings.terms?.length || 0,
-          hasLogo: !!sSettings.logo
+          primaryColor: sSettings.primary_color,
+          organizationId: sSettings.organization_id
         });
 
         // Convert database format to app format
@@ -170,11 +175,11 @@ export default function Settings() {
           onboardingCompleted: sSettings.onboarding_completed ?? false,
         };
 
-        setSettings(loadedSettings);
-        console.log('[Settings] ✓ Settings state updated');
+        // Merge with local settings to ensure everything is captured
+        setSettings(prev => ({ ...prev, ...loadedSettings }));
+        console.log('[Settings] ✓ Settings state updated with Supabase data');
       } else {
-        console.log('[Settings] No settings found in Supabase, using defaults');
-        // Keep default empty settings
+        console.log('[Settings] No settings found in Supabase for this identity');
       }
 
       console.log('[Settings] ========== SETTINGS LOAD COMPLETE ==========');
@@ -184,7 +189,7 @@ export default function Settings() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, organizationId]);
 
   useEffect(() => {
     loadSettings();

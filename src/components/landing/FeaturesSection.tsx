@@ -82,7 +82,7 @@ export function FeaturesSection() {
             <GlassCard
               key={idx}
               delay={idx * 0.1}
-              className={`${feature.span} flex flex-col justify-between group overflow-hidden p-6 md:p-8`}
+              className={`${feature.span} flex flex-col justify-between group overflow-hidden p-8 md:p-10 md:pb-12`}
             >
               <div className="relative z-10">
                 <div className="h-12 w-12 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/20 group-hover:border-primary/40 transition-all duration-500">

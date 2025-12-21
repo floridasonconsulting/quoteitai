@@ -30,6 +30,7 @@ export default function Landing() {
         <HeroSection />
         <MotionProposalSection />
         <IntegrationsSection />
+        <ProactiveShowcase />
         <FeaturesSection />
         <BenefitsSection />
         <ComparisonSection />
