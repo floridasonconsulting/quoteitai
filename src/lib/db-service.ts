@@ -206,35 +206,44 @@ export async function saveSettings(
       if (error) {
         console.error('[DB Service] ❌ Supabase upsert error:', error);
 
-        // AUTOMATIC RECOVERY: If 'industry' or 'show_proposal_images' column is missing, retry without it
-        if (error.message?.includes("industry") || error.message?.includes("show_proposal_images") || error.code === 'PGRST204') {
-          console.warn('[DB Service] ⚠️ Industry or ShowImages column missing in database. Retrying save without them...');
+        if (error.message?.includes("column") || error.code === 'PGRST204' || error.message?.includes("industry") || error.message?.includes("show_proposal_images")) {
+          console.warn('[DB Service] ⚠️ Database column mismatch detected. Retrying with base columns...');
 
-          // Create a copy without the industry, show_proposal_images, and visual fields
-          const {
-            industry,
-            show_proposal_images,
-            default_cover_image,
-            default_header_image,
-            visual_rules,
-            ...resilientSettings
-          } = dbSettings as any;
+          // Base columns that are guaranteed to exist in the original schema
+          const baseColumns = [
+            'user_id', 'name', 'address', 'city', 'state', 'zip', 'phone', 'email',
+            'website', 'logo', 'logo_display_option', 'license', 'insurance', 'terms',
+            'proposal_template', 'proposal_theme', 'notify_email_accepted',
+            'notify_email_declined', 'onboarding_completed', 'updated_at'
+          ];
+
+          const resilientSettings: any = {};
+          baseColumns.forEach(col => {
+            if ((dbSettings as any)[col] !== undefined) {
+              resilientSettings[col] = (dbSettings as any)[col];
+            }
+          });
+
+          // Also try to include branding colors if they exist (added in recent migration)
+          if ((dbSettings as any).primary_color) resilientSettings.primary_color = (dbSettings as any).primary_color;
+          if ((dbSettings as any).accent_color) resilientSettings.accent_color = (dbSettings as any).accent_color;
+          if ((dbSettings as any).organization_id) resilientSettings.organization_id = (dbSettings as any).organization_id;
+
+          console.log('[DB Service] Attempting resilient save with columns:', Object.keys(resilientSettings));
 
           const { data: retryData, error: retryError } = await (supabase
             .from('company_settings' as any)
-            .upsert(resilientSettings, {
-              onConflict: 'user_id',
-              ignoreDuplicates: false
-            }) as any)
+            .update(resilientSettings)
+            .eq('user_id', userId)
             .select()
-            .single();
+            .single() as any);
 
           if (retryError) {
             console.error('[DB Service] ❌ Resilient retry failed:', retryError);
             throw retryError;
           }
 
-          console.log('[DB Service] ✓ Settings saved successfully (without industry)');
+          console.log('[DB Service] ✓ Settings saved successfully using resilient fallback');
           return;
         }
 
