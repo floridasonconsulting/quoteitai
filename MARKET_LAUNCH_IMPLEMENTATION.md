@@ -51,7 +51,7 @@ src/components/settings/QuickBooksSection.tsx (251 lines)
 ```env
 QUICKBOOKS_CLIENT_ID=your_client_id
 QUICKBOOKS_CLIENT_SECRET=your_client_secret
-QUICKBOOKS_REDIRECT_URI=https://quoteit.ai/auth/quickbooks/callback
+QUICKBOOKS_REDIRECT_URI=https://quoteitai.com/auth/quickbooks/callback
 ```
 
 ---
@@ -410,7 +410,7 @@ src/pages/Subscription.tsx                          (updated pricing, 403 lines)
 # QuickBooks Integration
 QUICKBOOKS_CLIENT_ID=your_quickbooks_client_id
 QUICKBOOKS_CLIENT_SECRET=your_quickbooks_client_secret
-QUICKBOOKS_REDIRECT_URI=https://quoteit.ai/auth/quickbooks/callback
+QUICKBOOKS_REDIRECT_URI=https://quoteitai.com/auth/quickbooks/callback
 QUICKBOOKS_ENVIRONMENT=production
 
 # Stripe Payment Integration  
@@ -441,7 +441,7 @@ STRIPE_WEBHOOK_SECRET=whsec_test_...
 **Steps:**
 1. Create app at developer.intuit.com
 2. Configure OAuth redirect URIs:
-   - Production: `https://quoteit.ai/auth/quickbooks/callback`
+   - Production: `https://quoteitai.com/auth/quickbooks/callback`
    - Development: `http://localhost:5173/auth/quickbooks/callback`
 3. Enable scopes:
    - `com.intuit.quickbooks.accounting` (required)
@@ -451,7 +451,7 @@ STRIPE_WEBHOOK_SECRET=whsec_test_...
 
 **Webhook Configuration:**
 Create webhook endpoint for real-time sync:
-- Endpoint: `https://quoteit.ai/api/webhooks/quickbooks`
+- Endpoint: `https://quoteitai.com/api/webhooks/quickbooks`
 - Events: Customer updates, Invoice updates, Payment updates
 
 ---
