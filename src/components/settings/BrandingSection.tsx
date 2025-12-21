@@ -150,6 +150,56 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
           </p>
         </div>
 
+        {/* Brand Colors */}
+        <div className="space-y-4 pt-4 border-t">
+          <Label>Application Colors</Label>
+          <p className="text-sm text-muted-foreground">
+            These colors will be used for buttons, links, and accents throughout the application.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="primary-color">Primary Color</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="primary-color"
+                  type="color"
+                  value={settings.primaryColor || '#4F46E5'}
+                  onChange={(e) => onUpdate({ primaryColor: e.target.value })}
+                  className="w-12 h-10 p-1 bg-transparent"
+                />
+                <Input
+                  type="text"
+                  value={settings.primaryColor || '#4F46E5'}
+                  onChange={(e) => onUpdate({ primaryColor: e.target.value })}
+                  placeholder="#4F46E5"
+                  className="flex-1 font-mono uppercase"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="accent-color">Accent Color</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="accent-color"
+                  type="color"
+                  value={settings.accentColor || '#10B981'}
+                  onChange={(e) => onUpdate({ accentColor: e.target.value })}
+                  className="w-12 h-10 p-1 bg-transparent"
+                />
+                <Input
+                  type="text"
+                  value={settings.accentColor || '#10B981'}
+                  onChange={(e) => onUpdate({ accentColor: e.target.value })}
+                  placeholder="#10B981"
+                  className="flex-1 font-mono uppercase"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* White-Label Logo Upload (Max AI Tier Only) */}
         <div className="space-y-3 pt-4 border-t">
           <Label htmlFor="logo-upload">Company Logo</Label>

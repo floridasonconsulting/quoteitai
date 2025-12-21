@@ -36,7 +36,7 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-5xl md:text-7xl lg:text-9xl font-black leading-[1.05] tracking-tighter text-foreground"
+            className="text-4xl md:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tighter text-foreground"
           >
             Win More Deals<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] animate-gradient">
@@ -48,7 +48,7 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed"
+            className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
           >
             The first AI-powered quoting platform that tracks client engagement in real-time.
             Deliver <span className="text-foreground font-semibold">Cinematic Proposals</span> and close with surgical precision using behavioral data.
@@ -114,6 +114,6 @@ export function HeroSection() {
           <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[80%] h-20 bg-primary/20 blur-[60px] opacity-30 skew-x-12" />
         </motion.div>
       </div>
-    </section>
+    </section >
   );
 }

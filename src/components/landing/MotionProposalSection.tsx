@@ -28,11 +28,11 @@ export function MotionProposalSection() {
                         <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 px-4 py-1.5 text-xs font-black uppercase tracking-widest">
                             Proposal Motion Experience
                         </Badge>
-                        <h2 className="text-4xl md:text-6xl lg:text-7xl font-black leading-[1.1] tracking-tighter">
+                        <h2 className="text-3xl md:text-5xl lg:text-6xl font-black leading-[1.1] tracking-tighter">
                             Stop Sending PDFs.<br />
                             <span className="text-indigo-400">Start Sending Experiences.</span>
                         </h2>
-                        <p className="text-xl text-slate-400 leading-relaxed max-w-xl">
+                        <p className="text-lg text-slate-400 leading-relaxed max-w-lg">
                             Static documents belong in the 90s. QuoteIt proposals are living, breathing sales engines that track every scroll, every hover, and every hesitation.
                         </p>
 

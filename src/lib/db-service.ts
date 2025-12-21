@@ -139,6 +139,8 @@ export async function saveSettings(
       show_financing: settings.showFinancing ?? false,
       financing_text: settings.financingText || null,
       financing_link: settings.financingLink || null,
+      primary_color: settings.primaryColor || null,
+      accent_color: settings.accentColor || null,
       onboarding_completed: settings.onboardingCompleted ?? false,
       updated_at: new Date().toISOString()
     };

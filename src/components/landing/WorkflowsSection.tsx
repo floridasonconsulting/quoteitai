@@ -47,11 +47,12 @@ export function WorkflowsSection() {
     >
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-20 space-y-4">
-          <h2 className="text-4xl md:text-6xl font-black text-foreground tracking-tighter uppercase italic">
-            Visual <span className="text-primary not-italic">Sequence</span>
+          <h2 className="text-3xl md:text-5xl font-black mb-6 tracking-tighter">
+            Ready to Save $1,000s and Win More Deals?
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Optimized operational paths for the high-performance modern enterprise.
+          <p className="text-lg mb-12 max-w-xl mx-auto opacity-90 font-medium leading-relaxed">
+            Join 500+ smart businesses who switched to Quote-it AI for QuickBooks integration,
+            Stripe payments, and AI automation at 40-80% less cost.
           </p>
         </div>
 

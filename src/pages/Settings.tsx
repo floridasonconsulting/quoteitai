@@ -155,6 +155,8 @@ export default function Settings() {
           showFinancing: sSettings.show_financing ?? false,
           financingText: sSettings.financing_text || "",
           financingLink: sSettings.financing_link || "",
+          primaryColor: sSettings.primary_color || undefined,
+          accentColor: sSettings.accent_color || undefined,
           onboardingCompleted: sSettings.onboarding_completed ?? false,
         };
 

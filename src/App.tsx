@@ -16,6 +16,7 @@ import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { OnboardingWizard } from "@/components/OnboardingWizard";
 import { useCacheWarmup } from "@/hooks/useCacheWarmup";
 import { DemoProvider } from "@/contexts/DemoContext";
+import { BrandThemeManager } from "./components/BrandThemeManager";
 
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -95,6 +96,7 @@ function AppRoutes() {
       </Routes>
 
       {/* Global Components */}
+      <BrandThemeManager />
       <OnboardingWizard />
       <MobileBottomNav />
     </>

@@ -95,13 +95,13 @@ export function PricingSection() {
   const navigate = useNavigate();
 
   return (
-    <section id="pricing" className="py-24 bg-background relative overflow-hidden transition-colors duration-500">
+    <section id="pricing" className="py-20 bg-background relative overflow-hidden transition-colors duration-500">
       <div className="container mx-auto px-4 relative z-10">
-        <div className="text-center mb-20 space-y-4">
-          <h2 className="text-4xl md:text-6xl font-black text-foreground tracking-tighter">
+        <div className="text-center mb-16 space-y-4">
+          <h2 className="text-3xl md:text-5xl font-black text-foreground tracking-tighter">
             Hybrid <span className="text-primary italic">Seat-Bucket</span> Logic
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
             Choose your base tier and scale dynamically. No hidden fees.
             No enterprise-level friction.
           </p>

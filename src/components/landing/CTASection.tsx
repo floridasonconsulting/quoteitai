@@ -10,7 +10,7 @@ export function CTASection() {
   return (
     <section
       ref={section.ref}
-      className={`py-24 relative overflow-hidden transition-all duration-1000 ${section.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+      className={`py-20 relative overflow-hidden transition-all duration-1000 ${section.isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
         }`}
     >
       <div className="absolute inset-0 bg-brand-pro" />
@@ -18,10 +18,10 @@ export function CTASection() {
       <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--primary)_0%,_transparent_70%)]" />
 
       <div className="container mx-auto px-4 relative z-10 text-center text-primary-foreground">
-        <h2 className="text-4xl md:text-6xl font-black mb-6 tracking-tighter">
+        <h2 className="text-3xl md:text-5xl font-black mb-6 tracking-tighter">
           Ready to Save $1,000s and Win More Deals?
         </h2>
-        <p className="text-xl mb-12 max-w-2xl mx-auto opacity-90 font-medium leading-relaxed">
+        <p className="text-lg mb-12 max-w-xl mx-auto opacity-90 font-medium leading-relaxed">
           Join 500+ smart businesses who switched to Quote-it AI for QuickBooks integration,
           Stripe payments, and AI automation at 40-80% less cost.
         </p>

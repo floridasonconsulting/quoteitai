@@ -466,6 +466,8 @@ export function OnboardingWizard() {
         phone: companyData.phone,
         address: companyData.address,
         industry: companyData.industry,
+        primaryColor: brandingData.primaryColor,
+        accentColor: brandingData.accentColor,
         onboardingCompleted: true,
       };
 

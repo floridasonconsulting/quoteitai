@@ -68,10 +68,10 @@ export function FeaturesSection() {
           <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5 uppercase tracking-widest px-4 py-1">
             Core Infrastructure
           </Badge>
-          <h2 className="text-4xl md:text-6xl font-black text-foreground tracking-tighter">
+          <h2 className="text-3xl md:text-5xl font-black text-foreground tracking-tighter">
             Engineered for <span className="text-primary italic">Absolute</span> Dominance
           </h2>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-lg text-muted-foreground">
             Ditch the bloated legacy tools. QuoteIt AI is built on a high-performance stack
             designed to maximize conversion and minimize administrative overhead.
           </p>

@@ -106,6 +106,8 @@ export interface CompanySettings {
   showFinancing?: boolean;
   financingText?: string;
   financingLink?: string;
+  primaryColor?: string;
+  accentColor?: string;
   onboardingCompleted?: boolean;
 }
 
