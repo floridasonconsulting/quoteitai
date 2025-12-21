@@ -12,36 +12,36 @@ import React, { useState } from 'react';
 const SUBSCRIPTION_TIERS = {
   pro_monthly: {
     name: 'Pro',
-    price: '$49/month',
+    price: '$59/month',
     priceId: 'price_pro_monthly',
     productId: 'prod_pro',
-    description: 'Includes 3 users',
+    description: 'Includes 2 seats',
     popular: true,
     features: [
       'Unlimited quotes',
-      '3 Users included',
-      '$15/mo per extra user',
+      '2 Seats included',
+      '$25/mo per extra seat (up to 2)',
       'QuickBooks & Stripe sync',
-      'Professional Email Sending',
       'AI Follow-up Messages',
-      'Priority support',
+      'Cloud sync across devices',
+      'Priority email support',
     ],
   },
   business_monthly: {
     name: 'Business',
-    price: '$99/month',
+    price: '$149/month',
     priceId: 'price_business_monthly',
     productId: 'prod_business',
-    description: 'Includes 10 users',
+    description: 'Includes 5 seats',
     popular: false,
     features: [
-      'Everything in Pro, plus:',
-      '10 Users included',
-      '$10/mo per extra user',
-      '✨ AI Scope of Work drafting',
-      '✨ AI-powered full quote generation',
-      'Manager dashboard & review',
-      'Advanced analytics',
+      '✨ Behavioral Sales Intelligence',
+      '✨ Cinematic Pro Dynamic Banners',
+      '✨ Dwell-time Heatmaps',
+      'AI-powered full generation',
+      '5 Seats included',
+      '$20/mo per extra seat (up to 4)',
+      'Everything in Pro',
     ],
   },
 };
@@ -249,7 +249,7 @@ export default function Subscription() {
             <div className="space-y-2">
               <h4 className="font-semibold flex items-center gap-2">
                 <Check className="h-4 w-4 text-success" />
-                Quote-It AI Pro ($49/mo)
+                Quote-It AI Pro ($59/mo)
               </h4>
               <ul className="text-sm text-muted-foreground space-y-1 ml-6">
                 <li>• QuickBooks & Stripe included</li>

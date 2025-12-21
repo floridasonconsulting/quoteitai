@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { FollowUpSettings } from '@/components/quote-form/FollowUpSettings';
 import { FollowUpSchedule } from '@/types';
 import { getFollowUpSchedule, saveFollowUpSchedule } from '@/lib/services/follow-up-service';
+import { UpgradePrompt } from '@/components/UpgradePrompt';
 
 interface LocationState {
   editQuote?: Quote;
@@ -36,7 +37,7 @@ export default function NewQuote() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
-  const { user, isAdmin, isMaxAITier, organizationId } = useAuth();
+  const { user, isAdmin, isMaxAITier, isProTier, isBusinessTier, organizationId } = useAuth();
   const { queueChange } = useSyncManager();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -537,11 +538,19 @@ export default function NewQuote() {
         <div className="space-y-6 min-w-0">
           {/* AI Full Quote Generation */}
           {!isEditMode && items.length > 0 && (
-            <FullQuoteGenerationAI
-              items={items}
-              customers={customers}
-              onQuoteGenerated={handleQuoteGenerated}
-            />
+            isBusinessTier ? (
+              <FullQuoteGenerationAI
+                items={items}
+                customers={customers}
+                onQuoteGenerated={handleQuoteGenerated}
+              />
+            ) : (
+              <UpgradePrompt
+                title="AI Full Quote Generation"
+                description="Harness the power of AI to generate complete quotes with items, summaries, and notes from just a simple project description."
+                tier="Business"
+              />
+            )
           )}
 
           {/* Main Form Content with Tabs */}
@@ -577,29 +586,37 @@ export default function NewQuote() {
 
               {/* Executive Summary Section */}
               {quoteItems.length > 0 && selectedCustomerId && (
-                <QuoteSummaryAI
-                  quote={{
-                    id: editQuoteId || '',
-                    quoteNumber: generateQuoteNumber(),
-                    customerId: selectedCustomerId,
-                    customerName: selectedCustomer?.name || '',
-                    title: quoteTitle,
-                    items: quoteItems,
-                    subtotal,
-                    tax,
-                    total,
-                    status: 'draft',
-                    notes: quoteNotes,
-                    executiveSummary,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    userId: user?.id || '',
-                  }}
-                  customer={selectedCustomer}
-                  onSummaryGenerated={setExecutiveSummary}
-                  currentSummary={executiveSummary}
-                  onSummaryChange={setExecutiveSummary}
-                />
+                isProTier ? (
+                  <QuoteSummaryAI
+                    quote={{
+                      id: editQuoteId || '',
+                      quoteNumber: generateQuoteNumber(),
+                      customerId: selectedCustomerId,
+                      customerName: selectedCustomer?.name || '',
+                      title: quoteTitle,
+                      items: quoteItems,
+                      subtotal,
+                      tax,
+                      total,
+                      status: 'draft',
+                      notes: quoteNotes,
+                      executiveSummary,
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                      userId: user?.id || '',
+                    }}
+                    customer={selectedCustomer}
+                    onSummaryGenerated={setExecutiveSummary}
+                    currentSummary={executiveSummary}
+                    onSummaryChange={setExecutiveSummary}
+                  />
+                ) : (
+                  <UpgradePrompt
+                    title="AI Executive Summaries"
+                    description="Let AI craft professional executive summaries for your proposals to help win more deals."
+                    tier="Pro"
+                  />
+                )
               )}
 
               <QuoteItemsSection
@@ -623,29 +640,37 @@ export default function NewQuote() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="bg-muted/50 p-4 rounded-lg">
-                    <SOWGeneratorAI
-                      quote={{
-                        id: editQuoteId || '',
-                        quoteNumber: generateQuoteNumber(),
-                        customerId: selectedCustomerId,
-                        customerName: selectedCustomer?.name || '',
-                        title: quoteTitle,
-                        items: quoteItems,
-                        subtotal,
-                        tax,
-                        total,
-                        status: 'draft',
-                        notes: quoteNotes,
-                        executiveSummary,
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
-                        userId: user?.id || '',
-                      }}
-                      companyName={settings?.name}
-                      onSaveToQuote={(content) => {
-                        setScopeOfWork(content);
-                      }}
-                    />
+                    {isBusinessTier ? (
+                      <SOWGeneratorAI
+                        quote={{
+                          id: editQuoteId || '',
+                          quoteNumber: generateQuoteNumber(),
+                          customerId: selectedCustomerId,
+                          customerName: selectedCustomer?.name || '',
+                          title: quoteTitle,
+                          items: quoteItems,
+                          subtotal,
+                          tax,
+                          total,
+                          status: 'draft',
+                          notes: quoteNotes,
+                          executiveSummary,
+                          createdAt: new Date().toISOString(),
+                          updatedAt: new Date().toISOString(),
+                          userId: user?.id || '',
+                        }}
+                        companyName={settings?.name}
+                        onSaveToQuote={(content) => {
+                          setScopeOfWork(content);
+                        }}
+                      />
+                    ) : (
+                      <UpgradePrompt
+                        title="AI Scope of Work Generation"
+                        description="Automatically generate detailed, professional Scope of Work documents tailored to your project items."
+                        tier="Business"
+                      />
+                    )}
                   </div>
 
                   <div className="space-y-2">

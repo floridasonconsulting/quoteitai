@@ -126,7 +126,11 @@ serve(async (req) => {
       const roleMap: Record<string, "free" | "pro" | "max"> = {
         "admin": "max",
         "max": "max",
+        "max_ai": "max",
+        "business": "max",
+        "enterprise": "max",
         "pro": "pro",
+        "starter": "free",
         "free": "free"
       };
 

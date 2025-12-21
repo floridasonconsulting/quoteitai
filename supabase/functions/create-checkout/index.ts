@@ -27,7 +27,7 @@ serve(async (req) => {
     const { priceId, orgId, tier, totalSeats } = await req.json();
 
     // Seat Bucket Logic
-    const tierLimits = { pro: 3, business: 10 };
+    const tierLimits = { pro: 2, business: 5 };
     const includedSeats = tierLimits[tier as keyof typeof tierLimits] || 0;
     const overageSeats = Math.max(0, (totalSeats || 0) - includedSeats);
 

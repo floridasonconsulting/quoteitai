@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { CompanySettings } from "@/types";
+import { UpgradePrompt } from "@/components/UpgradePrompt";
 
 interface BrandingSectionProps {
   settings: CompanySettings;
@@ -18,7 +19,7 @@ interface BrandingSectionProps {
 }
 
 export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
-  const { user, isMaxAITier } = useAuth();
+  const { user, isProTier, isBusinessTier } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [primaryColor, setPrimaryColor] = useState(settings.primaryColor || '#4F46E5');
@@ -59,8 +60,8 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
   };
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!isMaxAITier) {
-      toast.error("Logo upload is only available for Max AI tier users");
+    if (!isBusinessTier) {
+      toast.error("Logo upload is only available for Business tier users");
       return;
     }
 
@@ -110,7 +111,7 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
   };
 
   const handleLogoRemove = async () => {
-    if (!isMaxAITier || !settings.logo) return;
+    if (!isBusinessTier || !settings.logo) return;
 
     try {
       setIsDeleting(true);
@@ -182,78 +183,84 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
             These colors will be used for buttons, links, and accents throughout the application.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="primary-color">Primary Color</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="primary-color"
-                  type="color"
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="w-12 h-10 p-1 bg-transparent cursor-pointer"
-                />
-                <Input
-                  type="text"
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  placeholder="#4F46E5"
-                  className="flex-1 font-mono uppercase"
-                />
-              </div>
-            </div>
+          {isProTier ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="primary-color">Primary Color</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="primary-color"
+                      type="color"
+                      value={primaryColor}
+                      onChange={(e) => setPrimaryColor(e.target.value)}
+                      className="w-12 h-10 p-1 bg-transparent cursor-pointer"
+                    />
+                    <Input
+                      type="text"
+                      value={primaryColor}
+                      onChange={(e) => setPrimaryColor(e.target.value)}
+                      placeholder="#4F46E5"
+                      className="flex-1 font-mono uppercase"
+                    />
+                  </div>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="accent-color">Accent Color</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="accent-color"
-                  type="color"
-                  value={accentColor}
-                  onChange={(e) => setAccentColor(e.target.value)}
-                  className="w-12 h-10 p-1 bg-transparent cursor-pointer"
-                />
-                <Input
-                  type="text"
-                  value={accentColor}
-                  onChange={(e) => setAccentColor(e.target.value)}
-                  placeholder="#10B981"
-                  className="flex-1 font-mono uppercase"
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="accent-color">Accent Color</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="accent-color"
+                      type="color"
+                      value={accentColor}
+                      onChange={(e) => setAccentColor(e.target.value)}
+                      className="w-12 h-10 p-1 bg-transparent cursor-pointer"
+                    />
+                    <Input
+                      type="text"
+                      value={accentColor}
+                      onChange={(e) => setAccentColor(e.target.value)}
+                      placeholder="#10B981"
+                      className="flex-1 font-mono uppercase"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {hasColorChanges && (
-            <div className="flex justify-end pt-2">
-              <Button
-                size="sm"
-                onClick={handleApplyColors}
-                disabled={isSavingColors}
-              >
-                {isSavingColors ? "Saving..." : "Apply Color Changes"}
-              </Button>
-            </div>
+              {hasColorChanges && (
+                <div className="flex justify-end pt-2">
+                  <Button
+                    size="sm"
+                    onClick={handleApplyColors}
+                    disabled={isSavingColors}
+                  >
+                    {isSavingColors ? "Saving..." : "Apply Color Changes"}
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : (
+            <UpgradePrompt
+              title="Custom Branding Colors"
+              description="Personalize the application with your brand's primary and accent colors."
+              tier="Pro"
+            />
           )}
         </div>
 
-        {/* White-Label Logo Upload (Max AI Tier Only) */}
+        {/* White-Label Logo Upload (Business Tier) */}
         <div className="space-y-3 pt-4 border-t">
           <Label htmlFor="logo-upload">Company Logo</Label>
 
-          {!isMaxAITier && (
-            <Alert>
-              <Crown className="h-4 w-4" />
-              <AlertDescription>
-                Custom logo upload is available exclusively for Max AI tier subscribers.
-                <Button variant="link" className="p-0 h-auto ml-1" onClick={() => window.location.href = '/subscription'}>
-                  Upgrade to Max AI
-                </Button>
-              </AlertDescription>
-            </Alert>
+          {!isBusinessTier && (
+            <UpgradePrompt
+              title="Custom Company Logo"
+              description="Upload your company logo to appear on all proposals and throughout the application."
+              tier="Business"
+            />
           )}
 
-          {isMaxAITier && (
+          {isBusinessTier && (
             <>
               {settings.logo && (
                 <div className="mb-3 flex items-center gap-4">
@@ -311,20 +318,22 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
           )}
         </div>
 
-        {/* Custom Favicon (Max AI Tier Only) */}
+        {/* Custom Favicon (Business Tier) */}
         <div className="space-y-3 pt-4 border-t">
           <Label htmlFor="favicon-upload">Custom Favicon</Label>
 
-          {!isMaxAITier && (
-            <Alert>
-              <Crown className="h-4 w-4" />
-              <AlertDescription>
-                Custom favicon is available exclusively for Max AI tier subscribers.
-              </AlertDescription>
-            </Alert>
+          {!isBusinessTier && (
+            <div className="p-4 bg-muted/30 rounded-lg border border-dashed text-center">
+              <p className="text-sm text-muted-foreground mb-2">
+                Custom favicon upload is a Business tier feature.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => window.location.href = '/settings'}>
+                View Plans
+              </Button>
+            </div>
           )}
 
-          {isMaxAITier && (
+          {isBusinessTier && (
             <>
               {(settings as any).customFavicon && (
                 <div className="mb-3 flex items-center gap-4">

@@ -18,6 +18,7 @@ import { ProposalVisuals, ProposalData } from "@/types/proposal";
 import { getTheme, getThemeCSSVars } from "@/lib/proposal-themes";
 import { useProposalTelemetry } from "@/hooks/useProposalTelemetry";
 import { ProposalAssistant } from "./ProposalAssistant";
+import { generateClassicPDF, generateModernPDF, generateDetailedPDF } from "@/lib/pdf-generator";
 
 interface ProposalViewerProps {
   quote?: Quote;
@@ -186,6 +187,59 @@ export function ProposalViewer({
     }
   };
 
+  const handleDownloadPDF = async () => {
+    if (!proposalData || !proposalData.settings) {
+      toast({
+        title: "Error",
+        description: "Missing required data for PDF generation",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      if (!quote && !directProposal) {
+        throw new Error("No source data available for PDF");
+      }
+
+      let pdfBlob;
+      const template = settings?.proposalTemplate || 'classic';
+
+      const sourceQuote = quote || (directProposal as any);
+      const sourceCustomer = (quote as any)?.customer || proposalData.client;
+
+      if (template === 'modern') {
+        pdfBlob = generateModernPDF(sourceQuote, sourceCustomer as any, settings);
+      } else if (template === 'detailed') {
+        pdfBlob = generateDetailedPDF(sourceQuote, sourceCustomer as any, settings);
+      } else {
+        pdfBlob = generateClassicPDF(sourceQuote, sourceCustomer as any, settings);
+      }
+
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      const fileName = `Proposal-${proposalData.client.name.replace(/\s+/g, '-')}-${sourceQuote.quoteNumber || 'Draft'}.pdf`;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "PDF generated successfully"
+      });
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleUpdateImage = async (url: string) => {
     const quoteId = quote?.id || directProposal?.id;
     if (!quoteId) return;
@@ -345,13 +399,14 @@ export function ProposalViewer({
             </div>
 
             {/* Sticky Action Bar */}
-            {!isOwner && onAccept && onDecline && onComment && (
+            {(onAccept || onDecline || onComment || true) && (
               <ProposalActionBar
-                totalAmount={initialQuote?.total || directProposal?.total || 0}
+                totalAmount={(initialQuote?.total || directProposal?.total || 0)}
                 currency={settings?.currency || 'USD'}
                 onAccept={handleAccept}
                 onDecline={handleDecline}
                 onComment={handleCommentInternal}
+                onDownload={handleDownloadPDF}
                 isProcessing={isProcessing}
               />
             )}

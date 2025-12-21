@@ -20,6 +20,8 @@ import { rateLimiter } from '@/lib/rate-limiter';
 import { transformQuoteToProposal } from '@/lib/proposal-transformation';
 import { SOWGeneratorAI } from '@/components/SOWGeneratorAI';
 import { FollowUpScheduler } from '@/components/FollowUpScheduler';
+import { generateClassicPDF, generateModernPDF, generateDetailedPDF } from '@/lib/pdf-generator';
+import { FileDown } from 'lucide-react';
 
 export default function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
@@ -238,6 +240,52 @@ export default function QuoteDetail() {
     window.open(previewUrl, '_blank');
   };
 
+  const handleDownloadPDF = async () => {
+    if (!quote || !customer || !settings) {
+      toast({
+        title: "Error",
+        description: "Missing required data for PDF generation",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      let pdfBlob;
+      const template = settings.proposalTemplate || 'classic';
+
+      if (template === 'modern') {
+        pdfBlob = generateModernPDF(quote, customer, settings);
+      } else if (template === 'detailed') {
+        pdfBlob = generateDetailedPDF(quote, customer, settings);
+      } else {
+        pdfBlob = generateClassicPDF(quote, customer, settings);
+      }
+
+      // Create download link
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Quote-${quote.quoteNumber || 'Draft'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "PDF generated successfully"
+      });
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleConfirmSend = async (emailContent: EmailContent) => {
     if (!quote || !customer || !user) return;
 
@@ -421,6 +469,16 @@ export default function QuoteDetail() {
         >
           <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
           Preview / Print
+        </Button>
+
+        <Button
+          variant="outline"
+          onClick={handleDownloadPDF}
+          className="border-primary/20 text-primary hover:bg-primary/5"
+          aria-label="Download PDF"
+        >
+          <FileDown className="mr-2 h-4 w-4" aria-hidden="true" />
+          Download PDF
         </Button>
 
         <Button

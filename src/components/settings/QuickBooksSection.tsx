@@ -3,11 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle, RefreshCw, ExternalLink, Unlink } from "lucide-react";
+import { AlertCircle, CheckCircle, RefreshCw, ExternalLink, Unlink, Crown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "react-router-dom";
+import { UpgradePrompt } from "@/components/UpgradePrompt";
 
 interface QuickBooksConnection {
   realm_id: string | null;
@@ -17,7 +18,7 @@ interface QuickBooksConnection {
 }
 
 export function QuickBooksSection() {
-  const { user } = useAuth();
+  const { user, isProTier } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [connection, setConnection] = useState<QuickBooksConnection | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -167,6 +168,37 @@ export function QuickBooksSection() {
   const isTokenExpired = connection?.token_expires_at
     ? new Date(connection.token_expires_at) < new Date()
     : false;
+
+  if (!isProTier) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <img src="/quickbooks-logo.svg" alt="QuickBooks" className="h-5 w-5" onError={(e) => e.currentTarget.style.display = 'none'} />
+                QuickBooks Integration
+              </CardTitle>
+              <CardDescription>
+                Sync customers, invoices, and payments with QuickBooks Online
+              </CardDescription>
+            </div>
+            <Badge variant="outline" className="bg-muted text-muted-foreground border-muted-foreground/20">
+              <Crown className="h-3 w-3 mr-1" />
+              Pro Feature
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <UpgradePrompt
+            title="QuickBooks Integration"
+            description="Automatically sync your customers, invoices, and payments between QuoteIt and QuickBooks to save hours of manual data entry."
+            tier="Pro"
+          />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>

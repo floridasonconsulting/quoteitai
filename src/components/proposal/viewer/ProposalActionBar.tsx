@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MessageSquare, ThumbsDown, CheckCircle } from "lucide-react";
+import { MessageSquare, ThumbsDown, CheckCircle, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
@@ -9,6 +9,7 @@ interface ProposalActionBarProps {
   onComment: () => void;
   onDecline: () => void;
   onAccept: () => void;
+  onDownload?: () => void;
   isProcessing?: boolean;
 }
 
@@ -22,6 +23,7 @@ export function ProposalActionBar({
   onComment,
   onDecline,
   onAccept,
+  onDownload,
   isProcessing = false,
 }: ProposalActionBarProps) {
   const formatCurrency = (amount: number) => {
@@ -56,6 +58,18 @@ export function ProposalActionBar({
 
           {/* Right: Action Buttons */}
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={onDownload}
+              disabled={isProcessing}
+              className="gap-2"
+              title="Download PDF"
+            >
+              <FileDown className="w-4 h-4" />
+              <span className="hidden sm:inline">Download</span>
+            </Button>
+
             <Button
               variant="outline"
               size="lg"

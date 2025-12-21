@@ -127,7 +127,7 @@ async function syncAllowedSeats(supabase: any, stripe: any, orgId: string, subsc
   console.log(`Syncing allowed_seats for org ${orgId}`)
 
   const tier = subscription.metadata?.tier || 'starter'
-  const tierLimits: Record<string, number> = { starter: 1, pro: 3, business: 10, max_ai: 999999 }
+  const tierLimits: Record<string, number> = { starter: 1, pro: 2, business: 5, max_ai: 999999 }
   const includedSeats = tierLimits[tier] || 1
 
   let overageSeats = 0
