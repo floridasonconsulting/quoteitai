@@ -38,13 +38,9 @@ export const UpgradeModal = ({ isOpen, tier, onClose }: UpgradeModalProps) => {
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[500px] bg-slate-950 border-slate-800 text-white overflow-hidden p-0">
-                {/* Visual Header with "Hill Family" placeholder feel */}
-                <div className="relative h-32 w-full overflow-hidden">
-                    <img
-                        src="https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?q=80&w=2670&auto=format&fit=crop"
-                        alt="Closer's Edge"
-                        className="w-full h-full object-cover opacity-40"
-                    />
+                {/* Visual Header with professional gradient */}
+                <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-indigo-900 via-slate-950 to-indigo-950">
+                    <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/20 via-transparent to-transparent" />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent" />
                     <div className="absolute top-6 left-6 flex items-center gap-3">
                         <div className="p-2 bg-indigo-500/20 backdrop-blur-md rounded-xl border border-indigo-500/30">

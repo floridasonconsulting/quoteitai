@@ -130,6 +130,7 @@ export function ComparisonSection() {
             </div>
           </GlassCard>
         </div>
+      </div>
     </section>
   );
 }

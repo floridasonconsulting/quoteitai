@@ -61,10 +61,9 @@ const pricingPlans: PricingPlan[] = [
     overage: "$20/extra seat (up to 4)",
     features: [
       "✨ Behavioral Sales Intelligence",
-      "✨ Hill Family Cinematic Banners",
+      "✨ Cinematic Pro Dynamic Banners",
       "✨ Dwell-time Heatmaps",
       "AI-powered full generation",
-      "Manager Audit Dashboard",
       "Everything in Pro"
     ],
     cta: "Start Business Trial",

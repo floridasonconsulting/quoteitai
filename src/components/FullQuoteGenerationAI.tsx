@@ -175,10 +175,10 @@ CRITICAL INSTRUCTIONS:
    - Any capitalized proper noun that appears to be a person or business name
    
    Examples:
-   - "I'm at the Hill Family home and we will be doing pool work" → clientName: "Hill Family"
-   - "Customer is Johnson Pools LLC" → clientName: "Johnson Pools LLC"
-   - "Quote for the Smith residence" → clientName: "Smith"
-   - "Pool renovation for Mike's Backyard Services" → clientName: "Mike's Backyard Services"
+   - "I'm at the Johnson Residence and we will be performing a complete service audit" → clientName: "Johnson Residence"
+   - "Customer is ABC Logistics LLC" → clientName: "ABC Logistics LLC"
+   - "Quote for the Smith property" → clientName: "Smith"
+   - "Project proposal for Northpoint Services" → clientName: "Northpoint Services"
    - If NO name pattern is found, set clientName to ""
 
 2. EXECUTIVE SUMMARY RULES - THIS IS CRITICAL:
@@ -245,7 +245,7 @@ Include the customer/client name for automatic matching!`}
             Generate Complete Quote with AI
           </AIButton>
           <p className="text-xs text-muted-foreground">
-            💡 <strong>Tip:</strong> Start with "I'm at the [Name] home..." or "Customer is [Name]..." to auto-match clients. AI will suggest items, title, notes, and executive summary.
+            💡 <strong>Tip:</strong> Start with "I'm at the [Name] site..." or "Customer is [Name]..." to auto-match clients. AI will suggest items, title, notes, and executive summary.
           </p>
         </CardContent>
       </Card>

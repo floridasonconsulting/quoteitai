@@ -83,19 +83,15 @@ export function MotionProposalSection() {
                             className="relative aspect-[3/4] md:aspect-[4/5] lg:aspect-[4/5] bg-slate-900 rounded-[2rem] md:rounded-[2.5rem] border border-slate-800 shadow-2xl overflow-hidden group"
                         >
                             {/* Proposal Mockup Content */}
-                            <div className="absolute inset-x-0 top-0 h-48 md:h-64 overflow-hidden">
-                                <img
-                                    src="https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?q=80&w=2670&auto=format&fit=crop"
-                                    alt="Cinematic Header"
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]"
-                                />
+                            <div className="absolute inset-x-0 top-0 h-48 md:h-64 overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-700 to-indigo-900">
+                                <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_30%_30%,_var(--tw-gradient-stops))] from-white/40 via-transparent to-transparent" />
                                 <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-slate-900" />
                             </div>
 
                             <div className="relative pt-32 md:pt-48 px-8 space-y-6">
                                 <div className="space-y-2">
                                     <div className="h-1 w-12 bg-indigo-500 rounded-full" />
-                                    <h4 className="text-2xl md:text-4xl font-black uppercase tracking-tight">Luxury Pool Renovation</h4>
+                                    <h4 className="text-2xl md:text-4xl font-black uppercase tracking-tight">Executive Project Suite</h4>
                                 </div>
 
                                 <div className="space-y-4 pt-4">
@@ -110,7 +106,7 @@ export function MotionProposalSection() {
                                 <div className="pt-8 flex items-center justify-between">
                                     <div className="space-y-1">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total Investment</p>
-                                        <p className="text-3xl font-black text-indigo-400">$64,250.00</p>
+                                        <p className="text-3xl font-black text-indigo-400">$12,450.00</p>
                                     </div>
                                     <div className="h-10 w-28 md:h-12 md:w-32 bg-indigo-500 rounded-xl md:rounded-2xl flex items-center justify-center font-black uppercase tracking-widest text-[10px]">
                                         Sign Now
