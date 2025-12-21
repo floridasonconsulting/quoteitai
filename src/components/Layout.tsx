@@ -31,7 +31,7 @@ export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const { signOut, userRole, user } = useAuth();
+  const { signOut, userRole, user, organizationId } = useAuth();
   const { unreadCount, markAllAsRead } = useNotificationsSystem();
   const [companyLogo, setCompanyLogo] = useState<string>();
 

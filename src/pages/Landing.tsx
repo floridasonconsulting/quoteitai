@@ -29,7 +29,6 @@ export default function Landing() {
       <main>
         <HeroSection />
         <MotionProposalSection />
-        <ProactiveShowcase />
         <IntegrationsSection />
         <FeaturesSection />
         <BenefitsSection />

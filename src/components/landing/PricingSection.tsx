@@ -84,7 +84,6 @@ export function PricingSection() {
           </h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">
             Choose your base tier and scale dynamically. No hidden fees.
-            No enterprise-level friction.
           </p>
         </div>
 

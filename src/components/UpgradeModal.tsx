@@ -22,8 +22,8 @@ export const UpgradeModal = ({ isOpen, tier, onClose }: UpgradeModalProps) => {
     const normalizedTier = tier.toLowerCase();
 
     const overagePrice = normalizedTier === 'pro' ? '$25' : '$20';
-    const nextTier = normalizedTier === 'starter' ? 'Pro' : (normalizedTier === 'pro' ? 'Business' : 'Enterprise');
-    const nextTierLimit = normalizedTier === 'starter' ? '2' : (normalizedTier === 'pro' ? '5' : '10');
+    const nextTier = normalizedTier === 'starter' ? 'Pro' : 'Business';
+    const nextTierLimit = normalizedTier === 'starter' ? '3' : '10';
 
     const handleAddSeat = () => {
         onClose();

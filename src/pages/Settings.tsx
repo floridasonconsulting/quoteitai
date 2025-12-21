@@ -95,12 +95,22 @@ export default function Settings() {
   const loadSettings = useCallback(async () => {
     if (!user?.id) {
       console.log('[Settings] No user ID, skipping settings load');
+      setLoading(false);
       return;
     }
 
     console.log('[Settings] ========== LOADING SETTINGS ==========');
     console.log('[Settings] Loading settings for user:', user.id);
     setLoading(true);
+
+    const timeoutDuration = 10000;
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn('[Settings] Loading timeout reached');
+        setLoading(false);
+        toast.error("Loading settings took too long. Using cached data.");
+      }
+    }, timeoutDuration);
 
     try {
       // CRITICAL: Load from Supabase FIRST to get most up-to-date data
