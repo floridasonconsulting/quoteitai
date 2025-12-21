@@ -21,6 +21,7 @@
 11. [Integrations](#integrations)
 12. [Troubleshooting](#troubleshooting)
 13. [Roadmap](#roadmap)
+14. [Behavioral Sales Experience Module](#behavioral-sales-experience-module)
 
 ---
 

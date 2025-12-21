@@ -1,5 +1,6 @@
 import { LandingHeader } from "@/components/landing/LandingHeader";
 import { HeroSection } from "@/components/landing/HeroSection";
+import { MotionProposalSection } from "@/components/landing/MotionProposalSection";
 import { IntegrationsSection } from "@/components/landing/IntegrationsSection";
 import { FeaturesSection } from "@/components/landing/FeaturesSection";
 import { BenefitsSection } from "@/components/landing/BenefitsSection";
@@ -26,6 +27,7 @@ export default function Landing() {
       <LandingHeader />
       <main>
         <HeroSection />
+        <MotionProposalSection />
         <IntegrationsSection />
         <FeaturesSection />
         <BenefitsSection />

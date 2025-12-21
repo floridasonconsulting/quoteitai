@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Trash2, Calendar, Edit, Clock, Link2, Copy, Check, Palette, Eye } from 'lucide-react';
+import { ArrowLeft, Mail, Trash2, Calendar, Edit, Clock, Link2, Copy, Check, Palette, Eye, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -421,6 +421,16 @@ export default function QuoteDetail() {
         >
           <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
           Preview / Print
+        </Button>
+
+        <Button
+          variant="outline"
+          onClick={() => navigate(`/quotes/${id}/analytics`)}
+          className="border-primary/20 text-primary hover:bg-primary/5"
+          aria-label="View behavioral engagement analytics"
+        >
+          <BarChart3 className="mr-2 h-4 w-4" aria-hidden="true" />
+          Behavioral Report
         </Button>
 
         {!shareLink ? (

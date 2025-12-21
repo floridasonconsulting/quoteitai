@@ -36,11 +36,11 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-5xl md:text-7xl lg:text-8xl font-black leading-[1.1] tracking-tighter text-foreground"
+            className="text-5xl md:text-7xl lg:text-9xl font-black leading-[1.05] tracking-tighter text-foreground"
           >
-            Draft, Quote, & Win<br />
+            Win More Deals<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] animate-gradient">
-              At Infinite Speed
+              Behavioral Sales Engine
             </span>
           </motion.h1>
 
@@ -48,10 +48,10 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
+            className="text-lg md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed"
           >
-            The market-disrupting platform for high-end trade services.
-            Built-in <span className="text-foreground font-semibold">QuickBooks & Stripe</span> integration.
+            The first AI-powered quoting platform that tracks client engagement in real-time.
+            Deliver <span className="text-foreground font-semibold">Cinematic Proposals</span> and close with surgical precision using behavioral data.
           </motion.p>
 
           <motion.div

@@ -16,6 +16,7 @@ import { visualsService } from "@/lib/services/visuals-service";
 import { useToast } from "@/hooks/use-toast";
 import { ProposalVisuals, ProposalData } from "@/types/proposal";
 import { getTheme, getThemeCSSVars } from "@/lib/proposal-themes";
+import { useProposalTelemetry } from "@/hooks/useProposalTelemetry";
 
 interface ProposalViewerProps {
   quote?: Quote;
@@ -112,6 +113,15 @@ export function ProposalViewer({
     const themeDef = getTheme(themeId);
     return getThemeCSSVars(themeDef);
   }, [proposalData, settings?.proposalTheme]);
+
+  // Telemetry: Track dwell time per section
+  const activeSectionId = useMemo(() => {
+    if (!proposalData) return 'loading';
+    if (stage === 'cover') return 'cover';
+    return proposalData.sections[activeSlideIndex]?.id || 'unknown';
+  }, [stage, activeSlideIndex, proposalData]);
+
+  useProposalTelemetry(quote?.id || directProposal?.id, activeSectionId, true, isOwner);
 
   // Navigation Items Generation
   const navigationItems = useMemo(() => {

@@ -35,6 +35,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const Help = lazy(() => import("./pages/Help"));
 const Subscription = lazy(() => import("./pages/Subscription"));
 const QuotePreview = lazy(() => import("./pages/QuotePreview"));
+const QuoteAnalytics = lazy(() => import("./pages/QuoteAnalytics"));
 
 const queryClient = new QueryClient();
 
@@ -81,6 +82,7 @@ function AppRoutes() {
           <Route path="/quotes/new" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><NewQuote /></Suspense></ProtectedRoute>} />
           <Route path="/quotes/:id" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><QuoteDetail /></Suspense></ProtectedRoute>} />
           <Route path="/quotes/:id/preview" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><QuotePreview /></Suspense></ProtectedRoute>} />
+          <Route path="/quotes/:id/analytics" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><QuoteAnalytics /></Suspense></ProtectedRoute>} />
           <Route path="/customers" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Customers /></Suspense></ProtectedRoute>} />
           <Route path="/items" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Items /></Suspense></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Suspense fallback={<LoadingFallback />}><Settings /></Suspense></ProtectedRoute>} />
