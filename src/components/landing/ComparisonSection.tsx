@@ -111,7 +111,7 @@ export function ComparisonSection() {
               ))}
             </div>
 
-            <div className="p-12 bg-success/5 border-t border-success/10 text-center">
+            <div className="p-6 md:p-12 bg-success/5 border-t border-success/10 flex flex-col items-center text-center">
               <div className="mb-8">
                 <span className="text-success font-black uppercase tracking-[0.3em] text-xs mb-4 block">Economic Analysis</span>
                 <p className="text-3xl md:text-5xl font-black text-foreground tracking-tighter mb-4">
@@ -121,7 +121,7 @@ export function ComparisonSection() {
               </div>
               <Button
                 size="lg"
-                className="bg-brand-pro text-primary-foreground hover:opacity-90 h-16 px-12 text-lg font-black shadow-2xl shadow-primary/20"
+                className="bg-brand-pro text-primary-foreground hover:opacity-90 h-16 px-8 md:px-12 text-lg font-black shadow-2xl shadow-primary/20 w-auto"
                 onClick={() => navigate("/auth")}
               >
                 PROCEED TO SCALE
