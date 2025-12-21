@@ -4,21 +4,24 @@ export function LandingFooter() {
   const navigate = useNavigate();
 
   return (
-    <footer className="border-t py-8">
+    <footer className="border-t border-border py-16 bg-background transition-colors duration-500">
       <div className="container mx-auto px-4">
-        <div className="grid md:grid-cols-4 gap-8">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <img src="/logo.png" alt="Quote-it AI" className="h-5 w-5" />
-              <span className="font-bold">Quote-it AI</span>
+        <div className="grid md:grid-cols-4 gap-12">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 group cursor-pointer" onClick={() => navigate("/")}>
+              <div className="h-7 w-7 bg-primary rounded flex items-center justify-center">
+                <span className="text-primary-foreground font-black text-sm">Q</span>
+              </div>
+              <span className="text-lg font-black tracking-tighter text-foreground uppercase">QUOTE<span className="text-primary">IT</span></span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Smart quote management powered by AI with QuickBooks & Stripe integration
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Precision estimate engineering powered by solar-adaptive intelligence.
+              Built for high-performance service teams.
             </p>
           </div>
           <div>
-            <h3 className="font-semibold mb-4">Product</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
+            <h3 className="font-bold text-foreground mb-6 uppercase tracking-widest text-xs">Product</h3>
+            <ul className="space-y-3 text-sm text-muted-foreground">
               <li>
                 <a href="#features" className="hover:text-primary transition-colors">
                   Features
@@ -42,8 +45,8 @@ export function LandingFooter() {
             </ul>
           </div>
           <div>
-            <h3 className="font-semibold mb-4">Resources</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
+            <h3 className="font-bold text-foreground mb-6 uppercase tracking-widest text-xs">Resources</h3>
+            <ul className="space-y-3 text-sm text-muted-foreground">
               <li>
                 <a href="/help" className="hover:text-primary transition-colors">
                   Documentation
@@ -62,8 +65,8 @@ export function LandingFooter() {
             </ul>
           </div>
           <div>
-            <h3 className="font-semibold mb-4">Legal</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
+            <h3 className="font-bold text-foreground mb-6 uppercase tracking-widest text-xs">Legal</h3>
+            <ul className="space-y-3 text-sm text-muted-foreground">
               <li>
                 <button
                   onClick={() => navigate("/privacy")}
@@ -83,8 +86,9 @@ export function LandingFooter() {
             </ul>
           </div>
         </div>
-        <div className="border-t mt-8 pt-8 text-center text-sm text-muted-foreground">
+        <div className="border-t border-border mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-muted-foreground font-medium uppercase tracking-widest">
           <p>© 2025 Quote-it AI. All rights reserved.</p>
+          <p>Handcrafted by Floridason Consulting</p>
         </div>
       </div>
     </footer>

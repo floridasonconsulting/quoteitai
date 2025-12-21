@@ -57,6 +57,12 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Elite Utility Semantic Tokens
+        "bg-app": "hsl(var(--bg-app))",
+        "bg-card": "hsl(var(--bg-card))",
+        "text-main": "hsl(var(--text-main))",
+        "brand-pro": "hsl(var(--brand-pro))",
+        "border-ui": "hsl(var(--border-ui))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

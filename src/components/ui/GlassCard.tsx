@@ -15,10 +15,10 @@ export const GlassCard = ({ children, className = "", delay = 0 }: GlassCardProp
         transition={{ duration: 0.5, delay }}
         whileHover={{
             scale: 1.02,
-            boxShadow: "0px 0px 25px rgba(0, 255, 255, 0.2)",
-            borderColor: "rgba(0, 255, 255, 0.4)"
+            boxShadow: "0px 0px 25px hsl(var(--primary)/0.2)",
+            borderColor: "hsl(var(--primary)/0.4)"
         }}
-        className={`bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-2xl shadow-2xl transition-all duration-300 ${className}`}
+        className={`bg-card/30 backdrop-blur-xl border border-border p-6 rounded-2xl shadow-xl transition-all duration-300 ${className}`}
     >
         {children}
     </motion.div>

@@ -95,13 +95,13 @@ export function PricingSection() {
   const navigate = useNavigate();
 
   return (
-    <section id="pricing" className="py-24 bg-[#0A0A0A] relative overflow-hidden">
+    <section id="pricing" className="py-24 bg-background relative overflow-hidden transition-colors duration-500">
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-20 space-y-4">
-          <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter">
+          <h2 className="text-4xl md:text-6xl font-black text-foreground tracking-tighter">
             Hybrid <span className="text-primary italic">Seat-Bucket</span> Logic
           </h2>
-          <p className="text-xl text-slate-400 max-w-2xl mx-auto">
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Choose your base tier and scale dynamically. No hidden fees.
             No enterprise-level friction.
           </p>
@@ -112,31 +112,31 @@ export function PricingSection() {
             <GlassCard
               key={idx}
               delay={idx * 0.1}
-              className={`flex flex-col relative ${plan.highlighted ? "border-primary/50 shadow-[0_0_30px_rgba(0,255,255,0.1)] lg:scale-105" : ""
+              className={`flex flex-col relative ${plan.highlighted ? "border-primary/50 shadow-[0_0_30px_hsl(var(--primary)/0.15)] lg:scale-105" : ""
                 }`}
             >
               {plan.badge && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="bg-primary text-black font-black text-[10px] tracking-widest px-3 py-0.5">
+                  <Badge className="bg-primary text-primary-foreground font-black text-[10px] tracking-widest px-3 py-0.5">
                     {plan.badge}
                   </Badge>
                 </div>
               )}
 
               <div className="mb-8">
-                <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
+                <h3 className="text-xl font-bold text-foreground mb-2">{plan.name}</h3>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black text-white">{plan.price}</span>
-                  <span className="text-slate-500 text-sm">/{plan.period}</span>
+                  <span className="text-4xl font-black text-foreground">{plan.price}</span>
+                  <span className="text-muted-foreground text-sm">/{plan.period}</span>
                 </div>
-                <p className="text-slate-400 text-sm mt-4 min-h-[40px]">{plan.description}</p>
+                <p className="text-muted-foreground text-sm mt-4 min-h-[40px]">{plan.description}</p>
               </div>
 
-              <div className="bg-white/5 rounded-xl p-4 mb-8 border border-white/5">
+              <div className="bg-primary/5 rounded-xl p-4 mb-8 border border-primary/10">
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-xs font-bold text-primary uppercase tracking-tighter">{plan.seats}</span>
                 </div>
-                <div className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">
+                <div className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">
                   Overage: {plan.overage}
                 </div>
               </div>
@@ -144,16 +144,16 @@ export function PricingSection() {
               <ul className="space-y-3 mb-8 flex-1">
                 {plan.features.map((feature, fidx) => (
                   <li key={fidx} className="flex items-start gap-2">
-                    <CheckCircle2 className={`h-4 w-4 shrink-0 mt-0.5 ${feature.includes("✨") ? "text-primary animate-pulse" : "text-slate-600"}`} />
-                    <span className="text-sm text-slate-300">{feature}</span>
+                    <CheckCircle2 className={`h-4 w-4 shrink-0 mt-0.5 ${feature.includes("✨") ? "text-primary animate-pulse" : "text-muted-foreground"}`} />
+                    <span className="text-sm text-muted-foreground">{feature}</span>
                   </li>
                 ))}
               </ul>
 
               <Button
                 className={`w-full h-12 font-bold ${plan.highlighted
-                    ? "bg-primary text-black hover:bg-primary/90 shadow-[0_0_15px_rgba(0,255,255,0.4)]"
-                    : "bg-white/5 text-white border-white/10 hover:bg-white/10"
+                  ? "bg-brand-pro text-primary-foreground hover:opacity-90 shadow-[0_0_15px_hsl(var(--primary)/0.4)]"
+                  : "bg-muted text-foreground hover:bg-muted/80"
                   }`}
                 onClick={() => navigate("/auth")}
               >

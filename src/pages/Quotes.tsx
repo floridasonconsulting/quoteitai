@@ -311,7 +311,8 @@ export default function Quotes() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'accepted': return 'bg-success/10 text-success border-success/20';
+      case 'accepted':
+      case 'paid': return 'bg-success/10 text-success border-success/20';
       case 'sent': return 'bg-primary/10 text-primary border-primary/20';
       case 'draft': return 'bg-muted text-muted-foreground border-border';
       case 'declined': return 'bg-destructive/10 text-destructive border-destructive/20';
@@ -531,7 +532,7 @@ export default function Quotes() {
                               {quote.status}
                             </Badge>
                             {quote.status === 'accepted' && (
-                              <Badge variant="secondary" className="text-xs whitespace-nowrap bg-green-100 text-green-700 border-green-200">
+                              <Badge variant="secondary" className="text-xs whitespace-nowrap bg-success/10 text-success border-success/20">
                                 <RefreshCw className="h-3 w-3 mr-1" />
                                 Synced to QuickBooks
                               </Badge>

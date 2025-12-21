@@ -20,7 +20,6 @@ const bentoFeatures = [
     description: "The market-disrupting engine that drafts legally-defensible, 3-phase Scope of Work documents in 15 seconds. Built for high-end trade professionals.",
     span: "lg:col-span-3 lg:row-span-2",
     badge: "FLAGSHIP",
-    glow: "rgba(0, 255, 255, 0.1)"
   },
   {
     icon: Building2,
@@ -63,16 +62,16 @@ const bentoFeatures = [
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="py-24 bg-[#0A0A0A] relative overflow-hidden">
+    <section id="features" className="py-24 bg-background relative overflow-hidden transition-colors duration-500">
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-3xl mx-auto text-center mb-20 space-y-4">
           <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5 uppercase tracking-widest px-4 py-1">
             Core Infrastructure
           </Badge>
-          <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter">
+          <h2 className="text-4xl md:text-6xl font-black text-foreground tracking-tighter">
             Engineered for <span className="text-primary italic">Absolute</span> Dominance
           </h2>
-          <p className="text-xl text-slate-400">
+          <p className="text-xl text-muted-foreground">
             Ditch the bloated legacy tools. QuoteIt AI is built on a high-performance stack
             designed to maximize conversion and minimize administrative overhead.
           </p>
@@ -86,19 +85,19 @@ export function FeaturesSection() {
               className={`${feature.span} flex flex-col justify-between group overflow-hidden`}
             >
               <div className="relative z-10">
-                <div className="h-12 w-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/20 group-hover:border-primary/40 transition-all duration-500">
+                <div className="h-12 w-12 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/20 group-hover:border-primary/40 transition-all duration-500">
                   <feature.icon className="h-6 w-6 text-primary" />
                 </div>
                 <div>
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-white tracking-tight">{feature.title}</h3>
+                    <h3 className="text-xl font-bold text-foreground tracking-tight">{feature.title}</h3>
                     {feature.badge && (
-                      <Badge className="bg-primary text-black font-bold text-[10px] py-0 px-2 h-5">
+                      <Badge className="bg-primary text-primary-foreground font-bold text-[10px] py-0 px-2 h-5">
                         {feature.badge}
                       </Badge>
                     )}
                   </div>
-                  <p className="text-slate-400 text-sm leading-relaxed group-hover:text-slate-300 transition-colors">
+                  <p className="text-muted-foreground text-sm leading-relaxed group-hover:text-foreground transition-colors">
                     {feature.description}
                   </p>
                 </div>
