@@ -111,6 +111,12 @@ export const getSettings = async (userId: string, organizationId: string | null 
         notifyEmailDeclined: (dbSettings as any).notify_email_declined ?? true,
         showProposalImages: (dbSettings as any).show_proposal_images ?? true,
         onboardingCompleted: (dbSettings as any).onboarding_completed ?? false,
+        defaultCoverImage: (dbSettings as any).default_cover_image || undefined,
+        defaultHeaderImage: (dbSettings as any).default_header_image || undefined,
+        visualRules: (dbSettings as any).visual_rules || undefined,
+        showFinancing: (dbSettings as any).show_financing ?? false,
+        financingText: (dbSettings as any).financing_text || "",
+        financingLink: (dbSettings as any).financing_link || "",
         primaryColor: (dbSettings as any).primary_color || undefined,
         accentColor: (dbSettings as any).accent_color || undefined,
       };
@@ -153,6 +159,7 @@ export async function saveSettings(
     console.log('[DB Service] Attempting Supabase save...');
 
     // CRITICAL: Build the database object with proper field mapping
+    // NOTE: visual_rules is JSONB, so we pass the object/array directly, let Supabase client handle serialization
     const dbSettings = {
       user_id: userId,
       organization_id: organizationId,
@@ -178,7 +185,7 @@ export async function saveSettings(
       show_proposal_images: settings.showProposalImages ?? true,
       default_cover_image: settings.defaultCoverImage || null,
       default_header_image: settings.defaultHeaderImage || null,
-      visual_rules: settings.visualRules ? JSON.stringify(settings.visualRules) : null,
+      visual_rules: settings.visualRules || null,
       show_financing: settings.showFinancing ?? false,
       financing_text: settings.financingText || null,
       financing_link: settings.financingLink || null,
@@ -197,7 +204,6 @@ export async function saveSettings(
           hasImageUrl: !!r.imageUrl,
           imageUrlPreview: r.imageUrl?.substring(0, 80)
         })),
-        stringified: dbSettings.visual_rules?.substring(0, 200)
       });
     }
 
@@ -210,7 +216,7 @@ export async function saveSettings(
     });
 
     if (navigator.onLine) {
-      // Use upsert with a 15s timeout
+      // Use upsert with a 30s timeout
       const { error } = await withTimeout(
         Promise.resolve(
           supabase
@@ -220,7 +226,7 @@ export async function saveSettings(
               ignoreDuplicates: false
             })
         ),
-        15000
+        30000
       ) as any;
 
       if (error) {
