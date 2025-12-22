@@ -125,9 +125,9 @@ export default function Settings() {
       console.log('[Settings] Fetching from Supabase...');
       let supabaseResult: any;
       if (organizationId) {
-        supabaseResult = await supabase.from('company_settings').select('*').eq('organization_id', organizationId).maybeSingle();
+        supabaseResult = await supabase.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle();
       } else {
-        supabaseResult = await supabase.from('company_settings').select('*').eq('user_id', user.id).maybeSingle();
+        supabaseResult = await supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle();
       }
       const { data: supabaseSettings, error } = supabaseResult;
 
@@ -159,6 +159,7 @@ export default function Settings() {
           license: sSettings.license || "",
           insurance: sSettings.insurance || "",
           terms: sSettings.terms || "",
+          legalTerms: sSettings.legal_terms || "", // ✅ NEW: Map legal_terms from DB
           proposalTemplate: (sSettings.proposal_template as any) || 'classic',
           proposalTheme: (sSettings.proposal_theme as any) || 'modern-corporate',
           notifyEmailAccepted: sSettings.notify_email_accepted ?? true,
