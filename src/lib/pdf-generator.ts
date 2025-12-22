@@ -108,8 +108,25 @@ export function renderCustomerInfo(
 
   pdf.setFontSize(10);
   pdf.setFont(undefined, "normal");
-  pdf.text(quote.customerName, MARGIN, yPos);
+
+  // Prioritize Contact Name, but show business as reference if present
+  const hasContact = customer?.contactFirstName || customer?.contactLastName;
+  const contactName = hasContact
+    ? `${customer?.contactFirstName || ''} ${customer?.contactLastName || ''}`.trim()
+    : quote.customerName; // Fallback to business name if no contact explicitly set
+
+  pdf.text(contactName, MARGIN, yPos);
   yPos += LINE_HEIGHT;
+
+  // Show Business Name if it differs and is present
+  if (hasContact && quote.customerName && quote.customerName !== contactName) {
+    pdf.setFontSize(8);
+    pdf.setFont(undefined, "italic");
+    pdf.text(quote.customerName, MARGIN, yPos);
+    yPos += LINE_HEIGHT;
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, "normal");
+  }
 
   if (customer?.address) {
     pdf.text(customer.address, MARGIN, yPos);
@@ -157,7 +174,21 @@ export function renderTermsAndNotes(
 
     pdf.setFont(undefined, "normal");
     pdf.setFontSize(8);
-    const termsLines = pdf.splitTextToSize(settings.terms, 170);
+
+    // Clean JSON content if present
+    let termsText = settings.terms;
+    if (termsText.startsWith('{') || termsText.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(termsText);
+        // If it's the rich text format we sometimes use
+        if (parsed.content) termsText = parsed.content;
+        else if (Array.isArray(parsed)) termsText = parsed.join('\n');
+      } catch (e) {
+        // Not actual JSON or parse failed, use as is
+      }
+    }
+
+    const termsLines = pdf.splitTextToSize(termsText, 170);
     pdf.text(termsLines, MARGIN, yPos);
     yPos += termsLines.length * 4 + 8;
   }

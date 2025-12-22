@@ -114,6 +114,11 @@ export function ProposalCover({
             <div className="space-y-1">
               <p className="text-white/60 text-[10px] md:text-xs uppercase tracking-[0.3em] font-black">Prepared For</p>
               <p className="text-xl md:text-2xl font-black">{clientName}</p>
+              {subtitle && subtitle !== `Prepared for ${clientName}` && (
+                <p className="text-sm text-white/40 uppercase tracking-widest font-bold mt-1">
+                  {subtitle.replace('Prepared for ', '')}
+                </p>
+              )}
             </div>
           </div>
         </motion.div>

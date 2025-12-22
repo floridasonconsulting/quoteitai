@@ -106,9 +106,9 @@ export function transformQuoteToProposal(
       financingLink: activeSettings.financingLink,
     },
     client: {
-      name: quote.customerName,
+      name: (quote as any).contactName || quote.customerName,
       email: '',
-      company: '',
+      company: (quote as any).contactName ? quote.customerName : '',
     },
     sender: {
       name: activeSettings.name || '',
@@ -135,7 +135,7 @@ export function transformQuoteToProposal(
     id: 'hero',
     type: 'hero',
     title: quote.title,
-    subtitle: `Prepared for ${quote.customerName}`,
+    subtitle: `Prepared for ${(quote as any).contactName || quote.customerName}`,
     content: quote.executiveSummary || "Thank you for the opportunity to present this proposal. We have carefully reviewed your requirements and crafted a solution that meets your specific needs.",
     backgroundImage: smartCoverImage,
     companyName: activeSettings.name || '',

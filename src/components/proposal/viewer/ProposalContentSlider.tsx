@@ -117,7 +117,7 @@ export function ProposalContentSlider({
 
               {/* Desktop Visual Hints */}
               {isDesktop && (
-                <div className="absolute bottom-6 right-16 z-40 bg-black/40 backdrop-blur-sm text-white px-3 py-1 rounded-full text-[10px] font-bold tracking-widest border border-white/10 pointer-events-none">
+                <div className="absolute bottom-24 right-16 z-40 bg-black/40 backdrop-blur-sm text-white px-3 py-1 rounded-full text-[10px] font-bold tracking-widest border border-white/10 pointer-events-none">
                   PAGE {index + 1} / {processedSections.length}
                 </div>
               )}
@@ -159,6 +159,9 @@ export function ProposalContentSlider({
             width: 24px;
             border-radius: 4px;
             background: var(--theme-primary) !important;
+        }
+        .swiper-pagination {
+            bottom: 90px !important;
         }
       `}</style>
     </div>
