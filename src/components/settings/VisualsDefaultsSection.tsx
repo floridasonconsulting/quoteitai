@@ -35,8 +35,10 @@ export function VisualsDefaultsSection({ settings, onUpdate }: VisualsDefaultsSe
         try {
             setIsUploading(field);
             const fileExt = file.name.split('.').pop();
-            const fileName = `${user.id}/${uuidv4()}.${fileExt}`;
-            const bucket = 'company-logos'; // Using existing public bucket to avoid "Bucket not found" errors
+            const fileExt = file.name.split('.').pop();
+            // Use 'visual-rules' folder to keep organized and avoid potential root-level RLS conflicts
+            const fileName = `${user.id}/visual-rules/${uuidv4()}.${fileExt}`;
+            const bucket = 'company-logos';
             console.log("Uploading to verified bucket:", bucket);
 
             const { error: uploadError } = await supabase.storage
@@ -207,8 +209,23 @@ export function VisualsDefaultsSection({ settings, onUpdate }: VisualsDefaultsSe
                             <div className="flex-1 space-y-2 w-full">
                                 <Label className="text-xs">Use This Image:</Label>
                                 <div className="flex gap-2">
-                                    <div className="h-10 w-16 bg-slate-200 dark:bg-slate-800 rounded border overflow-hidden flex-shrink-0">
-                                        {newImageUrl && <img src={newImageUrl} className="h-full w-full object-cover" />}
+                                    <div className="h-10 w-16 bg-slate-200 dark:bg-slate-800 rounded border overflow-hidden flex-shrink-0 relative">
+                                        {newImageUrl ? (
+                                            <img
+                                                src={newImageUrl}
+                                                className="h-full w-full object-cover"
+                                                alt="Preview"
+                                                onError={(e) => {
+                                                    console.error("Image load failed for:", newImageUrl);
+                                                    e.currentTarget.style.display = 'none';
+                                                    e.currentTarget.parentElement?.classList.add('bg-red-100');
+                                                }}
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-slate-400">
+                                                <Image className="w-4 h-4" />
+                                            </div>
+                                        )}
                                     </div>
                                     <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'ruleImage')} className="hidden" id="upload-rule" />
                                     <Label htmlFor="upload-rule" className="flex-1">
