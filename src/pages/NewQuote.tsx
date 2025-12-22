@@ -23,6 +23,7 @@ import { QuoteSummarySidebar } from '@/components/quote-form/QuoteSummarySidebar
 import { CustomItemDialog } from '@/components/quote-form/CustomItemDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { SOWGeneratorAI } from '@/components/SOWGeneratorAI';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -52,7 +53,11 @@ export default function NewQuote() {
   const [quoteTitle, setQuoteTitle] = useState('');
   const [quoteNotes, setQuoteNotes] = useState('');
   const [executiveSummary, setExecutiveSummary] = useState('');
-  const [scopeOfWork, setScopeOfWork] = useState(''); // NEW: SOW State
+  const [scopeOfWork, setScopeOfWork] = useState(''); // SOW State
+  const [paymentTerms, setPaymentTerms] = useState(''); // NEW: Quote-specific payment terms
+  const [legalTerms, setLegalTerms] = useState(''); // NEW: Quote-specific legal terms
+  const [useCustomPaymentTerms, setUseCustomPaymentTerms] = useState(false); // NEW: Toggle for custom payment terms
+  const [useCustomLegalTerms, setUseCustomLegalTerms] = useState(false); // NEW: Toggle for custom legal terms
   const [followUpSchedule, setFollowUpSchedule] = useState<Partial<FollowUpSchedule>>({
     status: 'paused',
     scheduleType: 'one_time',
@@ -173,6 +178,10 @@ export default function NewQuote() {
       setExecutiveSummary(editQuote.executiveSummary || '');
       setScopeOfWork(cleanContentForEditor(editQuote.scopeOfWork || '')); // Load SOW
       setQuoteNotes(cleanContentForEditor(editQuote.notes || '')); // Load Terms/Notes
+      setPaymentTerms(cleanContentForEditor(editQuote.paymentTerms || '')); // NEW: Load payment terms
+      setLegalTerms(cleanContentForEditor(editQuote.legalTerms || '')); // NEW: Load legal terms
+      setUseCustomPaymentTerms(!!editQuote.paymentTerms); // NEW: Set toggle based on existence
+      setUseCustomLegalTerms(!!editQuote.legalTerms); // NEW: Set toggle based on existence
       setShowPricing(editQuote.showPricing !== false);
       setPricingMode(editQuote.pricingMode || 'category_total');
     }
@@ -194,6 +203,10 @@ export default function NewQuote() {
         setExecutiveSummary(quoteToEdit.executiveSummary || '');
         setScopeOfWork(cleanContentForEditor(quoteToEdit.scopeOfWork || '')); // Load SOW
         setQuoteNotes(cleanContentForEditor(quoteToEdit.notes || '')); // Load Terms/Notes
+        setPaymentTerms(cleanContentForEditor(quoteToEdit.paymentTerms || '')); // NEW: Load payment terms
+        setLegalTerms(cleanContentForEditor(quoteToEdit.legalTerms || '')); // NEW: Load legal terms
+        setUseCustomPaymentTerms(!!quoteToEdit.paymentTerms); // NEW: Set toggle based on existence
+        setUseCustomLegalTerms(!!quoteToEdit.legalTerms); // NEW: Set toggle based on existence
         setShowPricing(quoteToEdit.showPricing !== false);
         setPricingMode(quoteToEdit.pricingMode || 'category_total');
 
@@ -317,6 +330,8 @@ export default function NewQuote() {
           status: 'draft',
           notes: quoteNotes,
           executiveSummary,
+          paymentTerms: useCustomPaymentTerms ? paymentTerms : undefined,
+          legalTerms: useCustomLegalTerms ? legalTerms : undefined,
           showPricing,
           pricingMode,
           scopeOfWork: scopeOfWork,
@@ -352,6 +367,8 @@ export default function NewQuote() {
           status: 'draft',
           notes: quoteNotes,
           executiveSummary,
+          paymentTerms: useCustomPaymentTerms ? paymentTerms : undefined,
+          legalTerms: useCustomLegalTerms ? legalTerms : undefined,
           showPricing,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -423,6 +440,8 @@ export default function NewQuote() {
           status: 'sent',
           notes: quoteNotes,
           executiveSummary: finalSummary,
+          paymentTerms: useCustomPaymentTerms ? paymentTerms : undefined,
+          legalTerms: useCustomLegalTerms ? legalTerms : undefined,
           showPricing,
           sentDate: new Date().toISOString(),
           createdAt: existingQuoteData?.createdAt || new Date().toISOString(),
@@ -466,6 +485,8 @@ export default function NewQuote() {
           status: 'sent',
           notes: quoteNotes,
           executiveSummary: finalSummary,
+          paymentTerms: useCustomPaymentTerms ? paymentTerms : undefined,
+          legalTerms: useCustomLegalTerms ? legalTerms : undefined,
           showPricing,
           sentDate: new Date().toISOString(),
           createdAt: new Date().toISOString(),
@@ -782,21 +803,121 @@ export default function NewQuote() {
 
                     <Separator />
 
-                    <div className="space-y-2">
-                      <Label htmlFor="terms-content" className="flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        Terms & Conditions Editor
-                      </Label>
-                      <Textarea
-                        id="terms-content"
-                        value={quoteNotes}
-                        onChange={(e) => setQuoteNotes(e.target.value)}
-                        placeholder="Enter payment terms, warranties, and legal notes..."
-                        className="min-h-[200px] text-sm leading-relaxed p-6 glass-card border-white/20 bg-white/5 backdrop-blur-md"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Tip: Use clear sections for payment terms, warranties, and project-specific notes.
+                    {/* Payment Terms Section with Priority System */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Payment & Warranty Terms
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          {useCustomPaymentTerms ? (
+                            <span className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                              🔹 Custom for this quote
+                            </span>
+                          ) : (
+                            <span className="text-xs px-2 py-1 rounded-full bg-gray-500/10 text-gray-400 border border-gray-500/20">
+                              🌐 Using default
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg">
+                        <Checkbox
+                          id="use-custom-payment"
+                          checked={useCustomPaymentTerms}
+                          onCheckedChange={(checked) => setUseCustomPaymentTerms(checked === true)}
+                        />
+                        <label
+                          htmlFor="use-custom-payment"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          Use custom payment terms for this quote
+                        </label>
+                      </div>
+
+                      {useCustomPaymentTerms ? (
+                        <div className="space-y-2">
+                          <Textarea
+                            value={paymentTerms}
+                            onChange={(e) => setPaymentTerms(e.target.value)}
+                            placeholder="Enter custom payment terms, warranty details..."
+                            className="min-h-[200px] text-sm leading-relaxed p-6 glass-card border-white/20 bg-white/5 backdrop-blur-md"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Custom payment terms will override your default settings for this quote only.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
+                          <p className="text-xs font-medium text-muted-foreground mb-2">Preview of default terms:</p>
+                          <div className="text-sm text-muted-foreground whitespace-pre-wrap max-h-[150px] overflow-y-auto">
+                            {settings?.terms || 'No default payment terms set in Settings > Proposals'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <Separator />
+
+                    {/* Legal Terms Section with Priority System */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="flex items-center gap-2">
+                          ⚖️ Legal & Contractual Terms
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          {useCustomLegalTerms ? (
+                            <span className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                              🔹 Custom for this quote
+                            </span>
+                          ) : (
+                            <span className="text-xs px-2 py-1 rounded-full bg-gray-500/10 text-gray-400 border border-gray-500/20">
+                              🌐 Using default
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg">
+                        <Checkbox
+                          id="use-custom-legal"
+                          checked={useCustomLegalTerms}
+                          onCheckedChange={(checked) => setUseCustomLegalTerms(checked === true)}
+                        />
+                        <label
+                          htmlFor="use-custom-legal"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          Use custom legal terms for this quote
+                        </label>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+                        ⚖️ <strong>Legal terms are shown to clients during proposal acceptance</strong> - this is your opportunity to include specific legal clauses, indemnification, liability limitations, etc.
                       </p>
+
+                      {useCustomLegalTerms ? (
+                        <div className="space-y-2">
+                          <Textarea
+                            value={legalTerms}
+                            onChange={(e) => setLegalTerms(e.target.value)}
+                            placeholder="Enter custom legal clauses, indemnification, liability limitations..."
+                            className="min-h-[250px] text-sm leading-relaxed p-6 glass-card border-white/20 bg-white/5 backdrop-blur-md"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Custom legal terms will override your default settings for this quote only.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
+                          <p className="text-xs font-medium text-muted-foreground mb-2">Preview of default legal terms:</p>
+                          <div className="text-sm text-muted-foreground whitespace-pre-wrap max-h-[200px] overflow-y-auto">
+                            {settings?.legalTerms || 'No default legal terms set in Settings. Using global defaults.'}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>

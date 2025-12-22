@@ -57,6 +57,8 @@ export interface Quote {
   status: 'draft' | 'sent' | 'accepted' | 'declined';
   notes?: string;
   executiveSummary?: string;
+  paymentTerms?: string; // Quote-specific payment terms (overrides CompanySettings.terms)
+  legalTerms?: string; // Quote-specific legal clauses (overrides CompanySettings.legalTerms)
   sentDate?: string;
   followUpDate?: string;
   createdAt: string;
@@ -97,7 +99,8 @@ export interface CompanySettings {
   logoDisplayOption?: "logo" | "name" | "both";
   license?: string;
   insurance?: string;
-  terms: string;
+  terms: string; // Global default payment/warranty terms
+  legalTerms?: string; // Global default legal clauses (shown at signing)
   proposalTemplate?: "classic" | "modern" | "detailed";
   proposalTheme?: "modern-corporate" | "creative-studio" | "minimalist" | "bold-impact" | "elegant-serif" | "tech-future";
   currency?: string;

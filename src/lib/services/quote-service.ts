@@ -105,7 +105,7 @@ export async function getQuotes(
         }
 
         const { data, error } = await withTimeout(
-          Promise.resolve(query.order('created_at', { ascending: false })),
+          Promise.resolve(query.order('updated_at', { ascending: false })),
           15000
         );
 
