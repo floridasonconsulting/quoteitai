@@ -450,6 +450,7 @@ export default function PublicQuoteView() {
           license: s.license || '',
           insurance: s.insurance || '',
           terms: s.terms || '',
+          legalTerms: s.legal_terms || '',
           proposalTemplate: (s.proposal_template as 'classic' | 'modern' | 'detailed') || 'classic',
           proposalTheme: (s.proposal_theme as any) || 'modern-corporate',
           showProposalImages: s.show_proposal_images ?? true,

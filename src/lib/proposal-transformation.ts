@@ -94,6 +94,7 @@ export function transformQuoteToProposal(
     organization_id: quote.organizationId,
     status: quote.status,
     settings: {
+      ...activeSettings, // Spread all valid settings (includes legalTerms, visualRules, etc.)
       theme: 'modern_scroll',
       mode: 'light',
       primaryColor: getTheme(activeSettings.proposalTheme as any).colors.primary,
