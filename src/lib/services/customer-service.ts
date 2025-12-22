@@ -50,74 +50,69 @@ export async function getCustomers(
     await cacheManager.invalidate('customers');
   }
 
+  // On first load or force refresh, skip cache and go straight to IndexedDB/Supabase
+  if (!isFirstLoad && !forceRefresh) {
+    const cached = await cacheManager.get<Customer[]>('customers');
+    const hasCache = cached && Array.isArray(cached);
+
+    if (hasCache && cached.length > 0) {
+      console.log(`[CustomerService] ✓ Retrieved ${cached.length} customers from cache`);
+      return cached;
+    }
+  }
+
+  // Try IndexedDB
+  if (isIndexedDBSupported()) {
+    try {
+      const indexedDBData = await CustomerDB.getAll(userId);
+      console.log(`[CustomerService] IndexedDB check: found ${indexedDBData?.length || 0} customers`);
+
+      if (indexedDBData && indexedDBData.length > 0) {
+        if (!forceRefresh) {
+          console.log(`[CustomerService] ✓ Retrieved ${indexedDBData.length} customers from IndexedDB`);
+          // Update cache for future reads
+          await cacheManager.set('customers', indexedDBData);
+
+          // Mark first load as complete
+          if (isFirstLoad) {
+            firstLoadMap.set(userId, true);
+            console.log(`[CustomerService] First load complete - found ${indexedDBData.length} customers in IndexedDB`);
+          }
+
+          // Return IndexedDB data (will sync with Supabase in background if online)
+          return indexedDBData;
+        } else {
+          console.log(`[CustomerService] IndexedDB has data but FORCE REFRESH is on - proceeding to Supabase`);
+        }
+      }
+    } catch (error) {
+      console.warn('[CustomerService] IndexedDB read failed:', error);
+    }
+  }
+
+  // If we're offline and have no local data, return empty
+  if (!navigator.onLine) {
+    if (isIndexedDBSupported()) {
+      try {
+        const indexedDBData = await CustomerDB.getAll(userId);
+        if (indexedDBData && indexedDBData.length > 0) {
+          console.log('[CustomerService] Offline with Force Refresh - returning IndexedDB fallback');
+          return indexedDBData;
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    console.log('[CustomerService] Offline and no local data - returning empty array');
+    if (isFirstLoad) {
+      firstLoadMap.set(userId, true);
+    }
+    return [];
+  }
+
   const dedupKey = `fetch-customers-${userId}`;
 
   return dedupedRequest(dedupKey, async () => {
     try {
-      // On first load or force refresh, skip cache and go straight to IndexedDB/Supabase
-      if (!isFirstLoad && !forceRefresh) {
-        const cached = await cacheManager.get<Customer[]>('customers');
-        const hasCache = cached && Array.isArray(cached);
-
-        if (hasCache && cached.length > 0) {
-          console.log(`[CustomerService] ✓ Retrieved ${cached.length} customers from cache`);
-          return cached;
-        }
-      }
-
-      // Try IndexedDB
-      if (isIndexedDBSupported()) {
-        try {
-          // If forceRefresh is TRUE, we still read from IndexedDB but we WON'T return early
-          // We'll use it only if offline
-          const indexedDBData = await CustomerDB.getAll(userId);
-          console.log(`[CustomerService] IndexedDB check: found ${indexedDBData?.length || 0} customers`);
-
-          if (indexedDBData && indexedDBData.length > 0) {
-            if (!forceRefresh) {
-              console.log(`[CustomerService] ✓ Retrieved ${indexedDBData.length} customers from IndexedDB`);
-              // Update cache for future reads
-              await cacheManager.set('customers', indexedDBData);
-
-              // Mark first load as complete
-              if (isFirstLoad) {
-                firstLoadMap.set(userId, true);
-                console.log(`[CustomerService] First load complete - found ${indexedDBData.length} customers in IndexedDB`);
-              }
-
-              // Return IndexedDB data (will sync with Supabase in background if online)
-              return indexedDBData;
-            } else {
-              console.log(`[CustomerService] IndexedDB has data but FORCE REFRESH is on - proceeding to Supabase`);
-            }
-          }
-        } catch (error) {
-          console.warn('[CustomerService] IndexedDB read failed:', error);
-        }
-      }
-
-      // If we're offline and have no local data, return empty
-      if (!navigator.onLine) {
-        // If force refresh was requested but we are offline, we should return whatever we have in IndexedDB
-        // (which we might have skipped returning above)
-        if (isIndexedDBSupported()) {
-          try {
-            const indexedDBData = await CustomerDB.getAll(userId);
-            if (indexedDBData && indexedDBData.length > 0) {
-              console.log('[CustomerService] Offline with Force Refresh - returning IndexedDB fallback');
-              return indexedDBData;
-            }
-          } catch (e) { /* ignore */ }
-        }
-
-        console.log('[CustomerService] Offline and no local data - returning empty array');
-        if (isFirstLoad) {
-          firstLoadMap.set(userId, true);
-          console.log('[CustomerService] First load complete - offline with no local data');
-        }
-        return [];
-      }
-
       // Fetch from Supabase
       return cacheManager.coalesce(`customers-${userId}`, async () => {
         console.log(`[CustomerService] Fetching from Supabase for user ${userId}`);

@@ -18,6 +18,7 @@ import type { CompanySettings } from '@/types';
 import { SettingsDB, isIndexedDBSupported } from './indexed-db';
 import { cacheManager } from './cache-manager';
 import { setStorageItem } from './storage';
+import { withTimeout } from './services/request-pool-service';
 import { supabase } from '@/integrations/supabase/client';
 
 // Re-export everything from the specialized services
@@ -70,11 +71,16 @@ export const getSettings = async (userId: string, organizationId: string | null 
   // Final fallback: Try Supabase since local storage is empty
   console.log('[db-service] 🔍 Local settings missing, attempting Supabase fallback...');
   try {
-    const { data: dbSettings, error } = await supabase
-      .from('company_settings' as any)
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data: dbSettings, error } = await withTimeout(
+      Promise.resolve(
+        supabase
+          .from('company_settings' as any)
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle()
+      ),
+      10000
+    ) as any;
 
     if (error) {
       console.error('[db-service] Supabase settings fetch failed:', error);

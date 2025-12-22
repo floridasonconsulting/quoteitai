@@ -37,57 +37,49 @@ export async function getItems(
 
   const forceRefresh = options?.forceRefresh;
   const dedupKey = `fetch-items-${userId}`;
+  let cached: Item[] | null = null;
 
-  return dedupedRequest(dedupKey, async () => {
-    let cached: Item[] | null = null;
-
-    // Check cache first (CacheManager handles memory cache)
-    if (!forceRefresh) {
-      cached = await cacheManager.get<Item[]>('items');
-      if (cached && cached.length > 0) {
-        console.log(`[ItemService] Retrieved ${cached.length} items from cache`);
-        return cached;
-      }
+  // Check cache first (CacheManager handles memory cache)
+  if (!forceRefresh) {
+    cached = await cacheManager.get<Item[]>('items');
+    if (cached && cached.length > 0) {
+      console.log(`[ItemService] Retrieved ${cached.length} items from cache`);
+      return cached;
     }
+  }
 
-    // Try IndexedDB if cache miss or forceRefresh is enabled (but we won't return early if forceRefresh)
+  // Try IndexedDB if cache miss or forceRefresh is enabled (but we won't return early if forceRefresh)
+  if (isIndexedDBSupported()) {
+    try {
+      const indexedDBData = await ItemDB.getAll(userId);
+      if (indexedDBData && indexedDBData.length > 0) {
+        if (!forceRefresh) {
+          console.log(`[ItemService] Retrieved ${indexedDBData.length} items from IndexedDB`);
+          // Update cache
+          await cacheManager.set('items', indexedDBData);
+          // If offline, return IndexedDB data immediately
+          return indexedDBData;
+        } else {
+          console.log(`[ItemService] IndexedDB has ${indexedDBData.length} items but FORCE REFRESH is on - proceeding to Supabase`);
+        }
+      }
+    } catch (error) {
+      console.warn('[ItemService] IndexedDB read failed, falling back to Supabase:', error);
+    }
+  }
+
+  if (!navigator.onLine) {
     if (isIndexedDBSupported()) {
       try {
         const indexedDBData = await ItemDB.getAll(userId);
-        if (indexedDBData && indexedDBData.length > 0) {
-
-          if (!forceRefresh) {
-            console.log(`[ItemService] Retrieved ${indexedDBData.length} items from IndexedDB`);
-            // Update cache
-            await cacheManager.set('items', indexedDBData);
-            cached = indexedDBData;
-
-            // If offline, return IndexedDB data immediately
-            if (!navigator.onLine) {
-              return indexedDBData;
-            }
-          } else {
-            console.log(`[ItemService] IndexedDB has ${indexedDBData.length} items but FORCE REFRESH is on - proceeding to Supabase`);
-          }
-        }
-      } catch (error) {
-        console.warn('[ItemService] IndexedDB read failed, falling back to Supabase:', error);
-      }
+        if (indexedDBData && indexedDBData.length > 0) return indexedDBData;
+      } catch (e) { /* ignore */ }
     }
+    const oldCached = await cacheManager.get<Item[]>('items');
+    return oldCached || [];
+  }
 
-    if (!navigator.onLine) {
-      // If offline and forceRefresh, we should fallback to DB/Cache
-      if (isIndexedDBSupported()) {
-        try {
-          const indexedDBData = await ItemDB.getAll(userId);
-          if (indexedDBData && indexedDBData.length > 0) return indexedDBData;
-        } catch (e) { /* ignore */ }
-      }
-      // If no DB data, try older cache?
-      const cached = await cacheManager.get<Item[]>('items');
-      return cached || [];
-    }
-
+  return dedupedRequest(dedupKey, async () => {
     // Use cache manager's request coalescing for network requests
     return cacheManager.coalesce(`items-${userId}`, async () => {
       try {

@@ -79,7 +79,23 @@ function initDB(): Promise<IDBDatabase> {
       reject(request.error);
     };
 
+    request.onblocked = () => {
+      console.warn("[IndexedDB] Database open blocked. Another tab may have the database open with an older version.");
+      // We don't reject here usually as it might eventually open, but for our "loading fix"
+      // we want to know if it's hitting a wall.
+    };
+
+    // Safety timeout for database opening - 5 seconds
+    const timeout = setTimeout(() => {
+      if (!dbInstance) {
+        console.error("[IndexedDB] Database open timed out after 5s");
+        dbPromise = null;
+        reject(new Error("IndexedDB initialization timeout"));
+      }
+    }, 5000);
+
     request.onsuccess = () => {
+      clearTimeout(timeout);
       dbInstance = request.result;
       console.log("[IndexedDB] Database opened successfully");
 
@@ -169,19 +185,36 @@ async function executeTransaction<T>(
   const tx = db.transaction(storeNames, mode);
 
   return new Promise((resolve, reject) => {
+    // Safety timeout for transaction - 8 seconds
+    const timeout = setTimeout(() => {
+      console.error(`[IndexedDB] Transaction timed out for stores: ${storeNames}`);
+      // Try to abort if possible, though it's already hanging
+      try { tx.abort(); } catch (e) { }
+      reject(new Error("IndexedDB transaction timeout"));
+    }, 8000);
+
+    tx.oncomplete = () => {
+      clearTimeout(timeout);
+    };
+
     tx.onerror = () => {
+      clearTimeout(timeout);
       console.error("[IndexedDB] Transaction error:", tx.error);
       reject(tx.error);
     };
 
     tx.onabort = () => {
+      clearTimeout(timeout);
       console.error("[IndexedDB] Transaction aborted");
       reject(new Error("Transaction aborted"));
     };
 
     callback(tx)
       .then(resolve)
-      .catch(reject);
+      .catch((err) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
   });
 }
 
@@ -235,14 +268,14 @@ export async function add<T extends { id: string; userId?: string }>(
 ): Promise<T> {
   return executeTransaction(storeName, "readwrite", async (tx) => {
     const store = tx.objectStore(storeName);
-    
+
     // Transform userId (camelCase) to user_id (snake_case) for IndexedDB index
     // Fallback to existing user_id if userId is missing (for SettingsDB)
     const dbRecord = {
       ...record,
       user_id: record.userId || (record as Record<string, unknown>).user_id,
     };
-    
+
     const request = store.add(dbRecord);
 
     return new Promise((resolve, reject) => {
@@ -267,14 +300,14 @@ export async function update<T extends { id: string; userId?: string }>(
 ): Promise<T> {
   return executeTransaction(storeName, "readwrite", async (tx) => {
     const store = tx.objectStore(storeName);
-    
+
     // Transform userId (camelCase) to user_id (snake_case) for IndexedDB index
     // Fallback to existing user_id if userId is missing (for SettingsDB)
     const dbRecord = {
       ...record,
       user_id: record.userId || (record as Record<string, unknown>).user_id,
     };
-    
+
     const request = store.put(dbRecord);
 
     return new Promise((resolve, reject) => {
@@ -322,7 +355,7 @@ export async function clearUserData(
   userId: string
 ): Promise<void> {
   const records = await getAll<{ id: string }>(storeName, userId);
-  
+
   return executeTransaction(storeName, "readwrite", async (tx) => {
     const store = tx.objectStore(storeName);
     const promises = records.map(record => {
@@ -409,20 +442,20 @@ export function closeDB(): void {
  */
 export async function deleteDatabase(): Promise<void> {
   closeDB();
-  
+
   return new Promise((resolve, reject) => {
     const request = indexedDB.deleteDatabase(DB_NAME);
-    
+
     request.onsuccess = () => {
       console.log("[IndexedDB] Database deleted successfully");
       resolve();
     };
-    
+
     request.onerror = () => {
       console.error("[IndexedDB] Failed to delete database:", request.error);
       reject(request.error);
     };
-    
+
     request.onblocked = () => {
       console.warn("[IndexedDB] Database deletion blocked - close all tabs");
     };
@@ -472,7 +505,7 @@ export const QuoteDB = {
  */
 export const SettingsDB = {
   get: (userId: string) => getById<CompanySettings>(STORES.SETTINGS, userId),
-  set: (userId: string, settings: CompanySettings) => 
+  set: (userId: string, settings: CompanySettings) =>
     update(STORES.SETTINGS, { ...settings, user_id: userId } as never),
 };
 

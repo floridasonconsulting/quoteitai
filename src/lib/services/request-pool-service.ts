@@ -5,7 +5,7 @@
  */
 
 // Request pooling to limit concurrent Supabase requests
-const MAX_CONCURRENT_REQUESTS = 2;
+const MAX_CONCURRENT_REQUESTS = 5;
 let activeRequests = 0;
 
 /**
@@ -15,7 +15,7 @@ export async function executeWithPool<T>(requestFn: () => Promise<T>): Promise<T
   while (activeRequests >= MAX_CONCURRENT_REQUESTS) {
     await new Promise(resolve => setTimeout(resolve, 50));
   }
-  
+
   activeRequests++;
   try {
     return await requestFn();
@@ -67,7 +67,7 @@ export function clearInFlightRequests(): void {
 function clearStaleRequests(): void {
   const now = Date.now();
   const staleKeys: string[] = [];
-  
+
   inFlightRequests.forEach((request, key) => {
     if (now - request.startTime > MAX_REQUEST_AGE) {
       staleKeys.push(key);
@@ -75,7 +75,7 @@ function clearStaleRequests(): void {
       request.abortController.abort();
     }
   });
-  
+
   if (staleKeys.length > 0) {
     console.log(`[Dedup] Clearing ${staleKeys.length} stale requests:`, staleKeys);
     staleKeys.forEach(key => inFlightRequests.delete(key));
@@ -101,7 +101,7 @@ export function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<
 export async function dedupedRequest<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
   // Clear stale requests before checking
   clearStaleRequests();
-  
+
   const existing = inFlightRequests.get(key);
   if (existing) {
     const age = Date.now() - existing.startTime;
@@ -110,10 +110,10 @@ export async function dedupedRequest<T>(key: string, requestFn: () => Promise<T>
   }
 
   console.log(`[Dedup] Starting new request for ${key}`);
-  
+
   // Create abort controller for this request
   const abortController = new AbortController();
-  
+
   // Create promise with guaranteed cleanup
   const promise = (async () => {
     try {
@@ -137,6 +137,6 @@ export async function dedupedRequest<T>(key: string, requestFn: () => Promise<T>
     startTime: Date.now(),
     abortController
   });
-  
+
   return promise as Promise<T>;
 }

@@ -57,45 +57,41 @@ export async function getQuotes(
   const forceRefresh = options?.forceRefresh;
   const dedupKey = `fetch-quotes-${userId}`;
 
-  return dedupedRequest(dedupKey, async () => {
-    let cached: Quote[] | null = null;
-
-    // 1. Check memory cache first
-    if (!forceRefresh) {
-      cached = await cacheManager.get<Quote[]>('quotes');
-      if (cached && cached.length > 0) {
-        console.log(`[QuoteService] Retrieved ${cached.length} quotes from cache`);
-        return deduplicateQuotes(cached);
-      }
+  // 1. Check memory cache first (OUTSIDE of pool)
+  if (!forceRefresh) {
+    const cached = await cacheManager.get<Quote[]>('quotes');
+    if (cached && cached.length > 0) {
+      console.log(`[QuoteService] Retrieved ${cached.length} quotes from cache`);
+      return deduplicateQuotes(cached);
     }
+  }
 
-    // 2. Try IndexedDB
-    if (isIndexedDBSupported()) {
-      try {
-        const indexedDBData = await QuoteDB.getAll(userId);
-        if (indexedDBData && indexedDBData.length > 0) {
-
-          if (!forceRefresh) {
-            console.log(`[QuoteService] Retrieved ${indexedDBData.length} quotes from IndexedDB`);
-            const dedupedData = deduplicateQuotes(indexedDBData);
-            // Populate cache
-            await cacheManager.set('quotes', dedupedData);
-            cached = dedupedData;
-            return dedupedData;
-          } else {
-            console.log(`[QuoteService] IndexedDB has ${indexedDBData.length} quotes but FORCE REFRESH is on - proceeding to Supabase`);
-          }
+  // 2. Try IndexedDB (OUTSIDE of pool)
+  if (isIndexedDBSupported()) {
+    try {
+      const indexedDBData = await QuoteDB.getAll(userId);
+      if (indexedDBData && indexedDBData.length > 0) {
+        if (!forceRefresh) {
+          console.log(`[QuoteService] Retrieved ${indexedDBData.length} quotes from IndexedDB`);
+          const dedupedData = deduplicateQuotes(indexedDBData);
+          // Populate cache
+          await cacheManager.set('quotes', dedupedData);
+          return dedupedData;
+        } else {
+          console.log(`[QuoteService] IndexedDB has ${indexedDBData.length} quotes but FORCE REFRESH is on - proceeding to Supabase`);
         }
-      } catch (error) {
-        console.warn('[QuoteService] IndexedDB read failed, falling back to Supabase:', error);
       }
+    } catch (error) {
+      console.warn('[QuoteService] IndexedDB read failed, falling back to Supabase:', error);
     }
+  }
 
-    if (!navigator.onLine) {
-      return [];
-    }
+  if (!navigator.onLine) {
+    return [];
+  }
 
-    // 3. Fetch from Supabase
+  // 3. Fetch from Supabase (INSIDE pool/dedup)
+  return dedupedRequest(dedupKey, async () => {
     return cacheManager.coalesce(`quotes-${userId}`, async () => {
       try {
         let query = supabase.from('quotes' as any).select('*');
