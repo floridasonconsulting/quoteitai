@@ -63,6 +63,10 @@ export default function NewQuote() {
   const [pricingMode, setPricingMode] = useState<'itemized' | 'category_total' | 'grand_total'>('category_total');
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
+  const [existingQuoteData, setExistingQuoteData] = useState<{
+    createdAt: string;
+    quoteNumber: string;
+  } | null>(null);
 
   // Helper to strip markdown and clean TipTap JSON
   const cleanContentForEditor = (text: string): string => {
@@ -159,6 +163,10 @@ export default function NewQuote() {
       console.log('[NewQuote] Loading quote from navigation state:', editQuote);
       setIsEditMode(true);
       setEditQuoteId(editQuote.id); // CRITICAL: Store the quote ID
+      setExistingQuoteData({
+        createdAt: editQuote.createdAt,
+        quoteNumber: editQuote.quoteNumber
+      });
       setSelectedCustomerId(editQuote.customerId);
       setQuoteTitle(editQuote.title);
       setQuoteItems(editQuote.items);
@@ -176,6 +184,10 @@ export default function NewQuote() {
         console.log('[NewQuote] Loading quote from URL params:', quoteToEdit);
         setIsEditMode(true);
         setEditQuoteId(quoteToEdit.id); // CRITICAL: Store the quote ID
+        setExistingQuoteData({
+          createdAt: quoteToEdit.createdAt,
+          quoteNumber: quoteToEdit.quoteNumber
+        });
         setSelectedCustomerId(quoteToEdit.customerId);
         setQuoteTitle(quoteToEdit.title);
         setQuoteItems(quoteToEdit.items);
@@ -287,78 +299,89 @@ export default function NewQuote() {
       }
     }
 
-    if (isEditMode && editQuoteId) { // CRITICAL: Use editQuoteId instead of id
-      const quotes = await getQuotes(user?.id, organizationId, isAdmin || isMaxAITier);
-      const existingQuote = quotes.find(q => q.id === editQuoteId);
-      const updatedQuote: Quote = {
-        id: editQuoteId, // CRITICAL: Use stored editQuoteId
-        quoteNumber: existingQuote?.quoteNumber || generateQuoteNumber(),
-        customerId: selectedCustomerId,
-        customerName: selectedCustomer?.name || '',
-        title: quoteTitle,
-        items: quoteItems,
-        subtotal,
-        tax,
-        total,
-        status: 'draft',
-        notes: quoteNotes,
-        executiveSummary,
-        showPricing,
-        pricingMode, // Save pricing mode
-        scopeOfWork: scopeOfWork, // Save current SOW
-        createdAt: existingQuote?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        userId: user?.id || '',
-      };
+    setLoading(true);
+    try {
+      if (isEditMode && editQuoteId) { // CRITICAL: Use editQuoteId instead of id
+        // Optimize: Don't fetch all quotes just to find one. 
+        // We already have the metadata needed in the current state or can merge safely.
+        const updatedQuote: Quote = {
+          id: editQuoteId,
+          quoteNumber: existingQuoteData?.quoteNumber || (quoteTitle.split(' - ')[1] || generateQuoteNumber()), // Fallback
+          customerId: selectedCustomerId,
+          customerName: selectedCustomer?.name || '',
+          title: quoteTitle,
+          items: quoteItems,
+          subtotal,
+          tax,
+          total,
+          status: 'draft',
+          notes: quoteNotes,
+          executiveSummary,
+          showPricing,
+          pricingMode,
+          scopeOfWork: scopeOfWork,
+          createdAt: existingQuoteData?.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          userId: user?.id || '',
+        };
 
-      await updateQuote(user?.id, organizationId, editQuoteId, updatedQuote, queueChange);
+        console.log('[NewQuote] Updating draft:', editQuoteId);
+        await updateQuote(user?.id, organizationId, editQuoteId, updatedQuote, queueChange);
 
-      // Save Follow-up Schedule
-      if (followUpSchedule.status === 'active' || followUpSchedule.id) {
-        await saveFollowUpSchedule({
-          ...followUpSchedule,
-          quoteId: editQuoteId,
-          userId: user?.id || ''
-        });
+        // Save Follow-up Schedule
+        if (followUpSchedule.status === 'active' || followUpSchedule.id) {
+          await saveFollowUpSchedule({
+            ...followUpSchedule,
+            quoteId: editQuoteId,
+            userId: user?.id || ''
+          });
+        }
+
+        toast.success('Quote updated');
+      } else {
+        const quote: Quote = {
+          id: crypto.randomUUID(),
+          quoteNumber: generateQuoteNumber(),
+          customerId: selectedCustomerId,
+          customerName: selectedCustomer?.name || '',
+          title: quoteTitle,
+          items: quoteItems,
+          subtotal,
+          tax,
+          total,
+          status: 'draft',
+          notes: quoteNotes,
+          executiveSummary,
+          showPricing,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          userId: user?.id || '',
+          pricingMode,
+          scopeOfWork,
+        };
+
+        console.log('[NewQuote] Creating new draft');
+        await addQuote(user?.id, organizationId, quote, queueChange);
+
+        // Save Follow-up Schedule
+        if (followUpSchedule.status === 'active') {
+          await saveFollowUpSchedule({
+            ...followUpSchedule,
+            quoteId: quote.id,
+            userId: user?.id || ''
+          });
+        }
+
+        toast.success('Quote saved as draft');
       }
-
-      toast.success('Quote updated');
-    } else {
-      const quote: Quote = {
-        id: crypto.randomUUID(),
-        quoteNumber: generateQuoteNumber(),
-        customerId: selectedCustomerId,
-        customerName: selectedCustomer?.name || '',
-        title: quoteTitle,
-        items: quoteItems,
-        subtotal,
-        tax,
-        total,
-        status: 'draft',
-        notes: quoteNotes,
-        executiveSummary,
-        showPricing,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        userId: user?.id || '',
-        pricingMode, // Save pricing mode
-        scopeOfWork, // Save current SOW
-      };
-
-      await addQuote(user?.id, organizationId, quote, queueChange);
-
-      // Save Follow-up Schedule
-      if (followUpSchedule.status === 'active') {
-        await saveFollowUpSchedule({
-          ...followUpSchedule,
-          quoteId: quote.id,
-          userId: user?.id || ''
-        });
-      }
-
-      toast.success('Quote saved as draft');
+      console.log('[NewQuote] Navigation to /quotes starting...');
+      navigate('/quotes');
+    } catch (saveError) {
+      console.error('[NewQuote] Save failed:', saveError);
+      toast.error('Failed to save quote. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    navigate('/quotes');
   };
 
   const sendQuote = async () => {
@@ -381,83 +404,106 @@ export default function NewQuote() {
 
   const handleConfirmSend = async (emailContent: EmailContent) => {
     const finalSummary = emailContent.includeSummary ? emailContent.customSummary : undefined;
+    setSendDialogOpen(false); // Close dialog immediately
+    setLoading(true);
 
-    if (isEditMode && editQuoteId) { // CRITICAL: Use editQuoteId instead of id
-      const quotes = await getQuotes(user?.id, organizationId, isAdmin || isMaxAITier);
-      const existingQuote = quotes.find(q => q.id === editQuoteId);
-      const updatedQuote: Quote = {
-        id: editQuoteId, // CRITICAL: Use stored editQuoteId
-        quoteNumber: existingQuote?.quoteNumber || generateQuoteNumber(),
-        customerId: selectedCustomerId,
-        customerName: selectedCustomer?.name || '',
-        title: quoteTitle,
-        items: quoteItems,
-        subtotal,
-        tax,
-        total,
-        status: 'sent',
-        notes: quoteNotes,
-        executiveSummary: finalSummary,
-        showPricing,
-        sentDate: new Date().toISOString(),
-        createdAt: existingQuote?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        userId: user?.id || '',
-        pricingMode, // Save pricing mode
-        scopeOfWork: scopeOfWork, // Save current SOW
-      };
+    try {
+      if (isEditMode && editQuoteId) { // CRITICAL: Use editQuoteId instead of id
+        // Use a lightweight approach to update
+        const updatedQuote: Quote = {
+          id: editQuoteId,
+          quoteNumber: existingQuoteData?.quoteNumber || generateQuoteNumber(),
+          customerId: selectedCustomerId,
+          customerName: selectedCustomer?.name || '',
+          title: quoteTitle,
+          items: quoteItems,
+          subtotal,
+          tax,
+          total,
+          status: 'sent',
+          notes: quoteNotes,
+          executiveSummary: finalSummary,
+          showPricing,
+          sentDate: new Date().toISOString(),
+          createdAt: existingQuoteData?.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          userId: user?.id || '',
+          pricingMode,
+          scopeOfWork: scopeOfWork,
+        };
 
-      await updateQuote(user?.id, organizationId, editQuoteId, updatedQuote, queueChange);
+        console.log('[NewQuote] Sending update for:', editQuoteId);
+        await updateQuote(user?.id, organizationId, editQuoteId, updatedQuote, queueChange);
 
-      // Save Follow-up Schedule
-      if (followUpSchedule.status === 'active' || followUpSchedule.id) {
-        await saveFollowUpSchedule({
-          ...followUpSchedule,
-          quoteId: editQuoteId,
-          userId: user?.id || ''
-        });
+        // Save Follow-up Schedule
+        if (followUpSchedule.status === 'active' || followUpSchedule.id) {
+          await saveFollowUpSchedule({
+            ...followUpSchedule,
+            quoteId: editQuoteId,
+            userId: user?.id || ''
+          });
+        }
+
+        try {
+          await generatePDF(updatedQuote);
+        } catch (pdfError) {
+          console.error('[NewQuote] PDF generation failed:', pdfError);
+          // Don't block navigation for PDF issues
+        }
+
+        toast.success('Quote updated and sent');
+      } else {
+        const quote: Quote = {
+          id: crypto.randomUUID(),
+          quoteNumber: generateQuoteNumber(),
+          customerId: selectedCustomerId,
+          customerName: selectedCustomer?.name || '',
+          title: quoteTitle,
+          items: quoteItems,
+          subtotal,
+          tax,
+          total,
+          status: 'sent',
+          notes: quoteNotes,
+          executiveSummary: finalSummary,
+          showPricing,
+          sentDate: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          userId: user?.id || '',
+          pricingMode,
+          scopeOfWork,
+        };
+
+        console.log('[NewQuote] Creating and sending new quote');
+        await addQuote(user?.id, organizationId, quote, queueChange);
+
+        // Save Follow-up Schedule
+        if (followUpSchedule.status === 'active') {
+          await saveFollowUpSchedule({
+            ...followUpSchedule,
+            quoteId: quote.id,
+            userId: user?.id || ''
+          });
+        }
+
+        try {
+          await generatePDF(quote);
+        } catch (pdfError) {
+          console.error('[NewQuote] PDF generation failed:', pdfError);
+        }
+
+        toast.success('Quote sent successfully');
       }
 
-      await generatePDF(updatedQuote);
-      toast.success('Quote updated and sent');
-    } else {
-      const quote: Quote = {
-        id: crypto.randomUUID(),
-        quoteNumber: generateQuoteNumber(),
-        customerId: selectedCustomerId,
-        customerName: selectedCustomer?.name || '',
-        title: quoteTitle,
-        items: quoteItems,
-        subtotal,
-        tax,
-        total,
-        status: 'sent',
-        notes: quoteNotes,
-        executiveSummary: finalSummary,
-        showPricing,
-        sentDate: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        userId: user?.id || '',
-        pricingMode, // Save pricing mode
-        scopeOfWork, // Save current SOW
-      };
-
-      await addQuote(user?.id, organizationId, quote, queueChange);
-
-      // Save Follow-up Schedule
-      if (followUpSchedule.status === 'active') {
-        await saveFollowUpSchedule({
-          ...followUpSchedule,
-          quoteId: quote.id,
-          userId: user?.id || ''
-        });
-      }
-
-      await generatePDF(quote);
-      toast.success('Quote sent successfully');
+      console.log('[NewQuote] Navigation to /quotes starting...');
+      navigate('/quotes');
+    } catch (saveError) {
+      console.error('[NewQuote] Send operation failed:', saveError);
+      toast.error('Failed to send quote. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    navigate('/quotes');
   };
 
   const generatePDF = async (quote: Quote) => {
@@ -633,7 +679,7 @@ export default function NewQuote() {
                   <QuoteSummaryAI
                     quote={{
                       id: editQuoteId || '',
-                      quoteNumber: generateQuoteNumber(),
+                      quoteNumber: existingQuoteData?.quoteNumber || generateQuoteNumber(),
                       customerId: selectedCustomerId,
                       customerName: selectedCustomer?.name || '',
                       title: quoteTitle,
@@ -644,7 +690,7 @@ export default function NewQuote() {
                       status: 'draft',
                       notes: quoteNotes,
                       executiveSummary,
-                      createdAt: new Date().toISOString(),
+                      createdAt: existingQuoteData?.createdAt || new Date().toISOString(),
                       updatedAt: new Date().toISOString(),
                       userId: user?.id || '',
                     }}
@@ -687,7 +733,7 @@ export default function NewQuote() {
                       <SOWGeneratorAI
                         quote={{
                           id: editQuoteId || '',
-                          quoteNumber: generateQuoteNumber(),
+                          quoteNumber: existingQuoteData?.quoteNumber || generateQuoteNumber(),
                           customerId: selectedCustomerId,
                           customerName: selectedCustomer?.name || '',
                           title: quoteTitle,
@@ -698,7 +744,7 @@ export default function NewQuote() {
                           status: 'draft',
                           notes: quoteNotes,
                           executiveSummary,
-                          createdAt: new Date().toISOString(),
+                          createdAt: existingQuoteData?.createdAt || new Date().toISOString(),
                           updatedAt: new Date().toISOString(),
                           userId: user?.id || '',
                         }}
@@ -792,7 +838,7 @@ export default function NewQuote() {
         onOpenChange={setSendDialogOpen}
         quote={{
           id: editQuoteId || crypto.randomUUID(), // CRITICAL: Use editQuoteId if available
-          quoteNumber: generateQuoteNumber(),
+          quoteNumber: existingQuoteData?.quoteNumber || generateQuoteNumber(),
           customerId: selectedCustomerId,
           customerName: selectedCustomer?.name || '',
           title: quoteTitle,
@@ -803,7 +849,7 @@ export default function NewQuote() {
           status: 'draft',
           notes: quoteNotes,
           executiveSummary,
-          createdAt: new Date().toISOString(),
+          createdAt: existingQuoteData?.createdAt || new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           userId: user?.id || '',
         }}
