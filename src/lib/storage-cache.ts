@@ -143,6 +143,7 @@ class StorageCache {
       const protectedPrefixes = [
         "sb-",                // Supabase internal auth keys
         "onboarding_",        // User onboarding flags
+        "settings_",          // User specific settings (Company info, Logo, Colors)
         "theme",              // UI Theme preferences
         "supabase.auth.token" // Legacy auth token
       ];

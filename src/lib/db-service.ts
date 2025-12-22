@@ -62,7 +62,62 @@ export const getSettings = async (userId: string, organizationId: string | null 
 
   // Fall back to localStorage
   const localStorageSettings = storageGetSettings(userId);
-  console.log('[db-service] ✓ Retrieved settings from localStorage');
+  if (localStorageSettings && (localStorageSettings.name || localStorageSettings.email)) {
+    console.log('[db-service] ✓ Retrieved settings from localStorage');
+    return localStorageSettings;
+  }
+
+  // Final fallback: Try Supabase since local storage is empty
+  console.log('[db-service] 🔍 Local settings missing, attempting Supabase fallback...');
+  try {
+    const { data: dbSettings, error } = await supabase
+      .from('company_settings' as any)
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[db-service] Supabase settings fetch failed:', error);
+    } else if (dbSettings) {
+      console.log('[db-service] ✓ Retrieved settings from Supabase');
+
+      const mappedSettings: CompanySettings = {
+        name: (dbSettings as any).name || '',
+        address: (dbSettings as any).address || '',
+        city: (dbSettings as any).city || '',
+        state: (dbSettings as any).state || '',
+        zip: (dbSettings as any).zip || '',
+        phone: (dbSettings as any).phone || '',
+        email: (dbSettings as any).email || '',
+        website: (dbSettings as any).website || '',
+        logo: (dbSettings as any).logo || undefined,
+        logoDisplayOption: (dbSettings as any).logo_display_option as any || 'both',
+        license: (dbSettings as any).license || '',
+        insurance: (dbSettings as any).insurance || '',
+        terms: (dbSettings as any).terms || '',
+        proposalTemplate: (dbSettings as any).proposal_template as any || 'classic',
+        proposalTheme: (dbSettings as any).proposal_theme as any || 'modern-corporate',
+        industry: (dbSettings as any).industry as any || 'other',
+        notifyEmailAccepted: (dbSettings as any).notify_email_accepted ?? true,
+        notifyEmailDeclined: (dbSettings as any).notify_email_declined ?? true,
+        showProposalImages: (dbSettings as any).show_proposal_images ?? true,
+        onboardingCompleted: (dbSettings as any).onboarding_completed ?? false,
+        primaryColor: (dbSettings as any).primary_color || undefined,
+        accentColor: (dbSettings as any).accent_color || undefined,
+      };
+
+      // Restore to local storage to avoid future overhead
+      if (isIndexedDBSupported()) {
+        SettingsDB.set(userId, mappedSettings).catch(e => console.error('Failed to update IDB during fallback:', e));
+      }
+      setStorageItem(`settings_${userId}`, mappedSettings);
+
+      return mappedSettings;
+    }
+  } catch (error) {
+    console.error('[db-service] Unexpected error in getSettings fallback:', error);
+  }
+
   return localStorageSettings;
 };
 

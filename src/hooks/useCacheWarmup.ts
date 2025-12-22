@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getCustomers } from '@/lib/services/customer-service';
 import { getItems } from '@/lib/services/item-service';
 import { getQuotes } from '@/lib/services/quote-service';
+import { getSettings } from '@/lib/db-service';
 
 /**
  * Hook to warm up the Service Worker cache by fetching fresh data
@@ -31,6 +32,7 @@ export function useCacheWarmup() {
                     getCustomers(user.id, organizationId, isAdmin || isMaxAITier, { forceRefresh: true }),
                     getItems(user.id, organizationId, { forceRefresh: true }),
                     getQuotes(user.id, organizationId, isAdmin || isMaxAITier, { forceRefresh: true }),
+                    getSettings(user.id, organizationId),
                 ];
                 await Promise.all(promises);
 

@@ -9,6 +9,7 @@ import { exportAllData, importAllData } from "@/lib/import-export-utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
+import { storageCache } from "@/lib/storage-cache";
 
 export function DataManagementSection() {
   const { user } = useAuth();
@@ -59,13 +60,13 @@ export function DataManagementSection() {
 
     try {
       setIsClearing(true);
-      
+
       // Clear database data (Supabase)
       await clearDatabaseData(user.id);
-      
+
       // Clear local storage
       await clearAllData();
-      
+
       toast.success("All data cleared successfully");
       window.location.reload();
     } catch (error) {
@@ -86,7 +87,7 @@ export function DataManagementSection() {
     const firstConfirm = window.confirm(
       "⚠️ WARNING: This will permanently delete ALL your data including customers, items, quotes, and settings.\n\nAre you absolutely sure you want to continue?"
     );
-    
+
     if (!firstConfirm) return;
 
     // Second confirmation with typing requirement
@@ -108,15 +109,12 @@ export function DataManagementSection() {
 
       // Clear database
       await clearDatabaseData(user.id);
-      
-      // Clear local storage
-      await clearAllData();
-      
-      // Clear all localStorage
-      localStorage.clear();
-      
+
+      // Clear local storage surgically
+      storageCache.clear();
+
       toast.success("All data has been permanently deleted");
-      
+
       // Reload to fresh state
       setTimeout(() => {
         window.location.href = '/';
