@@ -305,7 +305,7 @@ function HeroSlide({
           </Button>
         </div>
       )}
-      <div className="max-w-4xl">
+      <div className="max-w-4xl pb-24 md:pb-0">
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -582,7 +582,7 @@ function InvestmentSummarySlide({
         onTouchMove={handleTouchMove}
         className="flex-1 overflow-y-auto w-full custom-scrollbar touch-pan-y"
       >
-        <div className="max-w-6xl mx-auto p-4 md:p-8 pb-32">
+        <div className="max-w-6xl mx-auto p-4 md:p-8 pb-40 md:pb-32">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
 
             {/* Left: Detailed Scope (Table Style) */}

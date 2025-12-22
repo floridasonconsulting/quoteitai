@@ -282,7 +282,7 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkS
                     onWheel={handleWheel}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
-                    className="h-[calc(100%-120px)] overflow-y-auto px-6 py-4 pb-24 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent touch-pan-y"
+                    className="h-[calc(100%-120px)] overflow-y-auto px-6 py-4 pb-32 md:pb-24 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent touch-pan-y"
                 >
                     <div className="max-w-3xl mx-auto space-y-6">
                         {sowSections.length > 0 ? (

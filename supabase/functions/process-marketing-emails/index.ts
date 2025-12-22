@@ -6,16 +6,18 @@ const FROM_EMAIL = Deno.env.get('FROM_EMAIL_ADDRESS') || 'onboarding@quoteit.ai'
 
 const templates = {
     welcome: {
-        subject: "Welcome to Quote-it Pro: Let's automate your payments!",
+        subject: "Welcome to Quote.it AI: Let's automate your payments!",
         html: (name: string) => `
-      <h1>Welcome to the Pro family, ${name}!</h1>
-      <p>You've just unlocked the most powerful tools in Quote-it AI. To get the most out of your upgrade, we recommend two immediate steps:</p>
+      <h1>Welcome to the Quote.it family, ${name}!</h1>
+      <p>We're excited to help you streamline your quoting process. To get the most out of your trial, we recommend these steps:</p>
       <ul>
+        <li><strong>Config Your Data:</strong> For the best AI results, add your Customers and Item Catalog first.</li>
+        <li><strong>14-Day Trial:</strong> During your trial, you have access to <strong>2 uses of every premium AI feature</strong>. Make sure your data is ready before spending these uses!</li>
         <li><strong>Connect QuickBooks:</strong> Sync your customers and items instantly under Settings > Integrations.</li>
         <li><strong>Enable Stripe:</strong> Start collecting deposits and full payments directly on your proposals.</li>
       </ul>
       <p>Questions? Just reply to this email.</p>
-      <p>Best,<br>The Quote-it Team</p>
+      <p>Best,<br>The Quote.it Team</p>
     `
     },
     sow_magic: {
@@ -46,17 +48,19 @@ serve(async (req: Request) => {
 
         console.log('--- Processing Marketing Emails ---')
 
-        // 1. Fetch all organizations with pro_upgraded_at
+        // 1. Fetch all organizations that are either pro or trialing
         const { data: orgs, error: orgsError } = await supabase
             .from('organizations')
-            .select('id, name, pro_upgraded_at')
-            .not('pro_upgraded_at', 'is', null)
+            .select('id, name, pro_upgraded_at, subscription_status, created_at')
+            .or('subscription_status.eq.trialing,subscription_status.eq.active,subscription_status.eq.pro,pro_upgraded_at.not.is.null')
 
         if (orgsError) throw orgsError
         console.log(`Checking ${orgs?.length || 0} organizations...`)
 
         for (const org of orgs || []) {
-            const upgradeTime = new Date(org.pro_upgraded_at).getTime()
+            const upgradeTime = org.pro_upgraded_at
+                ? new Date(org.pro_upgraded_at).getTime()
+                : new Date(org.created_at).getTime()
             const now = Date.now()
             const diffMs = now - upgradeTime
 

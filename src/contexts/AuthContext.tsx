@@ -165,6 +165,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setSubscription(data);
+
+      // Also fetch trial metadata directly from organizations table
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('subscription_status, trial_end_date, trial_ai_usage')
+        .eq('owner_id', userId)
+        .maybeSingle();
+
+      if (orgData) {
+        setSubscription(prev => ({
+          ...prev,
+          trialStatus: orgData.subscription_status,
+          trialEnd: orgData.trial_end_date,
+          trialAIUsage: orgData.trial_ai_usage
+        }));
+      }
     } catch (error) {
       console.warn('[AuthContext] Subscription check error (non-critical):', error);
       setSubscription(null);

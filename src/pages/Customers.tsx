@@ -217,6 +217,21 @@ export default function Customers() {
       return;
     }
 
+    // Trial limit check
+    if (!editingCustomer && subscription?.trialStatus === 'trialing') {
+      const { count } = await supabase
+        .from('customers')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user?.id);
+
+      if (count && count >= 10) {
+        toast.error("Trial Limit Reached", {
+          description: "During your 14-day trial, you are limited to 10 customers. Activate your full membership to unlock unlimited customers!"
+        });
+        return;
+      }
+    }
+
     try {
       if (editingCustomer) {
         const updatedCustomer = { ...editingCustomer, ...formData };

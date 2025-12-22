@@ -244,6 +244,21 @@ export default function NewQuote() {
       return;
     }
 
+    // Trial limit check (only for new quotes)
+    if (!isEditMode && subscription?.trialStatus === 'trialing') {
+      const { count } = await supabase
+        .from('quotes')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user?.id);
+
+      if (count && count >= 10) {
+        toast.error("Trial Limit Reached", {
+          description: "During your 14-day trial, you are limited to 10 quotes. Activate your full membership to unlock unlimited quotes!"
+        });
+        return;
+      }
+    }
+
     if (isEditMode && editQuoteId) { // CRITICAL: Use editQuoteId instead of id
       const quotes = await getQuotes(user?.id, organizationId, isAdmin || isMaxAITier);
       const existingQuote = quotes.find(q => q.id === editQuoteId);
@@ -555,10 +570,10 @@ export default function NewQuote() {
 
           {/* Main Form Content with Tabs */}
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="w-full grid w-full grid-cols-3 mb-6">
-              <TabsTrigger value="details">Quote Details</TabsTrigger>
-              <TabsTrigger value="sow">Scope of Work</TabsTrigger>
-              <TabsTrigger value="automation">Automation</TabsTrigger>
+            <TabsList className="w-full grid grid-cols-3 mb-6">
+              <TabsTrigger value="details" className="text-xs sm:text-sm px-1 sm:px-4">Details</TabsTrigger>
+              <TabsTrigger value="sow" className="text-xs sm:text-sm px-1 sm:px-4">SOW</TabsTrigger>
+              <TabsTrigger value="automation" className="text-xs sm:text-sm px-1 sm:px-4">Automation</TabsTrigger>
             </TabsList>
 
             <TabsContent value="details" className="space-y-6">
@@ -680,7 +695,7 @@ export default function NewQuote() {
                       value={scopeOfWork}
                       onChange={(e) => setScopeOfWork(e.target.value)}
                       placeholder="Scope of work content will appear here..."
-                      className="min-h-[500px] font-mono text-sm leading-relaxed"
+                      className="min-h-[300px] md:min-h-[500px] font-mono text-sm leading-relaxed"
                     />
                     <p className="text-xs text-muted-foreground">
                       Tip: Use Markdown formatting (## for headers, • for lists) to style your document.

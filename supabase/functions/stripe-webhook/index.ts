@@ -152,6 +152,9 @@ async function syncAllowedSeats(supabase: any, stripe: any, orgId: string, subsc
   const updateData: any = {
     allowed_seats: totalSeats,
     subscription_tier: tier,
+    subscription_status: subscription.status,
+    trial_end_date: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+    stripe_subscription_id: subscription.id,
     stripe_customer_id: subscription.customer as string,
     updated_at: new Date().toISOString()
   }

@@ -223,6 +223,21 @@ export default function Items() {
   });
 
   const handleFormSubmit = async (formData: FormData) => {
+    // Trial limit check (only for new items)
+    if (!editingItem && subscription?.trialStatus === 'trialing') {
+      const { count } = await supabase
+        .from('items')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user?.id);
+
+      if (count && count >= 10) {
+        toast.error("Trial Limit Reached", {
+          description: "During your 14-day trial, you are limited to 10 catalog items. Activate your full membership to unlock unlimited items!"
+        });
+        return;
+      }
+    }
+
     try {
       const basePrice = parseFloat(formData.basePrice);
       const markup = parseFloat(formData.markup) || 0;

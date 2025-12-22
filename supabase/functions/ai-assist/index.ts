@@ -109,6 +109,32 @@ serve(async (req) => {
     const featureConfig = FEATURE_CONFIG[featureType as keyof typeof FEATURE_CONFIG];
     if (!featureConfig) throw new Error("Invalid feature type");
 
+    // Use database function to get organization info for subscription status
+    const { data: orgData, error: orgError } = await supabaseClient
+      .from("organizations")
+      .select("subscription_status, trial_ai_usage, id")
+      .eq("owner_id", user.id) // Assuming owner_id relates to the user for limits
+      .maybeSingle();
+
+    logStep("Org query result", { hasData: !!orgData, status: orgData?.subscription_status });
+
+    let isTrial = orgData?.subscription_status === 'trialing';
+
+    if (isTrial) {
+      const usage = orgData?.trial_ai_usage || {};
+      const featureUsage = usage[featureType] || 0;
+
+      if (featureUsage >= 2) {
+        return new Response(
+          JSON.stringify({
+            error: `Trial limit reached for this specific AI tool (2/2). Upgrade to a full membership to unlock unlimited use.`,
+            requiresUpgrade: true
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+    }
+
     // Use database function to get highest priority role
     const { data: userRole, error: roleError } = await supabaseClient
       .rpc("get_user_highest_role", { _user_id: user.id });
@@ -512,6 +538,17 @@ Be specific and actionable. Reference actual quote items, quantities, and prices
         last_ai_request_at: new Date().toISOString(),
       })
       .eq("user_id", user.id);
+
+    // Increment trial usage if applicable
+    if (orgData?.subscription_status === 'trialing') {
+      const newTrialUsage = { ...(orgData.trial_ai_usage || {}) };
+      newTrialUsage[featureType] = (newTrialUsage[featureType] || 0) + 1;
+
+      await supabaseClient
+        .from("organizations")
+        .update({ trial_ai_usage: newTrialUsage })
+        .eq("id", orgData.id);
+    }
 
     logStep("Usage tracked", { newCount });
 

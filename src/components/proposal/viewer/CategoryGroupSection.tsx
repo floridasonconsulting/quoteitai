@@ -218,7 +218,7 @@ export function CategoryGroupSection({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
       >
-        <div className="max-w-5xl mx-auto p-4 md:p-8 pb-16">
+        <div className="max-w-5xl mx-auto p-4 md:p-8 pb-32 md:pb-16">
           {/* Items Grid - TIGHTER SPACING */}
           <div className="space-y-4 mb-6">
             {categoryGroup.items.map((item, idx) => (

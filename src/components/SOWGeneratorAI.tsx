@@ -194,16 +194,16 @@ GUARDRAILS:
                     </AIButton>
 
                     {generatedSOW && (
-                        <div className="mt-4 space-y-3">
-                            <div className="flex items-center justify-between">
-                                <Label>Generated SOW</Label>
-                                <div className="flex gap-2">
-                                    <Button variant="outline" size="sm" onClick={handleCopySOW}>
-                                        <Copy className="h-4 w-4 mr-1" />
+                        <div className="mt-4 space-y-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <Label className="text-base font-semibold">Generated SOW</Label>
+                                <div className="flex flex-wrap gap-2 items-center">
+                                    <Button variant="outline" size="sm" onClick={handleCopySOW} className="flex-1 sm:flex-none">
+                                        <Copy className="h-4 w-4 mr-2" />
                                         Copy
                                     </Button>
-                                    <Button variant="outline" size="sm" onClick={handleDownloadSOW}>
-                                        <Download className="h-4 w-4 mr-1" />
+                                    <Button variant="outline" size="sm" onClick={handleDownloadSOW} className="flex-1 sm:flex-none">
+                                        <Download className="h-4 w-4 mr-2" />
                                         Download
                                     </Button>
                                     {onSaveToQuote && (
@@ -222,9 +222,9 @@ GUARDRAILS:
                                                 }
                                             }}
                                             disabled={isSaving}
-                                            className="bg-blue-600 hover:bg-blue-700"
+                                            className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto mt-2 sm:mt-0"
                                         >
-                                            <PlusCircle className="h-4 w-4 mr-1" />
+                                            <PlusCircle className="h-4 w-4 mr-2" />
                                             {isSaving ? 'Saving...' : 'Add to Proposal'}
                                         </Button>
                                     )}

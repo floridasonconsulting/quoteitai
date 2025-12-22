@@ -180,8 +180,8 @@ export function SendQuoteDialog({
             </div>
 
             {/* Executive Summary Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
+            <div className="space-y-3 pt-2 border-t">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="include-summary"
@@ -198,6 +198,7 @@ export function SendQuoteDialog({
                     size="sm"
                     onClick={handleGenerateSummary}
                     disabled={isGenerating || summaryAI.isLoading}
+                    className="w-full sm:w-auto"
                   >
                     {(isGenerating || summaryAI.isLoading) ? (
                       <>
@@ -244,11 +245,11 @@ export function SendQuoteDialog({
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button onClick={handleConfirm}>
+            <Button onClick={handleConfirm} className="w-full sm:w-auto">
               Confirm & Send
             </Button>
           </DialogFooter>

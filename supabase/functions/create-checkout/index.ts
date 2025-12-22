@@ -66,6 +66,13 @@ serve(async (req) => {
       customer_email: customerId ? undefined : user.email,
       line_items: lineItems,
       mode: "subscription",
+      subscription_data: {
+        trial_period_days: 14,
+        metadata: {
+          orgId: orgId || "",
+          tier: tier || "",
+        }
+      },
       success_url: `${req.headers.get("origin")}/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin")}/settings/billing`,
       metadata: {
