@@ -94,7 +94,7 @@ export async function getQuotes(
   return dedupedRequest(dedupKey, async () => {
     return cacheManager.coalesce(`quotes-${userId}`, async () => {
       try {
-        let query = supabase.from('quotes' as any).select('*');
+        let query = supabase.from('quotes' as any).select('*, customers(contact_first_name, contact_last_name)');
 
         if (organizationId) {
           // Fetch quotes belonging to the organization OR created by the user
@@ -114,7 +114,21 @@ export async function getQuotes(
           throw error;
         }
 
-        const result = data ? data.map(item => toCamelCase(item)) as Quote[] : [];
+        const result = data ? data.map(item => {
+          const camelItem = toCamelCase(item) as any;
+
+          // Map contact name from joined customer data
+          if (camelItem.customers) {
+            const firstName = camelItem.customers.contactFirstName || '';
+            const lastName = camelItem.customers.contactLastName || '';
+            const fullName = `${firstName} ${lastName}`.trim();
+            if (fullName) {
+              camelItem.contactName = fullName;
+            }
+          }
+
+          return camelItem as Quote;
+        }) : [];
 
         // PROTECT LOCAL STATE: Merge with pending changes before updating IndexedDB/Cache
         const protectedResult = syncStorage.applyPendingChanges(result, 'quotes');
@@ -182,7 +196,7 @@ export async function getQuote(userId: string, id: string): Promise<Quote | null
   try {
     const { data, error } = await supabase
       .from("quotes")
-      .select("*")
+      .select("*, customers(contact_first_name, contact_last_name)")
       .eq("user_id", userId)
       .eq("id", id)
       .single();
@@ -194,7 +208,19 @@ export async function getQuote(userId: string, id: string): Promise<Quote | null
       return null;
     }
 
-    const result = toCamelCase(data) as Quote;
+    const camelData = toCamelCase(data) as any;
+
+    // Map contact name from joined customer data
+    if (camelData.customers) {
+      const firstName = camelData.customers.contactFirstName || '';
+      const lastName = camelData.customers.contactLastName || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+      if (fullName) {
+        camelData.contactName = fullName;
+      }
+    }
+
+    const result = camelData as Quote;
 
     // Update storage
     if (isIndexedDBSupported()) {

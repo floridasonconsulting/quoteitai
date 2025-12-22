@@ -1,4 +1,4 @@
-import { ProposalSection } from '@/types/proposal';
+import { ProposalSection, CompanySettings } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Edit3, FileText, CheckCircle, Clock, Target, ListChecks, Ban, DollarSign, ShieldCheck, Scale, AlertTriangle } from 'lucide-react';
 import { useRef } from 'react';
@@ -7,13 +7,14 @@ interface ScopeOfWorkSlideProps {
     section: ProposalSection;
     isOwner?: boolean;
     onEditImage?: (currentUrl?: string) => void;
+    settings?: CompanySettings; // Added settings
 }
 
 /**
  * Scope of Work Slide Component
  * Displays AI-generated SOW content with professional formatting
  */
-export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkSlideProps) {
+export function ScopeOfWorkSlide({ section, isOwner, onEditImage, settings }: ScopeOfWorkSlideProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     // Convert JSON SOW to readable text
@@ -154,6 +155,19 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkS
         return sections;
     };
 
+    const sowSections = parseSections(section.content || '');
+
+    // Inject Global Legal Terms if applicable (Payment Terms & Conditions slide)
+    if (section.type === 'legal' && settings?.legalTerms) {
+        sowSections.push({
+            title: 'General Contractual Terms',
+            content: settings.legalTerms,
+            icon: 'legal'
+        });
+    }
+
+
+
     // Format content - convert markdown lists to clean bullets
     const formatContent = (content: string): string => {
         return content
@@ -224,7 +238,7 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkS
         }
     };
 
-    const sowSections = parseSections(section.content || '');
+
 
     return (
         <div
@@ -267,7 +281,7 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkS
                         </div>
                     </div>
                     <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
-                        {section.title || (section.type === 'legal' ? 'Terms & Conditions' : 'Scope of Work')}
+                        {section.title || (section.type === 'legal' ? 'Payment Terms and Conditions' : 'Scope of Work')}
                     </h2>
                     {section.subtitle && (
                         <p className="text-white/70 mt-2">

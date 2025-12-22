@@ -49,6 +49,7 @@ export interface Quote {
   quoteNumber: string;
   customerId: string;
   customerName: string;
+  contactName?: string; // Derived from customer contact items
   title: string;
   items: QuoteItem[];
   subtotal: number;

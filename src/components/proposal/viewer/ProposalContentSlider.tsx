@@ -249,9 +249,9 @@ function SlideContent({
           settings={settings}
         />;
       case 'legal':
-        return <ScopeOfWorkSlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} />;
+        return <ScopeOfWorkSlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} settings={settings} />;
       case 'scopeOfWork':
-        return <ScopeOfWorkSlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} />;
+        return <ScopeOfWorkSlide section={section} isOwner={isOwner} onEditImage={(url) => onEditSectionImage?.(section.id, url)} settings={settings} />;
       default:
         return null;
     }
