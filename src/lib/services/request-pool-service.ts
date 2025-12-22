@@ -12,7 +12,14 @@ let activeRequests = 0;
  * Execute request with connection pooling to limit concurrent requests
  */
 export async function executeWithPool<T>(requestFn: () => Promise<T>): Promise<T> {
+  const startTime = Date.now();
+  const POOL_WAIT_TIMEOUT = 10000; // 10 seconds timeout for waiting on pool
+
   while (activeRequests >= MAX_CONCURRENT_REQUESTS) {
+    if (Date.now() - startTime > POOL_WAIT_TIMEOUT) {
+      console.warn('[Pool] Wait timeout exceeded, forcing request through. Current active:', activeRequests);
+      break;
+    }
     await new Promise(resolve => setTimeout(resolve, 50));
   }
 
@@ -44,6 +51,12 @@ declare global {
 // Expose for debugging in Diagnostics page
 if (typeof window !== 'undefined') {
   window.__inFlightRequests = inFlightRequests;
+  (window as any).__resetRequestPool = () => {
+    console.log('[Pool] Manual reset triggered');
+    activeRequests = 0;
+    clearInFlightRequests();
+    return "Pool reset successfully";
+  };
 }
 
 /**

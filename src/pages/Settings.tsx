@@ -63,7 +63,7 @@ const parseVisualRules = (rules: any): VisualRule[] => {
 export default function Settings() {
   const navigate = useNavigate();
   const { themeMode } = useTheme();
-  const { user, userRole, isAdmin, isMaxAITier, organizationId, updateUserRole, checkUserRole, subscription, refreshSubscription } = useAuth();
+  const { user, userRole, isAdmin, isDevAccount, isMaxAITier, organizationId, updateUserRole, checkUserRole, subscription, refreshSubscription } = useAuth();
   const { isDemoMode, setDemoMode } = useDemoMode();
   const { queueChange, pauseSync, resumeSync, isOnline, isSyncing, pendingCount, failedCount } = useSyncManager();
 
@@ -488,6 +488,22 @@ export default function Settings() {
             <CardContent className="space-y-6">
               <ProposalThemeSelector settings={settings} onUpdate={handleUpdateSettings} />
               <Separator />
+
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="space-y-0.5">
+                  <Label htmlFor="showImages">Show Rich Images in Proposals</Label>
+                  <div className="text-xs text-muted-foreground">
+                    Display high-quality industry photos in proposal headers and sections
+                  </div>
+                </div>
+                <Switch
+                  id="showImages"
+                  checked={settings.showProposalImages ?? true}
+                  onCheckedChange={(checked) => handleUpdateSettings({ showProposalImages: checked })}
+                />
+              </div>
+
+              <Separator />
               <TermsSection settings={settings} onUpdate={handleUpdateSettings} />
             </CardContent>
           </Card>
@@ -501,8 +517,6 @@ export default function Settings() {
             settings={settings}
             onUpdate={handleUpdateSettings}
           />
-
-          <AppearanceSection />
         </TabsContent>
 
         {/* INTEGRATIONS TAB */}
@@ -514,7 +528,9 @@ export default function Settings() {
         <TabsContent value="system" className="space-y-6">
           <DataManagementSection />
 
-          {isAdmin && (
+          <AppearanceSection />
+
+          {isDevAccount && (
             <>
               <CacheManagementSection />
 
@@ -522,7 +538,7 @@ export default function Settings() {
             </>
           )}
 
-          {isAdmin && (
+          {isDevAccount && (
             <>
               <Card>
                 <CardHeader>
@@ -584,7 +600,7 @@ export default function Settings() {
             </>
           )}
 
-          {isAdmin && (
+          {isDevAccount && (
             <Card className="border-primary/50 bg-primary/5">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

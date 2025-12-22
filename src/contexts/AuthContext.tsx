@@ -25,7 +25,9 @@ interface AuthContextType {
   isProTier: boolean;
   isBusinessTier: boolean;
   isEnterpriseTier: boolean;
+  isEnterpriseTier: boolean;
   isMaxAITier: boolean;
+  isDevAccount: boolean;
   loading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
@@ -55,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isBusinessTier = userRole === 'business' || userRole === 'enterprise' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
   const isEnterpriseTier = userRole === 'enterprise' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
   const isMaxAITier = userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
+  const isDevAccount = user?.email === 'quoteitai@gmail.com' || isAdmin;
 
   const checkUserRole = async (sessionToUse?: Session | null) => {
     if (roleCheckInProgress.current) {
@@ -176,10 +179,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (orgData) {
         setSubscription(prev => ({
-          ...prev,
-          trialStatus: orgData.subscription_status,
-          trialEnd: orgData.trial_end_date,
-          trialAIUsage: orgData.trial_ai_usage
+          ...prev!,
+          trialStatus: (orgData as any).subscription_status,
+          trialEnd: (orgData as any).trial_end_date,
+          trialAIUsage: (orgData as any).trial_ai_usage
         }));
       }
     } catch (error) {
@@ -402,7 +405,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Load subscription in background
       loadSubscription(data.session.user.id).catch(console.error);
 
-      toast.success('Signed in successfully!');
+      // toast.success('Signed in successfully!'); // Removed to prevent duplicate with Auth.tsx
 
       // Navigate to dashboard immediately - React will handle the rest
       navigate('/dashboard');
@@ -417,7 +420,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      // Add a timeout to sign out to ensure we clear local state even if the network is flaky
+      const signOutPromise = supabase.auth.signOut();
+      await Promise.race([
+        signOutPromise,
+        new Promise(resolve => setTimeout(resolve, 2000))
+      ]);
     } catch (error) {
       console.error('Sign out error:', error);
     } finally {
@@ -443,6 +451,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isBusinessTier,
         isEnterpriseTier,
         isMaxAITier,
+        isDevAccount,
         loading,
         signUp,
         signIn,

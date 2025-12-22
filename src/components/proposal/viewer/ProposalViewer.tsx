@@ -430,7 +430,6 @@ export function ProposalViewer({
                 onAccept={handleAccept}
                 onDecline={handleDecline}
                 onComment={handleCommentInternal}
-                onDownload={handleDownloadPDF}
                 isProcessing={isProcessing}
               />
             )}

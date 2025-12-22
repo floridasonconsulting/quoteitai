@@ -185,54 +185,41 @@ Format as clear, professional terms and conditions.`;
           />
         </div>
 
-        <div className="flex items-center space-x-2 pt-2 border-t">
-          <Checkbox
-            id="showPricing"
-            checked={showPricing}
-            onCheckedChange={onShowPricingChange}
-          />
-          <Label
-            htmlFor="showPricing"
-            className="text-sm font-normal cursor-pointer"
-          >
-            Show individual item pricing in proposal
-          </Label>
-        </div>
+      </div>
 
-        {showPricing && (
-          <div className="space-y-2 pt-2 border-t">
-            <Label htmlFor="pricingMode">Pricing Breakdown Display</Label>
-            <Select
-              value={pricingMode}
-              onValueChange={(val: any) => onPricingModeChange(val)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select display mode" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="category_total">
-                  <div className="flex flex-col">
-                    <span className="font-bold">Category Totals (Default)</span>
-                    <span className="text-xs text-muted-foreground">Detailed items without individual prices</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="itemized">
-                  <div className="flex flex-col">
-                    <span className="font-bold">Fully Itemized</span>
-                    <span className="text-xs text-muted-foreground">Show price for every single item</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="grand_total">
-                  <div className="flex flex-col">
-                    <span className="font-bold">Grand Total Only</span>
-                    <span className="text-xs text-muted-foreground">Hide all items and category breakdowns</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="space-y-2 pt-2 border-t">
+        <Label htmlFor="pricingMode">Pricing Breakdown Display</Label>
+        <Select
+          value={pricingMode}
+          onValueChange={(val: any) => onPricingModeChange(val)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select display mode" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="category_total">
+              <div className="flex flex-col">
+                <span className="font-bold">Category Totals (Default)</span>
+                <span className="text-xs text-muted-foreground">Detailed items without individual prices</span>
+              </div>
+            </SelectItem>
+            <SelectItem value="itemized">
+              <div className="flex flex-col">
+                <span className="font-bold">Fully Itemized</span>
+                <span className="text-xs text-muted-foreground">Show price for every single item</span>
+              </div>
+            </SelectItem>
+            <SelectItem value="grand_total">
+              <div className="flex flex-col">
+                <span className="font-bold">Grand Total Only</span>
+                <span className="text-xs text-muted-foreground">Hide all items and category breakdowns</span>
+              </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
         )}
-      </CardContent>
-    </Card>
+    </CardContent>
+    </Card >
   );
 }

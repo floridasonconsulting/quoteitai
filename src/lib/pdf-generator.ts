@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable, { UserOptions } from "jspdf-autotable";
 import { Quote, Customer, CompanySettings } from "@/types";
+import { normalizeCategory } from "./proposal-categories";
 
 // Helper function to format currency, assuming it's in utils
 // If not, we might need to create it. For now, assuming it exists.
@@ -176,13 +177,23 @@ export function renderTermsAndNotes(
     pdf.setFontSize(8);
 
     // Clean JSON content if present
-    let termsText = settings.terms;
-    if (termsText.startsWith('{') || termsText.startsWith('[')) {
+    let termsText = settings.terms || "";
+    if (typeof termsText === 'string' && (termsText.trim().startsWith('{') || termsText.trim().startsWith('['))) {
       try {
         const parsed = JSON.parse(termsText);
-        // If it's the rich text format we sometimes use
-        if (parsed.content) termsText = parsed.content;
-        else if (Array.isArray(parsed)) termsText = parsed.join('\n');
+        // Handle TipTap standard object
+        if (parsed.type === 'doc' && Array.isArray(parsed.content)) {
+          termsText = parsed.content
+            .map((p: any) => p.content?.map((c: any) => c.text).join('') || '')
+            .join('\n');
+        }
+        // Handle custom rich text format
+        else if (parsed.content && typeof parsed.content === 'string') {
+          termsText = parsed.content;
+        }
+        else if (Array.isArray(parsed)) {
+          termsText = parsed.join('\n');
+        }
       } catch (e) {
         // Not actual JSON or parse failed, use as is
       }
@@ -309,14 +320,16 @@ export function generateClassicPDF(
     ]);
   } else {
     // Group by category for 'category_total' mode
-    const categories = Array.from(new Set(quote.items.map(i => i.category || 'Other')));
+    console.log('[PDF] Grouping items by category. Total items:', quote.items.length);
+    const categories = Array.from(new Set(quote.items.map(i => normalizeCategory(i.category, i.name))));
+    console.log('[PDF] Found categories:', categories);
     tableHeaders = [["Category", "Items", "Total"]];
     tableData = categories.map(cat => {
-      const catItems = quote.items.filter(i => (i.category || 'Other') === cat);
+      const catItems = quote.items.filter(i => normalizeCategory(i.category, i.name) === cat);
       const catTotal = catItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
       return [
         cat,
-        catItems.map(i => i.name).join(", "),
+        catItems.map(i => i.name).join("\n"),
         formatCurrency(catTotal, settings.currency)
       ];
     });
@@ -382,14 +395,14 @@ export function generateModernPDF(
       formatCurrency(item.quantity * item.price, settings.currency),
     ]);
   } else {
-    const categories = Array.from(new Set(quote.items.map(i => i.category || 'Other')));
+    const categories = Array.from(new Set(quote.items.map(i => normalizeCategory(i.category, i.name))));
     tableHeaders = [["Category", "Included Items", "Total"]];
     tableData = categories.map(cat => {
-      const catItems = quote.items.filter(i => (i.category || 'Other') === cat);
+      const catItems = quote.items.filter(i => normalizeCategory(i.category, i.name) === cat);
       const catTotal = catItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
       return [
         cat,
-        catItems.map(i => i.name).join(", "),
+        catItems.map(i => i.name).join("\n"),
         formatCurrency(catTotal, settings.currency)
       ];
     });
@@ -455,14 +468,14 @@ export function generateDetailedPDF(
       formatCurrency(item.quantity * item.price, settings.currency),
     ]);
   } else {
-    const categories = Array.from(new Set(quote.items.map(i => i.category || 'Other')));
+    const categories = Array.from(new Set(quote.items.map(i => normalizeCategory(i.category, i.name))));
     tableHeaders = [["Category", "Items", "TotalValue"]];
     tableData = categories.map(cat => {
-      const catItems = quote.items.filter(i => (i.category || 'Other') === cat);
+      const catItems = quote.items.filter(i => normalizeCategory(i.category, i.name) === cat);
       const catTotal = catItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
       return [
         cat,
-        catItems.map(i => i.name).join(", "),
+        catItems.map(i => i.name).join("\n"),
         formatCurrency(catTotal, settings.currency)
       ];
     });

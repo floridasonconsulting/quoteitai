@@ -444,33 +444,34 @@ export default function Customers() {
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Business/Company Name *</Label>
+                    <Label htmlFor="name">Business/Company Name (Optional)</Label>
                     <Input
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       placeholder="Acme Corporation"
-                      required
                     />
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="contactFirstName">Contact First Name</Label>
+                      <Label htmlFor="contactFirstName">Contact First Name *</Label>
                       <Input
                         id="contactFirstName"
                         value={formData.contactFirstName}
                         onChange={(e) => setFormData({ ...formData, contactFirstName: e.target.value })}
                         placeholder="John"
+                        required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="contactLastName">Contact Last Name</Label>
+                      <Label htmlFor="contactLastName">Contact Last Name *</Label>
                       <Input
                         id="contactLastName"
                         value={formData.contactLastName}
                         onChange={(e) => setFormData({ ...formData, contactLastName: e.target.value })}
                         placeholder="Doe"
+                        required
                       />
                     </div>
                   </div>

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Edit3, FileText } from 'lucide-react';
 import { getCustomers, getItems, addQuote, updateQuote, getSettings, getQuotes } from '@/lib/db-service';
 import { generateQuoteNumber, calculateItemTotal, calculateQuoteTotal } from '@/lib/quote-utils';
 import { Customer, Item, Quote, QuoteItem } from '@/types';
@@ -61,16 +62,41 @@ export default function NewQuote() {
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
 
-  // Helper to strip markdown code blocks from AI responses
-  const stripMarkdownCodeBlocks = (text: string): string => {
-    return text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  // Helper to strip markdown and clean TipTap JSON
+  const cleanContentForEditor = (text: string): string => {
+    if (!text) return '';
+
+    // Check if it's TipTap JSON
+    if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+      try {
+        const parsed = JSON.parse(text);
+        // Handle TipTap standard object
+        if (parsed.type === 'doc' && Array.isArray(parsed.content)) {
+          return parsed.content
+            .map((p: any) => p.content?.map((c: any) => c.text).join('') || '')
+            .join('\n');
+        }
+        // Handle custom rich text format
+        else if (parsed.content && typeof parsed.content === 'string') {
+          return parsed.content;
+        }
+        else if (Array.isArray(parsed)) {
+          return parsed.join('\n');
+        }
+      } catch (e) {
+        // Not actual JSON or parse failed, return as is
+      }
+    }
+
+    // Strip markdown code blocks if present
+    return text.replace(/```(json|markdown)?\s*/g, '').replace(/```\s*/g, '').trim();
   };
 
   // AI hooks
   const titleAI = useAI('quote_title', {
     onSuccess: (content) => {
       try {
-        const cleaned = stripMarkdownCodeBlocks(content);
+        const cleaned = cleanContentForEditor(content);
         const parsed = JSON.parse(cleaned);
         if (parsed.titles && parsed.titles[0]) {
           setQuoteTitle(parsed.titles[0]);
@@ -84,7 +110,7 @@ export default function NewQuote() {
 
   const notesAI = useAI('notes_generator', {
     onSuccess: (content) => {
-      const cleaned = stripMarkdownCodeBlocks(content);
+      const cleaned = cleanContentForEditor(content);
       setQuoteNotes(cleaned);
     },
   });
@@ -134,9 +160,9 @@ export default function NewQuote() {
       setSelectedCustomerId(editQuote.customerId);
       setQuoteTitle(editQuote.title);
       setQuoteItems(editQuote.items);
-      setQuoteNotes(editQuote.notes || '');
       setExecutiveSummary(editQuote.executiveSummary || '');
-      setScopeOfWork(editQuote.scopeOfWork || ''); // Load SOW
+      setScopeOfWork(cleanContentForEditor(editQuote.scopeOfWork || '')); // Load SOW
+      setQuoteNotes(cleanContentForEditor(editQuote.notes || '')); // Load Terms/Notes
       setShowPricing(editQuote.showPricing !== false);
       setPricingMode(editQuote.pricingMode || 'category_total');
     }
@@ -151,9 +177,9 @@ export default function NewQuote() {
         setSelectedCustomerId(quoteToEdit.customerId);
         setQuoteTitle(quoteToEdit.title);
         setQuoteItems(quoteToEdit.items);
-        setQuoteNotes(quoteToEdit.notes || '');
         setExecutiveSummary(quoteToEdit.executiveSummary || '');
-        setScopeOfWork(quoteToEdit.scopeOfWork || ''); // Load SOW
+        setScopeOfWork(cleanContentForEditor(quoteToEdit.scopeOfWork || '')); // Load SOW
+        setQuoteNotes(cleanContentForEditor(quoteToEdit.notes || '')); // Load Terms/Notes
         setShowPricing(quoteToEdit.showPricing !== false);
         setPricingMode(quoteToEdit.pricingMode || 'category_total');
 
@@ -688,18 +714,42 @@ export default function NewQuote() {
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="sow-content">Content Editor</Label>
-                    <Textarea
-                      id="sow-content"
-                      value={scopeOfWork}
-                      onChange={(e) => setScopeOfWork(e.target.value)}
-                      placeholder="Scope of work content will appear here..."
-                      className="min-h-[300px] md:min-h-[500px] font-mono text-sm leading-relaxed"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Tip: Use Markdown formatting (## for headers, • for lists) to style your document.
-                    </p>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="sow-content" className="flex items-center gap-2">
+                        <Edit3 className="h-4 w-4" />
+                        Professional Content Editor
+                      </Label>
+                      <Textarea
+                        id="sow-content"
+                        value={scopeOfWork}
+                        onChange={(e) => setScopeOfWork(e.target.value)}
+                        placeholder="Scope of work content will appear here..."
+                        className="min-h-[400px] md:min-h-[600px] text-sm leading-relaxed p-6 glass-card border-white/20 bg-white/5 backdrop-blur-md"
+                      />
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        Markdown formatting (## Headers, • Bullets) is automatically applied to proposals.
+                      </p>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                      <Label htmlFor="terms-content" className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Terms & Conditions Editor
+                      </Label>
+                      <Textarea
+                        id="terms-content"
+                        value={quoteNotes}
+                        onChange={(e) => setQuoteNotes(e.target.value)}
+                        placeholder="Enter payment terms, warranties, and legal notes..."
+                        className="min-h-[200px] text-sm leading-relaxed p-6 glass-card border-white/20 bg-white/5 backdrop-blur-md"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Tip: Use clear sections for payment terms, warranties, and project-specific notes.
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
