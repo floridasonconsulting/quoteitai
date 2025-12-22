@@ -20,6 +20,7 @@ import { cacheManager } from './cache-manager';
 import { setStorageItem } from './storage';
 import { withTimeout } from './services/request-pool-service';
 import { supabase } from '@/integrations/supabase/client';
+import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 
 // Re-export everything from the specialized services
 export * from './services/quote-service';
@@ -48,28 +49,29 @@ interface SyncChange {
 export const getSettings = async (userId: string, organizationId: string | null = null): Promise<CompanySettings> => {
   console.log('[db-service] getSettings called with userId:', userId);
 
-  // Try IndexedDB first if supported
+  // 1. Try CacheManager first (now with stale-while-revalidate)
+  const cached = await cacheManager.get<CompanySettings>('settings', userId);
+  if (cached && (cached.name || cached.email)) {
+    console.log('[db-service] ✓ Retrieved settings from CacheManager');
+    return cached;
+  }
+
+  // 2. Try IndexedDB 
   if (isIndexedDBSupported()) {
     try {
       const indexedDBSettings = await SettingsDB.get(userId);
       if (indexedDBSettings && (indexedDBSettings.name || indexedDBSettings.email)) {
         console.log('[db-service] ✓ Retrieved settings from IndexedDB');
+        await cacheManager.set('settings', indexedDBSettings, userId);
         return indexedDBSettings;
       }
     } catch (error) {
-      console.warn('[db-service] IndexedDB read failed, falling back to localStorage:', error);
+      console.warn('[db-service] IndexedDB read failed:', error);
     }
   }
 
-  // Fall back to localStorage
-  const localStorageSettings = storageGetSettings(userId);
-  if (localStorageSettings && (localStorageSettings.name || localStorageSettings.email)) {
-    console.log('[db-service] ✓ Retrieved settings from localStorage');
-    return localStorageSettings;
-  }
-
-  // Final fallback: Try Supabase since local storage is empty
-  console.log('[db-service] 🔍 Local settings missing, attempting Supabase fallback...');
+  // 3. Fall back to Supabase
+  console.log('[db-service] 🔍 Local settings missing or stale, attempting Supabase fetch...');
   try {
     const { data: dbSettings, error } = await withTimeout(
       Promise.resolve(
@@ -124,6 +126,7 @@ export const getSettings = async (userId: string, organizationId: string | null 
     console.error('[db-service] Unexpected error in getSettings fallback:', error);
   }
 
+  const localStorageSettings = storageGetSettings(userId);
   return localStorageSettings;
 };
 
@@ -133,40 +136,17 @@ export async function saveSettings(
   settings: CompanySettings,
   queueChange?: (change: SyncChange) => void
 ): Promise<void> {
-  console.log('[DB Service] ========== SAVING SETTINGS ==========');
-  console.log('[DB Service] User ID:', userId);
-  console.log('[DB Service] Settings data:', {
-    name: settings.name,
-    email: settings.email,
-    phone: settings.phone,
-    address: settings.address,
-    hasLogo: !!settings.logo,
-    terms: settings.terms?.substring(0, 50) + '...',
-    proposalTheme: settings.proposalTheme
-  });
-
   try {
-    // Step 1: Store in memory cache first
+    // Step 1: Store in storage/cache immediately for UI responsiveness
     const cacheKey = `settings-${userId}`;
-    await cacheManager.set(cacheKey, settings);
-    console.log('[DB Service] ✓ Settings cached in memory');
+    await cacheManager.set('settings', settings, userId);
 
-    // Step 2: Store in IndexedDB
     if (isIndexedDBSupported()) {
-      try {
-        await SettingsDB.set(userId, settings);
-        console.log('[DB Service] ✓ Settings saved to IndexedDB');
-      } catch (indexedDBError) {
-        console.error('[DB Service] IndexedDB save failed:', indexedDBError);
-        // Fallback to localStorage
-        setStorageItem(`settings-${userId}`, settings);
-        console.log('[DB Service] ✓ Settings saved to localStorage (fallback)');
-      }
-    } else {
-      // No IndexedDB support, use localStorage
-      setStorageItem(`settings-${userId}`, settings);
-      console.log('[DB Service] ✓ Settings saved to localStorage');
+      await SettingsDB.set(userId, settings).catch(e => console.error('IDB set failed:', e));
     }
+    setStorageItem(`settings_${userId}`, settings);
+
+    console.log('[DB Service] ✓ Settings updated locally');
 
     // Step 3: ALWAYS attempt Supabase save (even if offline, we'll queue it)
     console.log('[DB Service] Attempting Supabase save...');
@@ -228,115 +208,50 @@ export async function saveSettings(
     });
 
     if (navigator.onLine) {
-      // Use upsert with proper conflict resolution
-      let query = supabase.from('company_settings' as any).select('*');
-
-      if (organizationId) {
-        query = query.eq('organization_id', organizationId);
-      } else {
-        query = query.eq('user_id', userId);
-      }
-
-      const { data: supabaseSettings, error: selectError } = await (query as any).maybeSingle();
-
-      if (selectError) {
-        console.error('[DB Service] ❌ Supabase select error:', selectError);
-        throw selectError;
-      }
-
-      let upsertResult;
-      if (supabaseSettings) {
-        // Record exists, perform an update
-        upsertResult = await (supabase
-          .from('company_settings' as any)
-          .update(dbSettings)
-          .eq(organizationId ? 'organization_id' : 'user_id', organizationId || userId)
-          .select()
-          .single() as any);
-      } else {
-        // Record does not exist, perform an insert
-        upsertResult = await (supabase
-          .from('company_settings' as any)
-          .insert(dbSettings)
-          .select()
-          .single() as any);
-      }
-
-      const { data, error } = upsertResult;
+      // Use upsert with a 15s timeout
+      const { error } = await withTimeout(
+        Promise.resolve(
+          supabase
+            .from('company_settings' as any)
+            .upsert(dbSettings, {
+              onConflict: organizationId ? 'organization_id' : 'user_id',
+              ignoreDuplicates: false
+            })
+        ),
+        15000
+      ) as any;
 
       if (error) {
         console.error('[DB Service] ❌ Supabase upsert error:', error);
 
-        if (error.message?.includes("column") || error.code === 'PGRST204' || error.message?.includes("industry") || error.message?.includes("show_proposal_images")) {
-          console.warn('[DB Service] ⚠️ Database column mismatch detected. Retrying with base columns...');
-
-          // Base columns that are guaranteed to exist in the original schema
+        // Resilience logic for schema mismatches
+        if (error.message?.includes("column") || error.code === 'PGRST204') {
           const baseColumns = [
             'user_id', 'name', 'address', 'city', 'state', 'zip', 'phone', 'email',
             'website', 'logo', 'logo_display_option', 'license', 'insurance', 'terms',
             'proposal_template', 'proposal_theme', 'notify_email_accepted',
             'notify_email_declined', 'onboarding_completed', 'updated_at'
           ];
-
           const resilientSettings: any = {};
           baseColumns.forEach(col => {
-            if ((dbSettings as any)[col] !== undefined) {
-              resilientSettings[col] = (dbSettings as any)[col];
-            }
+            if ((dbSettings as any)[col] !== undefined) resilientSettings[col] = (dbSettings as any)[col];
           });
 
-          // Also try to include branding colors if they exist (added in recent migration)
-          if ((dbSettings as any).primary_color) resilientSettings.primary_color = (dbSettings as any).primary_color;
-          if ((dbSettings as any).accent_color) resilientSettings.accent_color = (dbSettings as any).accent_color;
-          if ((dbSettings as any).organization_id) resilientSettings.organization_id = (dbSettings as any).organization_id;
-
-          console.log('[DB Service] Attempting resilient save with columns:', Object.keys(resilientSettings));
-
-          const { data: retryData, error: retryError } = await (supabase
-            .from('company_settings' as any)
-            .update(resilientSettings)
-            .eq('user_id', userId)
-            .select()
-            .single() as any);
-
-          if (retryError) {
-            console.error('[DB Service] ❌ Resilient retry failed:', retryError);
-            throw retryError;
-          }
-
-          console.log('[DB Service] ✓ Settings saved successfully using resilient fallback');
-          return;
+          await withTimeout(
+            Promise.resolve(
+              supabase.from('company_settings' as any).upsert(resilientSettings, { onConflict: 'user_id' })
+            ),
+            10000
+          );
+        } else {
+          throw error;
         }
-
-        console.error('[DB Service] Full Error JSON:', JSON.stringify(error, null, 2));
-        throw error;
       }
 
-      console.log('[DB Service] ✓ Settings saved to Supabase successfully');
-      console.log('[DB Service] Supabase returned data:', data ? 'data received' : 'no data');
-
-      // Verify the save by reading back
-      const { data: verifyData, error: verifyError } = await (supabase
-        .from('company_settings' as any)
-        .select('name, email, terms, industry, license, insurance, show_proposal_images, show_financing, financing_text, financing_link')
-        .eq(organizationId ? 'organization_id' : 'user_id', organizationId || userId)
-        .single() as any);
-
-      if (verifyError) {
-        console.error('[DB Service] ❌ Verification failed:', verifyError);
-      } else {
-        const vData = verifyData as any;
-        console.log('[DB Service] ✓ Verified save:', {
-          name: vData.name,
-          email: vData.email,
-          industry: vData.industry,
-          showProposalImages: vData.show_proposal_images,
-          termsLength: vData.terms?.length || 0
-        });
-      }
+      console.log('[DB Service] ✓ Settings saved to Supabase');
+      dispatchDataRefresh('quotes-changed');
     } else {
       console.log('[DB Service] Offline - queuing for sync');
-      // Offline: queue for sync
       if (queueChange) {
         queueChange({
           id: `settings-${userId}`,
@@ -345,7 +260,6 @@ export async function saveSettings(
           data: settings,
           timestamp: Date.now()
         });
-        console.log('[DB Service] ✓ Settings queued for sync');
       }
     }
 

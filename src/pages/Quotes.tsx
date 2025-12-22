@@ -22,6 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { debugQuoteStorage, nuclearClearAllQuotes } from '@/lib/debug-quotes';
 import { BatchQuoteDialog } from '@/components/BatchQuoteDialog';
 import { FollowUpNotificationDialog } from '@/components/FollowUpNotificationDialog';
+import { useDataRefresh } from '@/hooks/useDataRefresh';
 
 export default function Quotes() {
   const navigate = useNavigate();
@@ -101,6 +102,12 @@ export default function Quotes() {
       loadNotificationFilter();
     }
   }, [searchParams, user, loadQuotes]);
+
+  // Listen for data refresh events
+  useDataRefresh('quotes-changed', () => {
+    console.log('[Quotes] Received refresh signal, re-fetching...');
+    loadQuotes(true);
+  });
 
   const loadNotificationFilter = async () => {
     if (!user) return;

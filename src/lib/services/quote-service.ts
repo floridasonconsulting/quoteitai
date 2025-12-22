@@ -249,11 +249,16 @@ export async function addQuote(
   // 3. Save to Supabase
   try {
     const dbQuote = toSnakeCase(quoteWithUser);
-    const { data: insertedData, error } = await supabase
-      .from('quotes' as any)
-      .insert(dbQuote as any)
-      .select()
-      .single();
+    const { data: insertedData, error } = await withTimeout(
+      Promise.resolve(
+        supabase
+          .from('quotes' as any)
+          .insert(dbQuote as any)
+          .select()
+          .single()
+      ),
+      15000
+    ) as any;
 
     if (error) throw error;
 
@@ -340,7 +345,10 @@ export async function updateQuote(
       query = query.eq('user_id', userId);
     }
 
-    const { error } = await query;
+    const { error } = await withTimeout(
+      Promise.resolve(query),
+      15000
+    ) as any;
 
     if (error) throw error;
 

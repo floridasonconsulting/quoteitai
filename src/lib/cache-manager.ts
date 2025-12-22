@@ -58,7 +58,7 @@ const CACHE_CONFIGS: Record<string, CacheConfig> = {
     ttl: 30 * 60 * 1000, // 30 minutes
     priority: 'high',
     preload: true,
-    strategy: 'cache-first',
+    strategy: 'stale-while-revalidate',
   },
 };
 
@@ -104,7 +104,7 @@ export class CacheManager {
   private isValid<T>(entry: CacheEntry<T> | null, config: CacheConfig): boolean {
     if (!entry) return false;
     if (entry.version !== CACHE_VERSION) return false;
-    
+
     const age = Date.now() - entry.timestamp;
     return age < config.ttl;
   }
@@ -112,32 +112,35 @@ export class CacheManager {
   /**
    * Get from cache (memory-first, then IndexedDB)
    */
-  async get<T>(entityType: string, id?: string): Promise<T | null> {
+  async get<T>(entityType: string, id?: string, force?: boolean): Promise<T | null> {
+    if (force) return null;
     const startTime = Date.now();
     const cacheKey = this.getCacheKey(entityType, id);
     const config = this.getConfig(entityType);
 
     try {
-      // Try memory cache first (localStorage for speed)
+      // Memory cache miss or stale
       const memoryCache = localStorage.getItem(cacheKey);
       if (memoryCache) {
         const entry: CacheEntry<T> = JSON.parse(memoryCache);
-        
         if (this.isValid(entry, config)) {
           // Update metrics
           entry.hits++;
           entry.lastAccess = Date.now();
           localStorage.setItem(cacheKey, JSON.stringify(entry));
-          
           this.recordHit(Date.now() - startTime);
           console.log(`[CacheManager] Memory cache hit for ${cacheKey}`);
           return entry.data;
         }
+
+        if (config.strategy === 'stale-while-revalidate') {
+          console.log(`[CacheManager] Stale-while-revalidate hit for ${cacheKey}. Returning stale...`);
+          this.recordHit(Date.now() - startTime);
+          return entry.data;
+        }
       }
 
-      // Memory cache miss
       this.recordMiss(Date.now() - startTime);
-      console.log(`[CacheManager] Cache miss for ${cacheKey}`);
       return null;
     } catch (error) {
       this.recordError();
@@ -151,7 +154,7 @@ export class CacheManager {
    */
   async set<T>(entityType: string, data: T, id?: string): Promise<void> {
     const cacheKey = this.getCacheKey(entityType, id);
-    
+
     try {
       const entry: CacheEntry<T> = {
         data,
@@ -162,10 +165,58 @@ export class CacheManager {
       };
 
       // Store in memory cache
-      localStorage.setItem(cacheKey, JSON.stringify(entry));
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(entry));
+      } catch (e) {
+        if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+          console.warn('[CacheManager] LocalStorage quota exceeded, clearing old entries...');
+          this.evictOldEntries();
+          // Try again once
+          localStorage.setItem(cacheKey, JSON.stringify(entry));
+        } else {
+          throw e;
+        }
+      }
       console.log(`[CacheManager] Cached ${cacheKey}`);
     } catch (error) {
       console.error(`[CacheManager] Error setting cache for ${cacheKey}:`, error);
+    }
+  }
+
+  /**
+   * Evict old or low-priority cache entries to free up space
+   */
+  private evictOldEntries(): void {
+    const keys = Object.keys(localStorage);
+    const entries: { key: string; lastAccess: number; priority: string }[] = [];
+
+    keys.forEach(key => {
+      if (key.includes(':all') || key.split(':').length > 1) {
+        const entityType = key.split(':')[0];
+        const config = this.getConfig(entityType);
+        try {
+          const item = JSON.parse(localStorage.getItem(key) || '');
+          entries.push({ key, lastAccess: item.lastAccess || 0, priority: config.priority });
+        } catch (e) {
+          entries.push({ key, lastAccess: 0, priority: config.priority });
+        }
+      }
+    });
+
+    // Sort by priority (low first), then by last access (oldest first)
+    entries.sort((a, b) => {
+      const priorityMap: Record<string, number> = { low: 0, medium: 1, high: 2 };
+      if (priorityMap[a.priority] !== priorityMap[b.priority]) {
+        return priorityMap[a.priority] - priorityMap[b.priority];
+      }
+      return a.lastAccess - b.lastAccess;
+    });
+
+    // Remove bottom 20% of entries
+    const toRemove = Math.max(1, Math.floor(entries.length * 0.2));
+    for (let i = 0; i < toRemove; i++) {
+      localStorage.removeItem(entries[i].key);
+      console.log(`[CacheManager] Evicted ${entries[i].key} due to quota`);
     }
   }
 
@@ -174,7 +225,7 @@ export class CacheManager {
    */
   async invalidate(entityType: string, id?: string): Promise<void> {
     const cacheKey = this.getCacheKey(entityType, id);
-    
+
     try {
       localStorage.removeItem(cacheKey);
       console.log(`[CacheManager] Invalidated cache for ${cacheKey}`);
@@ -240,7 +291,7 @@ export class CacheManager {
    */
   async preload(entityTypes: string[]): Promise<void> {
     console.log(`[CacheManager] Preloading ${entityTypes.length} entity types`);
-    
+
     const preloadPromises = entityTypes
       .filter(type => {
         const config = this.getConfig(type);
@@ -259,7 +310,7 @@ export class CacheManager {
    */
   async warmCache(): Promise<void> {
     console.log('[CacheManager] Warming cache with high-priority resources');
-    
+
     // Preload high-priority entity types
     await this.preload(['customers', 'items', 'settings']);
   }
@@ -272,8 +323,8 @@ export class CacheManager {
       // Clear memory cache
       const keys = Object.keys(localStorage);
       keys.forEach(key => {
-        if (key.includes('customers:') || key.includes('items:') || 
-            key.includes('quotes:') || key.includes('settings:')) {
+        if (key.includes('customers:') || key.includes('items:') ||
+          key.includes('quotes:') || key.includes('settings:')) {
           localStorage.removeItem(key);
         }
       });
@@ -281,15 +332,15 @@ export class CacheManager {
       // Clear service worker caches
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         const messageChannel = new MessageChannel();
-        
+
         await new Promise<void>((resolve) => {
           messageChannel.port1.onmessage = () => resolve();
-          
+
           navigator.serviceWorker.controller?.postMessage(
             { type: 'CLEAR_ALL_CACHE' },
             [messageChannel.port2]
           );
-          
+
           setTimeout(resolve, 1000);
         });
       }
@@ -316,8 +367,8 @@ export class CacheManager {
       return {
         usage: estimate.usage || 0,
         quota: estimate.quota || 0,
-        percentage: estimate.quota 
-          ? Math.round(((estimate.usage || 0) / estimate.quota) * 100) 
+        percentage: estimate.quota
+          ? Math.round(((estimate.usage || 0) / estimate.quota) * 100)
           : 0,
       };
     }
@@ -335,12 +386,12 @@ export class CacheManager {
       cacheNames.map(async (name) => {
         const cache = await caches.open(name);
         const keys = await cache.keys();
-        
+
         // Calculate approximate size (this is expensive, so be careful)
         let totalSize = 0;
         // We limit size calculation to first 50 items to prevent blocking
         const sampleKeys = keys.slice(0, 50);
-        
+
         for (const request of sampleKeys) {
           try {
             const response = await cache.match(request);
@@ -352,12 +403,12 @@ export class CacheManager {
             // Ignore errors reading blob
           }
         }
-        
+
         // Estimate total based on sample if needed
         if (keys.length > 50) {
           totalSize = (totalSize / 50) * keys.length;
         }
-        
+
         return {
           name,
           size: totalSize,
@@ -365,7 +416,7 @@ export class CacheManager {
         };
       })
     );
-    
+
     return details;
   }
 
