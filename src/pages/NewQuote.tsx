@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Edit3, FileText } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { getCustomers, getItems, addQuote, updateQuote, getSettings, getQuotes } from '@/lib/db-service';
 import { generateQuoteNumber, calculateItemTotal, calculateQuoteTotal } from '@/lib/quote-utils';
 import { Customer, Item, Quote, QuoteItem } from '@/types';
@@ -29,6 +30,7 @@ import { FollowUpSettings } from '@/components/quote-form/FollowUpSettings';
 import { FollowUpSchedule } from '@/types';
 import { getFollowUpSchedule, saveFollowUpSchedule } from '@/lib/services/follow-up-service';
 import { UpgradePrompt } from '@/components/UpgradePrompt';
+import { Separator } from '@/components/ui/separator';
 
 interface LocationState {
   editQuote?: Quote;
@@ -38,7 +40,7 @@ export default function NewQuote() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
-  const { user, isAdmin, isMaxAITier, isProTier, isBusinessTier, organizationId } = useAuth();
+  const { user, subscription, isAdmin, isMaxAITier, isProTier, isBusinessTier, organizationId } = useAuth();
   const { queueChange } = useSyncManager();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [items, setItems] = useState<Item[]>([]);

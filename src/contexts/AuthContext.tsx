@@ -10,6 +10,9 @@ interface SubscriptionData {
   subscribed: boolean;
   product_id: string | null;
   subscription_end: string | null;
+  trialStatus?: string;
+  trialEnd?: string;
+  trialAIUsage?: number;
 }
 
 type UserRole = 'admin' | 'free' | 'pro' | 'max' | 'starter' | 'business' | 'enterprise' | 'max_ai';
@@ -24,7 +27,6 @@ interface AuthContextType {
   isAdmin: boolean;
   isProTier: boolean;
   isBusinessTier: boolean;
-  isEnterpriseTier: boolean;
   isEnterpriseTier: boolean;
   isMaxAITier: boolean;
   isDevAccount: boolean;
