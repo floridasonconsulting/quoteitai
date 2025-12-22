@@ -77,12 +77,12 @@ export function FeaturesSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 auto-rows-[220px] gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 md:auto-rows-[220px] gap-6">
           {bentoFeatures.map((feature, idx) => (
             <GlassCard
               key={idx}
               delay={idx * 0.1}
-              className={`${feature.span} flex flex-col justify-between group overflow-hidden p-8 md:p-10 md:pb-12`}
+              className={`${feature.span} flex flex-col justify-between group overflow-hidden p-8 md:p-10`}
             >
               <div className="relative z-10">
                 <div className="h-12 w-12 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/20 group-hover:border-primary/40 transition-all duration-500">
