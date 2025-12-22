@@ -26,16 +26,26 @@ serve(async (req) => {
 
     const { priceId, orgId, tier, totalSeats } = await req.json();
 
-    // Seat Bucket Logic
+    // Standardize Tier Logic
+    const activeTier = tier?.toLowerCase() || 'pro';
     const tierLimits = { pro: 2, business: 5 };
-    const includedSeats = tierLimits[tier as keyof typeof tierLimits] || 0;
+    const includedSeats = tierLimits[activeTier as keyof typeof tierLimits] || 1;
     const overageSeats = Math.max(0, (totalSeats || 0) - includedSeats);
 
-    // Get price IDs from env or fallback to one-time priceId if provided
-    const basePriceId = Deno.env.get(`STRIPE_${tier?.toUpperCase()}_BASE_PRICE_ID`) || priceId;
-    const seatPriceId = Deno.env.get(`STRIPE_${tier?.toUpperCase()}_SEAT_PRICE_ID`);
+    // Get price IDs from env with fallbacks for testing
+    const envBaseKey = `STRIPE_${activeTier.toUpperCase()}_BASE_PRICE_ID`;
+    const envSeatKey = `STRIPE_${activeTier.toUpperCase()}_SEAT_PRICE_ID`;
 
-    if (!basePriceId) throw new Error("Base Price ID is required");
+    const basePriceId = Deno.env.get(envBaseKey) || priceId;
+    const seatPriceId = Deno.env.get(envSeatKey);
+
+    console.log(`[Checkout] Creating session for ${activeTier}:`, {
+      basePrice: basePriceId,
+      seatPrice: seatPriceId,
+      overage: overageSeats
+    });
+
+    if (!basePriceId) throw new Error(`Price ID not found for tier: ${activeTier}`);
 
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
       {

@@ -35,7 +35,7 @@ export default function Auth() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast.error('Please enter both email and password');
       return;
@@ -43,7 +43,7 @@ export default function Auth() {
 
     setLoading(true);
     const { error } = await signIn(email, password);
-    
+
     if (error) {
       toast.error(error.message);
       setLoading(false);
@@ -56,7 +56,7 @@ export default function Auth() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast.error('Please enter both email and password');
       return;
@@ -72,11 +72,19 @@ export default function Auth() {
 
     setLoading(true);
     const { error } = await signUp(email, password);
-    
+
     if (error) {
       toast.error(error.message);
       setLoading(false);
     } else {
+      // Capture plan intent if present
+      const params = new URLSearchParams(location.search);
+      const plan = params.get('plan');
+      if (plan) {
+        sessionStorage.setItem('intended_plan', plan);
+        console.log(`[Auth] Saved intended plan to session: ${plan}`);
+      }
+
       // Success - clear form and show success message
       setEmail('');
       setPassword('');
@@ -103,7 +111,7 @@ export default function Auth() {
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="signin">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
@@ -133,7 +141,7 @@ export default function Auth() {
                 </Button>
               </form>
             </TabsContent>
-            
+
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">

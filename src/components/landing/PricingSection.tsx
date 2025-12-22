@@ -135,7 +135,7 @@ export function PricingSection() {
                   ? "bg-brand-pro text-primary-foreground hover:opacity-90 shadow-[0_0_15px_hsl(var(--primary)/0.4)]"
                   : "bg-muted text-foreground hover:bg-muted/80"
                   }`}
-                onClick={() => navigate("/auth")}
+                onClick={() => navigate(`/auth?plan=${plan.name.toLowerCase()}`)}
               >
                 {plan.cta}
                 {plan.highlighted && <Zap className="ml-2 h-4 w-4 fill-current" />}

@@ -43,6 +43,7 @@ const SUBSCRIPTION_TIERS = {
       '$20/mo per extra seat (up to 4)',
       'Everything in Pro',
     ],
+    badge: 'BEST VALUE FOR CLOSERS'
   },
 };
 
@@ -137,7 +138,7 @@ export default function Subscription() {
           <CardDescription className="text-2xl font-bold">
             $0/forever
           </CardDescription>
-          <p className="text-sm text-muted-foreground mt-2">1 User • 5 quotes per month</p>
+          <p className="text-sm text-muted-foreground mt-2">1 User • 10 quotes per month</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <ul className="space-y-2">
@@ -147,7 +148,7 @@ export default function Subscription() {
             </li>
             <li className="flex items-start gap-2 text-sm">
               <Check className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
-              <span>5 quotes per month</span>
+              <span>10 quotes per month</span>
             </li>
             <li className="flex items-start gap-2 text-sm">
               <Check className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
@@ -177,10 +178,10 @@ export default function Subscription() {
 
           return (
             <Card key={key} className={`${isActive ? 'border-primary' : ''} ${isPopular ? 'border-primary shadow-lg scale-105' : ''} relative`}>
-              {isPopular && (
+              {tier.badge && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <Badge className="bg-primary text-primary-foreground">
-                    Most Popular
+                    {tier.badge}
                   </Badge>
                 </div>
               )}

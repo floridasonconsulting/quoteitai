@@ -11,15 +11,16 @@ import { getAgingSummary, getQuoteAge } from "@/lib/quote-utils";
 import { Quote, Customer } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useLoadingState } from "@/hooks/useLoadingState";
+import { supabase } from "@/integrations/supabase/client";
 import { AdvancedAnalytics } from "@/components/AdvancedAnalytics";
 import { BasicStatCards } from "@/components/dashboard/BasicStatCards";
 import { storageCache } from "@/lib/storage-cache";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, loading: authLoading, userRole, isAdmin, isMaxAITier, organizationId } = useAuth();
+  const { user, loading: authLoading, userRole, isAdmin, isMaxAITier, organizationId, subscription, refreshSubscription } = useAuth();
   const { startLoading, stopLoading } = useLoadingState();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +55,47 @@ export default function Dashboard() {
       }
     };
   }, [user]);
+
+  // Handle automated checkout redirect for trials
+  useEffect(() => {
+    const intendedPlan = sessionStorage.getItem('intended_plan');
+    if (intendedPlan && !subscription?.subscribed && user?.id) {
+      console.log(`[Dashboard] Found intended plan: ${intendedPlan}. Redirecting to checkout...`);
+      sessionStorage.removeItem('intended_plan');
+
+      const priceId = intendedPlan === 'business' ? 'price_business_monthly' : 'price_pro_monthly';
+
+      setTimeout(() => {
+        handleSubscribe(priceId, intendedPlan);
+      }, 1500);
+    }
+  }, [subscription, user?.id]);
+
+  const handleSubscribe = async (priceId: string, tier?: string) => {
+    const operationId = `subscribe-${Date.now()}`;
+    startLoading(operationId, "Preparing checkout session");
+
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          priceId,
+          tier,
+          orgId: organizationId
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('[Dashboard] Checkout error:', error);
+      toast.error('Failed to create checkout session. Please try again from the subscription page.');
+    } finally {
+      stopLoading(operationId);
+    }
+  };
 
   const loadData = async () => {
     if (hasLoadedData.current && !loading && quotes.length > 0) {
@@ -135,11 +177,7 @@ export default function Dashboard() {
       stopLoading(operationId);
       if (error instanceof Error && error.name !== 'AbortError') {
         setError("Failed to load dashboard data. Please try again.");
-        toast({
-          title: "Error loading data",
-          description: "Could not load dashboard. Please try refreshing.",
-          variant: "destructive",
-        });
+        toast.error("Could not load dashboard. Please try refreshing.");
       }
       setLoading(false);
     }
@@ -172,21 +210,14 @@ export default function Dashboard() {
       setRetryCount(0);
       setError(null);
 
-      toast({
-        title: "Cache cleared",
-        description: "All cached data has been cleared. Reloading...",
-      });
+      toast.success("All cached data has been cleared. Reloading...");
 
       setTimeout(() => {
         loadData();
       }, 500);
     } catch (error) {
       console.error("Error during reset:", error);
-      toast({
-        title: "Reset failed",
-        description: "Could not clear cache. Please try refreshing the page.",
-        variant: "destructive",
-      });
+      toast.error("Could not clear cache. Please try refreshing the page.");
     }
   };
 
