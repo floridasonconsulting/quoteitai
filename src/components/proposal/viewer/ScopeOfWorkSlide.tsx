@@ -277,37 +277,39 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage }: ScopeOfWorkS
                 </div>
 
                 {/* Scrollable SOW Content */}
-                className="h-[calc(100%-120px)] overflow-y-auto px-6 py-4 pb-40 md:pb-36 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent touch-pan-y"
-                <div className="max-w-3xl mx-auto space-y-6">
-                    {sowSections.length > 0 ? (
-                        sowSections.map((sec, index) => (
-                            <div
-                                key={index}
-                                className="bg-white/10 backdrop-blur-md rounded-xl p-5 border border-white/20"
-                            >
-                                <div className="flex items-center gap-3 mb-3">
-                                    <div className="p-2 bg-white/20 rounded-lg text-white">
-                                        {getIcon(sec.icon)}
+                <div
+                    className="h-[calc(100%-120px)] overflow-y-auto px-6 py-4 pb-40 md:pb-36 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent touch-pan-y"
+                >
+                    <div className="max-w-3xl mx-auto space-y-6">
+                        {sowSections.length > 0 ? (
+                            sowSections.map((sec, index) => (
+                                <div
+                                    key={index}
+                                    className="bg-white/10 backdrop-blur-md rounded-xl p-5 border border-white/20"
+                                >
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="p-2 bg-white/20 rounded-lg text-white">
+                                            {getIcon(sec.icon)}
+                                        </div>
+                                        <h3 className="text-xl font-semibold text-white">
+                                            {sec.title}
+                                        </h3>
                                     </div>
-                                    <h3 className="text-xl font-semibold text-white">
-                                        {sec.title}
-                                    </h3>
+                                    <div className="text-white/80 text-sm leading-relaxed whitespace-pre-wrap">
+                                        {sec.content.trim()}
+                                    </div>
                                 </div>
-                                <div className="text-white/80 text-sm leading-relaxed whitespace-pre-wrap">
-                                    {sec.content.trim()}
-                                </div>
+                            ))
+                        ) : (
+                            <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+                                <pre className="text-white/80 text-sm leading-relaxed whitespace-pre-wrap font-sans">
+                                    {section.content || 'No content available.'}
+                                </pre>
                             </div>
-                        ))
-                    ) : (
-                        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
-                            <pre className="text-white/80 text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                                {section.content || 'No content available.'}
-                            </pre>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
-        </div >
     );
 }
