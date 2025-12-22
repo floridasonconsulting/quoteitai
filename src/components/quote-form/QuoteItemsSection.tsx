@@ -5,7 +5,7 @@ import { ItemRecommendationsAI } from "@/components/ItemRecommendationsAI";
 import { QuoteItem, Item } from "@/types";
 import { Plus, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { sortCategoriesByOrder } from "@/lib/proposal-categories";
+import { sortCategoriesByOrder, normalizeCategory } from "@/lib/proposal-categories";
 
 interface QuoteItemsSectionProps {
   quoteItems: QuoteItem[];
@@ -49,7 +49,7 @@ export function QuoteItemsSection({
           </p>
         ) : (
           <div className="space-y-6">
-            {sortCategoriesByOrder(Array.from(new Set(quoteItems.map(i => i.category || 'General')))).map(category => (
+            {sortCategoriesByOrder(Array.from(new Set(quoteItems.map(i => normalizeCategory(i.category, i.name))))).map(category => (
               <div key={category} className="space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="h-px flex-1 bg-border/60" />
@@ -60,7 +60,7 @@ export function QuoteItemsSection({
                 </div>
 
                 {quoteItems
-                  .filter(item => (item.category || 'General') === category)
+                  .filter(item => normalizeCategory(item.category, item.name) === category)
                   .map(item => (
                     <div
                       key={item.itemId}

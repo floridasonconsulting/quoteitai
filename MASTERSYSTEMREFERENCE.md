@@ -1,7 +1,7 @@
 # 📚 Master System Reference - Quote.it AI
 
-**Version:** 2.3
-**Last Updated:** December 19, 2025
+**Version:** 2.4
+**Last Updated:** December 22, 2025
 **Status:** ✅ Production-Ready | 🎨 Theme Engine Active
 
 ---
@@ -246,8 +246,10 @@ interface Quote {
   tax: number;             // Tax amount
   total: number;           // Final total
   status: 'draft' | 'sent' | 'accepted' | 'declined';
-  notes?: string;          // Internal notes
+  notes?: string;          // Internal notes (Cover Page Intro)
   executiveSummary?: string; // AI-generated summary
+  paymentTerms?: string;     // ✅ NEW: Quote-specific payment terms (overrides global)
+  legalTerms?: string;       // ✅ NEW: Quote-specific legal clauses (overrides global)
   sentDate?: string;       // When sent to customer
   followUpDate?: string;   // Scheduled follow-up
   createdAt: string;       // ISO timestamp
@@ -274,6 +276,7 @@ interface CompanySettings {
   license?: string;        // License number
   insurance?: string;      // Insurance info
   terms: string;           // Default payment terms
+  legalTerms?: string;     // ✅ NEW: Global default legal clauses
   proposalTemplate?: 'classic' | 'modern' | 'detailed';
   notifyEmailAccepted?: boolean;
   notifyEmailDeclined?: boolean;
@@ -302,6 +305,9 @@ USING (auth.uid() = user_id);
 **Recent Schema Updates (December 5, 2025):**
 - ✅ `items.min_quantity` - INTEGER column with default 1, CHECK constraint (min_quantity > 0)
 - ✅ `items.image_url` - TEXT column (nullable) for product/service images
+- ✅ `quotes.payment_terms` - TEXT column for quote-specific payment terms
+- ✅ `quotes.legal_terms` - TEXT column for quote-specific legal terms
+- ✅ `company_settings.legal_terms` - TEXT column for global legal terms
 
 ---
 
@@ -487,7 +493,8 @@ quote-it-ai/
 │   │   └── stripe-webhook/ # Payment webhooks
 │   └── migrations/        # Database migrations (✅ UPDATED Dec 5)
 │       ├── 20251204233000_add_min_quantity_to_items.sql (✅ NEW)
-│       └── 20251205120000_add_image_url_to_items.sql (✅ NEW)
+│       ├── 20251205120000_add_image_url_to_items.sql (✅ NEW)
+│       └── 20251222151700_add_terms_fields.sql (✅ NEW - Dec 22)
 │
 ├── e2e/                   # E2E tests (Playwright)
 ├── capacitor.config.ts    # Mobile app config
@@ -512,11 +519,12 @@ quote-it-ai/
 | `src/lib/storage-cache.ts` | Performance cache | ✅ Yes | ✅ Stable |
 | `src/hooks/useSyncManager.ts` | Offline sync | ✅ Yes | ✅ Stable |
 | `src/pages/Items.tsx` | Item catalog UI | ✅ Yes | ✅ **FIXED Dec 5** |
+| `src/pages/NewQuote.tsx` | Quote creator UI | ✅ Yes | ✅ **UPDATED Dec 22** |
 | `src/pages/QuoteDetail.tsx` | Quote detail UI | ⚠️ Important | ✅ **FIXED Dec 5** |
 | `src/pages/Settings.tsx` | Settings UI | ⚠️ Important | ✅ **FIXED Dec 5** |
 | `src/components/OnboardingWizard.tsx` | First-run setup | ⚠️ Important | ✅ **FIXED Dec 5** |
 | `src/components/items/ItemForm.tsx` | Item edit form | ⚠️ Important | ✅ **FIXED Dec 5** |
-| `supabase/migrations/` | DB schema | ✅ Yes | ✅ **UPDATED Dec 5** |
+| `supabase/migrations/` | DB schema | ✅ Yes | ✅ **UPDATED Dec 22** |
 | `public/manifest.json` | PWA config | ⚠️ Important | ✅ Stable |
 | `public/service-worker.js` | SW cache | ⚠️ Important | 🔄 Phase 2 refactoring |
 | `vite.config.ts` | Build config | ⚠️ Important | ✅ Stable |

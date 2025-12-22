@@ -1,7 +1,7 @@
 # Quote.it AI
 
-**Version:** 2.2.0 (Feature Complete)
-**Last Updated:** December 19, 2025
+**Version:** 2.4.0 (Feature Complete)
+**Last Updated:** December 22, 2025
 
 ![Quote.it AI Logo](public/logo.png)
 
@@ -92,7 +92,11 @@ Edge Functions require:
 
 ## 📋 Recent Updates (v2.2.0)
 
-### December 2025
+### December 2025 (v2.4.0)
+- ✅ **Proposal Content Architecture** - Priority-based system for payment & legal terms
+- ✅ **Dedicated Legal Review** - Separate fields for legal clauses vs payment terms
+- ✅ **Quote List Sorting** - Recently modified quotes appear first
+- ✅ **Item Categorization** - Quote items verify against proposal category order
 - ✅ **Scope of Work Proposals** - AI-generated SOW appears as dedicated slide
 - ✅ **AI Follow-up Notifications** - Staleness-based message generation with edit/send
 - ✅ **Settings Tabs** - Reorganized into Company/Proposals/Integrations/System

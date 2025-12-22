@@ -31,9 +31,10 @@ This guide will help you transfer Quote.it AI from the Softgen-managed Supabase 
 1. In your Supabase project, click **"SQL Editor"** in the left sidebar
 2. Click **"New Query"**
 3. Open the file: `supabase/migrations/00000000000000_complete_schema.sql`
-4. Copy ALL the SQL content
-5. Paste it into the Supabase SQL Editor
-6. Click **"Run"** (bottom right corner)
+4. ALSO Open: `supabase/migrations/20251222151700_add_terms_fields.sql` (New Dec 22)
+5. Copy ALL the SQL content from BOTH files (in order)
+6. Paste it into the Supabase SQL Editor
+7. Click **"Run"** (bottom right corner)
 7. Wait for completion (you'll see a success message)
 
 **Expected Output:**
@@ -47,6 +48,8 @@ This guide will help you transfer Quote.it AI from the Softgen-managed Supabase 
    - company_settings (with RLS)
    - user_roles (with RLS)
    - subscription_usage (with RLS)
+   - *Updated*: quotes (added payment_terms, legal_terms)
+   - *Updated*: company_settings (added legal_terms)
 
 🔒 Security:
    - Row Level Security enabled on all tables
