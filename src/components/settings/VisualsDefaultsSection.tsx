@@ -35,7 +35,6 @@ export function VisualsDefaultsSection({ settings, onUpdate }: VisualsDefaultsSe
         try {
             setIsUploading(field);
             const fileExt = file.name.split('.').pop();
-            const fileExt = file.name.split('.').pop();
             // Use 'visual-rules' folder to keep organized and avoid potential root-level RLS conflicts
             const fileName = `${user.id}/visual-rules/${uuidv4()}.${fileExt}`;
             const bucket = 'company-logos';
