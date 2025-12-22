@@ -130,16 +130,35 @@ class StorageCache {
   }
 
   /**
-   * Clears everything - memory cache and all localStorage
+   * Clears most data - memory cache and non-critical localStorage
+   * Protects auth tokens, onboarding flags, and theme preferences
    */
   clear(): void {
     this.cache.clear();
     this.pendingWrites.forEach(timeout => clearTimeout(timeout));
     this.pendingWrites.clear();
+
     try {
-      localStorage.clear();
+      // Surgical clear instead of localStorage.clear() to protect user flags and auth
+      const protectedPrefixes = [
+        "sb-",                // Supabase internal auth keys
+        "onboarding_",        // User onboarding flags
+        "theme",              // UI Theme preferences
+        "supabase.auth.token" // Legacy auth token
+      ];
+
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && !protectedPrefixes.some(p => key.startsWith(p))) {
+          keysToRemove.push(key);
+        }
+      }
+
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+      console.log(`[StorageCache] Surgically cleared ${keysToRemove.length} keys, protecting auth and onboarding.`);
     } catch (error) {
-      console.error("Failed to clear localStorage:", error);
+      console.error("Failed to clear localStorage surgically:", error);
     }
   }
 

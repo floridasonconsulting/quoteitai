@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { checkAndMigrateData } from '@/lib/migration-helper';
+import { storageCache } from '@/lib/storage-cache';
 
 interface SubscriptionData {
   subscribed: boolean;
@@ -220,7 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
               } catch (validationError) {
                 console.error('[AUTH DEBUG] Session validation failed:', validationError);
-                localStorage.clear();
+                storageCache.clear();
                 toast.error('Your session expired. Please sign in again.');
                 setSession(null);
                 setUser(null);
@@ -234,7 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (event === 'TOKEN_REFRESHED' && !currentSession) {
               console.error('[AUTH DEBUG] Token refresh failed - clearing corrupted data');
               try {
-                localStorage.clear();
+                storageCache.clear();
                 if (navigator.serviceWorker.controller) {
                   navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_AUTH_CACHE' });
                 }
@@ -253,7 +254,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (event === 'SIGNED_OUT') {
               console.log('[AUTH DEBUG] Signed out event');
               try {
-                localStorage.clear();
+                storageCache.clear();
               } catch (e) {
                 console.error('[AUTH DEBUG] Error clearing storage on signout:', e);
               }
