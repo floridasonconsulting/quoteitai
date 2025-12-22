@@ -157,14 +157,7 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage, settings }: Sc
 
     const sowSections = parseSections(section.content || '');
 
-    // Inject Global Legal Terms if applicable (Payment Terms & Conditions slide)
-    if (section.type === 'legal' && settings?.legalTerms) {
-        sowSections.push({
-            title: 'General Contractual Terms',
-            content: settings.legalTerms,
-            icon: 'legal'
-        });
-    }
+
 
 
 

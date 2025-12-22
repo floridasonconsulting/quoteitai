@@ -267,7 +267,7 @@ export default function PublicQuoteView() {
       // Fetch quote by share token
       const { data: quoteData, error: quoteError } = await supabase
         .from('quotes')
-        .select('*')
+        .select('*, customers(contact_first_name, contact_last_name)')
         .eq('share_token', decodedShareToken)
         .maybeSingle();
 
@@ -292,6 +292,20 @@ export default function PublicQuoteView() {
 
       console.log('[PublicQuoteView] ✅ Quote loaded successfully:', quoteData.id);
       console.log('[PublicQuoteView] Quote user_id:', quoteData.user_id);
+
+      // Extract contact name from joined customer data
+      let contactName = '';
+      if (quoteData.customers) {
+        // Handle potential array or single object response from join
+        const cust = Array.isArray(quoteData.customers) ? quoteData.customers[0] : quoteData.customers;
+        if (cust) {
+          // Use type assertion to access joined fields if needed, or rely on loose typing
+          const c = cust as any;
+          contactName = `${c.contact_first_name || ''} ${c.contact_last_name || ''}`.trim();
+        }
+      }
+
+      console.log('[PublicQuoteView] 👤 Contact Name resolved:', contactName || 'None (Using Company Name)');
 
       // 🚀 NEW: Fetch visuals from proposal_visuals table
       console.log('[PublicQuoteView] 🖼️ Fetching visuals for quote:', quoteData.id);
@@ -347,10 +361,7 @@ export default function PublicQuoteView() {
         const jsonbEnhancedDesc = itemWithSnakeCase.enhanced_description || quoteItem.enhancedDescription;
 
         if (freshData) {
-          console.log(`[PublicQuoteView] ✅ Enriching "${quoteItem.name}" with:`, {
-            imageUrl: freshData.imageUrl ? '✅ YES' : '❌ NO',
-            enhancedDescription: freshData.enhancedDescription ? '✅ YES' : '❌ NO'
-          });
+          /* console.log(`[PublicQuoteView] ✅ Enriching "${quoteItem.name}"`); */
 
           return {
             ...quoteItem,
@@ -360,10 +371,7 @@ export default function PublicQuoteView() {
         }
 
         // If no fresh data, still transform snake_case to camelCase
-        console.log(`[PublicQuoteView] ⚠️ No fresh data for "${quoteItem.name}", using JSONB:`, {
-          hasJsonbImageUrl: !!jsonbImageUrl,
-          hasJsonbEnhancedDesc: !!jsonbEnhancedDesc
-        });
+        /* console.log(`[PublicQuoteView] ⚠️ No fresh data for "${quoteItem.name}", using JSONB`); */
 
         return {
           ...quoteItem,
@@ -378,6 +386,7 @@ export default function PublicQuoteView() {
         quoteNumber: quoteData.quote_number,
         customerId: quoteData.customer_id,
         customerName: quoteData.customer_name,
+        contactName: contactName, // Explicitly set contactName
         title: quoteData.title,
         items: enrichedItems, // 🚀 USE ENRICHED ITEMS
         subtotal: Number(quoteData.subtotal),
