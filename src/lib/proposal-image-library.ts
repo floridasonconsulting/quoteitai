@@ -127,28 +127,42 @@ export function getSmartCoverImage(currentUrl?: string, theme?: Theme, settings?
 
 /**
  * Gets item image based on priority:
- * 1. Specific Override (Quote Item)
+ * 1. Viewer Override (User edited in Proposal Viewer)
  * 2. Visual Rules (Category/Name match)
- * 3. Theme Gradient
+ * 3. Database Image (From Quote/Catalog)
+ * 4. Theme Gradient
  */
-export function getSmartItemImage(itemName: string, category: string, currentUrl?: string, theme?: Theme, settings?: CompanySettings): string {
-  // 1. Override
-  if (currentUrl && (currentUrl.startsWith('http') || currentUrl.startsWith('data:'))) {
-    return currentUrl;
+export function getSmartItemImage(
+  itemName: string,
+  category: string,
+  viewerOverride: string | undefined, // Was currentUrl
+  databaseImage: string | undefined, // New param
+  theme?: Theme,
+  settings?: CompanySettings
+): string {
+  // 1. Viewer Override (Highest Priority)
+  if (viewerOverride && (viewerOverride.startsWith('http') || viewerOverride.startsWith('data:'))) {
+    return viewerOverride;
   }
 
-  // 2. Visual Rules
+  // 2. Visual Rules (Global Presentation Settings)
   if (settings?.visualRules) {
     const lowerName = (itemName || '').toLowerCase();
     const lowerCat = (category || '').toLowerCase();
     const match = settings.visualRules.find(rule => {
       const key = (rule.keyword || '').toLowerCase();
+      // Simple inclusive check
       return lowerCat.includes(key) || lowerName.includes(key);
     });
     if (match) return match.imageUrl;
   }
 
-  // 3. Theme Gradient
+  // 3. Database Image (Quote/Catalog Data)
+  if (databaseImage && (databaseImage.startsWith('http') || databaseImage.startsWith('data:'))) {
+    return databaseImage;
+  }
+
+  // 4. Theme Gradient (Fallback)
   return getThemeGradient(theme, 'item');
 }
 

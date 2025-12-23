@@ -165,26 +165,32 @@ export function transformQuoteToProposal(
     // 1. Visual Override (User edited in Proposal Viewer)
     // 2. Database Image (From Item Catalog)
     // 3. Smart Fallback (Visual Rules / Category / Theme Gradient)
+    // Check override from visual settings (Viewer)
     const itemOverride = visuals?.itemImages?.[item.name] || visuals?.sectionBackgrounds?.[`item_${item.name}`];
 
-    // Check override OR database image
-    const effectiveImageUrl = itemOverride || item.imageUrl;
-
+    // Priority: Viewer Override > Visual Ruler > Database Image > Theme
     const smartItemImage = showImages
-      ? getSmartItemImage(item.name, item.category, effectiveImageUrl, activeSettings.proposalTheme, activeSettings)
+      ? getSmartItemImage(
+        item.name,
+        item.category,
+        itemOverride,   // Viewer Override (Highest)
+        item.imageUrl,  // Database Image (Fallback)
+        activeSettings.proposalTheme,
+        activeSettings
+      )
       : undefined;
 
     console.log('[Transformation] Processing item with SMART RESOLUTION:', {
       itemName: item.name,
       originalCategory: item.category,
       normalizedCategory: normalizedCat,
-      originalImageUrl: item.imageUrl,
+      originalImageUrl: item.imageUrl, // Database image
+      itemOverride: itemOverride,      // Viewer override
       resolvedImageUrl: smartItemImage,
-      resolutionMethod: item.imageUrl && item.imageUrl.startsWith('http')
-        ? '✅ DATABASE (original)'
-        : smartItemImage
-          ? '⚠️ Smart Fallback (keyword or category)'
-          : '❌ None',
+      resolutionMethod:
+        itemOverride ? '🚀 Viewer Override' :
+          (smartItemImage === item.imageUrl) ? '💾 Database Image' :
+            smartItemImage && smartItemImage.startsWith('http') ? '✨ Smart Rule/Fallback' : '❌ None',
       enhancedDescription: item.enhancedDescription
     });
 
