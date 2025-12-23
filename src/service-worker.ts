@@ -30,7 +30,7 @@ registerRoute(
     request.destination === 'style' ||
     request.destination === 'script' ||
     request.destination === 'worker',
-  new StaleWhileRevalidate({
+  new NetworkFirst({
     cacheName: 'assets-cache',
     plugins: [
       new ExpirationPlugin({
