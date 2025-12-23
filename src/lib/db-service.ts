@@ -86,7 +86,7 @@ export const getSettings = async (userId: string, organizationId: string | null 
           .eq('user_id', userId)
           .maybeSingle()
       ),
-      10000
+      20000
     ) as any;
 
     if (error) {
@@ -231,7 +231,7 @@ export async function saveSettings(
               ignoreDuplicates: false
             })
         ),
-        30000
+        60000
       ) as any;
 
       if (error) {
@@ -254,7 +254,7 @@ export async function saveSettings(
             Promise.resolve(
               supabase.from('company_settings' as any).upsert(resilientSettings, { onConflict: 'user_id' })
             ),
-            10000
+            20000
           );
         } else {
           throw error;
