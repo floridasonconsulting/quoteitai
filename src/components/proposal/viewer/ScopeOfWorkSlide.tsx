@@ -1,4 +1,5 @@
-import { ProposalSection, CompanySettings } from '@/types';
+import { CompanySettings } from '@/types';
+import { ProposalSection } from '@/types/proposal';
 import { Button } from '@/components/ui/button';
 import { Edit3, FileText, CheckCircle, Clock, Target, ListChecks, Ban, DollarSign, ShieldCheck, Scale, AlertTriangle } from 'lucide-react';
 import { useRef } from 'react';

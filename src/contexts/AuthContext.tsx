@@ -174,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Also fetch trial metadata directly from organizations table
       const { data: orgData } = await supabase
-        .from('organizations')
+        .from('organizations' as any)
         .select('subscription_status, trial_end_date, trial_ai_usage')
         .eq('owner_id', userId)
         .maybeSingle();

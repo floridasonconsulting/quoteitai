@@ -154,7 +154,10 @@ export function getSmartItemImage(
       // Simple inclusive check
       return lowerCat.includes(key) || lowerName.includes(key);
     });
-    if (match) return match.imageUrl;
+    // Fix: Only return if the rule actually has a valid image URL
+    if (match && match.imageUrl && match.imageUrl.trim()) {
+      return match.imageUrl;
+    }
   }
 
   // 3. Database Image (Quote/Catalog Data)

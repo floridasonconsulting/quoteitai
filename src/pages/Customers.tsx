@@ -20,9 +20,10 @@ import { useSyncManager } from '@/hooks/useSyncManager';
 import { useLoadingState } from '@/hooks/useLoadingState';
 import { CustomersTable } from '@/components/customers/CustomersTable';
 import { useOptimisticList } from '@/hooks/useOptimisticList';
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Customers() {
-  const { user, isAdmin, isMaxAITier, organizationId } = useAuth();
+  const { user, isAdmin, isMaxAITier, organizationId, checkUserRole, subscription } = useAuth();
   const { queueChange, pauseSync, resumeSync } = useSyncManager();
   const { startLoading, stopLoading } = useLoadingState();
 
@@ -197,7 +198,7 @@ export default function Customers() {
         setSelectedCustomers([]);
 
         // Perform deletions
-        const promises = deletedIds.map(id => deleteCustomer(user?.id, id, queueChange));
+        const promises = deletedIds.map(id => deleteCustomer(user?.id, organizationId, id, queueChange));
         await Promise.all(promises);
 
         toast.success(`Deleted ${deletedIds.length} customer${deletedIds.length > 1 ? 's' : ''}`);
