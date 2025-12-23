@@ -32,21 +32,21 @@ serve(async (req) => {
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { 
+      {
         global: { headers: { Authorization: authHeader } },
-        auth: { persistSession: false } 
+        auth: { persistSession: false }
       }
     );
-    
+
     logStep("Authenticating user with token");
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    const stripe = new Stripe(stripeKey, { apiVersion: "2024-06-20" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    
+
     if (customers.data.length === 0) {
       logStep("No customer found, updating unsubscribed state");
       return new Response(JSON.stringify({ subscribed: false, product_id: null, subscription_end: null }), {
@@ -88,10 +88,10 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR in check-subscription", { message: errorMessage });
-    
+
     // Detect session invalidation and return special error code
     if (errorMessage.includes("session missing") || errorMessage.includes("session not found")) {
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: "Session expired. Please sign in again.",
         code: "SESSION_EXPIRED"
       }), {
@@ -99,13 +99,13 @@ serve(async (req) => {
         status: 401, // Unauthorized instead of 500
       });
     }
-    
+
     // Return sanitized error to client
     const isDevelopment = Deno.env.get('ENVIRONMENT') === 'development';
-    const clientError = isDevelopment 
-      ? errorMessage 
+    const clientError = isDevelopment
+      ? errorMessage
       : 'Unable to check subscription status. Please try again.';
-    
+
     return new Response(JSON.stringify({ error: clientError }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
