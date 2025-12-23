@@ -59,14 +59,19 @@ export const getSettings = async (userId: string, organizationId: string | null 
   // 2. Try IndexedDB 
   if (isIndexedDBSupported()) {
     try {
-      const indexedDBSettings = await SettingsDB.get(userId);
+      // Wrap IDB access in a short timeout (2s) to prevent hangs
+      const indexedDBSettings = await withTimeout(
+        SettingsDB.get(userId),
+        2000
+      ) as CompanySettings | undefined;
+
       if (indexedDBSettings && (indexedDBSettings.name || indexedDBSettings.email)) {
         console.log('[db-service] ✓ Retrieved settings from IndexedDB');
         await cacheManager.set('settings', indexedDBSettings, userId);
         return indexedDBSettings;
       }
     } catch (error) {
-      console.warn('[db-service] IndexedDB read failed:', error);
+      console.warn('[db-service] IndexedDB read failed or timed out:', error);
     }
   }
 

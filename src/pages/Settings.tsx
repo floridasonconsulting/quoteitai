@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { saveSettings, getSettings, clearDatabaseData, clearSampleData } from "@/lib/db-service";
 import { clearAllData } from "@/lib/storage";
+import { withTimeout } from "@/lib/services/request-pool-service";
 import {
   importCustomersFromCSV,
   importItemsFromCSV,
@@ -123,13 +124,15 @@ export default function Settings() {
 
       // Step 2: Fetch from Supabase for authoritative data
       console.log('[Settings] Fetching from Supabase...');
-      let supabaseResult: any;
-      if (organizationId) {
-        supabaseResult = await supabase.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle();
-      } else {
-        supabaseResult = await supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle();
-      }
-      const { data: supabaseSettings, error } = supabaseResult;
+      // Wrap the network call in a timeout to prevent hanging
+      const { data: supabaseSettings, error } = await withTimeout(
+        Promise.resolve(
+          organizationId
+            ? supabase.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle()
+            : supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle()
+        ),
+        10000
+      ) as any;
 
       if (error) {
         console.error('[Settings] Supabase fetch error:', error);
