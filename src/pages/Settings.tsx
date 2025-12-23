@@ -131,7 +131,7 @@ export default function Settings() {
             ? supabase.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle()
             : supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle()
         ),
-        10000
+        30000 // Increased from 10s to 30s to prevent premature timeout
       ) as any;
 
       if (error) {

@@ -57,6 +57,16 @@ if (typeof window !== 'undefined') {
     clearInFlightRequests();
     return "Pool reset successfully";
   };
+
+  // Auto-cleanup stale requests every 30 seconds to prevent pool exhaustion
+  setInterval(() => {
+    clearStaleRequests();
+    // Also reset activeRequests if it's stuck at max but no real requests are in flight
+    if (activeRequests >= MAX_CONCURRENT_REQUESTS && inFlightRequests.size === 0) {
+      console.warn('[Pool] Detected stuck activeRequests counter, resetting to 0');
+      activeRequests = 0;
+    }
+  }, 30000);
 }
 
 /**
