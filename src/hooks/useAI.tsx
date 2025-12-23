@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabaseFunctions } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { rateLimiter } from '@/lib/rate-limiter';
 import { sanitizeForAI } from '@/lib/input-sanitization';
@@ -79,7 +79,7 @@ export function useAI(featureType: AIFeatureType, options?: UseAIOptions) {
       // Wrap the API call with rate limiting
       const data = await rateLimiter.trackRequest(rateLimitKey, async () => {
         try {
-          const { data, error } = await supabaseFunctions.functions.invoke('ai-assist', {
+          const { data, error } = await supabase.functions.invoke('ai-assist', {
             body: {
               featureType,
               prompt: sanitizedPrompt,

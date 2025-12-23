@@ -19,9 +19,3 @@ export const supabase = createClient<Database>(
   SUPABASE_PUBLISHABLE_KEY || 'placeholder-key'
 );
 
-// Functions client - Uses YOUR Supabase project (Edge Functions must be deployed there)
-// Reusing the primary client credentials to ensure consistency
-export const supabaseFunctions = createClient(
-  SUPABASE_URL || 'https://placeholder.supabase.co',
-  SUPABASE_PUBLISHABLE_KEY || 'placeholder-key'
-);
