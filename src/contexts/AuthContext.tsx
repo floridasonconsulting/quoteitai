@@ -162,15 +162,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Try to check subscription via Edge Function, but don't fail if it doesn't exist
-      const { data, error } = await supabase.functions.invoke('check-subscription');
+      try {
+        const { data, error } = await supabase.functions.invoke('check-subscription');
 
-      if (error) {
-        console.warn('[AuthContext] Subscription check not available:', error);
-        setSubscription(null);
-        return;
+        if (error) {
+          // Log as warning only - this is non-critical for core app function
+          console.warn('[AuthContext] Subscription check unavailable (Edge Function error):', error);
+          // Do not throw, just continue with null subscription (features might be limited but app works)
+        } else {
+          setSubscription(data);
+        }
+      } catch (invokeError) {
+        console.warn('[AuthContext] Exception calling check-subscription:', invokeError);
       }
-
-      setSubscription(data);
 
       // Also fetch trial metadata directly from organizations table
       const { data: orgData } = await supabase

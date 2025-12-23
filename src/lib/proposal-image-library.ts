@@ -151,13 +151,15 @@ export function getSmartItemImage(
     const lowerCat = (category || '').toLowerCase();
     const match = settings.visualRules.find(rule => {
       const key = (rule.keyword || '').toLowerCase();
-      // Simple inclusive check
-      return lowerCat.includes(key) || lowerName.includes(key);
+      // Simple inclusive check AND valid image check
+      // This ensures we skip rules that match keywords but have no image (broken rules)
+      const matchesKeyword = lowerCat.includes(key) || lowerName.includes(key);
+      const hasValidImage = rule.imageUrl && rule.imageUrl.trim().length > 0;
+
+      return matchesKeyword && hasValidImage;
     });
-    // Fix: Only return if the rule actually has a valid image URL
-    if (match && match.imageUrl && match.imageUrl.trim()) {
-      return match.imageUrl;
-    }
+
+    if (match) return match.imageUrl;
   }
 
   // 3. Database Image (Quote/Catalog Data)
@@ -206,15 +208,18 @@ export function getCategoryImage(categoryName: string, currentUrl?: string, them
     const match = settings.visualRules.find(rule => {
       const keywordLower = (rule.keyword || '').toLowerCase();
       const isMatch = lowerCat.includes(keywordLower);
-      console.log(`[getCategoryImage] Rule check: "${lowerCat}" includes "${keywordLower}" = ${isMatch}`);
-      return isMatch;
+      const hasValidImage = rule.imageUrl && rule.imageUrl.trim().length > 0;
+
+      console.log(`[getCategoryImage] Rule check: "${lowerCat}" includes "${keywordLower}" = ${isMatch}, ValidImg: ${hasValidImage} (${rule.imageUrl?.substring(0, 15)}...)`);
+
+      return isMatch && hasValidImage;
     });
 
     if (match) {
       console.log('[getCategoryImage] ✓ Visual rule MATCHED:', match.keyword, '->', match.imageUrl?.substring(0, 50));
       return match.imageUrl;
     }
-    console.log('[getCategoryImage] ✗ No visual rule matched');
+    console.log('[getCategoryImage] ✗ No visual rule matched (checked all)');
   }
 
   // 3. Global Default Header
