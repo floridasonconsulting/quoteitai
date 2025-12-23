@@ -22,7 +22,7 @@ export const checkAndMigrateData = async (
     console.log("[MigrationHelper] Starting migration check for user:", userId);
 
     // Phase 1: Migrate localStorage → IndexedDB (one-time migration)
-    const indexedDBMigrated = getStorageItem(MIGRATION_FLAG_KEY);
+    const indexedDBMigrated = getStorageItem(MIGRATION_FLAG_KEY, "false");
     if (!indexedDBMigrated) {
       console.log("[MigrationHelper] Starting localStorage → IndexedDB migration");
       await migrateLocalStorageToIndexedDB(userId);
@@ -64,7 +64,7 @@ async function migrateLocalStorageToIndexedDB(
 
   // Perform the migration
   const result = await migrationService.migrateFromLocalStorage();
-  
+
   if (!result.success) {
     console.error("[MigrationHelper] Migration failed:", result.message);
     throw new Error(result.message);
@@ -85,9 +85,20 @@ async function syncIndexedDBToSupabase(userId: string): Promise<void> {
     const customers = await CustomerDB.getAll(userId);
     if (customers.length > 0) {
       console.log(`[MigrationHelper] Syncing ${customers.length} customers to Supabase`);
-      const customersToSync = customers.map((customer) =>
-        toSnakeCase({ ...customer, user_id: userId })
-      );
+      const customersToSync = customers.map((customer) => ({
+        id: customer.id,
+        user_id: userId,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        address: customer.address,
+        city: customer.city,
+        state: customer.state,
+        zip: customer.zip,
+        contact_first_name: customer.contactFirstName,
+        contact_last_name: customer.contactLastName,
+        created_at: customer.createdAt
+      }));
       const { error: customersError } = await supabase
         .from("customers")
         .upsert(customersToSync, { onConflict: "id" });
@@ -103,9 +114,22 @@ async function syncIndexedDBToSupabase(userId: string): Promise<void> {
     const items = await ItemDB.getAll(userId);
     if (items.length > 0) {
       console.log(`[MigrationHelper] Syncing ${items.length} items to Supabase`);
-      const itemsToSync = items.map((item) =>
-        toSnakeCase({ ...item, user_id: userId })
-      );
+      const itemsToSync = items.map((item) => ({
+        id: item.id,
+        user_id: userId,
+        name: item.name,
+        description: item.description,
+        enhanced_description: item.enhancedDescription,
+        category: item.category,
+        base_price: item.basePrice,
+        markup_type: item.markupType,
+        markup: item.markup,
+        final_price: item.finalPrice,
+        units: item.units,
+        min_quantity: item.minQuantity,
+        image_url: item.imageUrl,
+        created_at: item.createdAt
+      }));
       const { error: itemsError } = await supabase
         .from("items")
         .upsert(itemsToSync, { onConflict: "id" });
@@ -121,9 +145,46 @@ async function syncIndexedDBToSupabase(userId: string): Promise<void> {
     const quotes = await QuoteDB.getAll(userId);
     if (quotes.length > 0) {
       console.log(`[MigrationHelper] Syncing ${quotes.length} quotes to Supabase`);
-      const quotesToSync = quotes.map((quote) =>
-        toSnakeCase({ ...quote, user_id: userId })
-      );
+      const quotesToSync = quotes.map((quote) => {
+        // Create a base object with only the fields that exist in the DB
+        const cleanQuote: any = {
+          id: quote.id,
+          user_id: userId,
+          quote_number: quote.quoteNumber,
+          customer_id: quote.customerId,
+          customer_name: quote.customerName,
+          title: quote.title,
+          items: quote.items,
+          subtotal: quote.subtotal,
+          tax: quote.tax,
+          total: quote.total,
+          status: quote.status,
+          notes: quote.notes,
+          executive_summary: quote.executiveSummary,
+          payment_terms: quote.paymentTerms,
+          legal_terms: quote.legalTerms,
+          sent_date: quote.sentDate,
+          follow_up_date: quote.followUpDate,
+          created_at: quote.createdAt,
+          updated_at: quote.updatedAt,
+          share_token: quote.shareToken,
+          shared_at: quote.sharedAt,
+          viewed_at: quote.viewedAt,
+          show_pricing: quote.showPricing,
+          project_description: quote.projectDescription,
+          pricing_mode: quote.pricingMode,
+          scope_of_work: quote.scopeOfWork,
+          organization_id: quote.organizationId,
+          signature_data: quote.signatureData,
+          signed_at: quote.signedAt,
+          signed_by_name: quote.signedByName
+        };
+
+        // Remove undefined values to let DB defaults take over or avoid errors
+        Object.keys(cleanQuote).forEach(key => cleanQuote[key] === undefined && delete cleanQuote[key]);
+
+        return cleanQuote;
+      });
       const { error: quotesError } = await supabase
         .from("quotes")
         .upsert(quotesToSync, { onConflict: "id" });
@@ -139,10 +200,41 @@ async function syncIndexedDBToSupabase(userId: string): Promise<void> {
     const settings = await SettingsDB.get(userId);
     if (settings && (settings.name || settings.email)) {
       console.log("[MigrationHelper] Syncing company settings to Supabase");
-      const settingsToSync = toSnakeCase({
+      const settingsToSync: any = {
         user_id: userId,
-        ...settings,
-      });
+        name: settings.name,
+        address: settings.address,
+        city: settings.city,
+        state: settings.state,
+        zip: settings.zip,
+        phone: settings.phone,
+        email: settings.email,
+        website: settings.website,
+        logo: settings.logo,
+        logo_display_option: settings.logoDisplayOption,
+        license: settings.license,
+        insurance: settings.insurance,
+        terms: settings.terms,
+        legal_terms: settings.legalTerms,
+        proposal_template: settings.proposalTemplate,
+        proposal_theme: settings.proposalTheme,
+        industry: settings.industry,
+        notify_email_accepted: settings.notifyEmailAccepted,
+        notify_email_declined: settings.notifyEmailDeclined,
+        show_proposal_images: settings.showProposalImages,
+        default_cover_image: settings.defaultCoverImage,
+        default_header_image: settings.defaultHeaderImage,
+        visual_rules: settings.visualRules,
+        show_financing: settings.showFinancing,
+        financing_text: settings.financingText,
+        financing_link: settings.financingLink,
+        primary_color: settings.primaryColor,
+        accent_color: settings.accentColor,
+        onboarding_completed: settings.onboardingCompleted
+      };
+
+      // Remove undefined values
+      Object.keys(settingsToSync).forEach(key => settingsToSync[key] === undefined && delete settingsToSync[key]);
       const { error: settingsError } = await supabase
         .from("company_settings")
         .upsert(settingsToSync, { onConflict: "user_id" });

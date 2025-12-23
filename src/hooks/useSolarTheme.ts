@@ -10,47 +10,24 @@ export const useSolarTheme = () => {
     const { setTheme } = useTheme();
 
     useEffect(() => {
-        const updateTheme = async () => {
-            if (!navigator.geolocation) {
-                setTheme('system');
-                return;
+        const updateTheme = () => {
+            const now = new Date();
+            const hours = now.getHours();
+
+            // Light mode between 6 AM (6) and 6 PM (18)
+            const isDaytime = hours >= 6 && hours < 18;
+
+            if (isDaytime) {
+                setTheme('light');
+            } else {
+                setTheme('dark');
             }
-
-            navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    const { latitude, longitude } = position.coords;
-                    try {
-                        const response = await fetch(
-                            `https://api.sunrise-sunset.org/json?lat=${latitude}&lng=${longitude}&formatted=0`
-                        );
-                        const data = await response.json();
-
-                        const now = new Date();
-                        const sunrise = new Date(data.results.sunrise);
-                        const sunset = new Date(data.results.sunset);
-
-                        // If current time is between sunrise and sunset, use light mode. Otherwise dark.
-                        if (now > sunrise && now < sunset) {
-                            setTheme('light');
-                        } else {
-                            setTheme('dark');
-                        }
-                    } catch (error) {
-                        console.error('Solar theme fetch failed:', error);
-                        setTheme('system');
-                    }
-                },
-                (error) => {
-                    console.error('Geolocation failed:', error);
-                    setTheme('system');
-                }
-            );
         };
 
         updateTheme();
 
-        // Re-check every hour to handle transitions
-        const interval = setInterval(updateTheme, 3600000);
+        // Re-check every 5 minutes to catch the exact crossover
+        const interval = setInterval(updateTheme, 300000);
         return () => clearInterval(interval);
     }, [setTheme]);
 };
