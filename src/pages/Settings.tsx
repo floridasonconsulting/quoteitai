@@ -103,7 +103,7 @@ export default function Settings() {
     console.log('[Settings] Loading settings for user:', user.id);
     setLoading(true);
 
-    const timeoutDuration = 10000;
+    const timeoutDuration = 20000;
     const timeoutId = setTimeout(() => {
       if (loading) {
         console.warn('[Settings] Loading timeout reached');

@@ -62,18 +62,13 @@ export function ImageSelectorInput({
 
                 <div className="flex-1 space-y-2">
                     <div className="flex gap-2">
-                        <Input
-                            value={value}
-                            readOnly
-                            placeholder="No image selected"
-                            className="flex-1 bg-muted"
-                        />
                         <Button
                             type="button"
                             variant="secondary"
                             onClick={() => setShowImageDialog(true)}
+                            className="w-full sm:w-auto"
                         >
-                            Select Image
+                            {value ? "Change Image" : "Select Image"}
                         </Button>
                     </div>
                     {description && (
