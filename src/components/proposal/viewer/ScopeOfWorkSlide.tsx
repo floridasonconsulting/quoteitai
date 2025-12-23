@@ -286,7 +286,12 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage, settings }: Sc
 
                 {/* Scrollable SOW Content */}
                 <div
+                    ref={scrollContainerRef}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onWheel={handleWheel}
                     className="h-[calc(100%-120px)] overflow-y-auto px-6 py-4 pb-40 md:pb-36 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent touch-pan-y"
+                    data-swiper-parallax="-100" // Add parallax effect back if appropriate, or keep it standard
                 >
                     <div className="max-w-3xl mx-auto space-y-6">
                         {sowSections.length > 0 ? (

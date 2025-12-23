@@ -145,22 +145,9 @@ export function getSmartItemImage(
     return viewerOverride;
   }
 
-  // 2. Visual Rules (Global Presentation Settings)
-  if (settings?.visualRules) {
-    const lowerName = (itemName || '').toLowerCase();
-    const lowerCat = (category || '').toLowerCase();
-    const match = settings.visualRules.find(rule => {
-      const key = (rule.keyword || '').toLowerCase();
-      // Simple inclusive check AND valid image check
-      // This ensures we skip rules that match keywords but have no image (broken rules)
-      const matchesKeyword = lowerCat.includes(key) || lowerName.includes(key);
-      const hasValidImage = rule.imageUrl && rule.imageUrl.trim().length > 0;
-
-      return matchesKeyword && hasValidImage;
-    });
-
-    if (match) return match.imageUrl;
-  }
+  // 2. Visual Rules (DISABLED for Items - Headers Only)
+  // User request: "custom rules should only apply to proposal category page headers, not item images"
+  // if (settings?.visualRules) { ... }
 
   // 3. Database Image (Quote/Catalog Data)
   if (databaseImage && (databaseImage.startsWith('http') || databaseImage.startsWith('data:'))) {

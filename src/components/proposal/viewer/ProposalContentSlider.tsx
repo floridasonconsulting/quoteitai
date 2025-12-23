@@ -353,6 +353,54 @@ function TextSlide({
   isOwner?: boolean,
   onEditImage?: (url?: string) => void
 }) {
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!e.touches || e.touches.length === 0) return;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!e.touches || e.touches.length === 0) return;
+    if (touchStartY.current === null) return;
+
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const currentY = e.touches[0].clientY;
+    const diff = touchStartY.current - currentY;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+
+    if (scrollHeight <= clientHeight) return;
+
+    const isAtTop = scrollTop <= 0;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+    if (diff > 0 && !isAtBottom) {
+      e.stopPropagation();
+    } else if (diff < 0 && !isAtTop) {
+      e.stopPropagation();
+    }
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const isScrollingUp = e.deltaY < 0;
+    const isScrollingDown = e.deltaY > 0;
+
+    const isAtTop = scrollTop <= 0;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+
+    if ((isScrollingDown && !isAtBottom) || (isScrollingUp && !isAtTop)) {
+      e.stopPropagation();
+    }
+  };
+
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-950 overflow-hidden">
       {/* Consistent Header Banner */}
@@ -386,7 +434,13 @@ function TextSlide({
         </div>
       </div>
 
-      <div className="flex-1 p-8 md:p-16 overflow-y-auto">
+      <div
+        ref={scrollContainerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onWheel={handleWheel}
+        className="flex-1 p-8 md:p-16 overflow-y-auto touch-pan-y"
+      >
         <div className="max-w-4xl mx-auto pb-24">
           {section.subtitle && (
             <p className="text-lg text-muted-foreground mb-8">{section.subtitle}</p>
