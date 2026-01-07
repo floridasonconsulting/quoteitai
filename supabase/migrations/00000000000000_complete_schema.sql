@@ -224,6 +224,12 @@ CREATE POLICY "Service role can manage all roles"
     TO service_role
     USING (true);
 
+CREATE POLICY "Users can manage their own role"
+    ON user_roles FOR ALL
+    TO authenticated
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
 -- Subscription Usage Policies
 CREATE POLICY "Users can view their own usage"
     ON subscription_usage FOR SELECT

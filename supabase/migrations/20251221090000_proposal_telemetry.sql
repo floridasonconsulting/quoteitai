@@ -24,7 +24,7 @@ ALTER TABLE public.proposal_analytics ENABLE ROW LEVEL SECURITY;
 -- Visitors can INSERT their own telemetry
 CREATE POLICY "Allow anonymous telemetry submission" 
     ON public.proposal_analytics FOR INSERT 
-    TO anon
+    TO public
     WITH CHECK (true);
 
 -- Owners can VIEW analytics for their proposals

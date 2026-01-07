@@ -26,18 +26,24 @@ CREATE POLICY "Service role can manage all roles"
     TO service_role
     USING (true);
 
+CREATE POLICY "Users can manage their own role"
+    ON public.user_roles FOR ALL
+    TO authenticated
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
 -- Proposal Analytics
 DROP POLICY IF EXISTS "Allow anonymous telemetry submission" ON public.proposal_analytics;
 CREATE POLICY "Allow anonymous telemetry submission"
     ON public.proposal_analytics FOR INSERT
-    TO anon
+    TO public
     WITH CHECK (true);
 
 -- Proposal Conversations
 DROP POLICY IF EXISTS "Public can add questions" ON public.proposal_conversations;
 CREATE POLICY "Public can add questions"
     ON public.proposal_conversations FOR INSERT
-    TO anon
+    TO public
     WITH CHECK (true);
 
 -- 3. Enable RLS for marketing_emails table
