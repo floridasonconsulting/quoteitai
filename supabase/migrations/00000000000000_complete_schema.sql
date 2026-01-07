@@ -221,6 +221,7 @@ CREATE POLICY "Users can view their own role"
 
 CREATE POLICY "Service role can manage all roles"
     ON user_roles FOR ALL
+    TO service_role
     USING (true);
 
 -- Subscription Usage Policies
@@ -260,7 +261,7 @@ BEGIN
     
     RETURN user_role;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- ============================================================================
 -- ADMIN HELPER FUNCTIONS (for easy test account setup)
@@ -308,7 +309,7 @@ BEGIN
         'message', 'Role updated successfully'
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Function to list all users with their roles
 CREATE OR REPLACE FUNCTION list_users_with_roles()
@@ -329,7 +330,7 @@ BEGIN
     LEFT JOIN user_roles r ON u.id = r.user_id
     ORDER BY u.created_at DESC;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -338,7 +339,7 @@ BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- ============================================================================
 -- TRIGGERS

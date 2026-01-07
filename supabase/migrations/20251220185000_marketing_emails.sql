@@ -16,3 +16,12 @@ CREATE TABLE IF NOT EXISTS public.marketing_emails (
 -- 3. Index for performance in background worker
 CREATE INDEX IF NOT EXISTS idx_organizations_pro_upgraded_at ON public.organizations(pro_upgraded_at) WHERE pro_upgraded_at IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_marketing_emails_org_type ON public.marketing_emails(organization_id, email_type);
+
+-- 4. Enable RLS
+ALTER TABLE public.marketing_emails ENABLE ROW LEVEL SECURITY;
+
+-- Allow members of the organization to see their own records
+CREATE POLICY "Users can see their organization's marketing email status"
+    ON public.marketing_emails FOR SELECT
+    TO authenticated
+    USING (organization_id = (SELECT public.get_my_organization()));

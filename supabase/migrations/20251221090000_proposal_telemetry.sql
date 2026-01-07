@@ -24,6 +24,7 @@ ALTER TABLE public.proposal_analytics ENABLE ROW LEVEL SECURITY;
 -- Visitors can INSERT their own telemetry
 CREATE POLICY "Allow anonymous telemetry submission" 
     ON public.proposal_analytics FOR INSERT 
+    TO anon
     WITH CHECK (true);
 
 -- Owners can VIEW analytics for their proposals
@@ -51,4 +52,4 @@ BEGIN
   VALUES (p_quote_id, p_session_id, p_section_id, p_dwell_ms, p_is_owner, p_user_agent)
   ON CONFLICT (id) DO NOTHING; -- We don't have a unique constraint on id for upsert yet, but we'll use inserts for raw timeline data
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;

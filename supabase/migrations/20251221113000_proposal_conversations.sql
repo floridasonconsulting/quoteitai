@@ -33,13 +33,13 @@ USING (organization_id = (SELECT get_my_organization()));
 CREATE POLICY "Public can add questions"
 ON public.proposal_conversations
 FOR INSERT
-TO public
+TO anon
 WITH CHECK (true);
 
 CREATE POLICY "Public can read their own conversations"
 ON public.proposal_conversations
 FOR SELECT
-TO public
+TO anon
 USING (true); -- We will filter by quote_id in the application
 
 -- Trigger for updated_at

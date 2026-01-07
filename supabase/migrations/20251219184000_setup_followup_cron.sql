@@ -27,7 +27,7 @@ EXCEPTION
   WHEN OTHERS THEN
     RAISE WARNING 'Error in scheduled followups: %', SQLERRM;
 END;
-$$;
+$$ SET search_path = public;
 
 -- Alternative: Use pg_net for async HTTP calls (recommended for Supabase)
 CREATE OR REPLACE FUNCTION public.trigger_scheduled_followups()
@@ -46,7 +46,7 @@ BEGIN
     body := '{}'::jsonb
   );
 END;
-$$;
+$$ SET search_path = public;
 
 -- Schedule the job to run every hour
 -- Format: minute hour day_of_month month day_of_week
