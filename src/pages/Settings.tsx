@@ -116,32 +116,58 @@ export default function Settings() {
       // Step 2: Fetch from Supabase for authoritative data
       console.log('[Settings] Fetching from Supabase...');
 
-      // DIAGNOSTIC: Use a FRESH Supabase client to test if main client is corrupted
+      // DIAGNOSTIC: Use RAW FETCH to bypass Supabase JS library entirely
+      // This tests if the issue is browser/network level vs Supabase JS library
       let supabaseSettings: any = null;
       let error: any = null;
 
       try {
-        console.log('[Settings] 🔄 Creating FRESH Supabase client...');
-        const freshClient = createFreshSupabaseClient();
+        console.log('[Settings] 🔄 Testing with RAW FETCH (bypassing Supabase JS)...');
 
-        // Simple Promise.race with manual timeout
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Fresh Client Query Timeout (15s)')), 15000);
+        const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+        const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          console.log('[Settings] ⏰ Aborting raw fetch after 10s...');
+          controller.abort();
+        }, 10000);
+
+        const url = `${SUPABASE_URL}/rest/v1/company_settings?user_id=eq.${user.id}&select=*`;
+        console.log('[Settings] 🚀 RAW FETCH to:', url);
+
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.pgrst.object+json' // Request single object
+          },
+          signal: controller.signal
         });
 
-        console.log('[Settings] 🚀 Querying with FRESH client...');
-        const queryPromise = organizationId
-          ? freshClient.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle()
-          : freshClient.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle();
+        clearTimeout(timeoutId);
 
-        const result = await Promise.race([queryPromise, timeoutPromise]) as any;
+        console.log('[Settings] ✅ RAW FETCH response status:', response.status);
 
-        console.log('[Settings] ✅ FRESH CLIENT query completed!', result);
-        supabaseSettings = result?.data;
-        error = result?.error;
-      } catch (directError: any) {
-        console.error('[Settings] ❌ FRESH CLIENT query failed:', directError?.message || directError);
-        error = directError;
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[Settings] ✅ RAW FETCH data:', data);
+          supabaseSettings = data;
+        } else {
+          const errorText = await response.text();
+          console.error('[Settings] ❌ RAW FETCH error response:', errorText);
+          error = new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+      } catch (fetchError: any) {
+        if (fetchError.name === 'AbortError') {
+          console.error('[Settings] ❌ RAW FETCH ABORTED (timeout)');
+          error = new Error('Raw fetch aborted after 10s timeout');
+        } else {
+          console.error('[Settings] ❌ RAW FETCH exception:', fetchError?.message || fetchError);
+          error = fetchError;
+        }
       }
 
       if (error) {
