@@ -226,75 +226,25 @@ export async function saveSettings(
     });
 
     if (navigator.onLine) {
-      // NOTE: We use raw fetch() here because the Supabase JS client has been observed
-      // to hang indefinitely after viewing proposals. Raw fetch is reliable.
-      // See: Settings timeout debugging 2026-01-09
-      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-      const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      console.log('[DB Service] Saving to Supabase via request pool...');
 
       try {
-        // PostgREST upsert via PATCH with Prefer: resolution=merge-duplicates
-        const filterParam = organizationId
-          ? `organization_id=eq.${organizationId}`
-          : `user_id=eq.${userId}`;
-        const url = `${SUPABASE_URL}/rest/v1/company_settings?${filterParam}`;
+        const { error } = await executeWithPool(async () => {
+          return await supabase
+            .from('company_settings' as any)
+            .upsert(dbSettings, { onConflict: 'user_id' });
+        }, 30000, `save-settings-${userId}`);
 
-        const response = await fetch(url, {
-          method: 'PATCH',
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal,resolution=merge-duplicates'
-          },
-          body: JSON.stringify(dbSettings),
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok && response.status !== 404) {
-          // If PATCH fails (no existing row), try POST (insert)
-          console.log('[DB Service] PATCH returned', response.status, '- trying POST insert...');
-          const insertUrl = `${SUPABASE_URL}/rest/v1/company_settings`;
-
-          const insertController = new AbortController();
-          const insertTimeoutId = setTimeout(() => insertController.abort(), 30000);
-
-          const insertResponse = await fetch(insertUrl, {
-            method: 'POST',
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${SUPABASE_KEY}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=minimal,resolution=ignore-duplicates'
-            },
-            body: JSON.stringify(dbSettings),
-            signal: insertController.signal
-          });
-
-          clearTimeout(insertTimeoutId);
-
-          if (!insertResponse.ok && insertResponse.status !== 409) {
-            const errorText = await insertResponse.text();
-            console.error('[DB Service] ❌ Supabase insert error:', errorText);
-            throw new Error(`Settings save failed: ${insertResponse.status}`);
-          }
+        if (error) {
+          console.error('[DB Service] ❌ Supabase upsert error:', error);
+          throw error;
         }
 
         console.log('[DB Service] ✓ Settings saved to Supabase');
         dispatchDataRefresh('quotes-changed');
-      } catch (fetchError: any) {
-        if (fetchError.name === 'AbortError') {
-          console.error('[DB Service] ❌ Settings save timed out');
-          throw new Error('Settings save timed out');
-        } else {
-          console.error('[DB Service] ❌ Settings save failed:', fetchError);
-          throw fetchError;
-        }
+      } catch (upsertError: any) {
+        console.error('[DB Service] ❌ Settings save failed:', upsertError);
+        throw upsertError;
       }
     } else {
       console.log('[DB Service] Offline - queuing for sync');

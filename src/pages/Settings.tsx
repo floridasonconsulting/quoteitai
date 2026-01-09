@@ -113,113 +113,12 @@ export default function Settings() {
         setSettings(prev => ({ ...prev, ...localSettings }));
       }
 
-      // Step 2: Fetch from Supabase for authoritative data
-      console.log('[Settings] Fetching from Supabase...');
-
-      // NOTE: We use raw fetch() here instead of the Supabase JS client because
-      // the Supabase JS client has been observed to hang indefinitely after viewing
-      // proposals. This is a workaround until the root cause is identified.
-      // See: Settings timeout debugging 2026-01-09
-      let supabaseSettings: any = null;
-      let error: any = null;
-
-      try {
-        const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-        const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-        // Build the PostgREST query URL
-        const filterParam = organizationId
-          ? `organization_id=eq.${organizationId}`
-          : `user_id=eq.${user.id}`;
-        const url = `${SUPABASE_URL}/rest/v1/company_settings?${filterParam}&select=*`;
-
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/vnd.pgrst.object+json' // Request single object (maybeSingle equivalent)
-          },
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          const data = await response.json();
-          supabaseSettings = data;
-        } else if (response.status === 406) {
-          // 406 = No rows found (equivalent to maybeSingle returning null)
-          supabaseSettings = null;
-        } else {
-          const errorText = await response.text();
-          console.error('[Settings] Supabase API error:', errorText);
-          error = new Error(`HTTP ${response.status}`);
-        }
-      } catch (fetchError: any) {
-        if (fetchError.name === 'AbortError') {
-          console.warn('[Settings] Settings fetch timed out after 10s');
-          error = new Error('Settings fetch timeout');
-        } else {
-          console.error('[Settings] Settings fetch failed:', fetchError?.message);
-          error = fetchError;
-        }
-      }
-
-      if (error) {
-        console.error('[Settings] Supabase fetch error:', error);
-        // Don't throw, just use local data
-      } else if (supabaseSettings) {
-        const sSettings = supabaseSettings as any;
-        console.log('[Settings] ✓ Loaded settings from Supabase:', {
-          name: sSettings.name,
-          email: sSettings.email,
-          primaryColor: sSettings.primary_color,
-          organizationId: sSettings.organization_id
-        });
-
-        // Convert database format to app format
-        const loadedSettings: CompanySettings = {
-          name: sSettings.name || "",
-          address: sSettings.address || "",
-          city: sSettings.city || "",
-          state: sSettings.state || "",
-          zip: sSettings.zip || "",
-          phone: sSettings.phone || "",
-          email: sSettings.email || "",
-          website: sSettings.website || "",
-          logo: sSettings.logo || undefined,
-          logoDisplayOption: (sSettings.logo_display_option as any) || 'both',
-          industry: (sSettings.industry as any) || "other",
-          license: sSettings.license || "",
-          insurance: sSettings.insurance || "",
-          terms: sSettings.terms || "",
-          legalTerms: sSettings.legal_terms || "", // ✅ NEW: Map legal_terms from DB
-          proposalTemplate: (sSettings.proposal_template as any) || 'classic',
-          proposalTheme: (sSettings.proposal_theme as any) || 'modern-corporate',
-          notifyEmailAccepted: sSettings.notify_email_accepted ?? true,
-          notifyEmailDeclined: sSettings.notify_email_declined ?? true,
-          showProposalImages: sSettings.show_proposal_images ?? true,
-          defaultCoverImage: sSettings.default_cover_image || undefined,
-          defaultHeaderImage: sSettings.default_header_image || undefined,
-          visualRules: sSettings.visual_rules ? parseVisualRules(sSettings.visual_rules) : [],
-          showFinancing: sSettings.show_financing ?? false,
-          financingText: sSettings.financing_text || "",
-          financingLink: sSettings.financing_link || "",
-          primaryColor: sSettings.primary_color || undefined,
-          accentColor: sSettings.accent_color || undefined,
-          onboardingCompleted: sSettings.onboarding_completed ?? false,
-        };
-
-        // Merge with local settings to ensure everything is captured
+      // Step 2: Authoritative load from db-service (which uses pool)
+      console.log('[Settings] Fetching from db-service...');
+      const loadedSettings = await getSettings(user.id, organizationId);
+      if (loadedSettings) {
         setSettings(prev => ({ ...prev, ...loadedSettings }));
-        console.log('[Settings] ✓ Settings state updated with Supabase data');
-      } else {
-        console.log('[Settings] No settings found in Supabase for this identity');
+        console.log('[Settings] ✓ Settings state updated with db-service data');
       }
 
       console.log('[Settings] ========== SETTINGS LOAD COMPLETE ==========');

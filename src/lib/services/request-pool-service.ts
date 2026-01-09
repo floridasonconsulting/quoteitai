@@ -30,34 +30,34 @@ export async function executeWithPool<T>(
   }
 
   activeRequests++;
-  console.log(`[Pool] Request [${label}] starting. Active: ${activeRequests}, Timeout: ${timeoutMs}ms`);
+  console.debug(`[Pool] Request [${label}] starting. Active: ${activeRequests}, Timeout: ${timeoutMs}ms`);
   const requestStartTime = Date.now();
 
   try {
     // Run with timeout to ensure we don't hold the pool slot forever
     // Ensure timeoutMs is at least 1s to avoid immediate timeouts from undefined/0
     const effectiveTimeout = Math.max(timeoutMs, 1000);
-    console.log(`[Pool] Request [${label}] effective timeout: ${effectiveTimeout}ms`);
+    console.debug(`[Pool] Request [${label}] effective timeout: ${effectiveTimeout}ms`);
 
     // Safely invoke the request function
     let promise: Promise<T>;
     try {
       promise = requestFn();
-      console.log(`[Pool] Request [${label}] promise created successfully`);
+      console.debug(`[Pool] Request [${label}] promise created successfully`);
     } catch (syncError) {
       console.error(`[Pool] Request [${label}] failed synchronously:`, syncError);
       throw syncError;
     }
 
     const result = await withTimeout(promise, effectiveTimeout);
-    console.log(`[Pool] Request [${label}] completed in ${Date.now() - requestStartTime}ms`);
+    console.debug(`[Pool] Request [${label}] completed in ${Date.now() - requestStartTime}ms`);
     return result;
   } catch (error) {
     console.error(`[Pool] Request [${label}] failed after ${Date.now() - requestStartTime}ms:`, error);
     throw error;
   } finally {
     activeRequests--;
-    console.log(`[Pool] Request [${label}] finished. Active: ${activeRequests}`);
+    console.debug(`[Pool] Request [${label}] finished. Active: ${activeRequests}`);
   }
 }
 
@@ -82,7 +82,7 @@ declare global {
 if (typeof window !== 'undefined') {
   window.__inFlightRequests = inFlightRequests;
   (window as any).__resetRequestPool = () => {
-    console.log('[Pool] Manual reset triggered');
+    console.debug('[Pool] Manual reset triggered');
     activeRequests = 0;
     clearInFlightRequests();
     return "Pool reset successfully";
@@ -162,11 +162,11 @@ export async function dedupedRequest<T>(
   const existing = inFlightRequests.get(key);
   if (existing) {
     const age = Date.now() - existing.startTime;
-    console.log(`[Dedup] Reusing in-flight request for ${key} (age: ${age}ms)`);
+    console.debug(`[Dedup] Reusing in-flight request for ${key} (age: ${age}ms)`);
     return existing.promise as Promise<T>;
   }
 
-  console.log(`[Dedup] Starting new request for ${key}`);
+  console.debug(`[Dedup] Starting new request for ${key}`);
 
   // Create abort controller for this request
   const abortController = new AbortController();
@@ -185,7 +185,7 @@ export async function dedupedRequest<T>(
     } finally {
       // Always cleanup, even on error or timeout
       const deleted = inFlightRequests.delete(key);
-      console.log(`[Dedup] Cleanup for ${key}: ${deleted ? 'success' : 'already removed'}`);
+      console.debug(`[Dedup] Cleanup for ${key}: ${deleted ? 'success' : 'already removed'}`);
     }
   })();
 

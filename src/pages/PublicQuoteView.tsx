@@ -15,6 +15,7 @@ import { ProposalVisuals, ProposalSection } from '@/types/proposal';
 import { VisualRule } from "@/types";
 import { isDemoModeActive } from '@/contexts/DemoContext';
 import { MOCK_QUOTES, MOCK_CUSTOMERS } from '@/lib/mockData';
+import { executeWithPool, dedupedRequest } from '@/lib/services/request-pool-service';
 
 // Helper to safely parse visual rules from JSON or object
 const parseVisualRules = (rules: any): VisualRule[] => {
@@ -57,7 +58,13 @@ export default function PublicQuoteView() {
       setAuthLoading(false);
     }, 1000);
 
-    return () => clearTimeout(authTimeout);
+    return () => {
+      clearTimeout(authTimeout);
+      // Reset request pool on unmount to prevent lockups during rapid navigation
+      if (typeof window !== 'undefined' && (window as any).__resetRequestPool) {
+        (window as any).__resetRequestPool();
+      }
+    };
   }, []);
 
   // Check for existing session token or ownership once auth is ready
@@ -147,11 +154,13 @@ export default function PublicQuoteView() {
       console.log('[PublicQuoteView] Fetching quote with shareToken:', decodedShareToken);
 
       // Fetch quote to check ownership
-      const { data: quoteData, error: quoteError } = await supabase
-        .from('quotes')
-        .select('user_id, id')
-        .eq('share_token', decodedShareToken)
-        .maybeSingle();
+      const { data: quoteData, error: quoteError } = await executeWithPool(async () => {
+        return await supabase
+          .from('quotes')
+          .select('user_id, id')
+          .eq('share_token', decodedShareToken)
+          .maybeSingle();
+      }, 10000, `check-ownership-${decodedShareToken}`);
 
       if (quoteError) {
         console.error('[PublicQuoteView] Error checking ownership:', quoteError);
@@ -265,11 +274,13 @@ export default function PublicQuoteView() {
     setLoading(true);
     try {
       // Fetch quote by share token
-      const { data: quoteData, error: quoteError } = await supabase
-        .from('quotes')
-        .select('*, customers(contact_first_name, contact_last_name)')
-        .eq('share_token', decodedShareToken)
-        .maybeSingle();
+      const { data: quoteData, error: quoteError } = await dedupedRequest(`quote-${decodedShareToken}`, async () => {
+        return await supabase
+          .from('quotes')
+          .select('*, customers(contact_first_name, contact_last_name)')
+          .eq('share_token', decodedShareToken)
+          .maybeSingle();
+      });
 
       if (quoteError) {
         console.error('[PublicQuoteView] ❌ Supabase error:', quoteError);
@@ -321,10 +332,12 @@ export default function PublicQuoteView() {
 
       // 🚀 NEW: Fetch current items table data to enrich quote JSONB
       console.log('[PublicQuoteView] 🔄 Fetching fresh items table data for enrichment...');
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('items')
-        .select('name, image_url, enhanced_description, category')
-        .eq('user_id', quoteData.user_id);
+      const { data: itemsData, error: itemsError } = await dedupedRequest(`items-${quoteData.user_id}`, async () => {
+        return await supabase
+          .from('items')
+          .select('name, image_url, enhanced_description, category')
+          .eq('user_id', quoteData.user_id);
+      });
 
       if (itemsError) {
         console.warn('[PublicQuoteView] ⚠️ Could not fetch items table:', itemsError);
@@ -426,11 +439,13 @@ export default function PublicQuoteView() {
       // Fetch company settings - CRITICAL for proposal display
       console.log('[PublicQuoteView] 🔍 Fetching company settings for user:', quoteData.user_id);
 
-      const { data: settingsData, error: settingsError } = await supabase
-        .from('company_settings')
-        .select('*')
-        .eq('user_id', quoteData.user_id)
-        .maybeSingle();
+      const { data: settingsData, error: settingsError } = await dedupedRequest(`settings-${quoteData.user_id}`, async () => {
+        return await supabase
+          .from('company_settings')
+          .select('*')
+          .eq('user_id', quoteData.user_id)
+          .maybeSingle();
+      });
 
       if (settingsError) {
         console.error('[PublicQuoteView] ⚠️ Settings fetch error:', settingsError);
@@ -588,10 +603,9 @@ export default function PublicQuoteView() {
     );
   }
 
-  // Render the new ProposalViewer
-  console.log('[PublicQuoteView] 🎨 Rendering ProposalViewer');
+  /* console.log('[PublicQuoteView] 🎨 Rendering ProposalViewer');
   console.log('[PublicQuoteView] Settings:', settings);
-  console.log('[PublicQuoteView] Quote:', { id: quote.id, itemCount: quote.items.length });
+  console.log('[PublicQuoteView] Quote:', { id: quote.id, itemCount: quote.items.length }); */
 
   return (
     <div className="min-h-screen bg-slate-50">

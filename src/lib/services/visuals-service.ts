@@ -1,50 +1,53 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ProposalVisuals } from "@/types/proposal";
+import { dedupedRequest, executeWithPool } from "./request-pool-service";
 
 export const visualsService = {
   /**
    * Get visuals for a specific quote
    */
   async getVisuals(quoteId: string): Promise<ProposalVisuals | null> {
-    const { data, error } = await supabase
-      .from('proposal_visuals' as any)
-      .select('*')
-      .eq('quote_id', quoteId)
-      .single();
+    return dedupedRequest(`visuals-${quoteId}`, async () => {
+      const { data, error } = await supabase
+        .from('proposal_visuals' as any)
+        .select('*')
+        .eq('quote_id', quoteId)
+        .single();
 
-    if (error) {
-      if (error.code === 'PGRST116') return null; // Not found
-      console.error('Error fetching visuals:', error);
-      throw error;
-    }
-
-    const visualsData = data as any;
-
-    // Extract item images from both sources for backward compatibility
-    const itemImagesFromColumn = (visualsData.item_images as Record<string, string>) || {};
-    const sectionBackgrounds = (visualsData.section_backgrounds as Record<string, string>) || {};
-
-    // Extract item images from section_backgrounds (fallback storage)
-    const itemImagesFromSections: Record<string, string> = {};
-    const cleanedSectionBackgrounds: Record<string, string> = {};
-    for (const [key, value] of Object.entries(sectionBackgrounds)) {
-      if (key.startsWith('item_')) {
-        itemImagesFromSections[key.substring(5)] = value; // Remove "item_" prefix
-      } else {
-        cleanedSectionBackgrounds[key] = value;
+      if (error) {
+        if (error.code === 'PGRST116') return null; // Not found
+        console.error('Error fetching visuals:', error);
+        throw error;
       }
-    }
 
-    // Merge: item_images column takes precedence over section_backgrounds fallback
-    const mergedItemImages = { ...itemImagesFromSections, ...itemImagesFromColumn };
+      const visualsData = data as any;
 
-    return {
-      coverImage: visualsData.cover_image,
-      logo: visualsData.logo_url,
-      gallery: (visualsData.gallery as string[]) || [],
-      sectionBackgrounds: cleanedSectionBackgrounds,
-      itemImages: mergedItemImages
-    };
+      // Extract item images from both sources for backward compatibility
+      const itemImagesFromColumn = (visualsData.item_images as Record<string, string>) || {};
+      const sectionBackgrounds = (visualsData.section_backgrounds as Record<string, string>) || {};
+
+      // Extract item images from section_backgrounds (fallback storage)
+      const itemImagesFromSections: Record<string, string> = {};
+      const cleanedSectionBackgrounds: Record<string, string> = {};
+      for (const [key, value] of Object.entries(sectionBackgrounds)) {
+        if (key.startsWith('item_')) {
+          itemImagesFromSections[key.substring(5)] = value; // Remove "item_" prefix
+        } else {
+          cleanedSectionBackgrounds[key] = value;
+        }
+      }
+
+      // Merge: item_images column takes precedence over section_backgrounds fallback
+      const mergedItemImages = { ...itemImagesFromSections, ...itemImagesFromColumn };
+
+      return {
+        coverImage: visualsData.cover_image,
+        logo: visualsData.logo_url,
+        gallery: (visualsData.gallery as string[]) || [],
+        sectionBackgrounds: cleanedSectionBackgrounds,
+        itemImages: mergedItemImages
+      };
+    });
   },
 
   /**
@@ -60,26 +63,28 @@ export const visualsService = {
    * Save or update visuals for a quote
    */
   async saveVisuals(quoteId: string, visuals: ProposalVisuals): Promise<void> {
-    const userId = await this.getUserId();
-    const dbData: any = {
-      user_id: userId,
-      quote_id: quoteId,
-      cover_image: visuals.coverImage,
-      logo_url: visuals.logo,
-      gallery: visuals.gallery,
-      section_backgrounds: visuals.sectionBackgrounds,
-      item_images: visuals.itemImages,
-      updated_at: new Date().toISOString()
-    };
+    return executeWithPool(async () => {
+      const userId = await this.getUserId();
+      const dbData: any = {
+        user_id: userId,
+        quote_id: quoteId,
+        cover_image: visuals.coverImage,
+        logo_url: visuals.logo,
+        gallery: visuals.gallery,
+        section_backgrounds: visuals.sectionBackgrounds,
+        item_images: visuals.itemImages,
+        updated_at: new Date().toISOString()
+      };
 
-    const { error } = await supabase
-      .from('proposal_visuals' as any)
-      .upsert(dbData, { onConflict: 'quote_id' });
+      const { error } = await supabase
+        .from('proposal_visuals' as any)
+        .upsert(dbData, { onConflict: 'quote_id' });
 
-    if (error) {
-      console.error('Error saving visuals:', error);
-      throw error;
-    }
+      if (error) {
+        console.error('Error saving visuals:', error);
+        throw error;
+      }
+    }, 15000, `save-visuals-${quoteId}`);
   },
 
 

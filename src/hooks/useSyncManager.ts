@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toCamelCase, toSnakeCase } from '@/lib/services/transformation-utils';
 import { syncStorage } from '@/lib/sync-storage';
 import { QueueChange } from '@/types';
+import { executeWithPool } from '@/lib/services/request-pool-service';
 
 const SYNC_INTERVAL = 30000; // 30 seconds
 const MAX_RETRIES = 3;
@@ -61,9 +62,11 @@ export function useSyncManager() {
 
       switch (change.type) {
         case 'create': {
-          const { error: createError } = await supabase
-            .from(table)
-            .insert(dbData as never);
+          const { error: createError } = await executeWithPool(async () => {
+            return await supabase
+              .from(table)
+              .insert(dbData as never);
+          }, 15000, `sync-create-${change.table}`);
 
           if (createError) {
             if (createError.code === '23505') {
@@ -80,11 +83,13 @@ export function useSyncManager() {
             return false;
           }
 
-          const { error: updateError } = await supabase
-            .from(table)
-            .update(dbData as never)
-            .eq('id', change.data.id as string)
-            .eq('user_id', user.id);
+          const { error: updateError } = await executeWithPool(async () => {
+            return await supabase
+              .from(table)
+              .update(dbData as never)
+              .eq('id', change.data.id as string)
+              .eq('user_id', user.id);
+          }, 15000, `sync-update-${change.table}`);
 
           if (updateError) throw updateError;
           break;
@@ -95,11 +100,13 @@ export function useSyncManager() {
             return false;
           }
 
-          const { error: deleteError } = await supabase
-            .from(table)
-            .delete()
-            .eq('id', change.data.id as string)
-            .eq('user_id', user.id);
+          const { error: deleteError } = await executeWithPool(async () => {
+            return await supabase
+              .from(table)
+              .delete()
+              .eq('id', change.data.id as string)
+              .eq('user_id', user.id);
+          }, 15000, `sync-delete-${change.table}`);
 
           if (deleteError) {
             if (deleteError.code === 'PGRST116') {

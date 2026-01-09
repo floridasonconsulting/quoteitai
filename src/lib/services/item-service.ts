@@ -6,7 +6,7 @@
 import { Item, QueueChange } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { cacheManager } from '../cache-manager';
-import { dedupedRequest, withTimeout } from './request-pool-service';
+import { dedupedRequest, executeWithPool, withTimeout } from './request-pool-service';
 import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 import { ItemDB, isIndexedDBSupported } from '../indexed-db';
@@ -94,7 +94,9 @@ export async function getItems(
           query = query.eq('user_id', userId);
         }
 
-        const { data, error } = await query.order('created_at', { ascending: false });
+        const { data, error } = await executeWithPool(async () => {
+          return await query.order('created_at', { ascending: false });
+        }, 15000, `fetch-items-${userId}`);
 
         apiTracker.track(
           'items.select',
@@ -241,7 +243,9 @@ export async function addItem(
     console.log('[ItemService] Syncing to Supabase with minQuantity and imageUrl');
 
     const startTime = performance.now();
-    const { error } = await supabase.from('items' as any).insert(dbItem as any);
+    const { error } = await executeWithPool(async () => {
+      return await supabase.from('items' as any).insert(dbItem as any);
+    }, 15000, `create-item-${item.id}`);
 
     apiTracker.track(
       'items.insert',
@@ -334,20 +338,18 @@ export async function updateItem(
     console.log('[ItemService] Syncing update to Supabase with minQuantity and imageUrl');
 
     const startTime = performance.now();
-    let query = supabase
-      .from('items' as any)
-      .update(dbUpdates as unknown)
-      .eq('id', id);
+    const { error } = await executeWithPool(async () => {
+      let query = supabase
+        .from('items' as any)
+        .update(dbUpdates as unknown)
+        .eq('id', id);
 
-    // If not in an organization context, strictly enforce user_id matching
-    // If in an organization, allow RLS to handle permission (to allow owner/admin updates)
-    if (!organizationId) {
-      query = query.eq('user_id', userId);
-    }
+      if (!organizationId) {
+        query = query.eq('user_id', userId);
+      }
 
-    const { error } = await query
-      .select()
-      .single();
+      return await query.select().single();
+    }, 15000, `update-item-${id}`);
 
     apiTracker.track(
       'items.update',

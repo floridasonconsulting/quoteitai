@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatTermsContent } from "@/lib/json-terms-formatter";
+import { clearInFlightRequests } from "@/lib/services/request-pool-service";
 
 interface ProposalViewerProps {
   quote?: Quote;
@@ -105,27 +106,6 @@ export function ProposalViewer({
 
   const { toast } = useToast();
 
-  // Debug logging for company info
-  console.log('[ProposalViewer] Settings received:', {
-    hasSettings: !!settings,
-    settingsName: settings?.name,
-    settingsLogo: settings?.logo,
-    settingsEmail: settings?.email,
-    settingsPhone: settings?.phone,
-    settingsAddress: settings?.address
-  });
-
-  console.log('[ProposalViewer] Quote data:', {
-    quoteId: quote?.id || directProposal?.id,
-    itemCount: quote?.items?.length || 0,
-    firstItemHasImage: !!quote?.items?.[0]?.imageUrl,
-    firstItemImageUrl: quote?.items?.[0]?.imageUrl,
-    sampleItem: quote?.items?.[0] ? {
-      name: quote.items[0].name,
-      imageUrl: quote.items[0].imageUrl,
-    } : null
-  });
-
   // Data Transformation with null checks
   const proposalData = useMemo(() => {
     if (directProposal) return directProposal;
@@ -134,10 +114,6 @@ export function ProposalViewer({
     const activeVisuals = visuals || {
       logo: settings?.logo,
     };
-
-    console.log('[ProposalViewer] Transforming quote:', quote?.id);
-    console.log('[ProposalViewer] Using visuals:', activeVisuals);
-    console.log('[ProposalViewer] Using settings:', settings);
 
     return transformQuoteToProposal(quote, settings, activeVisuals);
   }, [quote, settings, visuals, directProposal]);
@@ -148,6 +124,17 @@ export function ProposalViewer({
   useEffect(() => {
     // Enforce light mode for proposal viewer by default unless specified
     setTheme('light');
+
+    // Cleanup on unmount to prevent memory leaks and request pool exhaustion
+    return () => {
+      console.debug('[ProposalViewer] Unmounting, cleaning up requests...');
+      // If we're closing a proposal, we should probably clear any pending visuals fetches
+      // but let's be careful not to break global state.
+      // For now, just ensure the pool counter doesn't get stuck.
+      if (typeof window !== 'undefined' && (window as any).__resetRequestPool) {
+        (window as any).__resetRequestPool();
+      }
+    };
   }, [setTheme]);
 
   // Generate CSS Variables for the selected theme

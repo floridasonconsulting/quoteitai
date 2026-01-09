@@ -6,7 +6,7 @@
 import { Customer, QueueChange } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { cacheManager } from '../cache-manager';
-import { dedupedRequest, withTimeout } from './request-pool-service';
+import { dedupedRequest, executeWithPool, withTimeout } from './request-pool-service';
 import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 import { CustomerDB, isIndexedDBSupported } from '../indexed-db';
@@ -127,9 +127,9 @@ export async function getCustomers(
             query = query.eq('user_id', userId);
           }
 
-          const dbQueryPromise = Promise.resolve(query);
-
-          const { data, error } = await withTimeout(dbQueryPromise, 15000);
+          const { data, error } = await executeWithPool(async () => {
+            return await query;
+          }, 15000, `fetch-customers-${userId}`);
 
           if (error) {
             console.error('[CustomerService] Supabase error:', error);
@@ -242,7 +242,9 @@ export async function addCustomer(
 
   try {
     const dbCustomer = toSnakeCase(customerWithUser);
-    const { error } = await supabase.from('customers' as any).insert(dbCustomer as any);
+    const { error } = await executeWithPool(async () => {
+      return await supabase.from('customers' as any).insert(dbCustomer as any);
+    }, 15000, `create-customer-${customer.id}`);
 
     if (error) {
       console.error('❌ Database insert failed for customer:', error);
@@ -312,18 +314,19 @@ export async function updateCustomer(
 
   try {
     const dbUpdates = toSnakeCase(updates);
-    let query = supabase
-      .from('customers' as any)
-      .update(dbUpdates as unknown)
-      .eq('id', id);
+    const { error } = await executeWithPool(async () => {
+      let query = supabase
+        .from('customers' as any)
+        .update(dbUpdates as unknown)
+        .eq('id', id);
 
-    // If not in an organization context, strictly enforce user_id matching
-    // If in an organization, allow RLS to handle permission (to allow owner/admin updates)
-    if (!organizationId) {
-      query = query.eq('user_id', userId);
-    }
-
-    const { error } = await query;
+      // If not in an organization context, strictly enforce user_id matching
+      // If in an organization, allow RLS to handle permission (to allow owner/admin updates)
+      if (!organizationId) {
+        query = query.eq('user_id', userId);
+      }
+      return await query;
+    }, 15000, `update-customer-${id}`);
 
     if (error) throw error;
 

@@ -6,7 +6,7 @@
 import { Quote, QueueChange } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { cacheManager } from '../cache-manager';
-import { dedupedRequest, withTimeout } from './request-pool-service';
+import { dedupedRequest, executeWithPool, withTimeout } from './request-pool-service';
 import { toCamelCase, toSnakeCase } from './transformation-utils';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 import { QuoteDB, isIndexedDBSupported } from '../indexed-db';
@@ -194,12 +194,14 @@ export async function getQuote(userId: string, id: string): Promise<Quote | null
 
   // 3. Fetch from Supabase
   try {
-    const { data, error } = await supabase
-      .from("quotes")
-      .select("*, customers(contact_first_name, contact_last_name)")
-      .eq("user_id", userId)
-      .eq("id", id)
-      .single();
+    const { data, error } = await dedupedRequest(cacheKey, async () => {
+      return await supabase
+        .from("quotes")
+        .select("*, customers(contact_first_name, contact_last_name)")
+        .eq("user_id", userId)
+        .eq("id", id)
+        .single();
+    });
 
     if (error || !data) {
       if (error && error.code !== "PGRST116") {
@@ -275,16 +277,13 @@ export async function addQuote(
   // 3. Save to Supabase
   try {
     const dbQuote = toSnakeCase(quoteWithUser);
-    const { data: insertedData, error } = await withTimeout(
-      Promise.resolve(
-        supabase
-          .from('quotes' as any)
-          .insert(dbQuote as any)
-          .select()
-          .single()
-      ),
-      15000
-    ) as any;
+    const { data: insertedData, error } = await executeWithPool(async () => {
+      return await supabase
+        .from('quotes' as any)
+        .insert(dbQuote as any)
+        .select()
+        .single();
+    }, 15000, `create-quote-${quote.id}`);
 
     if (error) throw error;
 
@@ -360,21 +359,19 @@ export async function updateQuote(
   // 3. Update Supabase
   try {
     const dbUpdates = toSnakeCase(updates);
-    let query = supabase
-      .from('quotes' as any)
-      .update(dbUpdates as unknown)
-      .eq('id', id);
+    const { error } = await executeWithPool(async () => {
+      let query = supabase
+        .from('quotes' as any)
+        .update(dbUpdates as unknown)
+        .eq('id', id);
 
-    // If not in an organization context, strictly enforce user_id matching
-    // If in an organization, allow RLS to handle permission (to allow owner/admin updates)
-    if (!organizationId) {
-      query = query.eq('user_id', userId);
-    }
-
-    const { error } = await withTimeout(
-      Promise.resolve(query),
-      15000
-    ) as any;
+      // If not in an organization context, strictly enforce user_id matching
+      // If in an organization, allow RLS to handle permission (to allow owner/admin updates)
+      if (!organizationId) {
+        query = query.eq('user_id', userId);
+      }
+      return await query;
+    }, 15000, `update-quote-${id}`);
 
     if (error) throw error;
 
