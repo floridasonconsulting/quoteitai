@@ -5,6 +5,7 @@ import {
   getSettings,
 } from "./storage";
 import { toSnakeCase } from "./services/transformation-utils";
+import { executeWithPool } from "./services/request-pool-service";
 import { IndexedDBMigrationService } from "./indexed-db-migration";
 import { CustomerDB, ItemDB, QuoteDB, SettingsDB } from "./indexed-db";
 
@@ -99,9 +100,13 @@ async function syncIndexedDBToSupabase(userId: string): Promise<void> {
         contact_last_name: customer.contactLastName,
         created_at: customer.createdAt
       }));
-      const { error: customersError } = await supabase
-        .from("customers")
-        .upsert(customersToSync, { onConflict: "id" });
+      const { error: customersError } = await executeWithPool(
+        () => Promise.resolve(supabase
+          .from("customers")
+          .upsert(customersToSync, { onConflict: "id" })),
+        30000,
+        'migration-customers'
+      ) as any;
 
       if (customersError) {
         console.error("[MigrationHelper] Error syncing customers to Supabase:", customersError);
@@ -130,9 +135,13 @@ async function syncIndexedDBToSupabase(userId: string): Promise<void> {
         image_url: item.imageUrl,
         created_at: item.createdAt
       }));
-      const { error: itemsError } = await supabase
-        .from("items")
-        .upsert(itemsToSync, { onConflict: "id" });
+      const { error: itemsError } = await executeWithPool(
+        () => Promise.resolve(supabase
+          .from("items")
+          .upsert(itemsToSync, { onConflict: "id" })),
+        30000,
+        'migration-items'
+      ) as any;
 
       if (itemsError) {
         console.error("[MigrationHelper] Error syncing items to Supabase:", itemsError);
@@ -185,9 +194,13 @@ async function syncIndexedDBToSupabase(userId: string): Promise<void> {
 
         return cleanQuote;
       });
-      const { error: quotesError } = await supabase
-        .from("quotes")
-        .upsert(quotesToSync, { onConflict: "id" });
+      const { error: quotesError } = await executeWithPool(
+        () => Promise.resolve(supabase
+          .from("quotes")
+          .upsert(quotesToSync, { onConflict: "id" })),
+        60000, // Quotes can be large
+        'migration-quotes'
+      ) as any;
 
       if (quotesError) {
         console.error("[MigrationHelper] Error syncing quotes to Supabase:", quotesError);
@@ -235,9 +248,13 @@ async function syncIndexedDBToSupabase(userId: string): Promise<void> {
 
       // Remove undefined values
       Object.keys(settingsToSync).forEach(key => settingsToSync[key] === undefined && delete settingsToSync[key]);
-      const { error: settingsError } = await supabase
-        .from("company_settings")
-        .upsert(settingsToSync, { onConflict: "user_id" });
+      const { error: settingsError } = await executeWithPool(
+        () => Promise.resolve(supabase
+          .from("company_settings")
+          .upsert(settingsToSync, { onConflict: "user_id" })),
+        30000,
+        'migration-settings'
+      ) as any;
 
       if (settingsError) {
         console.error("[MigrationHelper] Error syncing settings to Supabase:", settingsError);

@@ -13,24 +13,32 @@ let activeRequests = 0;
  * Execute request with connection pooling to limit concurrent requests
  * Integrates internal timeout to ensure pool slots are always released
  */
-export async function executeWithPool<T>(requestFn: () => Promise<T>, timeoutMs: number = 30000): Promise<T> {
+export async function executeWithPool<T>(
+  requestFn: () => Promise<T>,
+  timeoutMs: number = 30000,
+  label: string = 'unlabeled'
+): Promise<T> {
   const startTime = Date.now();
   const POOL_WAIT_TIMEOUT = 10000; // 10 seconds timeout for waiting on pool
 
   while (activeRequests >= MAX_CONCURRENT_REQUESTS) {
     if (Date.now() - startTime > POOL_WAIT_TIMEOUT) {
-      console.warn('[Pool] Wait timeout exceeded, forcing request through. Current active:', activeRequests);
+      console.warn(`[Pool] Wait timeout exceeded for [${label}], forcing request through. Current active:`, activeRequests);
       break;
     }
     await new Promise(resolve => setTimeout(resolve, 50));
   }
 
   activeRequests++;
+  console.log(`[Pool] Request [${label}] starting. Active: ${activeRequests}`);
   try {
     // Run with timeout to ensure we don't hold the pool slot forever
-    return await withTimeout(requestFn(), timeoutMs);
+    // Ensure timeoutMs is at least 1s to avoid immediate timeouts from undefined/0
+    const effectiveTimeout = Math.max(timeoutMs, 1000);
+    return await withTimeout(requestFn(), effectiveTimeout);
   } finally {
     activeRequests--;
+    console.log(`[Pool] Request [${label}] finished. Active: ${activeRequests}`);
   }
 }
 
@@ -42,7 +50,7 @@ interface InFlightRequest {
 }
 
 const inFlightRequests = new Map<string, InFlightRequest>();
-const MAX_REQUEST_AGE = 20000; // 20 seconds max age for in-flight requests
+const MAX_REQUEST_AGE = 60000; // Increased to 60 seconds to match/exceed typical timeouts
 
 // Extend window type for debugging
 declare global {
@@ -124,7 +132,11 @@ export function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<
  * Request deduplication wrapper with abort support
  * Reuses in-flight requests for the same key to prevent duplicate API calls
  */
-export async function dedupedRequest<T>(key: string, requestFn: () => Promise<T>, timeoutMs?: number): Promise<T> {
+export async function dedupedRequest<T>(
+  key: string,
+  requestFn: () => Promise<T>,
+  timeoutMs: number = 30000
+): Promise<T> {
   // Clear stale requests before checking
   clearStaleRequests();
 
@@ -143,7 +155,7 @@ export async function dedupedRequest<T>(key: string, requestFn: () => Promise<T>
   // Create promise with guaranteed cleanup
   const promise = (async () => {
     try {
-      const result = await executeWithPool(requestFn, timeoutMs);
+      const result = await executeWithPool(requestFn, timeoutMs, key);
       return result;
     } catch (error) {
       // Don't log abort errors

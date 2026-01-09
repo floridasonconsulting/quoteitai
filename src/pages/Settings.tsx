@@ -123,7 +123,8 @@ export default function Settings() {
         sessionKey,
         () => Promise.resolve(organizationId
           ? supabase.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle()
-          : supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle())
+          : supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle()),
+        45000 // Increased to 45s for robustness
       ) as any;
 
       if (error) {

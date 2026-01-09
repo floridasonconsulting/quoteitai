@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { checkAndMigrateData } from '@/lib/migration-helper';
 import { storageCache } from '@/lib/storage-cache';
+import { executeWithPool } from '@/lib/services/request-pool-service';
 
 interface SubscriptionData {
   subscribed: boolean;
@@ -163,7 +164,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Try to check subscription via Edge Function, but don't fail if it doesn't exist
       try {
-        const { data, error } = await supabase.functions.invoke('check-subscription');
+        const { data, error } = await executeWithPool(
+          () => supabase.functions.invoke('check-subscription'),
+          15000,
+          'check-subscription'
+        ) as any;
 
         if (error) {
           // Log as warning only - this is non-critical for core app function

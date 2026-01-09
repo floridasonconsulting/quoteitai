@@ -87,7 +87,8 @@ export const getSettings = async (userId: string, organizationId: string | null 
           .select('*')
           .eq('user_id', userId)
           .maybeSingle()
-      )
+      ),
+      45000
     ) as any;
 
     if (error) {
