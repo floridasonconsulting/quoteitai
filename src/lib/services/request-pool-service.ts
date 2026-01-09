@@ -17,7 +17,7 @@ export async function executeWithPool<T>(
   requestFn: (signal?: AbortSignal) => Promise<T>,
   timeoutMs: number = 30000,
   label: string = 'unlabeled',
-  signal?: AbortSignal
+  externalSignal?: AbortSignal
 ): Promise<T> {
   const startTime = Date.now();
   const POOL_WAIT_TIMEOUT = 10000; // 10 seconds timeout for waiting on pool
@@ -27,38 +27,66 @@ export async function executeWithPool<T>(
       console.warn(`[Pool] Wait timeout exceeded for [${label}], forcing request through. Current active:`, activeRequests);
       break;
     }
+    // Check if external signal was aborted while waiting
+    if (externalSignal?.aborted) {
+      throw new Error(`Request [${label}] aborted while waiting for pool`);
+    }
     await new Promise(resolve => setTimeout(resolve, 50));
   }
 
   activeRequests++;
   console.debug(`[Pool] Request [${label}] starting. Active: ${activeRequests}, Timeout: ${timeoutMs}ms`);
   const requestStartTime = Date.now();
+  const effectiveTimeout = Math.max(timeoutMs, 1000);
+
+  // CRITICAL FIX: Create an internal controller that we can abort on timeout.
+  // This ensures the underlying Supabase/Browser request is TRULY killed.
+  const internalController = new AbortController();
+  const timeoutId = setTimeout(() => {
+    console.warn(`[Pool] ⚠️ Request [${label}] forced abortion after ${effectiveTimeout}ms timeout`);
+    internalController.abort();
+  }, effectiveTimeout);
+
+  // Link external signal to our internal controller
+  const linkAbort = () => internalController.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) internalController.abort();
+    else externalSignal.addEventListener('abort', linkAbort, { once: true });
+  }
 
   try {
-    // Run with timeout to ensure we don't hold the pool slot forever
-    // Ensure timeoutMs is at least 1s to avoid immediate timeouts from undefined/0
-    const effectiveTimeout = Math.max(timeoutMs, 1000);
-    console.debug(`[Pool] Request [${label}] effective timeout: ${effectiveTimeout}ms`);
+    // Race the request against a promise that rejects when the internal signal is aborted
+    // This provides a consistent "Request timeout" error while ensuring abortion happens.
+    const abortPromise = new Promise<never>((_, reject) => {
+      const handleAbort = () => reject(new Error('Request timeout'));
+      if (internalController.signal.aborted) {
+        handleAbort();
+      } else {
+        internalController.signal.addEventListener('abort', handleAbort, { once: true });
+      }
+    });
 
-    // Safely invoke the request function
-    let promise: Promise<T>;
-    try {
-      promise = requestFn(signal);
-      console.debug(`[Pool] Request [${label}] promise created successfully`);
-    } catch (syncError) {
-      console.error(`[Pool] Request [${label}] failed synchronously:`, syncError);
-      throw syncError;
-    }
+    const result = await Promise.race([
+      requestFn(internalController.signal),
+      abortPromise
+    ]);
 
-    const result = await withTimeout(promise, effectiveTimeout);
-    console.debug(`[Pool] Request [${label}] completed in ${Date.now() - requestStartTime}ms`);
+    console.debug(`[Pool] Request [${label}] succeeded in ${Date.now() - requestStartTime}ms`);
     return result;
   } catch (error) {
-    console.error(`[Pool] Request [${label}] failed after ${Date.now() - requestStartTime}ms:`, error);
+    const duration = Date.now() - requestStartTime;
+    // Log failures, but be less noisy for intentional abortions
+    if (error instanceof Error && (error.message === 'Request timeout' || error.name === 'AbortError')) {
+      console.warn(`[Pool] Request [${label}] ${error.message === 'Request timeout' ? 'timed out' : 'aborted'} after ${duration}ms`);
+    } else {
+      console.error(`[Pool] Request [${label}] failed after ${duration}ms:`, error);
+    }
     throw error;
   } finally {
+    clearTimeout(timeoutId);
+    if (externalSignal) externalSignal.removeEventListener('abort', linkAbort);
     activeRequests--;
-    console.debug(`[Pool] Request [${label}] finished. Active: ${activeRequests}`);
+    console.debug(`[Pool] Request [${label}] slot released. Active: ${activeRequests}`);
   }
 }
 
