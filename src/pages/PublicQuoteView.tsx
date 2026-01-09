@@ -154,13 +154,13 @@ export default function PublicQuoteView() {
       console.log('[PublicQuoteView] Fetching quote with shareToken:', decodedShareToken);
 
       // Fetch quote to check ownership
-      const { data: quoteData, error: quoteError } = await executeWithPool(async () => {
-        return await supabase
+      const { data: quoteData, error: quoteError } = await dedupedRequest(`check-ownership-${decodedShareToken}`, async (signal) => {
+        return await (supabase
           .from('quotes')
-          .select('user_id, id')
+          .select('user_id')
           .eq('share_token', decodedShareToken)
-          .maybeSingle();
-      }, 10000, `check-ownership-${decodedShareToken}`);
+          .single() as any).abortSignal(signal);
+      }, 10000);
 
       if (quoteError) {
         console.error('[PublicQuoteView] Error checking ownership:', quoteError);
@@ -274,13 +274,13 @@ export default function PublicQuoteView() {
     setLoading(true);
     try {
       // Fetch quote by share token
-      const { data: quoteData, error: quoteError } = await dedupedRequest(`quote-${decodedShareToken}`, async () => {
-        return await supabase
+      const { data: quoteData, error: quoteError } = await dedupedRequest(`quote-${decodedShareToken}`, async (signal) => {
+        return await (supabase
           .from('quotes')
           .select('*, customers(contact_first_name, contact_last_name)')
           .eq('share_token', decodedShareToken)
-          .maybeSingle();
-      });
+          .maybeSingle() as any).abortSignal(signal);
+      }, 30000);
 
       if (quoteError) {
         console.error('[PublicQuoteView] ❌ Supabase error:', quoteError);
@@ -332,11 +332,11 @@ export default function PublicQuoteView() {
 
       // 🚀 NEW: Fetch current items table data to enrich quote JSONB
       console.log('[PublicQuoteView] 🔄 Fetching fresh items table data for enrichment...');
-      const { data: itemsData, error: itemsError } = await dedupedRequest(`items-${quoteData.user_id}`, async () => {
-        return await supabase
+      const { data: itemsData, error: itemsError } = await dedupedRequest(`items-${quoteData.user_id}`, async (signal) => {
+        return await (supabase
           .from('items')
           .select('name, image_url, enhanced_description, category')
-          .eq('user_id', quoteData.user_id);
+          .eq('user_id', quoteData.user_id) as any).abortSignal(signal);
       });
 
       if (itemsError) {
@@ -439,12 +439,12 @@ export default function PublicQuoteView() {
       // Fetch company settings - CRITICAL for proposal display
       console.log('[PublicQuoteView] 🔍 Fetching company settings for user:', quoteData.user_id);
 
-      const { data: settingsData, error: settingsError } = await dedupedRequest(`settings-${quoteData.user_id}`, async () => {
-        return await supabase
+      const { data: settingsData, error: settingsError } = await dedupedRequest(`settings-${quoteData.user_id}`, async (signal) => {
+        return await (supabase
           .from('company_settings')
           .select('*')
           .eq('user_id', quoteData.user_id)
-          .maybeSingle();
+          .maybeSingle() as any).abortSignal(signal);
       });
 
       if (settingsError) {

@@ -62,10 +62,10 @@ export function useSyncManager() {
 
       switch (change.type) {
         case 'create': {
-          const { error: createError } = await executeWithPool(async () => {
-            return await supabase
+          const { error: createError } = await executeWithPool(async (signal) => {
+            return await (supabase
               .from(table)
-              .insert(dbData as never);
+              .insert(dbData as never) as any).abortSignal(signal);
           }, 15000, `sync-create-${change.table}`);
 
           if (createError) {
@@ -83,12 +83,12 @@ export function useSyncManager() {
             return false;
           }
 
-          const { error: updateError } = await executeWithPool(async () => {
-            return await supabase
+          const { error: updateError } = await executeWithPool(async (signal) => {
+            return await (supabase
               .from(table)
               .update(dbData as never)
               .eq('id', change.data.id as string)
-              .eq('user_id', user.id);
+              .eq('user_id', user.id) as any).abortSignal(signal);
           }, 15000, `sync-update-${change.table}`);
 
           if (updateError) throw updateError;
@@ -100,12 +100,12 @@ export function useSyncManager() {
             return false;
           }
 
-          const { error: deleteError } = await executeWithPool(async () => {
-            return await supabase
+          const { error: deleteError } = await executeWithPool(async (signal) => {
+            return await (supabase
               .from(table)
               .delete()
               .eq('id', change.data.id as string)
-              .eq('user_id', user.id);
+              .eq('user_id', user.id) as any).abortSignal(signal);
           }, 15000, `sync-delete-${change.table}`);
 
           if (deleteError) {

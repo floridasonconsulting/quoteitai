@@ -94,8 +94,8 @@ export async function getItems(
           query = query.eq('user_id', userId);
         }
 
-        const { data, error } = await executeWithPool(async () => {
-          return await query.order('created_at', { ascending: false });
+        const { data, error } = await executeWithPool(async (signal) => {
+          return await (query.order('created_at', { ascending: false }) as any).abortSignal(signal);
         }, 15000, `fetch-items-${userId}`);
 
         apiTracker.track(
@@ -243,8 +243,8 @@ export async function addItem(
     console.log('[ItemService] Syncing to Supabase with minQuantity and imageUrl');
 
     const startTime = performance.now();
-    const { error } = await executeWithPool(async () => {
-      return await supabase.from('items' as any).insert(dbItem as any);
+    const { error } = await executeWithPool(async (signal) => {
+      return await (supabase.from('items' as any).insert(dbItem as any) as any).abortSignal(signal);
     }, 15000, `create-item-${item.id}`);
 
     apiTracker.track(
@@ -338,7 +338,7 @@ export async function updateItem(
     console.log('[ItemService] Syncing update to Supabase with minQuantity and imageUrl');
 
     const startTime = performance.now();
-    const { error } = await executeWithPool(async () => {
+    const { error } = await executeWithPool(async (signal) => {
       let query = supabase
         .from('items' as any)
         .update(dbUpdates as unknown)
@@ -348,7 +348,7 @@ export async function updateItem(
         query = query.eq('user_id', userId);
       }
 
-      return await query.select().single();
+      return await (query.select().single() as any).abortSignal(signal);
     }, 15000, `update-item-${id}`);
 
     apiTracker.track(
@@ -411,18 +411,19 @@ export async function deleteItem(
 
   try {
     const startTime = performance.now();
-    let query = supabase
-      .from('items' as any)
-      .delete()
-      .eq('id', id);
+    const { error } = await executeWithPool(async (signal) => {
+      let query = supabase
+        .from('items' as any)
+        .delete()
+        .eq('id', id);
 
-    // If not in an organization context, strictly enforce user_id matching
-    // If in an organization, allow RLS to handle permission (to allow owner/admin deletes)
-    if (!organizationId) {
-      query = query.eq('user_id', userId);
-    }
-
-    const { error } = await query;
+      // If not in an organization context, strictly enforce user_id matching
+      // If in an organization, allow RLS to handle permission (to allow owner/admin deletes)
+      if (!organizationId) {
+        query = query.eq('user_id', userId);
+      }
+      return await (query as any).abortSignal(signal);
+    }, 15000, `delete-item-${id}`);
 
     apiTracker.track(
       'items.delete',

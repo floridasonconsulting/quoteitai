@@ -127,8 +127,8 @@ export async function getCustomers(
             query = query.eq('user_id', userId);
           }
 
-          const { data, error } = await executeWithPool(async () => {
-            return await query;
+          const { data, error } = await executeWithPool(async (signal) => {
+            return await (query as any).abortSignal(signal);
           }, 15000, `fetch-customers-${userId}`);
 
           if (error) {
@@ -242,8 +242,8 @@ export async function addCustomer(
 
   try {
     const dbCustomer = toSnakeCase(customerWithUser);
-    const { error } = await executeWithPool(async () => {
-      return await supabase.from('customers' as any).insert(dbCustomer as any);
+    const { error } = await executeWithPool(async (signal) => {
+      return await (supabase.from('customers' as any).insert(dbCustomer as any) as any).abortSignal(signal);
     }, 15000, `create-customer-${customer.id}`);
 
     if (error) {
@@ -314,7 +314,7 @@ export async function updateCustomer(
 
   try {
     const dbUpdates = toSnakeCase(updates);
-    const { error } = await executeWithPool(async () => {
+    const { error } = await executeWithPool(async (signal) => {
       let query = supabase
         .from('customers' as any)
         .update(dbUpdates as unknown)
@@ -325,7 +325,7 @@ export async function updateCustomer(
       if (!organizationId) {
         query = query.eq('user_id', userId);
       }
-      return await query;
+      return await (query as any).abortSignal(signal);
     }, 15000, `update-customer-${id}`);
 
     if (error) throw error;
@@ -369,18 +369,19 @@ export async function deleteCustomer(
   }
 
   try {
-    let query = supabase
-      .from('customers' as any)
-      .delete()
-      .eq('id', id);
+    const { error } = await executeWithPool(async (signal) => {
+      let query = supabase
+        .from('customers' as any)
+        .delete()
+        .eq('id', id);
 
-    // If not in an organization context, strictly enforce user_id matching
-    // If in an organization, allow RLS to handle permission (to allow owner/admin deletes)
-    if (!organizationId) {
-      query = query.eq('user_id', userId);
-    }
-
-    const { error } = await query;
+      // If not in an organization context, strictly enforce user_id matching
+      // If in an organization, allow RLS to handle permission (to allow owner/admin deletes)
+      if (!organizationId) {
+        query = query.eq('user_id', userId);
+      }
+      return await (query as any).abortSignal(signal);
+    }, 15000, `delete-customer-${id}`);
 
     if (error) throw error;
 

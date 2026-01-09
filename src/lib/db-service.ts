@@ -81,13 +81,12 @@ export const getSettings = async (userId: string, organizationId: string | null 
     const sessionKey = `settings-${userId}-${organizationId || 'personal'}`;
     const { data: dbSettings, error } = await dedupedRequest(
       sessionKey,
-      async () => {
-        // Properly await the Supabase query builder
-        return await supabase
+      async (signal) => {
+        return await (supabase
           .from('company_settings' as any)
           .select('*')
           .eq('user_id', userId)
-          .maybeSingle();
+          .maybeSingle() as any).abortSignal(signal);
       },
       45000
     ) as any;
@@ -229,10 +228,10 @@ export async function saveSettings(
       console.log('[DB Service] Saving to Supabase via request pool...');
 
       try {
-        const { error } = await executeWithPool(async () => {
-          return await supabase
+        const { error } = await executeWithPool(async (signal) => {
+          return await (supabase
             .from('company_settings' as any)
-            .upsert(dbSettings, { onConflict: 'user_id' });
+            .upsert(dbSettings, { onConflict: 'user_id' }) as any).abortSignal(signal);
         }, 30000, `save-settings-${userId}`);
 
         if (error) {

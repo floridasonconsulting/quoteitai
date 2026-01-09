@@ -14,9 +14,10 @@ let activeRequests = 0;
  * Integrates internal timeout to ensure pool slots are always released
  */
 export async function executeWithPool<T>(
-  requestFn: () => Promise<T>,
+  requestFn: (signal?: AbortSignal) => Promise<T>,
   timeoutMs: number = 30000,
-  label: string = 'unlabeled'
+  label: string = 'unlabeled',
+  signal?: AbortSignal
 ): Promise<T> {
   const startTime = Date.now();
   const POOL_WAIT_TIMEOUT = 10000; // 10 seconds timeout for waiting on pool
@@ -42,7 +43,7 @@ export async function executeWithPool<T>(
     // Safely invoke the request function
     let promise: Promise<T>;
     try {
-      promise = requestFn();
+      promise = requestFn(signal);
       console.debug(`[Pool] Request [${label}] promise created successfully`);
     } catch (syncError) {
       console.error(`[Pool] Request [${label}] failed synchronously:`, syncError);
@@ -153,7 +154,7 @@ export function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<
  */
 export async function dedupedRequest<T>(
   key: string,
-  requestFn: () => Promise<T>,
+  requestFn: (signal?: AbortSignal) => Promise<T>,
   timeoutMs: number = 30000
 ): Promise<T> {
   // Clear stale requests before checking
@@ -174,7 +175,7 @@ export async function dedupedRequest<T>(
   // Create promise with guaranteed cleanup
   const promise = (async () => {
     try {
-      const result = await executeWithPool(requestFn, timeoutMs, key);
+      const result = await executeWithPool((s) => requestFn(s), timeoutMs, key, abortController.signal);
       return result;
     } catch (error) {
       // Don't log abort errors

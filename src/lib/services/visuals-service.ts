@@ -7,18 +7,20 @@ export const visualsService = {
    * Get visuals for a specific quote
    */
   async getVisuals(quoteId: string): Promise<ProposalVisuals | null> {
-    return dedupedRequest(`visuals-${quoteId}`, async () => {
-      const { data, error } = await supabase
+    return dedupedRequest(`visuals-${quoteId}`, async (signal) => {
+      const { data, error } = await (supabase
         .from('proposal_visuals' as any)
         .select('*')
         .eq('quote_id', quoteId)
-        .single();
+        .maybeSingle() as any).abortSignal(signal);
 
       if (error) {
         if (error.code === 'PGRST116') return null; // Not found
         console.error('Error fetching visuals:', error);
         throw error;
       }
+
+      if (!data) return null;
 
       const visualsData = data as any;
 
@@ -63,7 +65,7 @@ export const visualsService = {
    * Save or update visuals for a quote
    */
   async saveVisuals(quoteId: string, visuals: ProposalVisuals): Promise<void> {
-    return executeWithPool(async () => {
+    return executeWithPool(async (signal) => {
       const userId = await this.getUserId();
       const dbData: any = {
         user_id: userId,
@@ -76,9 +78,9 @@ export const visualsService = {
         updated_at: new Date().toISOString()
       };
 
-      const { error } = await supabase
+      const { error } = await (supabase
         .from('proposal_visuals' as any)
-        .upsert(dbData, { onConflict: 'quote_id' });
+        .upsert(dbData, { onConflict: 'quote_id' }) as any).abortSignal(signal);
 
       if (error) {
         console.error('Error saving visuals:', error);
@@ -93,124 +95,130 @@ export const visualsService = {
    * Save an override for the cover image
    */
   async saveCoverOverride(quoteId: string, url: string): Promise<void> {
-    const { data: existing } = await supabase
-      .from('proposal_visuals' as any)
-      .select('id')
-      .eq('quote_id', quoteId)
-      .maybeSingle();
+    return executeWithPool(async (signal) => {
+      const { data: existing } = await (supabase
+        .from('proposal_visuals' as any)
+        .select('id')
+        .eq('quote_id', quoteId)
+        .maybeSingle() as any).abortSignal(signal);
 
-    if (existing) {
-      await supabase
-        .from('proposal_visuals' as any)
-        .update({ cover_image: url, updated_at: new Date().toISOString() })
-        .eq('id', (existing as any).id);
-    } else {
-      const userId = await this.getUserId();
-      await supabase
-        .from('proposal_visuals' as any)
-        .insert({
-          user_id: userId,
-          quote_id: quoteId,
-          cover_image: url,
-        } as any);
-    }
+      if (existing) {
+        await (supabase
+          .from('proposal_visuals' as any)
+          .update({ cover_image: url, updated_at: new Date().toISOString() })
+          .eq('id', (existing as any).id) as any).abortSignal(signal);
+      } else {
+        const userId = await this.getUserId();
+        await (supabase
+          .from('proposal_visuals' as any)
+          .insert({
+            user_id: userId,
+            quote_id: quoteId,
+            cover_image: url,
+          } as any) as any).abortSignal(signal);
+      }
+    }, 15000, `save-cover-override-${quoteId}`);
   },
 
   /**
    * Save an override for a specific section background
    */
   async saveSectionImageOverride(quoteId: string, sectionId: string, url: string): Promise<void> {
-    const { data: existing } = await supabase
-      .from('proposal_visuals' as any)
-      .select('id, section_backgrounds')
-      .eq('quote_id', quoteId)
-      .maybeSingle();
-
-    const sectionBackgrounds = ((existing as any)?.section_backgrounds as Record<string, string>) || {};
-    sectionBackgrounds[sectionId] = url;
-
-    if (existing) {
-      await supabase
+    return executeWithPool(async (signal) => {
+      const { data: existing } = await (supabase
         .from('proposal_visuals' as any)
-        .update({ section_backgrounds: sectionBackgrounds, updated_at: new Date().toISOString() })
-        .eq('id', (existing as any).id);
-    } else {
-      const userId = await this.getUserId();
-      await supabase
-        .from('proposal_visuals' as any)
-        .insert({
-          user_id: userId,
-          quote_id: quoteId,
-          section_backgrounds: sectionBackgrounds,
-        } as any);
-    }
-  },
+        .select('id, section_backgrounds')
+        .eq('quote_id', quoteId)
+        .maybeSingle() as any).abortSignal(signal);
 
-  /**
-   * Save an override for an item image
-   * Note: If 'item_images' column is missing, we'll gracefully fail or log for now.
-   * Assuming the table will be updated or we use section_backgrounds as a catch-all.
-   */
-  async saveItemImageOverride(quoteId: string, itemName: string, url: string): Promise<void> {
-    const { data: existing } = await supabase
-      .from('proposal_visuals' as any)
-      .select('id, item_images, section_backgrounds')
-      .eq('quote_id', quoteId)
-      .maybeSingle();
+      const sectionBackgrounds = ((existing as any)?.section_backgrounds as Record<string, string>) || {};
+      sectionBackgrounds[sectionId] = url;
 
-    const existingData = existing as any;
-    const itemImages = (existingData?.item_images as Record<string, string>) || {};
-    itemImages[itemName] = url;
-
-    const updateData: any = {
-      item_images: itemImages,
-      updated_at: new Date().toISOString()
-    };
-
-    if (existingData) {
-      const { error } = await supabase
-        .from('proposal_visuals' as any)
-        .update(updateData)
-        .eq('id', existingData.id);
-
-      if (error) {
-        console.warn('[Visuals] Error saving item_images, falling back to section_backgrounds:', error.message);
-        const sectionBackgrounds = (existingData?.section_backgrounds as Record<string, string>) || {};
-        sectionBackgrounds[`item_${itemName}`] = url;
-        const { error: fallbackError } = await supabase
+      if (existing) {
+        await (supabase
           .from('proposal_visuals' as any)
           .update({ section_backgrounds: sectionBackgrounds, updated_at: new Date().toISOString() })
-          .eq('id', existingData.id);
-        if (fallbackError) {
-          console.error('[Visuals] Fallback save also failed:', fallbackError);
-          throw fallbackError;
-        }
-      }
-    } else {
-      const userId = await this.getUserId();
-      const { error } = await supabase
-        .from('proposal_visuals' as any)
-        .insert({
-          user_id: userId,
-          quote_id: quoteId,
-          ...updateData
-        });
-
-      if (error) {
-        console.warn('[Visuals] Error inserting with item_images, retrying without it:', error.message);
-        const sectionBackgrounds = { [`item_${itemName}`]: url };
-        const { error: fallbackError } = await supabase
+          .eq('id', (existing as any).id) as any).abortSignal(signal);
+      } else {
+        const userId = await this.getUserId();
+        await (supabase
           .from('proposal_visuals' as any)
           .insert({
             user_id: userId,
             quote_id: quoteId,
-            section_backgrounds: sectionBackgrounds
-          });
-        if (fallbackError) {
-          console.error('[Visuals] Fallback insert also failed:', fallbackError);
-          throw fallbackError;
+            section_backgrounds: sectionBackgrounds,
+          } as any) as any).abortSignal(signal);
+      }
+    }, 15000, `save-section-image-override-${quoteId}-${sectionId}`);
+  },
+
+  /**
+   * Save an override for an item image
+   */
+  async saveItemImageOverride(quoteId: string, itemName: string, url: string): Promise<void> {
+    return executeWithPool(async (signal) => {
+      const { data: existing } = await (supabase
+        .from('proposal_visuals' as any)
+        .select('id, item_images, section_backgrounds')
+        .eq('quote_id', quoteId)
+        .maybeSingle() as any).abortSignal(signal);
+
+      const existingData = existing as any;
+      const itemImages = (existingData?.item_images as Record<string, string>) || {};
+      itemImages[itemName] = url;
+
+      const updateData: any = {
+        item_images: itemImages,
+        updated_at: new Date().toISOString()
+      };
+
+      if (existingData) {
+        const { error } = await (supabase
+          .from('proposal_visuals' as any)
+          .update(updateData)
+          .eq('id', existingData.id) as any).abortSignal(signal);
+
+        if (error) {
+          console.warn('[Visuals] Error saving item_images, falling back to section_backgrounds:', error.message);
+          const sectionBackgrounds = (existingData?.section_backgrounds as Record<string, string>) || {};
+          sectionBackgrounds[`item_${itemName}`] = url;
+          const { error: fallbackError } = await (supabase
+            .from('proposal_visuals' as any)
+            .update({ section_backgrounds: sectionBackgrounds, updated_at: new Date().toISOString() })
+            .eq('id', existingData.id) as any).abortSignal(signal);
+
+          if (fallbackError) {
+            console.error('[Visuals] Fallback save also failed:', fallbackError);
+            throw fallbackError;
+          }
+        }
+      } else {
+        const userId = await this.getUserId();
+        const { error } = await (supabase
+          .from('proposal_visuals' as any)
+          .insert({
+            user_id: userId,
+            quote_id: quoteId,
+            ...updateData
+          }) as any).abortSignal(signal);
+
+        if (error) {
+          console.warn('[Visuals] Error inserting with item_images, retrying without it:', error.message);
+          const sectionBackgrounds = { [`item_${itemName}`]: url };
+          const { error: fallbackError } = await (supabase
+            .from('proposal_visuals' as any)
+            .insert({
+              user_id: userId,
+              quote_id: quoteId,
+              section_backgrounds: sectionBackgrounds
+            }) as any).abortSignal(signal);
+
+          if (fallbackError) {
+            console.error('[Visuals] Fallback insert also failed:', fallbackError);
+            throw fallbackError;
+          }
         }
       }
-    }
+    }, 15000, `save-item-image-override-${quoteId}-${itemName}`);
   }
 };

@@ -277,12 +277,12 @@ export async function addQuote(
   // 3. Save to Supabase
   try {
     const dbQuote = toSnakeCase(quoteWithUser);
-    const { data: insertedData, error } = await executeWithPool(async () => {
-      return await supabase
+    const { data: insertedData, error } = await executeWithPool(async (signal) => {
+      return await (supabase
         .from('quotes' as any)
         .insert(dbQuote as any)
         .select()
-        .single();
+        .single() as any).abortSignal(signal);
     }, 15000, `create-quote-${quote.id}`);
 
     if (error) throw error;
@@ -359,7 +359,7 @@ export async function updateQuote(
   // 3. Update Supabase
   try {
     const dbUpdates = toSnakeCase(updates);
-    const { error } = await executeWithPool(async () => {
+    const { error } = await executeWithPool(async (signal) => {
       let query = supabase
         .from('quotes' as any)
         .update(dbUpdates as unknown)
@@ -370,7 +370,7 @@ export async function updateQuote(
       if (!organizationId) {
         query = query.eq('user_id', userId);
       }
-      return await query;
+      return await (query.select().single() as any).abortSignal(signal);
     }, 15000, `update-quote-${id}`);
 
     if (error) throw error;
@@ -440,7 +440,9 @@ export async function deleteQuote(
       query = query.eq('user_id', userId);
     }
 
-    const { error } = await query;
+    const { error } = await executeWithPool(async (signal) => {
+      return await (query as any).abortSignal(signal);
+    }, 15000, `delete-quote-${id}`);
 
     if (error) throw error;
 

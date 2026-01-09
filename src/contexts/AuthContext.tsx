@@ -165,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Try to check subscription via Edge Function, but don't fail if it doesn't exist
       try {
         const { data, error } = await executeWithPool(
-          () => supabase.functions.invoke('check-subscription'),
+          (signal) => supabase.functions.invoke('check-subscription', { signal }),
           15000,
           'check-subscription'
         ) as any;
