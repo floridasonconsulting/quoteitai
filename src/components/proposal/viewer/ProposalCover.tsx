@@ -150,7 +150,7 @@ export function ProposalCover({
           className="mt-12 text-center"
         >
           <p className="text-[10px] md:text-xs text-white/40 tracking-widest uppercase">
-            Powered by <span className="font-bold text-white/60">Quote.it AI</span>
+            Powered by <span className="font-bold text-white/60">Sellegance</span>
           </p>
         </motion.div>
       </div>

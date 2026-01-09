@@ -28,14 +28,14 @@ export function ProactiveShowcase() {
                             Anticipate Your Customer’s Needs—<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">Automatically.</span>
                         </h2>
                         <p className="text-lg text-slate-400 max-w-xl leading-relaxed">
-                            Don't wait for the phone to ring. Our AI monitors dwell time on critical sections like "Exclusions" or "Investment" and offers proactive help at the perfect psychological moment.
+                            Don't wait for the phone to ring. Our systems monitor dwell time on critical sections like "Exclusions" or "Investment" and offer proactive help at the perfect psychological moment.
                         </p>
 
                         <div className="space-y-4">
                             {[
                                 { title: "Empathy-First Triggers", desc: "Triggers help only when a customer shows hesitation." },
                                 { title: "Context-Aware Assistance", desc: "Messages adapt to the specific section being viewed." },
-                                { title: "Draft-then-Verify", desc: "AI drafts the perfect response for your approval." }
+                                { title: "Draft-then-Verify", desc: "The system drafts the perfect response for your approval." }
                             ].map((item, i) => (
                                 <div key={i} className="flex gap-4">
                                     <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0 mt-1">

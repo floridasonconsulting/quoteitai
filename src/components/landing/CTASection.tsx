@@ -22,8 +22,8 @@ export function CTASection() {
           Ready to Save $1,000s and Win More Deals?
         </h2>
         <p className="text-lg mb-12 max-w-xl mx-auto opacity-90 font-medium leading-relaxed">
-          Join 500+ smart businesses who switched to Quote-it AI for QuickBooks integration,
-          Stripe payments, and AI automation at 40-80% less cost.
+          Join 500+ businesses who switched to Sellegance for QuickBooks integration,
+          Stripe payments, and intelligent automation at 40-80% less cost.
         </p>
         <div className="flex flex-col sm:flex-row gap-6 justify-center">
           <Button

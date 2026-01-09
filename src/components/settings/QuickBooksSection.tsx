@@ -192,7 +192,7 @@ export function QuickBooksSection() {
         <CardContent>
           <UpgradePrompt
             title="QuickBooks Integration"
-            description="Automatically sync your customers, invoices, and payments between QuoteIt and QuickBooks to save hours of manual data entry."
+            description="Automatically sync your customers, invoices, and payments between Sellegance and QuickBooks to save hours of manual data entry."
             tier="Pro"
           />
         </CardContent>

@@ -5,7 +5,7 @@ export interface MediaAsset {
   image: string; // Can be .png, .jpg, or .gif
   badge?: string;
   isGif?: boolean; // Flag to indicate animated content
-  category?: "core" | "ai-features" | "mobile" | "analytics";
+  category?: "core" | "intelligence" | "mobile" | "analytics";
 }
 
 export const heroScreenshots: MediaAsset[] = [
@@ -20,10 +20,10 @@ export const heroScreenshots: MediaAsset[] = [
   {
     id: "quote-detail",
     title: "Professional Quotes",
-    description: "Create detailed quotes with AI assistance",
+    description: "Create detailed quotes with intelligent assistance",
     image: "/screenshots/new-quote.png",
-    badge: "AI-Powered",
-    category: "ai-features",
+    badge: "Intelligent",
+    category: "intelligence",
   },
   {
     id: "customers",
@@ -53,10 +53,10 @@ export const interactiveScreenshots: MediaAsset[] = [
   {
     id: "new-quote",
     title: "New Quote",
-    description: "AI-powered quote creation",
+    description: "Intelligent quote creation",
     image: "/screenshots/new-quote.png",
-    badge: "AI",
-    category: "ai-features",
+    badge: "Professional",
+    category: "intelligence",
   },
   {
     id: "email-editor",

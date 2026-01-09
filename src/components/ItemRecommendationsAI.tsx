@@ -149,15 +149,14 @@ Provide 3-5 item recommendations in JSON format:
         className="gap-2"
       >
         <Sparkles className={`h-4 w-4 ${recommendationsAI.isLoading ? 'animate-pulse' : ''}`} />
-        AI Item Recommendations
+        Intelligence Recommendations
       </Button>
 
       <Dialog open={showResultDialog} onOpenChange={setShowResultDialog}>
         <DialogContent className="max-w-3xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-purple-500" />
-              AI Item Recommendations
+              Intelligence Recommendations
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">

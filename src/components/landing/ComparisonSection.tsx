@@ -33,7 +33,7 @@ export function ComparisonSection() {
                 <thead>
                   <tr className="border-b border-primary/10 bg-primary/5">
                     <th className="text-left py-6 px-8 font-black text-xs uppercase tracking-widest text-muted-foreground">Strategic Feature</th>
-                    <th className="text-center py-6 px-8 font-black text-xs uppercase tracking-widest text-primary italic">Quote-it AI</th>
+                    <th className="text-center py-6 px-8 font-black text-xs uppercase tracking-widest text-primary italic">Sellegance</th>
                     <th className="text-center py-6 px-8 font-black text-xs uppercase tracking-widest text-muted-foreground/50">PandaDoc</th>
                     <th className="text-center py-6 px-8 font-black text-xs uppercase tracking-widest text-muted-foreground/50">ServiceTitan</th>
                   </tr>
@@ -52,7 +52,7 @@ export function ComparisonSection() {
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">Add-on</td>
                   </tr>
                   <tr>
-                    <td className="py-6 px-8 font-bold text-foreground">AI SOW Drafting</td>
+                    <td className="py-6 px-8 font-bold text-foreground">Professional SOW Drafting</td>
                     <td className="text-center py-6 px-8 text-primary font-black uppercase text-[10px] tracking-widest w-fit mx-auto">Standard</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">Not available</td>
                     <td className="text-center py-6 px-8 text-muted-foreground/60 text-sm">Manual</td>
@@ -92,7 +92,7 @@ export function ComparisonSection() {
               {[
                 { label: "QB Integration", qit: "Native", legacy: "$79-$200/mo" },
                 { label: "Stripe Flow", qit: "Integrated", legacy: "Add-on fees" },
-                { label: "AI SOW Drafting", qit: "Standard", legacy: "Manual" },
+                { label: "SOW Drafting", qit: "Standard", legacy: "Manual" },
                 { label: "User Fees", qit: "Hybrid", legacy: "$19-$200/user" },
                 { label: "Setup Time", qit: "Instant", legacy: "Days / Weeks" },
                 { label: "Annual Cost", qit: "$59/mo", legacy: "$1.7k-$12k+" },

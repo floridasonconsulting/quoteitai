@@ -68,9 +68,9 @@ export interface Quote {
   sharedAt?: string;
   viewedAt?: string;
   showPricing?: boolean; // Control line-item pricing visibility in proposals
-  projectDescription?: string; // NEW: For AI visual matching
+  projectDescription?: string; // NEW: For intelligent visual matching
   pricingMode?: 'itemized' | 'category_total' | 'grand_total'; // NEW: Pricing display mode
-  scopeOfWork?: string; // NEW: AI-generated Scope of Work for proposals
+  scopeOfWork?: string; // NEW: Intelligent Scope of Work for proposals
   organizationId?: string;
   signatureData?: string;
   signedAt?: string;

@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isBusinessTier = userRole === 'business' || userRole === 'enterprise' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
   const isEnterpriseTier = userRole === 'enterprise' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
   const isMaxAITier = userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
-  const isDevAccount = user?.email === 'quoteitai@gmail.com' || isAdmin;
+  const isDevAccount = user?.email === 'hello@sellegance.com' || isAdmin;
 
   const checkUserRole = async (sessionToUse?: Session | null) => {
     if (roleCheckInProgress.current) {

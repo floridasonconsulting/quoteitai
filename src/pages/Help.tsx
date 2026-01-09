@@ -31,7 +31,7 @@ const helpCategories = [
     articles: [
       {
         title: "Welcome & Quick Tour",
-        content: "Welcome to Quote-it AI! This guide will help you get started with creating professional quotes in minutes. The dashboard shows all your quotes, customers, and items in one place. Navigate using the sidebar to access different sections of the app."
+        content: "Welcome to Sellegance! This guide will help you get started with creating professional proposals in minutes. The dashboard shows all your quotes, customers, and items in one place. Navigate using the sidebar to access different sections of the app."
       },
       {
         title: "Creating Your First Quote",
@@ -71,7 +71,7 @@ const helpCategories = [
       },
       {
         title: "Scope of Work in Proposals",
-        content: "Generate an AI Scope of Work from the quote detail page and click 'Add to Proposal'. The SOW appears as a dedicated slide before the Investment Summary, presenting project details, deliverables, timeline, and acceptance criteria in a professional format."
+        content: "Generate a Professional Scope of Work from the quote detail page and click 'Add to Proposal'. The SOW appears as a dedicated slide before the Investment Summary, presenting project details, deliverables, timeline, and acceptance criteria in a professional format."
       },
       {
         title: "Pricing Display Modes",
@@ -142,20 +142,20 @@ const helpCategories = [
   {
     id: "ai",
     icon: Sparkles,
-    title: "AI Features",
-    description: "Using AI assistance",
+    title: "Intelligence Features",
+    description: "Using intelligent assistance",
     articles: [
       {
-        title: "AI Quote Title Suggestions",
-        content: "When creating or editing a quote, click the AI button next to the title field. The AI analyzes your customer and items to suggest relevant, professional quote titles. Available on Pro and Max AI plans."
+        title: "Intelligent Title Suggestions",
+        content: "When creating or editing a quote, click the assist button next to the title field. The platform analyzes your customer and items to suggest relevant, professional quote titles. Available on Pro and Enterprise plans."
       },
       {
-        title: "AI Full Quote Generation",
-        content: "On the New Quote page, describe your project in plain language (e.g., 'I'm at the Johnson residence and we will be installing new equipment...'). AI generates the title, suggests items from your catalog, writes the executive summary, and even extracts the customer name. Tip: Start with 'Customer is [Name]' or 'I'm at the [Name] home' for automatic customer matching. Max AI plan feature."
+        title: "Simplified Quote Generation",
+        content: "On the New Quote page, describe your project in plain language (e.g., 'I'm at the Johnson residence and we will be installing new equipment...'). Sellegance generates the title, suggests items from your catalog, writes the executive summary, and even extracts the customer name. Tip: Start with 'Customer is [Name]' or 'I'm at the [Name] home' for automatic customer matching. Enterprise plan feature."
       },
       {
-        title: "AI Scope of Work Generator",
-        content: "On any quote detail page, find the 'AI Scope of Work Generator' section. Click 'Generate Scope of Work' to create a comprehensive SOW document. Once generated, click 'Add to Proposal' to include it as a dedicated slide in your proposal. The SOW appears before the Investment Summary. Business+ plan feature."
+        title: "Professional Scope of Work Generator",
+        content: "On any quote detail page, find the 'Scope of Work Generator' section. Click 'Generate Scope of Work' to create a comprehensive SOW document. Once generated, click 'Add to Proposal' to include it as a dedicated slide in your proposal. The SOW appears before the Investment Summary. Business+ plan feature."
       },
       {
         title: "AI Follow-up Messages",
@@ -187,7 +187,7 @@ const helpCategories = [
       },
       {
         title: "Mobile App Setup",
-        content: "Quote-it AI supports native Android and iOS apps. See MOBILE_DEPLOYMENT.md in the documentation for detailed instructions on building and deploying mobile apps using Capacitor."
+        content: "Sellegance supports native Android and iOS apps. See MOBILE_DEPLOYMENT.md in the documentation for detailed instructions on building and deploying mobile apps using Capacitor."
       },
       {
         title: "Offline Mode",
@@ -255,7 +255,7 @@ const helpCategories = [
       },
       {
         title: "Mobile App Issues",
-        content: "Mobile app not working? 1) Ensure you're running the latest version. 2) Check internet connection. 3) Try force-closing and reopening. 4) Clear app data (Settings > Apps > Quote-it). 5) Reinstall the app if needed."
+        content: "Mobile app not working? 1) Ensure you're running the latest version. 2) Check internet connection. 3) Try force-closing and reopening. 4) Clear app data (Settings > Apps > Sellegance). 5) Reinstall the app if needed."
       }
     ]
   }
@@ -267,7 +267,7 @@ const faqs = [
     answer: "Yes! All data is encrypted in transit and at rest. We use Supabase's enterprise-grade infrastructure with Row Level Security (RLS) policies ensuring you can only access your own data. We never share your data with third parties."
   },
   {
-    question: "Can I use Quote-it AI offline?",
+    question: "Can I use Sellegance offline?",
     answer: "Yes! The app works fully offline. All changes are saved locally and automatically sync when you reconnect to the internet. This is perfect for working in areas with poor connectivity."
   },
   {
@@ -492,7 +492,7 @@ export default function Help() {
               <p className="text-muted-foreground mb-6">
                 Can't find what you're looking for? Contact our support team and we'll get back to you within 24 hours.
               </p>
-              <Button size="lg" onClick={() => window.location.href = 'mailto:quoteitai@gmail.com'}>
+              <Button size="lg" onClick={() => window.location.href = 'mailto:hello@sellegance.com'}>
                 Contact Support
               </Button>
             </CardContent>

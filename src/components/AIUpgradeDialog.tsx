@@ -17,67 +17,67 @@ const FEATURE_BENEFITS: Record<AIFeatureType, {
   benefits: string[];
 }> = {
   quote_title: {
-    name: 'AI Quote Titles',
+    name: 'Intelligent Quote Titles',
     description: 'Generate professional, compelling quote titles instantly',
-    benefits: ['Save 10+ minutes per quote', 'Consistent professional tone', 'SEO-optimized titles']
+    benefits: ['Save 10+ minutes per quote', 'Consistent professional tone', 'Optimized titles']
   },
   quote_summary: {
-    name: 'AI Executive Summaries',
+    name: 'Engagement Summaries',
     description: 'Create persuasive summaries that close deals faster',
     benefits: ['Highlight key value propositions', 'Professional writing quality', 'Boost conversion rates']
   },
   followup_message: {
-    name: 'AI Follow-up Messages',
+    name: 'Intelligent Follow-up Messages',
     description: 'Generate personalized follow-up messages for your quotes',
     benefits: ['Save time writing follow-ups', 'Personalized for each customer', 'Increase response rates']
   },
   notes_generator: {
-    name: 'AI Notes Generator',
+    name: 'Smart Notes Generator',
     description: 'Automatically generate detailed notes for your quotes',
     benefits: ['Never forget important details', 'Consistent documentation', 'Save hours of manual work']
   },
   item_description: {
-    name: 'AI Item Descriptions',
+    name: 'Professional Item Descriptions',
     description: 'Create compelling product and service descriptions',
     benefits: ['Professional product descriptions', 'Highlight key features', 'Increase perceived value']
   },
   discount_justification: {
-    name: 'AI Discount Justification',
+    name: 'Smart Discount Justification',
     description: 'Generate professional justifications for pricing and discounts',
     benefits: ['Explain value clearly', 'Build trust with transparency', 'Justify pricing decisions']
   },
   email_draft: {
-    name: 'AI Email Drafts',
+    name: 'Professional Email Drafts',
     description: 'Generate professional emails for quotes and follow-ups',
     benefits: ['Perfect tone every time', 'Save hours writing emails', 'Increase engagement']
   },
   full_quote_generation: {
-    name: 'AI Full Quote Generation',
-    description: 'Generate complete quotes with AI assistance',
+    name: 'Intelligent Quote Generation',
+    description: 'Generate complete quotes with intelligent assistance',
     benefits: ['Create quotes in minutes', 'Professional formatting', 'Reduce errors and omissions']
   },
   item_recommendations: {
-    name: 'AI Item Recommendations',
+    name: 'Intelligence Recommendations',
     description: 'Get smart suggestions for items to include in quotes',
     benefits: ['Increase quote value', 'Never miss cross-sell opportunities', 'Personalized recommendations']
   },
   pricing_optimization: {
-    name: 'AI Pricing Optimization',
-    description: 'Optimize your pricing strategy with AI insights',
+    name: 'Pricing Optimization',
+    description: 'Optimize your pricing strategy with intelligent insights',
     benefits: ['Maximize profitability', 'Stay competitive', 'Data-driven pricing decisions']
   },
   follow_up_suggestions: {
-    name: 'AI Follow-up Suggestions',
+    name: 'Follow-up Suggestions',
     description: 'Get intelligent timing and content suggestions for follow-ups',
     benefits: ['Never miss a follow-up', 'Perfect timing recommendations', 'Increase conversion rates']
   },
   customer_insights: {
-    name: 'AI Customer Insights',
+    name: 'Customer Insights',
     description: 'Gain deep insights into customer behavior and preferences',
     benefits: ['Understand your customers better', 'Personalize your approach', 'Predict customer needs']
   },
   competitive_analysis: {
-    name: 'AI Competitive Analysis',
+    name: 'Competitive Analysis',
     description: 'Analyze market positioning and competitive advantages',
     benefits: ['Stay ahead of competition', 'Identify market opportunities', 'Strategic decision making']
   },
@@ -94,12 +94,12 @@ const FEATURE_BENEFITS: Record<AIFeatureType, {
     ]
   },
   scope_of_work: {
-    name: 'AI Scope of Work',
+    name: 'Professional Scope of Work',
     description: 'Generate detailed, professional SOW documents in seconds',
     benefits: ['Comprehensive scope definitions', 'Clear project boundaries', 'Legal-ready language']
   },
   content_generation: {
-    name: 'AI Content Generation',
+    name: 'Smart Content Generation',
     description: 'Generate custom content and marketing copy for your proposals',
     benefits: ['Personalized storytelling', 'Professional copywriting', 'Consistent brand voice']
   }
@@ -108,23 +108,23 @@ const FEATURE_BENEFITS: Record<AIFeatureType, {
 const TIER_INFO = {
   pro: {
     name: 'Pro',
-    price: '$49/month',
-    features: ['3 Users included', '$15/mo per extra user', 'QuickBooks & Stripe Sync', 'AI Executive Summaries']
+    price: '$59/month',
+    features: ['2 Users included', 'QuickBooks & Stripe Sync', 'Behavioral Sales Intelligence']
   },
   business: {
     name: 'Business',
-    price: '$99/month',
-    features: ['10 Users included', '$10/mo per extra user', 'AI SOW Drafting', 'Priority Support']
+    price: '$149/month',
+    features: ['5 Users included', 'Professional SOW Drafting', 'Priority Support']
   },
   max_ai: {
-    name: 'Max AI',
-    price: '$249/month',
-    features: ['Unlimited Users', 'Full White-label', 'Custom AI Training', 'Dedicated Account Manager']
+    name: 'Enterprise',
+    price: '$249+/month',
+    features: ['Unlimited Users', 'Full White-label', 'Dedicated Account Manager']
   },
   max: {
-    name: 'Max AI',
-    price: '$249/month',
-    features: ['Unlimited AI requests', 'Full White-label', 'SOW Generator']
+    name: 'Enterprise',
+    price: '$249+/month',
+    features: ['Unlimited Power', 'Full White-label', 'SOW Generator']
   }
 };
 

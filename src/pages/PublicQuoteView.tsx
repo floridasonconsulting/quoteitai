@@ -234,14 +234,14 @@ export default function PublicQuoteView() {
     setQuote(demoQuote);
     setCustomer(MOCK_CUSTOMERS[0]);
     setSettings({
-      name: 'Quote-it Pro Services',
+      name: 'Sellegance Pro Services',
       address: '123 Enterprise Way',
       city: 'Innovate City',
       state: 'CA',
       zip: '90210',
       phone: '(800) 555-0199',
-      email: 'pro@quoteit.ai',
-      website: 'www.quoteit.ai',
+      email: 'pro@sellegance.com',
+      website: 'www.sellegance.com',
       logo: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=2070&auto=format&fit=crop', // Professional blue abstract logo
       logoDisplayOption: 'both',
       terms: 'Standard professional service terms apply. All work is guaranteed for 12 months.',
@@ -405,7 +405,7 @@ export default function PublicQuoteView() {
         userId: quoteData.user_id,
         showPricing: quoteData.show_pricing ?? true,
         pricingMode: (quoteData as any).pricing_mode || 'category_total', // Load pricing mode
-        scopeOfWork: (quoteData as any).scope_of_work, // NEW: AI SOW for proposals
+        scopeOfWork: (quoteData as any).scope_of_work, // NEW: Intelligent SOW for proposals
       };
 
       console.log('[PublicQuoteView] ✅ Quote formatted. Item count:', formattedQuote.items.length);

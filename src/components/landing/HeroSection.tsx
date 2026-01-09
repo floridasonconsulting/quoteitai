@@ -24,8 +24,7 @@ export function HeroSection() {
             className="flex justify-center gap-3"
           >
             <Badge className="bg-primary/10 backdrop-blur-md border-primary/20 text-primary py-1 px-3">
-              <Sparkles className="h-3.5 w-3.5 mr-2 text-primary" />
-              AI-Native Quoting
+              Professional Proposal Management
             </Badge>
             <Badge className="bg-muted backdrop-blur-md border-border text-muted-foreground py-1 px-3">
               v1.0 Now Live
@@ -38,9 +37,9 @@ export function HeroSection() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-4xl md:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tighter text-foreground"
           >
-            Win More Deals<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] animate-gradient">
-              Behavioral Sales Engine
+            Proposals That Win Business — Every Time<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-secondary to-primary bg-[length:200%_auto] animate-gradient">
+              Sales Execution Platform
             </span>
           </motion.h1>
 
@@ -50,8 +49,8 @@ export function HeroSection() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
           >
-            The first AI-powered quoting platform that tracks client engagement in real-time.
-            Deliver <span className="text-foreground font-semibold">Cinematic Proposals</span> and close with surgical precision using behavioral data.
+            Structured, clear, and confident proposal and quote management with Sellegance.
+            Deliver <span className="text-foreground font-semibold">Cinematic Proposals</span> and close with consistency, clarity, and speed.
           </motion.p>
 
           <motion.div
@@ -88,7 +87,7 @@ export function HeroSection() {
                 <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50" />
               </div>
               <div className="mx-auto bg-background rounded-md px-12 py-1 text-[10px] text-muted-foreground font-mono tracking-widest uppercase">
-                quoteit.ai / dashboard
+                sellegance.com / dashboard
               </div>
             </div>
 
@@ -101,7 +100,7 @@ export function HeroSection() {
               />
               <div className="absolute inset-0 bg-background/40 group-hover:bg-background/20 transition-all flex items-center justify-center">
                 <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center shadow-[0_0_30px_hsl(var(--primary)/0.6)] group-hover:scale-110 transition-transform">
-                  <Play className="h-8 w-8 text-primary-foreground fill-current" />
+                  <ArrowRight className="h-8 w-8 text-primary-foreground" />
                 </div>
               </div>
 

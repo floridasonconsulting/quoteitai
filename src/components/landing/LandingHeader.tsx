@@ -9,9 +9,9 @@ export function LandingHeader() {
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
         <div className="flex items-center gap-2 group cursor-pointer" onClick={() => navigate("/")}>
           <div className="h-9 w-9 bg-primary rounded-lg flex items-center justify-center shadow-[0_0_15px_hsl(var(--primary)/0.4)] group-hover:scale-110 transition-transform">
-            <span className="text-primary-foreground font-black text-xl">Q</span>
+            <span className="text-primary-foreground font-black text-xl">S</span>
           </div>
-          <span className="text-xl font-black tracking-tighter text-foreground uppercase">QUOTE<span className="text-primary">IT</span> <span className="text-muted-foreground font-light px-1 opacity-50 lowercase">v1.0</span></span>
+          <span className="text-xl font-black tracking-tighter text-foreground uppercase">SELLEGANCE <span className="text-muted-foreground font-light px-1 opacity-50 lowercase">v1.0</span></span>
         </div>
         <nav className="hidden md:flex gap-8">
           {["Features", "Integrations", "Benefits", "Pricing"].map((item) => (

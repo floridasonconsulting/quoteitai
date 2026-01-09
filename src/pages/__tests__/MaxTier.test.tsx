@@ -22,8 +22,14 @@ const getMockAuthContext = (overrides: MockAuthContext): ReturnType<typeof useAu
     session: null,
     subscription: null,
     userRole: 'free',
+    subscriptionTier: 'free',
+    organizationId: null,
     isAdmin: false,
+    isProTier: false,
+    isBusinessTier: false,
+    isEnterpriseTier: false,
     isMaxAITier: false,
+    isDevAccount: false,
     loading: false,
     signUp: vi.fn(),
     signIn: vi.fn(),
@@ -35,7 +41,7 @@ const getMockAuthContext = (overrides: MockAuthContext): ReturnType<typeof useAu
   return { ...defaultValues, ...overrides };
 };
 
-describe('Max AI Tier Features', () => {
+describe('Enterprise Tier Features', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -47,20 +53,20 @@ describe('Max AI Tier Features', () => {
       isMaxAITier: true,
     }));
 
-    // Max AI tier should have no quote limits
+    // Enterprise tier should have no quote limits
   });
 
-  it('should allow unlimited AI requests', async () => {
+  it('should allow unlimited Intelligent requests', async () => {
     vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
       user: { id: 'test-user' } as User,
       userRole: 'max',
       isMaxAITier: true,
     }));
 
-    // Max AI tier should have no AI usage limits
+    // Enterprise tier should have no Intelligence usage limits
   });
 
-  it('should enable AI Full Quote Generation', async () => {
+  it('should enable Intelligent Full Quote Generation', async () => {
     vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
       user: { id: 'test-user' } as User,
       userRole: 'max',
@@ -70,27 +76,27 @@ describe('Max AI Tier Features', () => {
     // Max AI tier should have access to full_quote_generation
   });
 
-  it('should enable AI Item Recommendations', async () => {
+  it('should enable Intelligence Item Recommendations', async () => {
     vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
       user: { id: 'test-user' } as User,
       userRole: 'max',
       isMaxAITier: true,
     }));
 
-    // Max AI tier should have access to item_recommendations
+    // Enterprise tier should have access to item_recommendations
   });
 
-  it('should enable AI Pricing Optimization', async () => {
+  it('should enable Pricing Optimization', async () => {
     vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
       user: { id: 'test-user' } as User,
       userRole: 'max',
       isMaxAITier: true,
     }));
 
-    // Max AI tier should have access to pricing_optimization
+    // Enterprise tier should have access to pricing_optimization
   });
 
-  it('should enable AI Customer Insights', async () => {
+  it('should enable Customer Insights', async () => {
     vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
       user: { id: 'test-user' } as User,
       userRole: 'max',
@@ -100,7 +106,7 @@ describe('Max AI Tier Features', () => {
     // Max AI tier should have access to customer_insights
   });
 
-  it('should enable AI Competitive Analysis', async () => {
+  it('should enable Competitive Analysis', async () => {
     vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
       user: { id: 'test-user' } as User,
       userRole: 'max',
@@ -133,7 +139,7 @@ describe('Max AI Tier Features', () => {
       isMaxAITier: true,
     }));
 
-    // Max AI tier should have no branding footer on public quotes
+    // Enterprise tier should have no branding footer on public quotes
     // This is tested in PublicQuoteView.whitelabel.test.tsx
   });
 
@@ -144,7 +150,7 @@ describe('Max AI Tier Features', () => {
       isMaxAITier: true,
     }));
 
-    // Max AI tier should be able to set custom favicon
+    // Enterprise tier should be able to set custom favicon
     // This is tested in useDynamicFavicon.test.tsx
   });
 

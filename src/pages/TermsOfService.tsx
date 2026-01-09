@@ -38,7 +38,7 @@ export default function TermsOfService() {
             <section>
               <h2 className="text-xl font-semibold mb-3">1. Acceptance of Terms</h2>
               <p>
-                By accessing or using Quote-it AI ("the Service"), you agree to be bound by these Terms of Service
+                By accessing or using Sellegance ("the Service"), you agree to be bound by these Terms of Service
                 ("Terms"). If you do not agree to these Terms, do not use the Service.
               </p>
             </section>
@@ -46,14 +46,14 @@ export default function TermsOfService() {
             <section>
               <h2 className="text-xl font-semibold mb-3">2. Description of Service</h2>
               <p>
-                Quote-it AI is a mobile and web-based application that enables users to:
+                Sellegance is a mobile and web-based application that enables users to:
               </p>
               <ul className="list-disc pl-6 space-y-2">
                 <li>Create, manage, and send professional quotes</li>
                 <li>Manage customer and item databases</li>
                 <li>Generate PDF proposals</li>
                 <li>Receive quote status notifications</li>
-                <li>Access AI-powered features (with applicable subscription)</li>
+                <li>Access intelligent features (with applicable subscription)</li>
               </ul>
             </section>
 
@@ -118,7 +118,7 @@ export default function TermsOfService() {
               <h2 className="text-xl font-semibold mb-3">6. Intellectual Property</h2>
               <h3 className="text-lg font-medium mt-3 mb-2">6.1 Our Rights</h3>
               <p>
-                Quote-it AI, including all software, designs, trademarks, and content, is owned by us and
+                Sellegance, including all software, designs, trademarks, and content, is owned by us and
                 protected by copyright and trademark laws. You receive a limited, non-exclusive license to
                 use the Service.
               </p>
@@ -223,7 +223,7 @@ export default function TermsOfService() {
             <section>
               <h2 className="text-xl font-semibold mb-3">14. Miscellaneous</h2>
               <h3 className="text-lg font-medium mt-3 mb-2">14.1 Entire Agreement</h3>
-              <p>These Terms constitute the entire agreement between you and Quote-it AI.</p>
+              <p>These Terms constitute the entire agreement between you and Sellegance.</p>
 
               <h3 className="text-lg font-medium mt-3 mb-2">14.2 Severability</h3>
               <p>If any provision is found invalid, the remaining provisions remain in effect.</p>
@@ -241,7 +241,7 @@ export default function TermsOfService() {
                 For questions about these Terms, contact us at:
               </p>
               <p className="mt-2">
-                <strong>Email:</strong> quoteitai@gmail.com<br />
+                <strong>Email:</strong> hello@sellegance.com<br />
                 <strong>Address:</strong> Florida, USA
               </p>
             </section>

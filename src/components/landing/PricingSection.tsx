@@ -44,7 +44,7 @@ const pricingPlans: PricingPlan[] = [
     features: [
       "Unlimited quotes",
       "QuickBooks & Stripe Sync",
-      "AI Follow-up Messages",
+      "Intelligent Follow-up Messages",
       "Cloud sync across devices",
       "Priority email support"
     ],
@@ -63,7 +63,7 @@ const pricingPlans: PricingPlan[] = [
       "✨ Behavioral Sales Intelligence",
       "✨ Cinematic Pro Dynamic Banners",
       "✨ Dwell-time Heatmaps",
-      "AI-powered full generation",
+      "✨ Automated full generation",
       "Everything in Pro"
     ],
     cta: "Start Business Trial",

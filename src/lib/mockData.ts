@@ -259,7 +259,7 @@ export const MOCK_QUOTES = generateMockQuotes();
 
 export const MOCK_SOW_TEMPLATE = `Title: Strategic Scope of Work: [Project Name]
 Document ID: SOW-2025-[ID]
-Prepared by: Quote-it AI Intelligence Engine
+Prepared by: Sellegance Intelligence Engine
 
 1. Project Executive Summary
 Comprehensive professional service delivery for [Project Name], focusing on high-efficiency output, operational excellence, and premium quality assurance. This project aims to achieve defined business objectives through rigorous implementation standards.

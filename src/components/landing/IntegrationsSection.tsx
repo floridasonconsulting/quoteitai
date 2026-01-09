@@ -27,7 +27,7 @@ const integrationBenefits = [
   },
   {
     icon: Sparkles,
-    title: "AI-Powered SOW",
+    title: "Intelligence SOW",
     features: [
       "Comprehensive scope of work",
       "Automatic WBS generation",

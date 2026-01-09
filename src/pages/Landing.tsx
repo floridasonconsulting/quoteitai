@@ -17,7 +17,7 @@ import { ScrollTopButton } from "@/components/landing/ScrollTopButton";
 // Force Vercel to rebuild with latest features:
 // - QuickBooks Integration (NEW)
 // - Stripe Payments (NEW)
-// - AI SOW Drafting (NEW)
+// - Professional SOW Drafting (NEW)
 // - Updated Hero Section with badges
 // - Updated Features Section with 10 features
 // - Full Advanced Analytics on Dashboard

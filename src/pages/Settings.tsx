@@ -617,7 +617,7 @@ export default function Settings() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-3">
-                  <Label>AI Account Tier</Label>
+                  <Label>Account Tier</Label>
                   <Select value={userRole || "free"} onValueChange={handleRoleChange}>
                     <SelectTrigger>
                       <SelectValue />
@@ -625,7 +625,7 @@ export default function Settings() {
                     <SelectContent>
                       <SelectItem value="free">Free Tier</SelectItem>
                       <SelectItem value="pro">Pro Tier</SelectItem>
-                      <SelectItem value="max">Max Tier</SelectItem>
+                      <SelectItem value="max">Enterprise Tier</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -676,7 +676,7 @@ export default function Settings() {
                     <div className="space-y-0.5">
                       <Label className="text-base">Demo Mode</Label>
                       <p className="text-sm text-muted-foreground">
-                        Showcase Quote-it AI with professional mock data and branding.
+                        Showcase Sellegance with professional mock data and branding.
                       </p>
                     </div>
                     <Switch

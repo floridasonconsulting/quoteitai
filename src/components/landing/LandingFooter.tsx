@@ -10,13 +10,13 @@ export function LandingFooter() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 group cursor-pointer" onClick={() => navigate("/")}>
               <div className="h-7 w-7 bg-primary rounded flex items-center justify-center">
-                <span className="text-primary-foreground font-black text-sm">Q</span>
+                <span className="text-primary-foreground font-black text-sm">S</span>
               </div>
-              <span className="text-lg font-black tracking-tighter text-foreground uppercase">QUOTE<span className="text-primary">IT</span></span>
+              <span className="text-lg font-black tracking-tighter text-foreground uppercase">SELLEGANCE</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Precision estimate engineering powered by solar-adaptive intelligence.
-              Built for high-performance service teams.
+              Structured. Clear. Confident.
+              Professional proposal and quote management for high-performance teams.
             </p>
           </div>
           <div>
@@ -87,7 +87,7 @@ export function LandingFooter() {
           </div>
         </div>
         <div className="border-t border-border mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-muted-foreground font-medium uppercase tracking-widest">
-          <p>© 2025 Quote-it AI. All rights reserved.</p>
+          <p>© 2026 Sellegance. All rights reserved.</p>
           <p>Handcrafted by Floridason Consulting</p>
         </div>
       </div>

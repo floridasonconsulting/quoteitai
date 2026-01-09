@@ -17,24 +17,25 @@ All colors MUST be HSL.
 @layer base {
   :root {
     /* DAY MODE: High-Contrast Productivity (Indigo Elite) */
-    --background: 210 20% 98%;
-    /* #F9FAFB */
-    --foreground: 221 39% 11%;
-    /* #111827 - Ink Black */
+    --background: 220 23% 97%;
+    /* #F7F8FA - Warm White */
+    --foreground: 213 28% 17%;
+    /* #1F2A37 - Charcoal / Deep Navy */
 
     --card: 0 0% 100%;
     /* #FFFFFF - Pure White */
-    --card-foreground: 221 39% 11%;
+    --card-foreground: 213 28% 17%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 221 39% 11%;
+    --popover-foreground: 213 28% 17%;
 
-    --primary: 243 75% 59%;
-    /* #4F46E5 - Indigo 600 (Brand Pro) */
+    --primary: 189 54% 40%;
+    /* #2F8C9D - Muted Teal (Accent) */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 221 39% 11%;
-    --secondary-foreground: 210 20% 98%;
+    --secondary: 218 17% 35%;
+    /* #4A5568 - Slate Gray */
+    --secondary-foreground: 220 23% 97%;
 
     --muted: 210 20% 90%;
     --muted-foreground: 215 16% 47%;
@@ -74,41 +75,39 @@ All colors MUST be HSL.
 
   .dark {
     /* NIGHT MODE: Deep Focus Midnight (Midnight Ink) */
-    --background: 216 28% 7%;
-    /* #0D1117 */
-    --foreground: 210 70% 96%;
-    /* #F0F6FC - Off-White */
+    --background: 213 28% 10%;
+    /* Darker Charcoal */
+    --foreground: 220 23% 97%;
+    /* Warm White */
 
-    --card: 214 21% 11%;
-    /* #161B22 - Layered Slate */
-    --card-foreground: 210 70% 96%;
+    --card: 213 28% 14%;
+    --card-foreground: 220 23% 97%;
 
-    --popover: 214 21% 11%;
-    --popover-foreground: 210 70% 96%;
+    --popover: 213 28% 14%;
+    --popover-foreground: 220 23% 97%;
 
-    --primary: 239 84% 67%;
-    /* #6366F1 - Vivid Indigo 500 */
+    --primary: 189 54% 45%;
+    /* Brighter Teal for Dark Mode */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 70% 96%;
+    --secondary: 218 17% 45%;
+    --secondary-foreground: 220 23% 97%;
 
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 262 83% 58%;
-    /* Sophisticated Violet */
+    --accent: 189 54% 40%;
     --accent-foreground: 0 0% 100%;
 
     --success: 158 64% 63%;
     /* #34D399 - Emerald 400 */
-    --success-foreground: 216 28% 7%;
+    --success-foreground: 213 28% 10%;
 
     --border: 0 0% 100% / 0.1;
     --input: 0 0% 100% / 0.1;
-    --ring: 239 84% 67%;
+    --ring: 189 54% 45%;
 
-    --shadow-glow: 0 0 25px rgba(99, 102, 241, 0.3);
+    --shadow-glow: 0 0 25px rgba(47, 140, 157, 0.3);
 
     /* Semantic Utility Mappings */
     --bg-app: var(--background);

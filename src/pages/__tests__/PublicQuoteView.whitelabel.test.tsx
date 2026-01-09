@@ -82,8 +82,14 @@ const getMockAuthContext = (overrides: MockAuthContext): ReturnType<typeof useAu
     session: null,
     subscription: null,
     userRole: 'free',
+    subscriptionTier: 'free',
+    organizationId: null,
     isAdmin: false,
+    isProTier: false,
+    isBusinessTier: false,
+    isEnterpriseTier: false,
     isMaxAITier: false,
+    isDevAccount: false,
     loading: false,
     signUp: vi.fn(),
     signIn: vi.fn(),
@@ -124,12 +130,12 @@ const renderPublicQuoteView = () => {
 describe('PublicQuoteView - White-Label Branding', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    document.title = 'Quote-it AI';
+    document.title = 'Sellegance';
   });
 
   describe('Tier-Based Footer Display', () => {
-    it('should show "Powered by Quote-it AI" footer for Pro tier users', async () => {
-      (supabase.from as vi.Mock).mockImplementation(createFromHandler('pro'));
+    it('should show "Powered by Sellegance" footer for Pro tier users', async () => {
+      (supabase.from as any).mockImplementation(createFromHandler('pro'));
       vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
         user: { id: 'user-123' } as User,
         isMaxAITier: false,
@@ -141,14 +147,14 @@ describe('PublicQuoteView - White-Label Branding', () => {
       // Wait for footer to appear
       const footer = await findByText(/Powered by/i);
       expect(footer).toBeInTheDocument();
-      
-      // Use getAllByText because "Quote-it AI" appears in header and footer
-      const brandingElements = getAllByText(/Quote-it AI/i);
+
+      // Use getAllByText because "Sellegance" appears in header and footer
+      const brandingElements = getAllByText(/Sellegance/i);
       expect(brandingElements.length).toBeGreaterThan(0);
     });
 
     it('should NOT show footer for Max AI tier users', async () => {
-      (supabase.from as vi.Mock).mockImplementation(createFromHandler('max'));
+      (supabase.from as any).mockImplementation(createFromHandler('max'));
       vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
         user: { id: 'user-123' } as User,
         isMaxAITier: true,
@@ -163,7 +169,7 @@ describe('PublicQuoteView - White-Label Branding', () => {
     });
 
     it('should show footer for Free tier users', async () => {
-      (supabase.from as vi.Mock).mockImplementation(createFromHandler('free'));
+      (supabase.from as any).mockImplementation(createFromHandler('free'));
       vi.spyOn(AuthContext, 'useAuth').mockReturnValue(getMockAuthContext({
         user: { id: 'user-123' } as User,
         isMaxAITier: false,
@@ -192,7 +198,7 @@ describe('PublicQuoteView - White-Label Branding', () => {
 
       // Mock company settings with logo
       const companyLogo = 'https://example.com/company-logo.png';
-      
+
       renderPublicQuoteView();
 
       // Note: Actual favicon change is tested in useDynamicFavicon.test.tsx

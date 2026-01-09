@@ -22,7 +22,7 @@ const SUBSCRIPTION_TIERS = {
       '2 Seats included',
       '$25/mo per extra seat (up to 2)',
       'QuickBooks & Stripe sync',
-      'AI Follow-up Messages',
+      'Intelligent Follow-up Messages',
       'Cloud sync across devices',
       'Priority email support',
     ],
@@ -38,7 +38,7 @@ const SUBSCRIPTION_TIERS = {
       '✨ Behavioral Sales Intelligence',
       '✨ Cinematic Pro Dynamic Banners',
       '✨ Dwell-time Heatmaps',
-      'AI-powered full generation',
+      '✨ Automated full generation',
       '5 Seats included',
       '$20/mo per extra seat (up to 4)',
       'Everything in Pro',
@@ -240,7 +240,7 @@ export default function Subscription() {
       {/* Comparison Note */}
       <Card className="bg-muted/30">
         <CardHeader>
-          <CardTitle>Why Quote-It AI?</CardTitle>
+          <CardTitle>Why Sellegance?</CardTitle>
           <CardDescription>
             Professional features at a fraction of competitor prices
           </CardDescription>
@@ -250,12 +250,12 @@ export default function Subscription() {
             <div className="space-y-2">
               <h4 className="font-semibold flex items-center gap-2">
                 <Check className="h-4 w-4 text-success" />
-                Quote-It AI Pro ($59/mo)
+                Sellegance Pro ($59/mo)
               </h4>
               <ul className="text-sm text-muted-foreground space-y-1 ml-6">
                 <li>• QuickBooks & Stripe included</li>
                 <li>• Professional email automation</li>
-                <li>• AI-powered features</li>
+                <li>• Intelligence features</li>
                 <li>• No per-user fees</li>
               </ul>
             </div>

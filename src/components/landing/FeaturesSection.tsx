@@ -16,7 +16,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 const bentoFeatures = [
   {
     icon: Sparkles,
-    title: "AI SOW Engine v1.0",
+    title: "Professional SOW Engine v1.0",
     description: "The market-disrupting engine that drafts legally-defensible, 3-phase Scope of Work documents in 15 seconds. Built for high-end trade professionals.",
     span: "lg:col-span-4 lg:row-span-2",
     badge: "FLAGSHIP",
@@ -43,7 +43,7 @@ const bentoFeatures = [
   {
     icon: ShieldCheck,
     title: "Risk Mitigation",
-    description: "AI-generated exclusions and acceptance criteria to prevent scope creep.",
+    description: "Professional-grade exclusions and acceptance criteria to prevent scope creep.",
     span: "lg:col-span-2 lg:row-span-1",
   },
   {
@@ -72,7 +72,7 @@ export function FeaturesSection() {
             Engineered for <span className="text-primary italic">Absolute</span> Dominance
           </h2>
           <p className="text-lg text-muted-foreground">
-            Ditch the bloated legacy tools. QuoteIt AI is built on a high-performance stack
+            Ditch the bloated legacy tools. Sellegance is built on a high-performance stack
             designed to maximize conversion and minimize administrative overhead.
           </p>
         </div>

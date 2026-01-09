@@ -72,7 +72,7 @@ export function Layout({ children }: LayoutProps) {
           <div className="hidden md:flex h-14 items-center justify-between">
             <div className="flex items-center gap-2">
               <img src="/logo.png" alt="Quote-it AI Logo" className="h-10 w-auto" />
-              <h1 className="text-xl font-bold">Quote-it AI</h1>
+              <h1 className="text-xl font-bold">Sellegance</h1>
             </div>
             <div className="flex items-center gap-2" role="toolbar" aria-label="Quick actions">
               <Button
@@ -136,7 +136,7 @@ export function Layout({ children }: LayoutProps) {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <img src="/logo.png" alt="Quote-it AI Logo" className="h-8 w-auto" />
-                <h1 className="text-lg font-bold">Quote-it AI</h1>
+                <h1 className="text-lg font-bold">Sellegance</h1>
               </div>
               <div className="flex items-center gap-1" role="toolbar" aria-label="Quick actions">
                 <Button

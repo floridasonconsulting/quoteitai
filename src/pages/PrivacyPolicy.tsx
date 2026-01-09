@@ -38,7 +38,7 @@ export default function PrivacyPolicy() {
             <section>
               <h2 className="text-xl font-semibold mb-3">1. Information We Collect</h2>
               <p>
-                Quote-it AI collects information necessary to provide our quote management services:
+                Sellegance collects information necessary to provide our quote management services:
               </p>
               <ul className="list-disc pl-6 space-y-2">
                 <li><strong>Account Information:</strong> Email address, password (encrypted), and subscription status</li>
@@ -52,7 +52,7 @@ export default function PrivacyPolicy() {
               <h2 className="text-xl font-semibold mb-3">2. How We Use Your Information</h2>
               <p>We use collected information to:</p>
               <ul className="list-disc pl-6 space-y-2">
-                <li>Provide and maintain the Quote-it AI service</li>
+                <li>Provide and maintain the Sellegance service</li>
                 <li>Process your quotes and manage customer data</li>
                 <li>Send quote notifications and status updates</li>
                 <li>Process payments and manage subscriptions via Stripe</li>
@@ -112,14 +112,14 @@ export default function PrivacyPolicy() {
                 <li>Object to data processing</li>
               </ul>
               <p className="mt-2">
-                To exercise these rights, contact us at quoteitai@gmail.com
+                To exercise these rights, contact us at hello@sellegance.com
               </p>
             </section>
 
             <section>
               <h2 className="text-xl font-semibold mb-3">7. Children's Privacy</h2>
               <p>
-                Quote-it AI is not intended for users under 18 years of age. We do not knowingly collect
+                Sellegance is not intended for users under 18 years of age. We do not knowingly collect
                 data from children. If we discover we have collected data from a child, we will delete it immediately.
               </p>
             </section>
@@ -127,7 +127,7 @@ export default function PrivacyPolicy() {
             <section>
               <h2 className="text-xl font-semibold mb-3">8. International Users</h2>
               <p>
-                Your data may be processed in countries where our service providers operate. By using Quote-it AI,
+                Your data may be processed in countries where our service providers operate. By using Sellegance,
                 you consent to the transfer of your data to these locations, which may have different data protection
                 laws than your country.
               </p>
@@ -147,7 +147,7 @@ export default function PrivacyPolicy() {
                 If you have questions about this Privacy Policy or our data practices, contact us at:
               </p>
               <p className="mt-2">
-                <strong>Email:</strong> quoteitai@gmail.com<br />
+                <strong>Email:</strong> hello@sellegance.com<br />
                 <strong>Address:</strong> Florida, USA
               </p>
             </section>

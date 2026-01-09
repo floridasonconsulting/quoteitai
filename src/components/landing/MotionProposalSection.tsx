@@ -34,7 +34,7 @@ export function MotionProposalSection() {
                             <span className="text-indigo-400">Start Sending Experiences.</span>
                         </h2>
                         <p className="text-lg text-slate-400 leading-relaxed max-w-lg">
-                            Static documents belong in the 90s. QuoteIt proposals are living, breathing sales engines that track every scroll, every hover, and every hesitation.
+                            Static documents belong in the 90s. Sellegance proposals are living, breathing sales experiences that provide insight into client engagement and decision signals.
                         </p>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-8">
@@ -61,8 +61,8 @@ export function MotionProposalSection() {
                                     <Zap className="w-6 h-6 text-green-400" />
                                 </div>
                                 <div>
-                                    <h3 className="font-black uppercase tracking-wide text-sm mb-1">The AI Closer</h3>
-                                    <p className="text-xs text-slate-500">Auto-generate follows-ups based on behavioral data.</p>
+                                    <h3 className="font-black uppercase tracking-wide text-sm mb-1">Engagement Intelligence</h3>
+                                    <p className="text-xs text-slate-500">Gain actionable insights based on buyer engagement signals.</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-4">
@@ -134,8 +134,8 @@ export function MotionProposalSection() {
                                 <div className="flex items-center gap-2 md:gap-3">
                                     <BarChart3 className="w-3 h-3 md:w-4 md:h-4 text-indigo-400" />
                                     <div>
-                                        <p className="text-[8px] md:text-[10px] font-black uppercase">Lingering Detected</p>
-                                        <p className="text-[7px] md:text-[9px] text-slate-400">Exclusions Section (84s)</p>
+                                        <p className="text-[8px] md:text-[10px] font-black uppercase">Buyer Signal Visibility</p>
+                                        <p className="text-[7px] md:text-[9px] text-slate-400">Section Analysis (84s)</p>
                                     </div>
                                 </div>
                             </motion.div>

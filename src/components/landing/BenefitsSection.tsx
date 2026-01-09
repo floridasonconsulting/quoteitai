@@ -12,7 +12,7 @@ const benefits = [
     icon: Zap,
     title: "10x Faster Quotes",
     stat: "Minutes not hours",
-    description: "AI automation eliminates repetitive work and speeds up quote creation"
+    description: "Intelligent automation eliminates repetitive work and speeds up quote creation"
   },
   {
     icon: Building2,

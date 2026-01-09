@@ -97,11 +97,13 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <img src="/logo.png" alt="Quote-it AI" className="h-24 w-auto" />
+          <div className="flex justify-center mb-6">
+            <div className="h-16 w-16 rounded-2xl bg-primary flex items-center justify-center shadow-2xl shadow-primary/20">
+              <span className="text-3xl font-black text-primary-foreground italic">S</span>
+            </div>
           </div>
-          <CardTitle className="text-2xl">Welcome to Quote-it AI</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-3xl font-black tracking-tight mb-2">Welcome to Sellegance</CardTitle>
+          <CardDescription className="text-base">
             Sign in to your account or create a new one
           </CardDescription>
         </CardHeader>
