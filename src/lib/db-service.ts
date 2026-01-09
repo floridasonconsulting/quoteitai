@@ -81,13 +81,14 @@ export const getSettings = async (userId: string, organizationId: string | null 
     const sessionKey = `settings-${userId}-${organizationId || 'personal'}`;
     const { data: dbSettings, error } = await dedupedRequest(
       sessionKey,
-      () => Promise.resolve(
-        supabase
+      async () => {
+        // Properly await the Supabase query builder
+        return await supabase
           .from('company_settings' as any)
           .select('*')
           .eq('user_id', userId)
-          .maybeSingle()
-      ),
+          .maybeSingle();
+      },
       45000
     ) as any;
 

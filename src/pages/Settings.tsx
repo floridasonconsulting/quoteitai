@@ -121,9 +121,14 @@ export default function Settings() {
       // Use dedupedRequest to prevent multiple simultaneous fetches
       const { data: supabaseSettings, error } = await dedupedRequest(
         sessionKey,
-        () => Promise.resolve(organizationId
-          ? supabase.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle()
-          : supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle()),
+        async () => {
+          // Properly await the Supabase query builder
+          if (organizationId) {
+            return await supabase.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle();
+          } else {
+            return await supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle();
+          }
+        },
         45000 // Increased to 45s for robustness
       ) as any;
 

@@ -48,7 +48,9 @@ export function useProposalTelemetry(
                     isOwner
                 });
             }
-            telemetryService.flush();
+            // Defer flush to next tick to avoid blocking navigation
+            // This prevents telemetry from interfering with route transitions
+            setTimeout(() => telemetryService.flush(), 100);
         };
     }, [currentSectionId, quoteId, isEnabled, isOwner]);
 }

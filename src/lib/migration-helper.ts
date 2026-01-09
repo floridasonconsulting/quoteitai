@@ -101,9 +101,9 @@ async function syncIndexedDBToSupabase(userId: string): Promise<void> {
         created_at: customer.createdAt
       }));
       const { error: customersError } = await executeWithPool(
-        () => Promise.resolve(supabase
+        async () => await supabase
           .from("customers")
-          .upsert(customersToSync, { onConflict: "id" })),
+          .upsert(customersToSync, { onConflict: "id" }),
         30000,
         'migration-customers'
       ) as any;
@@ -136,9 +136,9 @@ async function syncIndexedDBToSupabase(userId: string): Promise<void> {
         created_at: item.createdAt
       }));
       const { error: itemsError } = await executeWithPool(
-        () => Promise.resolve(supabase
+        async () => await supabase
           .from("items")
-          .upsert(itemsToSync, { onConflict: "id" })),
+          .upsert(itemsToSync, { onConflict: "id" }),
         30000,
         'migration-items'
       ) as any;
@@ -195,9 +195,9 @@ async function syncIndexedDBToSupabase(userId: string): Promise<void> {
         return cleanQuote;
       });
       const { error: quotesError } = await executeWithPool(
-        () => Promise.resolve(supabase
+        async () => await supabase
           .from("quotes")
-          .upsert(quotesToSync, { onConflict: "id" })),
+          .upsert(quotesToSync, { onConflict: "id" }),
         60000, // Quotes can be large
         'migration-quotes'
       ) as any;
@@ -249,9 +249,9 @@ async function syncIndexedDBToSupabase(userId: string): Promise<void> {
       // Remove undefined values
       Object.keys(settingsToSync).forEach(key => settingsToSync[key] === undefined && delete settingsToSync[key]);
       const { error: settingsError } = await executeWithPool(
-        () => Promise.resolve(supabase
+        async () => await supabase
           .from("company_settings")
-          .upsert(settingsToSync, { onConflict: "user_id" })),
+          .upsert(settingsToSync, { onConflict: "user_id" }),
         30000,
         'migration-settings'
       ) as any;

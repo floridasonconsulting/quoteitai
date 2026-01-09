@@ -35,7 +35,20 @@ export async function executeWithPool<T>(
     // Run with timeout to ensure we don't hold the pool slot forever
     // Ensure timeoutMs is at least 1s to avoid immediate timeouts from undefined/0
     const effectiveTimeout = Math.max(timeoutMs, 1000);
-    return await withTimeout(requestFn(), effectiveTimeout);
+
+    // Safely invoke the request function
+    let promise: Promise<T>;
+    try {
+      promise = requestFn();
+    } catch (syncError) {
+      console.error(`[Pool] Request [${label}] failed synchronously:`, syncError);
+      throw syncError;
+    }
+
+    return await withTimeout(promise, effectiveTimeout);
+  } catch (error) {
+    console.error(`[Pool] Request [${label}] failed:`, error);
+    throw error;
   } finally {
     activeRequests--;
     console.log(`[Pool] Request [${label}] finished. Active: ${activeRequests}`);

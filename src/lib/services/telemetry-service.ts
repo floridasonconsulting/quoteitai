@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { executeWithPool, withTimeout } from "./request-pool-service";
 
 export interface TelemetryEvent {
     quoteId: string;
@@ -15,6 +14,7 @@ class TelemetryService {
     private buffer: TelemetryEvent[] = [];
     private flushInterval: number = 5000; // 5 seconds
     private timer: NodeJS.Timeout | null = null;
+    private isFlushing: boolean = false;
 
     constructor() {
         if (typeof window !== 'undefined') {
@@ -36,16 +36,24 @@ class TelemetryService {
     }
 
     public async flush() {
-        if (this.buffer.length === 0) return;
+        // Prevent concurrent flushes and avoid interfering with main app
+        if (this.buffer.length === 0 || this.isFlushing) return;
 
+        this.isFlushing = true;
         const eventsToFlush = [...this.buffer];
         this.buffer = [];
 
         console.log('[Telemetry] Flushing events:', eventsToFlush.length);
 
+        // Use completely isolated try-catch - NEVER let telemetry errors affect main app
         try {
-            await executeWithPool(async () => {
-                const { error } = await (supabase.from('proposal_analytics' as any) as any).insert(
+            // Set a hard 8s timeout using AbortController
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+            const { error } = await supabase
+                .from('proposal_analytics' as any)
+                .insert(
                     eventsToFlush.map(e => ({
                         quote_id: e.quoteId,
                         session_id: e.sessionId,
@@ -54,23 +62,26 @@ class TelemetryService {
                         is_owner: !!e.isOwner,
                         user_agent: e.userAgent,
                         metadata: e.metadata || {}
-                    })) as any
+                    })) as any,
+                    { count: null } // Suppress count for performance
                 );
 
-                if (error) {
-                    console.error('[Telemetry] Flush failed:', error);
-                    // Put events back in buffer if it's not a fatal error
-                    if (this.buffer.length < 100) {
-                        this.buffer = [...eventsToFlush, ...this.buffer];
-                    }
+            clearTimeout(timeoutId);
+
+            if (error) {
+                console.warn('[Telemetry] Flush failed (non-critical):', error.message);
+                // Only retry buffer if it's small - don't let it grow forever
+                if (eventsToFlush.length < 20 && this.buffer.length < 50) {
+                    this.buffer = [...eventsToFlush, ...this.buffer];
                 }
-            }, 10000); // 10s timeout for telemetry flush
-        } catch (err) {
-            console.error('[Telemetry] Critical error or timeout during flush:', err);
-            // Put events back in buffer if possible
-            if (this.buffer.length < 100) {
-                this.buffer = [...eventsToFlush, ...this.buffer];
+            } else {
+                console.log('[Telemetry] Flush successful');
             }
+        } catch (err: any) {
+            // Completely swallow all errors - telemetry should NEVER break the app
+            console.warn('[Telemetry] Flush error (ignored):', err?.message || err);
+        } finally {
+            this.isFlushing = false;
         }
     }
 
