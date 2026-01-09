@@ -270,17 +270,22 @@ export default function PublicQuoteView() {
       return;
     }
 
-    console.log('[PublicQuoteView] 🚀 Loading quote with shareToken:', decodedShareToken);
+    console.log('[PublicQuoteView] 🚀 Loading quote data...', { shareToken: decodedShareToken });
+    const queryStartTime = Date.now();
     setLoading(true);
     try {
-      // Fetch quote by share token
+      // Step 1: Fetch ONLY the quote first (Simplifying to isolate timeout issue)
+      console.log('[PublicQuoteView] 📡 Sending Supabase request (Quote only)...');
       const { data: quoteData, error: quoteError } = await dedupedRequest(`quote-${decodedShareToken}`, async (signal) => {
         return await (supabase
           .from('quotes')
-          .select('*, customers(contact_first_name, contact_last_name)')
+          .select('*')
           .eq('share_token', decodedShareToken)
           .maybeSingle() as any).abortSignal(signal);
       }, 30000);
+
+      const queryDuration = Date.now() - queryStartTime;
+      console.log(`[PublicQuoteView] 🏁 Supabase request finished in ${queryDuration}ms`);
 
       if (quoteError) {
         console.error('[PublicQuoteView] ❌ Supabase error:', quoteError);
@@ -288,10 +293,34 @@ export default function PublicQuoteView() {
       }
 
       if (!quoteData) {
-        console.error('[PublicQuoteView] ❌ No quote found with shareToken:', decodedShareToken);
+        console.error('[PublicQuoteView] ❌ No quote found for token:', decodedShareToken);
         toast.error('Quote not found or link has expired');
         setLoading(false);
         return;
+      }
+
+      console.log('[PublicQuoteView] ✅ Quote data received:', {
+        id: quoteData.id,
+        customerId: quoteData.customer_id,
+        itemsCount: quoteData.items?.length
+      });
+
+      // Step 2: Fetch customer data separately if needed
+      if (quoteData.customer_id) {
+        console.log('[PublicQuoteView] 📡 Fetching customer data for:', quoteData.customer_id);
+        const { data: customerData } = await dedupedRequest(`customer-${quoteData.customer_id}`, async (signal) => {
+          return await (supabase
+            .from('customers')
+            .select('contact_first_name, contact_last_name')
+            .eq('id', quoteData.customer_id)
+            .maybeSingle() as any).abortSignal(signal);
+        }, 15000);
+
+        if (customerData) {
+          console.log('[PublicQuoteView] ✅ Customer data received');
+          // Merge customer data into quote for ProposalViewer
+          (quoteData as any).customers = customerData;
+        }
       }
 
       // Check if quote has expired
