@@ -116,25 +116,25 @@ export default function Settings() {
       // Step 2: Fetch from Supabase for authoritative data
       console.log('[Settings] Fetching from Supabase...');
 
-      // DIAGNOSTIC: Use RAW FETCH to bypass Supabase JS library entirely
-      // This tests if the issue is browser/network level vs Supabase JS library
+      // NOTE: We use raw fetch() here instead of the Supabase JS client because
+      // the Supabase JS client has been observed to hang indefinitely after viewing
+      // proposals. This is a workaround until the root cause is identified.
+      // See: Settings timeout debugging 2026-01-09
       let supabaseSettings: any = null;
       let error: any = null;
 
       try {
-        console.log('[Settings] 🔄 Testing with RAW FETCH (bypassing Supabase JS)...');
-
         const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
         const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-          console.log('[Settings] ⏰ Aborting raw fetch after 10s...');
-          controller.abort();
-        }, 10000);
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-        const url = `${SUPABASE_URL}/rest/v1/company_settings?user_id=eq.${user.id}&select=*`;
-        console.log('[Settings] 🚀 RAW FETCH to:', url);
+        // Build the PostgREST query URL
+        const filterParam = organizationId
+          ? `organization_id=eq.${organizationId}`
+          : `user_id=eq.${user.id}`;
+        const url = `${SUPABASE_URL}/rest/v1/company_settings?${filterParam}&select=*`;
 
         const response = await fetch(url, {
           method: 'GET',
@@ -142,30 +142,30 @@ export default function Settings() {
             'apikey': SUPABASE_KEY,
             'Authorization': `Bearer ${SUPABASE_KEY}`,
             'Content-Type': 'application/json',
-            'Accept': 'application/vnd.pgrst.object+json' // Request single object
+            'Accept': 'application/vnd.pgrst.object+json' // Request single object (maybeSingle equivalent)
           },
           signal: controller.signal
         });
 
         clearTimeout(timeoutId);
 
-        console.log('[Settings] ✅ RAW FETCH response status:', response.status);
-
         if (response.ok) {
           const data = await response.json();
-          console.log('[Settings] ✅ RAW FETCH data:', data);
           supabaseSettings = data;
+        } else if (response.status === 406) {
+          // 406 = No rows found (equivalent to maybeSingle returning null)
+          supabaseSettings = null;
         } else {
           const errorText = await response.text();
-          console.error('[Settings] ❌ RAW FETCH error response:', errorText);
-          error = new Error(`HTTP ${response.status}: ${errorText}`);
+          console.error('[Settings] Supabase API error:', errorText);
+          error = new Error(`HTTP ${response.status}`);
         }
       } catch (fetchError: any) {
         if (fetchError.name === 'AbortError') {
-          console.error('[Settings] ❌ RAW FETCH ABORTED (timeout)');
-          error = new Error('Raw fetch aborted after 10s timeout');
+          console.warn('[Settings] Settings fetch timed out after 10s');
+          error = new Error('Settings fetch timeout');
         } else {
-          console.error('[Settings] ❌ RAW FETCH exception:', fetchError?.message || fetchError);
+          console.error('[Settings] Settings fetch failed:', fetchError?.message);
           error = fetchError;
         }
       }
