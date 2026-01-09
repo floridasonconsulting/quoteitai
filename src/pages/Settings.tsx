@@ -29,7 +29,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSyncManager } from "@/hooks/useSyncManager";
 import { checkAndMigrateData } from "@/lib/migration-helper";
 import { dispatchDataRefresh } from "@/hooks/useDataRefresh";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, createFreshSupabaseClient } from "@/integrations/supabase/client";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { Switch } from "@/components/ui/switch";
 
@@ -116,32 +116,31 @@ export default function Settings() {
       // Step 2: Fetch from Supabase for authoritative data
       console.log('[Settings] Fetching from Supabase...');
 
-      // DIAGNOSTIC: Bypass request pool entirely and make direct call
-      // This will help identify if the pool/dedup logic is the issue
+      // DIAGNOSTIC: Use a FRESH Supabase client to test if main client is corrupted
       let supabaseSettings: any = null;
       let error: any = null;
 
       try {
-        console.log('[Settings] 🔄 Making DIRECT Supabase query (bypassing pool)...');
+        console.log('[Settings] 🔄 Creating FRESH Supabase client...');
+        const freshClient = createFreshSupabaseClient();
 
         // Simple Promise.race with manual timeout
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Direct Settings Query Timeout (15s)')), 15000);
+          setTimeout(() => reject(new Error('Fresh Client Query Timeout (15s)')), 15000);
         });
 
+        console.log('[Settings] 🚀 Querying with FRESH client...');
         const queryPromise = organizationId
-          ? supabase.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle()
-          : supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle();
-
-        console.log('[Settings] 🚀 Query promise created, racing with timeout...');
+          ? freshClient.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle()
+          : freshClient.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle();
 
         const result = await Promise.race([queryPromise, timeoutPromise]) as any;
 
-        console.log('[Settings] ✅ DIRECT Supabase query completed!', result);
+        console.log('[Settings] ✅ FRESH CLIENT query completed!', result);
         supabaseSettings = result?.data;
         error = result?.error;
       } catch (directError: any) {
-        console.error('[Settings] ❌ DIRECT Supabase query failed:', directError?.message || directError);
+        console.error('[Settings] ❌ FRESH CLIENT query failed:', directError?.message || directError);
         error = directError;
       }
 
