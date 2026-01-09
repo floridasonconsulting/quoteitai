@@ -16,22 +16,22 @@ export function MotionProposalSection() {
     const scale = useTransform(scrollYProgress, [0, 0.2], [isMobile ? 0.95 : 0.8, 1]);
 
     return (
-        <section ref={containerRef} className="py-32 overflow-hidden bg-slate-950 text-white relative">
+        <section ref={containerRef} className="py-32 overflow-hidden bg-[#0A0A0B] text-white relative">
             {/* Background elements */}
             <div className="absolute inset-0 z-0">
                 <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/20 blur-[150px] rounded-full animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-indigo-500/10 blur-[150px] rounded-full" />
+                <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-teal-500/10 blur-[150px] rounded-full" />
             </div>
 
             <div className="container mx-auto px-4 relative z-10">
                 <div className="max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-16">
                     <div className="flex-1 space-y-8">
-                        <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 px-4 py-1.5 text-xs font-black uppercase tracking-widest">
+                        <Badge className="bg-primary/20 text-primary border-primary/30 px-4 py-1.5 text-xs font-black uppercase tracking-widest">
                             Proposal Motion Experience
                         </Badge>
                         <h2 className="text-3xl md:text-5xl lg:text-6xl font-black leading-[1.1] tracking-tighter">
                             Stop Sending PDFs.<br />
-                            <span className="text-indigo-400">Start Sending Experiences.</span>
+                            <span className="text-primary">Start Sending Experiences.</span>
                         </h2>
                         <p className="text-lg text-slate-400 leading-relaxed max-w-lg">
                             Static documents belong in the 90s. Sellegance proposals are living, breathing sales experiences that provide insight into client engagement and decision signals.
@@ -39,8 +39,8 @@ export function MotionProposalSection() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-8">
                             <div className="flex items-start gap-4">
-                                <div className="mt-1 w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
-                                    <BarChart3 className="w-6 h-6 text-indigo-400" />
+                                <div className="mt-1 w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                                    <BarChart3 className="w-6 h-6 text-primary" />
                                 </div>
                                 <div>
                                     <h3 className="font-black uppercase tracking-wide text-sm mb-1">Dwell Time Heatmaps</h3>
@@ -57,8 +57,8 @@ export function MotionProposalSection() {
                                 </div>
                             </div>
                             <div className="flex items-start gap-4">
-                                <div className="mt-1 w-12 h-12 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
-                                    <Zap className="w-6 h-6 text-green-400" />
+                                <div className="mt-1 w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+                                    <Zap className="w-6 h-6 text-teal-400" />
                                 </div>
                                 <div>
                                     <h3 className="font-black uppercase tracking-wide text-sm mb-1">Engagement Intelligence</h3>
@@ -66,8 +66,8 @@ export function MotionProposalSection() {
                                 </div>
                             </div>
                             <div className="flex items-start gap-4">
-                                <div className="mt-1 w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                                    <MousePointer2 className="w-6 h-6 text-blue-400" />
+                                <div className="mt-1 w-12 h-12 rounded-2xl bg-secondary/10 border border-secondary/20 flex items-center justify-center">
+                                    <MousePointer2 className="w-6 h-6 text-secondary-foreground" />
                                 </div>
                                 <div>
                                     <h3 className="font-black uppercase tracking-wide text-sm mb-1">Dynamic Interaction</h3>
@@ -80,35 +80,35 @@ export function MotionProposalSection() {
                     <div className="flex-1 w-full relative">
                         <motion.div
                             style={{ opacity, scale, y: x }}
-                            className="relative aspect-[3/4] md:aspect-[4/5] lg:aspect-[4/5] bg-slate-900 rounded-[2rem] md:rounded-[2.5rem] border border-slate-800 shadow-2xl overflow-hidden group"
+                            className="relative aspect-[3/4] md:aspect-[4/5] lg:aspect-[4/5] bg-[#07090C] rounded-[2rem] md:rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden group"
                         >
                             {/* Proposal Mockup Content */}
-                            <div className="absolute inset-x-0 top-0 h-48 md:h-64 overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-700 to-indigo-900">
+                            <div className="absolute inset-x-0 top-0 h-48 md:h-64 overflow-hidden bg-gradient-to-br from-[#1F2A37] via-[#2F8C9D] to-[#0A0A0B]">
                                 <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_30%_30%,_var(--tw-gradient-stops))] from-white/40 via-transparent to-transparent" />
-                                <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-slate-900" />
+                                <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-[#07090C]" />
                             </div>
 
                             <div className="relative pt-32 md:pt-48 px-8 space-y-6">
                                 <div className="space-y-2">
-                                    <div className="h-1 w-12 bg-indigo-500 rounded-full" />
+                                    <div className="h-1 w-12 bg-primary rounded-full" />
                                     <h4 className="text-2xl md:text-4xl font-black uppercase tracking-tight">Executive Project Suite</h4>
                                 </div>
 
                                 <div className="space-y-4 pt-4">
                                     {[...Array(4)].map((_, i) => (
                                         <div key={i} className="space-y-2">
-                                            <div className="h-4 w-full bg-slate-800 rounded-lg animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />
-                                            <div className="h-4 w-2/3 bg-slate-800/50 rounded-lg animate-pulse" style={{ animationDelay: `${i * 250}ms` }} />
+                                            <div className="h-4 w-full bg-white/5 rounded-lg animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />
+                                            <div className="h-4 w-2/3 bg-white/5 rounded-lg animate-pulse" style={{ animationDelay: `${i * 250}ms` }} />
                                         </div>
                                     ))}
                                 </div>
 
                                 <div className="pt-8 flex items-center justify-between">
                                     <div className="space-y-1">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total Investment</p>
-                                        <p className="text-3xl font-black text-indigo-400">$12,450.00</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Total Investment</p>
+                                        <p className="text-3xl font-black text-primary">$12,450.00</p>
                                     </div>
-                                    <div className="h-10 w-28 md:h-12 md:w-32 bg-indigo-500 rounded-xl md:rounded-2xl flex items-center justify-center font-black uppercase tracking-widest text-[10px]">
+                                    <div className="h-10 w-28 md:h-12 md:w-32 bg-primary rounded-xl md:rounded-2xl flex items-center justify-center font-black uppercase tracking-widest text-[10px]">
                                         Sign Now
                                     </div>
                                 </div>
@@ -118,7 +118,7 @@ export function MotionProposalSection() {
                             <motion.div
                                 animate={{ y: [0, -10, 0] }}
                                 transition={{ duration: 4, repeat: Infinity }}
-                                className="absolute top-1/2 right-4 md:right-6 bg-white text-slate-950 p-2 md:p-4 rounded-xl md:rounded-2xl shadow-2xl border border-slate-200 z-20 scale-90 md:scale-100"
+                                className="absolute top-1/2 right-4 md:right-6 bg-white text-black p-2 md:p-4 rounded-xl md:rounded-2xl shadow-2xl border border-white/10 z-20 scale-90 md:scale-100"
                             >
                                 <div className="flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-red-500 animate-ping" />
@@ -129,13 +129,13 @@ export function MotionProposalSection() {
                             <motion.div
                                 animate={{ y: [0, 10, 0] }}
                                 transition={{ duration: 5, repeat: Infinity }}
-                                className="absolute bottom-1/4 left-4 md:left-6 bg-slate-800 text-white p-2 md:p-4 rounded-xl md:rounded-2xl shadow-2xl border border-slate-700 z-20 scale-90 md:scale-100"
+                                className="absolute bottom-1/4 left-4 md:left-6 bg-[#1F2A37] text-white p-2 md:p-4 rounded-xl md:rounded-2xl shadow-2xl border border-white/10 z-20 scale-90 md:scale-100"
                             >
                                 <div className="flex items-center gap-2 md:gap-3">
-                                    <BarChart3 className="w-3 h-3 md:w-4 md:h-4 text-indigo-400" />
+                                    <BarChart3 className="w-3 h-3 md:w-4 md:h-4 text-primary" />
                                     <div>
                                         <p className="text-[8px] md:text-[10px] font-black uppercase">Buyer Signal Visibility</p>
-                                        <p className="text-[7px] md:text-[9px] text-slate-400">Section Analysis (84s)</p>
+                                        <p className="text-[7px] md:text-[9px] text-white/40">Section Analysis (84s)</p>
                                     </div>
                                 </div>
                             </motion.div>

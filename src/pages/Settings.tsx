@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { saveSettings, getSettings, clearDatabaseData, clearSampleData } from "@/lib/db-service";
 import { clearAllData } from "@/lib/storage";
-import { withTimeout } from "@/lib/services/request-pool-service";
+import { withTimeout, executeWithPool } from "@/lib/services/request-pool-service";
 import {
   importCustomersFromCSV,
   importItemsFromCSV,
@@ -124,12 +124,12 @@ export default function Settings() {
 
       // Step 2: Fetch from Supabase for authoritative data
       console.log('[Settings] Fetching from Supabase...');
-      // Wrap the network call in a timeout to prevent hanging
+      // Wrap the network call in a timeout and pool to prevent hanging
       const { data: supabaseSettings, error } = await withTimeout(
-        Promise.resolve(
-          organizationId
+        executeWithPool(() =>
+          Promise.resolve(organizationId
             ? supabase.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle()
-            : supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle()
+            : supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle())
         ),
         30000 // Increased from 10s to 30s to prevent premature timeout
       ) as any;

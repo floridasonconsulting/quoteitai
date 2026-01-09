@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { executeWithPool, withTimeout } from "./request-pool-service";
 
 export interface TelemetryEvent {
     quoteId: string;
@@ -43,26 +44,36 @@ class TelemetryService {
         console.log('[Telemetry] Flushing events:', eventsToFlush.length);
 
         try {
-            const { error } = await (supabase.from('proposal_analytics' as any) as any).insert(
-                eventsToFlush.map(e => ({
-                    quote_id: e.quoteId,
-                    session_id: e.sessionId,
-                    section_id: e.sectionId,
-                    dwell_time_ms: e.dwellTimeMs,
-                    is_owner: !!e.isOwner,
-                    user_agent: e.userAgent,
-                    metadata: e.metadata || {}
-                })) as any
-            );
+            await withTimeout(
+                executeWithPool(async () => {
+                    const { error } = await (supabase.from('proposal_analytics' as any) as any).insert(
+                        eventsToFlush.map(e => ({
+                            quote_id: e.quoteId,
+                            session_id: e.sessionId,
+                            section_id: e.sectionId,
+                            dwell_time_ms: e.dwellTimeMs,
+                            is_owner: !!e.isOwner,
+                            user_agent: e.userAgent,
+                            metadata: e.metadata || {}
+                        })) as any
+                    );
 
-            if (error) {
-                console.error('[Telemetry] Flush failed:', error);
-                // Put events back in buffer
+                    if (error) {
+                        console.error('[Telemetry] Flush failed:', error);
+                        // Put events back in buffer if it's not a fatal error
+                        if (this.buffer.length < 100) {
+                            this.buffer = [...eventsToFlush, ...this.buffer];
+                        }
+                    }
+                }),
+                10000 // 10s timeout for telemetry flush
+            );
+        } catch (err) {
+            console.error('[Telemetry] Critical error or timeout during flush:', err);
+            // Put events back in buffer if possible
+            if (this.buffer.length < 100) {
                 this.buffer = [...eventsToFlush, ...this.buffer];
             }
-        } catch (err) {
-            console.error('[Telemetry] Critical error during flush:', err);
-            this.buffer = [...eventsToFlush, ...this.buffer];
         }
     }
 
