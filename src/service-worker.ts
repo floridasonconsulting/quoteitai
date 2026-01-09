@@ -123,17 +123,14 @@ registerRoute(
   'PATCH'
 );
 
+// 4. API Requests (GET) -> Network Only
+// We bypass Service Worker caching for Supabase REST and Functions GET requests.
+// This prevents cascading timeouts and deadlocks when the network is saturated.
 registerRoute(
-  ({ url }) => url.hostname.includes('supabase.co') && url.pathname.includes('/rest/v1/'),
-  new NetworkFirst({
-    cacheName: 'supabase-api-cache',
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 100,
-        maxAgeSeconds: 24 * 60 * 60, // 24 hours
-      }),
-    ],
-  }),
+  ({ url }) =>
+    (url.hostname.includes('supabase.co') && url.pathname.includes('/rest/v1/')) ||
+    url.pathname.startsWith('/functions/v1/'),
+  new NetworkOnly(),
   'GET'
 );
 

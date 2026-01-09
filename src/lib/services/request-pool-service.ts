@@ -35,7 +35,7 @@ export async function executeWithPool<T>(
   }
 
   activeRequests++;
-  console.debug(`[Pool] Request [${label}] starting. Active: ${activeRequests}, Timeout: ${timeoutMs}ms`);
+  console.log(`[Pool] 🚀 Request [${label}] starting. Active: ${activeRequests}, Timeout: ${timeoutMs}ms`);
   const requestStartTime = Date.now();
   const effectiveTimeout = Math.max(timeoutMs, 1000);
 
@@ -71,22 +71,21 @@ export async function executeWithPool<T>(
       abortPromise
     ]);
 
-    console.debug(`[Pool] Request [${label}] succeeded in ${Date.now() - requestStartTime}ms`);
+    console.log(`[Pool] ✅ Request [${label}] succeeded in ${Date.now() - requestStartTime}ms. Slot released. Active: ${activeRequests - 1}`);
     return result;
   } catch (error) {
     const duration = Date.now() - requestStartTime;
     // Log failures, but be less noisy for intentional abortions
     if (error instanceof Error && (error.message === 'Request timeout' || error.name === 'AbortError')) {
-      console.warn(`[Pool] Request [${label}] ${error.message === 'Request timeout' ? 'timed out' : 'aborted'} after ${duration}ms`);
+      console.warn(`[Pool] ⏱️ Request [${label}] ${error.message === 'Request timeout' ? 'timed out' : 'aborted'} after ${duration}ms. Slot released. Active: ${activeRequests - 1}`);
     } else {
-      console.error(`[Pool] Request [${label}] failed after ${duration}ms:`, error);
+      console.error(`[Pool] ❌ Request [${label}] failed after ${duration}ms. Slot released. Active: ${activeRequests - 1}:`, error);
     }
     throw error;
   } finally {
     clearTimeout(timeoutId);
     if (externalSignal) externalSignal.removeEventListener('abort', linkAbort);
     activeRequests--;
-    console.debug(`[Pool] Request [${label}] slot released. Active: ${activeRequests}`);
   }
 }
 
@@ -191,11 +190,11 @@ export async function dedupedRequest<T>(
   const existing = inFlightRequests.get(key);
   if (existing) {
     const age = Date.now() - existing.startTime;
-    console.debug(`[Dedup] Reusing in-flight request for ${key} (age: ${age}ms)`);
+    console.log(`[Dedup] ♻️ Reusing in-flight request for ${key} (age: ${age}ms)`);
     return existing.promise as Promise<T>;
   }
 
-  console.debug(`[Dedup] Starting new request for ${key}`);
+  console.log(`[Dedup] 🆕 Starting new request for ${key}`);
 
   // Create abort controller for this request
   const abortController = new AbortController();
