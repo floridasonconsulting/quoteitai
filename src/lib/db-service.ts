@@ -18,7 +18,7 @@ import type { CompanySettings } from '@/types';
 import { SettingsDB, isIndexedDBSupported } from './indexed-db';
 import { cacheManager } from './cache-manager';
 import { setStorageItem } from './storage';
-import { withTimeout, executeWithPool } from './services/request-pool-service';
+import { withTimeout, executeWithPool, dedupedRequest } from './services/request-pool-service';
 import { supabase } from '@/integrations/supabase/client';
 import { dispatchDataRefresh } from '@/hooks/useDataRefresh';
 
@@ -78,17 +78,16 @@ export const getSettings = async (userId: string, organizationId: string | null 
   // 3. Fall back to Supabase
   console.log('[db-service] 🔍 Local settings missing or stale, attempting Supabase fetch...');
   try {
-    const { data: dbSettings, error } = await withTimeout(
-      executeWithPool(() =>
-        Promise.resolve(
-          supabase
-            .from('company_settings' as any)
-            .select('*')
-            .eq('user_id', userId)
-            .maybeSingle()
-        )
-      ),
-      20000
+    const sessionKey = `settings-${userId}-${organizationId || 'personal'}`;
+    const { data: dbSettings, error } = await dedupedRequest(
+      sessionKey,
+      () => Promise.resolve(
+        supabase
+          .from('company_settings' as any)
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle()
+      )
     ) as any;
 
     if (error) {

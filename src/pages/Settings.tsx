@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { saveSettings, getSettings, clearDatabaseData, clearSampleData } from "@/lib/db-service";
 import { clearAllData } from "@/lib/storage";
-import { withTimeout, executeWithPool } from "@/lib/services/request-pool-service";
+import { withTimeout, executeWithPool, dedupedRequest } from "@/lib/services/request-pool-service";
 import {
   importCustomersFromCSV,
   importItemsFromCSV,
@@ -104,15 +104,6 @@ export default function Settings() {
     console.log('[Settings] Loading settings for user:', user.id);
     setLoading(true);
 
-    const timeoutDuration = 20000;
-    const timeoutId = setTimeout(() => {
-      if (loading) {
-        console.warn('[Settings] Loading timeout reached');
-        setLoading(false);
-        toast.error("Loading settings took too long. Using cached data.");
-      }
-    }, timeoutDuration);
-
     try {
       // Step 1: Load from local cache FIRST for instant UI
       console.log('[Settings] Checking local cache...');
@@ -124,14 +115,15 @@ export default function Settings() {
 
       // Step 2: Fetch from Supabase for authoritative data
       console.log('[Settings] Fetching from Supabase...');
-      // Wrap the network call in a timeout and pool to prevent hanging
-      const { data: supabaseSettings, error } = await withTimeout(
-        executeWithPool(() =>
-          Promise.resolve(organizationId
-            ? supabase.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle()
-            : supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle())
-        ),
-        30000 // Increased from 10s to 30s to prevent premature timeout
+
+      const sessionKey = `settings-${user.id}-${organizationId || 'personal'}`;
+
+      // Use dedupedRequest to prevent multiple simultaneous fetches
+      const { data: supabaseSettings, error } = await dedupedRequest(
+        sessionKey,
+        () => Promise.resolve(organizationId
+          ? supabase.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle()
+          : supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle())
       ) as any;
 
       if (error) {

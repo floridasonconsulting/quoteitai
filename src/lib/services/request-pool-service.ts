@@ -5,13 +5,15 @@
  */
 
 // Request pooling to limit concurrent Supabase requests
-const MAX_CONCURRENT_REQUESTS = 5;
+// Increased from 5 to 8 to handle more parallel dashboard components
+const MAX_CONCURRENT_REQUESTS = 8;
 let activeRequests = 0;
 
 /**
  * Execute request with connection pooling to limit concurrent requests
+ * Integrates internal timeout to ensure pool slots are always released
  */
-export async function executeWithPool<T>(requestFn: () => Promise<T>): Promise<T> {
+export async function executeWithPool<T>(requestFn: () => Promise<T>, timeoutMs: number = 30000): Promise<T> {
   const startTime = Date.now();
   const POOL_WAIT_TIMEOUT = 10000; // 10 seconds timeout for waiting on pool
 
@@ -25,7 +27,8 @@ export async function executeWithPool<T>(requestFn: () => Promise<T>): Promise<T
 
   activeRequests++;
   try {
-    return await requestFn();
+    // Run with timeout to ensure we don't hold the pool slot forever
+    return await withTimeout(requestFn(), timeoutMs);
   } finally {
     activeRequests--;
   }
@@ -121,7 +124,7 @@ export function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<
  * Request deduplication wrapper with abort support
  * Reuses in-flight requests for the same key to prevent duplicate API calls
  */
-export async function dedupedRequest<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
+export async function dedupedRequest<T>(key: string, requestFn: () => Promise<T>, timeoutMs?: number): Promise<T> {
   // Clear stale requests before checking
   clearStaleRequests();
 
@@ -140,7 +143,7 @@ export async function dedupedRequest<T>(key: string, requestFn: () => Promise<T>
   // Create promise with guaranteed cleanup
   const promise = (async () => {
     try {
-      const result = await executeWithPool(requestFn);
+      const result = await executeWithPool(requestFn, timeoutMs);
       return result;
     } catch (error) {
       // Don't log abort errors
