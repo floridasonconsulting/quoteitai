@@ -30,24 +30,30 @@ export async function executeWithPool<T>(
   }
 
   activeRequests++;
-  console.log(`[Pool] Request [${label}] starting. Active: ${activeRequests}`);
+  console.log(`[Pool] Request [${label}] starting. Active: ${activeRequests}, Timeout: ${timeoutMs}ms`);
+  const requestStartTime = Date.now();
+
   try {
     // Run with timeout to ensure we don't hold the pool slot forever
     // Ensure timeoutMs is at least 1s to avoid immediate timeouts from undefined/0
     const effectiveTimeout = Math.max(timeoutMs, 1000);
+    console.log(`[Pool] Request [${label}] effective timeout: ${effectiveTimeout}ms`);
 
     // Safely invoke the request function
     let promise: Promise<T>;
     try {
       promise = requestFn();
+      console.log(`[Pool] Request [${label}] promise created successfully`);
     } catch (syncError) {
       console.error(`[Pool] Request [${label}] failed synchronously:`, syncError);
       throw syncError;
     }
 
-    return await withTimeout(promise, effectiveTimeout);
+    const result = await withTimeout(promise, effectiveTimeout);
+    console.log(`[Pool] Request [${label}] completed in ${Date.now() - requestStartTime}ms`);
+    return result;
   } catch (error) {
-    console.error(`[Pool] Request [${label}] failed:`, error);
+    console.error(`[Pool] Request [${label}] failed after ${Date.now() - requestStartTime}ms:`, error);
     throw error;
   } finally {
     activeRequests--;

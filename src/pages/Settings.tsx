@@ -122,11 +122,17 @@ export default function Settings() {
       const { data: supabaseSettings, error } = await dedupedRequest(
         sessionKey,
         async () => {
+          console.log('[Settings] 🔄 Inside request function, starting Supabase query...');
           // Properly await the Supabase query builder
-          if (organizationId) {
-            return await supabase.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle();
-          } else {
-            return await supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle();
+          try {
+            const result = organizationId
+              ? await supabase.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle()
+              : await supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle();
+            console.log('[Settings] ✅ Supabase query completed successfully');
+            return result;
+          } catch (queryError) {
+            console.error('[Settings] ❌ Supabase query threw error:', queryError);
+            throw queryError;
           }
         },
         45000 // Increased to 45s for robustness
