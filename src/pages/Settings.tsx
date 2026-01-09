@@ -116,27 +116,34 @@ export default function Settings() {
       // Step 2: Fetch from Supabase for authoritative data
       console.log('[Settings] Fetching from Supabase...');
 
-      const sessionKey = `settings-${user.id}-${organizationId || 'personal'}`;
+      // DIAGNOSTIC: Bypass request pool entirely and make direct call
+      // This will help identify if the pool/dedup logic is the issue
+      let supabaseSettings: any = null;
+      let error: any = null;
 
-      // Use dedupedRequest to prevent multiple simultaneous fetches
-      const { data: supabaseSettings, error } = await dedupedRequest(
-        sessionKey,
-        async () => {
-          console.log('[Settings] 🔄 Inside request function, starting Supabase query...');
-          // Properly await the Supabase query builder
-          try {
-            const result = organizationId
-              ? await supabase.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle()
-              : await supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle();
-            console.log('[Settings] ✅ Supabase query completed successfully');
-            return result;
-          } catch (queryError) {
-            console.error('[Settings] ❌ Supabase query threw error:', queryError);
-            throw queryError;
-          }
-        },
-        45000 // Increased to 45s for robustness
-      ) as any;
+      try {
+        console.log('[Settings] 🔄 Making DIRECT Supabase query (bypassing pool)...');
+
+        // Simple Promise.race with manual timeout
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Direct Settings Query Timeout (15s)')), 15000);
+        });
+
+        const queryPromise = organizationId
+          ? supabase.from('company_settings' as any).select('*').eq('organization_id', organizationId).maybeSingle()
+          : supabase.from('company_settings' as any).select('*').eq('user_id', user.id).maybeSingle();
+
+        console.log('[Settings] 🚀 Query promise created, racing with timeout...');
+
+        const result = await Promise.race([queryPromise, timeoutPromise]) as any;
+
+        console.log('[Settings] ✅ DIRECT Supabase query completed!', result);
+        supabaseSettings = result?.data;
+        error = result?.error;
+      } catch (directError: any) {
+        console.error('[Settings] ❌ DIRECT Supabase query failed:', directError?.message || directError);
+        error = directError;
+      }
 
       if (error) {
         console.error('[Settings] Supabase fetch error:', error);
