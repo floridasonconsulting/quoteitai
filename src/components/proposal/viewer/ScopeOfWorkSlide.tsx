@@ -42,7 +42,7 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage, settings }: Sc
         }
 
         if (jsonContent.workBreakdown && Array.isArray(jsonContent.workBreakdown)) {
-            readable += `## Scope of Work\n`;
+            // Note: Removed "Scope of Work" umbrella heading - each phase name will display as its own header
             jsonContent.workBreakdown.forEach((phase: any) => {
                 const phaseName = phase.phase || phase.title || phase.name || 'Phase';
                 readable += `### ${phaseName}\n`;
@@ -90,6 +90,98 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage, settings }: Sc
             jsonContent.exclusions.forEach((e: any) => readable += `• ${formatValue(e)}\n`);
             readable += '\n';
         }
+
+        // Handle Responsibilities Matrix (Pool/Contractor specific)
+        if (jsonContent.responsibilitiesMatrix) {
+            const matrix = jsonContent.responsibilitiesMatrix;
+
+            if (matrix.poolContractorResponsibilities && Array.isArray(matrix.poolContractorResponsibilities)) {
+                readable += `## Contractor Responsibilities\n`;
+                matrix.poolContractorResponsibilities.forEach((r: any) => readable += `• ${formatValue(r)}\n`);
+                readable += '\n';
+            }
+
+            if (matrix.poolContractorExclusions && Array.isArray(matrix.poolContractorExclusions)) {
+                readable += `## Contractor Exclusions\n`;
+                matrix.poolContractorExclusions.forEach((e: any) => readable += `• ${formatValue(e)}\n`);
+                readable += '\n';
+            }
+
+            if (matrix.customerResponsibilities && Array.isArray(matrix.customerResponsibilities)) {
+                readable += `## Customer Responsibilities\n`;
+                matrix.customerResponsibilities.forEach((r: any) => readable += `• ${formatValue(r)}\n`);
+                readable += '\n';
+            }
+        }
+
+        // Handle Assumptions
+        if (jsonContent.assumptions && Array.isArray(jsonContent.assumptions)) {
+            readable += `## Assumptions\n`;
+            jsonContent.assumptions.forEach((a: any) => readable += `• ${formatValue(a)}\n`);
+            readable += '\n';
+        }
+
+        // Handle Warranty Terms
+        if (jsonContent.warrantyTerms) {
+            console.log('[ScopeOfWorkSlide] Processing warrantyTerms:', jsonContent.warrantyTerms);
+            readable += `## Warranty Terms\n`;
+            const warranty = jsonContent.warrantyTerms;
+
+            if (warranty.coverage) {
+                readable += `**Coverage:** ${formatValue(warranty.coverage)}\n\n`;
+            }
+
+            if (warranty.exclusions && Array.isArray(warranty.exclusions)) {
+                readable += `**Warranty Exclusions:**\n`;
+                warranty.exclusions.forEach((e: any) => readable += `• ${formatValue(e)}\n`);
+                readable += '\n';
+            }
+
+            if (warranty.voidConditions) {
+                readable += `**Void Conditions:** ${formatValue(warranty.voidConditions)}\n`;
+            }
+            readable += '\n';
+        } else {
+            console.log('[ScopeOfWorkSlide] NO warrantyTerms found in JSON. Keys present:', Object.keys(jsonContent));
+        }
+
+        // Handle Payment Schedule
+        if (jsonContent.paymentSchedule && Array.isArray(jsonContent.paymentSchedule)) {
+            console.log('[ScopeOfWorkSlide] Processing paymentSchedule:', jsonContent.paymentSchedule);
+            readable += `## Payment Schedule\n`;
+            jsonContent.paymentSchedule.forEach((payment: any) => {
+                const milestone = payment.milestone || payment.name || 'Milestone';
+                const percentage = payment.percentageDue || payment.percentage || payment.amount || '';
+                readable += `• **${milestone}:** ${percentage}\n`;
+            });
+            readable += '\n';
+        } else {
+            console.log('[ScopeOfWorkSlide] NO paymentSchedule found in JSON. Keys present:', Object.keys(jsonContent));
+        }
+
+        // Handle Change Management
+        if (jsonContent.changeManagement) {
+            readable += `## Change Management\n`;
+            readable += `${formatValue(jsonContent.changeManagement)}\n\n`;
+        }
+
+        // Handle Default and Collection Terms
+        if (jsonContent.defaultAndCollectionTerms) {
+            readable += `## Default & Collection Terms\n`;
+            const terms = jsonContent.defaultAndCollectionTerms;
+
+            if (terms.description) {
+                readable += `${formatValue(terms.description)}\n\n`;
+            }
+
+            if (terms.importantNote) {
+                readable += `**Important:** ${formatValue(terms.importantNote)}\n`;
+            }
+            readable += '\n';
+        }
+
+        console.log('[ScopeOfWorkSlide] Final readable output length:', readable.length);
+        console.log('[ScopeOfWorkSlide] Final readable preview:', readable.substring(readable.length - 500));
 
         return readable.trim();
     };

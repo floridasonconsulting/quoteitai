@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import { Quote, CompanySettings } from "@/types";
@@ -10,7 +10,7 @@ import { ProposalActionBar } from "./ProposalActionBar";
 import { ProposalSuccessStates, SuccessType } from "./ProposalSuccessStates";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Edit3 } from "lucide-react";
+import { Menu, Edit3, ScrollText, CheckCircle2 } from "lucide-react";
 import { ImageEditDialog } from "./ImageEditDialog";
 import { visualsService } from "@/lib/services/visuals-service";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,7 @@ import { SignatureCapture } from "./SignatureCapture";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { formatTermsContent } from "@/lib/json-terms-formatter";
 
 interface ProposalViewerProps {
   quote?: Quote;
@@ -69,8 +70,38 @@ export function ProposalViewer({
     isOpen: false,
     signerName: '',
     agreedToTerms: false,
-    signatureData: ''
+    signatureData: '',
+    hasScrolledToBottom: false // Track if user scrolled through legal terms
   });
+
+  // Ref for legal terms scroll container
+  const legalTermsScrollRef = useRef<HTMLDivElement>(null);
+
+  // Check if legal terms exist and need to be shown
+  const hasLegalTerms = useMemo(() => {
+    const legalTerms = settings?.legalTerms || (initialQuote as any)?.legalTerms;
+    return legalTerms && legalTerms.trim().length > 0;
+  }, [settings?.legalTerms, initialQuote]);
+
+  // Get formatted legal terms
+  const formattedLegalTerms = useMemo(() => {
+    const legalTerms = settings?.legalTerms || (initialQuote as any)?.legalTerms || '';
+    return formatTermsContent(legalTerms);
+  }, [settings?.legalTerms, initialQuote]);
+
+  // Handle scroll in legal terms container
+  const handleLegalTermsScroll = useCallback(() => {
+    const container = legalTermsScrollRef.current;
+    if (!container) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    // Consider "scrolled to bottom" when within 20px of bottom
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 20;
+
+    if (isAtBottom && !acceptDialog.hasScrolledToBottom) {
+      setAcceptDialog(prev => ({ ...prev, hasScrolledToBottom: true }));
+    }
+  }, [acceptDialog.hasScrolledToBottom]);
 
   const { toast } = useToast();
 
@@ -468,51 +499,113 @@ export function ProposalViewer({
       {/* e-Sign Acceptance Dialog */}
       <Dialog
         open={acceptDialog.isOpen}
-        onOpenChange={(open) => setAcceptDialog({ ...acceptDialog, isOpen: open })}
+        onOpenChange={(open) => {
+          // Reset scroll state when dialog opens/closes
+          setAcceptDialog({
+            ...acceptDialog,
+            isOpen: open,
+            hasScrolledToBottom: !hasLegalTerms // If no legal terms, mark as already scrolled
+          });
+        }}
       >
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className={hasLegalTerms ? "sm:max-w-[650px] max-h-[90vh]" : "sm:max-w-[500px]"}>
           <DialogHeader>
-            <DialogTitle>Sign & Accept Proposal</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {hasLegalTerms && !acceptDialog.hasScrolledToBottom ? (
+                <>
+                  <ScrollText className="w-5 h-5 text-amber-500" />
+                  Review Legal Terms
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  Sign & Accept Proposal
+                </>
+              )}
+            </DialogTitle>
             <DialogDescription>
-              Please enter your name and provide a signature to accept this proposal.
+              {hasLegalTerms && !acceptDialog.hasScrolledToBottom
+                ? "Please read through the legal terms below. Scroll to the bottom to proceed with signing."
+                : "Please enter your name and provide a signature to accept this proposal."
+              }
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="signerName">Full Name</Label>
-              <Input
-                id="signerName"
-                placeholder="Enter your full name"
-                value={acceptDialog.signerName}
-                onChange={(e) => setAcceptDialog({ ...acceptDialog, signerName: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Signature</Label>
-              <SignatureCapture
-                onSave={(data) => setAcceptDialog({ ...acceptDialog, signatureData: data })}
-                onClear={() => setAcceptDialog({ ...acceptDialog, signatureData: '' })}
-              />
-            </div>
-
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="terms"
-                checked={acceptDialog.agreedToTerms}
-                onCheckedChange={(checked) => setAcceptDialog({ ...acceptDialog, agreedToTerms: checked === true })}
-              />
-              <div className="grid gap-1.5 leading-none">
-                <label
-                  htmlFor="terms"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            {/* Legal Terms Section - Show if legal terms exist and not yet scrolled */}
+            {hasLegalTerms && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    <ScrollText className="w-4 h-4" />
+                    Legal Terms & Conditions
+                  </Label>
+                  {acceptDialog.hasScrolledToBottom && (
+                    <span className="text-xs text-green-600 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Reviewed
+                    </span>
+                  )}
+                </div>
+                <div
+                  ref={legalTermsScrollRef}
+                  onScroll={handleLegalTermsScroll}
+                  className={`
+                    border rounded-lg p-4 bg-muted/30 
+                    max-h-[250px] overflow-y-auto 
+                    text-sm whitespace-pre-wrap
+                    ${!acceptDialog.hasScrolledToBottom ? 'ring-2 ring-amber-200' : 'ring-1 ring-green-200'}
+                  `}
                 >
-                  Confirm acceptance of terms
-                </label>
-                <p className="text-xs text-muted-foreground">
-                  By checking this, you agree to the terms and conditions outlined in this proposal.
-                </p>
+                  {formattedLegalTerms || 'No legal terms provided.'}
+                </div>
+                {!acceptDialog.hasScrolledToBottom && (
+                  <p className="text-xs text-amber-600 animate-pulse">
+                    ↓ Scroll to the bottom to continue
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Signature Section - Disabled until legal terms are scrolled */}
+            <div className={`space-y-4 ${hasLegalTerms && !acceptDialog.hasScrolledToBottom ? 'opacity-50 pointer-events-none' : ''}`}>
+              <div className="space-y-2">
+                <Label htmlFor="signerName">Full Name</Label>
+                <Input
+                  id="signerName"
+                  placeholder="Enter your full name"
+                  value={acceptDialog.signerName}
+                  onChange={(e) => setAcceptDialog({ ...acceptDialog, signerName: e.target.value })}
+                  disabled={hasLegalTerms && !acceptDialog.hasScrolledToBottom}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Signature</Label>
+                <SignatureCapture
+                  onSave={(data) => setAcceptDialog({ ...acceptDialog, signatureData: data })}
+                  onClear={() => setAcceptDialog({ ...acceptDialog, signatureData: '' })}
+                />
+              </div>
+
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="terms"
+                  checked={acceptDialog.agreedToTerms}
+                  onCheckedChange={(checked) => setAcceptDialog({ ...acceptDialog, agreedToTerms: checked === true })}
+                  disabled={hasLegalTerms && !acceptDialog.hasScrolledToBottom}
+                />
+                <div className="grid gap-1.5 leading-none">
+                  <label
+                    htmlFor="terms"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Confirm acceptance of terms
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    By checking this, you agree to the terms and conditions outlined in this proposal.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -528,9 +621,15 @@ export function ProposalViewer({
             <Button
               type="button"
               onClick={handleAccept}
-              disabled={!acceptDialog.signerName || !acceptDialog.signatureData || !acceptDialog.agreedToTerms || isProcessing}
+              disabled={
+                !acceptDialog.signerName ||
+                !acceptDialog.signatureData ||
+                !acceptDialog.agreedToTerms ||
+                (hasLegalTerms && !acceptDialog.hasScrolledToBottom) ||
+                isProcessing
+              }
             >
-              {isProcessing ? "Processing..." : "Finish & Accept"}
+              {isProcessing ? "Processing..." : "Sign & Accept"}
             </Button>
           </DialogFooter>
         </DialogContent>

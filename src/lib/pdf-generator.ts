@@ -2,6 +2,32 @@ import jsPDF from "jspdf";
 import autoTable, { UserOptions } from "jspdf-autotable";
 import { Quote, Customer, CompanySettings } from "@/types";
 import { normalizeCategory } from "./proposal-categories";
+import { formatTermsContent } from "./json-terms-formatter";
+import { getTheme, ProposalTheme } from "./proposal-themes";
+
+/**
+ * Convert hex color to RGB array for jsPDF
+ */
+function hexToRgb(hex: string): [number, number, number] {
+  // Remove # if present
+  hex = hex.replace(/^#/, '');
+
+  // Parse hex values
+  const r = parseInt(hex.substring(0, 2), 16) || 0;
+  const g = parseInt(hex.substring(2, 4), 16) || 0;
+  const b = parseInt(hex.substring(4, 6), 16) || 0;
+
+  return [r, g, b];
+}
+
+/**
+ * Get theme color for PDF tables based on company settings
+ */
+function getThemeTableColor(settings: CompanySettings): [number, number, number] {
+  const themeId = (settings.proposalTheme as ProposalTheme) || 'modern-corporate';
+  const theme = getTheme(themeId);
+  return hexToRgb(theme.colors.primary);
+}
 
 // Helper function to format currency, assuming it's in utils
 // If not, we might need to create it. For now, assuming it exists.
@@ -176,28 +202,8 @@ export function renderTermsAndNotes(
     pdf.setFont(undefined, "normal");
     pdf.setFontSize(8);
 
-    // Clean JSON content if present
-    let termsText = settings.terms || "";
-    if (typeof termsText === 'string' && (termsText.trim().startsWith('{') || termsText.trim().startsWith('['))) {
-      try {
-        const parsed = JSON.parse(termsText);
-        // Handle TipTap standard object
-        if (parsed.type === 'doc' && Array.isArray(parsed.content)) {
-          termsText = parsed.content
-            .map((p: any) => p.content?.map((c: any) => c.text).join('') || '')
-            .join('\n');
-        }
-        // Handle custom rich text format
-        else if (parsed.content && typeof parsed.content === 'string') {
-          termsText = parsed.content;
-        }
-        else if (Array.isArray(parsed)) {
-          termsText = parsed.join('\n');
-        }
-      } catch (e) {
-        // Not actual JSON or parse failed, use as is
-      }
-    }
+    // Use shared formatter to convert JSON to readable text
+    const termsText = formatTermsContent(settings.terms);
 
     const termsLines = pdf.splitTextToSize(termsText, 170);
     pdf.text(termsLines, MARGIN, yPos);
@@ -301,7 +307,9 @@ export function generateClassicPDF(
 
   pdf.setFontSize(14);
   pdf.setFont(undefined, "bold");
-  pdf.text(`Quote #${quote.id}`, MARGIN, yPos);
+  // Use quoteNumber for display, fallback to truncated ID
+  const displayQuoteNumber = quote.quoteNumber || `Q-${quote.id.substring(0, 8)}`;
+  pdf.text(`Quote #${displayQuoteNumber}`, MARGIN, yPos);
   yPos += 8;
 
   const pricingMode = (quote as any).pricingMode || 'itemized';
@@ -335,12 +343,15 @@ export function generateClassicPDF(
     });
   }
 
+  // Get theme color for table header
+  const themeColor = getThemeTableColor(settings);
+
   autoTable(pdf, {
     startY: yPos,
     head: tableHeaders,
     body: tableData,
     theme: "striped",
-    headStyles: { fillColor: [22, 160, 133] },
+    headStyles: { fillColor: themeColor },
   } as UserOptions);
 
   yPos = pdf.lastAutoTable.finalY + SECTION_GAP * 2;
@@ -371,7 +382,9 @@ export function generateModernPDF(
   pdf.setFont(undefined, "bold");
   pdf.text(`QUOTE`, 190, MARGIN + 10, { align: 'right' });
   pdf.setFontSize(10);
-  pdf.text(`#${quote.id}`, 190, MARGIN + 15, { align: 'right' });
+  // Use quoteNumber for display, fallback to truncated ID
+  const displayQuoteNumber = quote.quoteNumber || `Q-${quote.id.substring(0, 8)}`;
+  pdf.text(`#${displayQuoteNumber}`, 190, MARGIN + 15, { align: 'right' });
 
   yPos = Math.max(yPos, MARGIN + 20);
 
@@ -408,12 +421,15 @@ export function generateModernPDF(
     });
   }
 
+  // Get theme color for table header
+  const themeColor = getThemeTableColor(settings);
+
   autoTable(pdf, {
     startY: yPos,
     head: tableHeaders,
     body: tableData,
     theme: "grid",
-    headStyles: { fillColor: [41, 128, 185] },
+    headStyles: { fillColor: themeColor },
   } as UserOptions);
 
   yPos = pdf.lastAutoTable.finalY + SECTION_GAP * 2;
@@ -446,7 +462,9 @@ export function generateDetailedPDF(
 
   pdf.setFontSize(14);
   pdf.setFont(undefined, "bold");
-  pdf.text(`Detailed Quote #${quote.id}`, MARGIN, yPos);
+  // Use quoteNumber for display, fallback to truncated ID
+  const displayQuoteNumber = quote.quoteNumber || `Q-${quote.id.substring(0, 8)}`;
+  pdf.text(`Detailed Quote #${displayQuoteNumber}`, MARGIN, yPos);
   yPos += 8;
 
   const quoteData = quote as any;
