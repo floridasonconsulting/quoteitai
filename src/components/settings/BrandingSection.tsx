@@ -19,12 +19,16 @@ interface BrandingSectionProps {
 }
 
 export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
-  const { user, isProTier, isBusinessTier } = useAuth();
+  const { user, isProTier, isBusinessTier, loading: authLoading } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [primaryColor, setPrimaryColor] = useState(settings.primaryColor || '#4F46E5');
   const [accentColor, setAccentColor] = useState(settings.accentColor || '#10B981');
   const [isSavingColors, setIsSavingColors] = useState(false);
+
+  // Prevent flash of lock screen while loading
+  const showProFeatures = isProTier || authLoading;
+  const showBusinessFeatures = isBusinessTier || authLoading;
 
   // Sync with settings when they change externally
   useEffect(() => {
@@ -60,7 +64,7 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
   };
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!isBusinessTier) {
+    if (!showBusinessFeatures) {
       toast.error("Logo upload is only available for Business tier users");
       return;
     }
@@ -111,7 +115,7 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
   };
 
   const handleLogoRemove = async () => {
-    if (!isBusinessTier || !settings.logo) return;
+    if (!showBusinessFeatures || !settings.logo) return;
 
     try {
       setIsDeleting(true);
@@ -183,7 +187,7 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
             These colors will be used for buttons, links, and accents throughout the application.
           </p>
 
-          {isProTier ? (
+          {showProFeatures ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -252,7 +256,7 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
         <div className="space-y-3 pt-4 border-t">
           <Label htmlFor="logo-upload">Company Logo</Label>
 
-          {!isBusinessTier && (
+          {!showBusinessFeatures && (
             <UpgradePrompt
               title="Custom Company Logo"
               description="Upload your company logo to appear on all proposals and throughout the application."
@@ -260,7 +264,7 @@ export function BrandingSection({ settings, onUpdate }: BrandingSectionProps) {
             />
           )}
 
-          {isBusinessTier && (
+          {showBusinessFeatures && (
             <>
               {settings.logo && (
                 <div className="mb-3 flex items-center gap-4">

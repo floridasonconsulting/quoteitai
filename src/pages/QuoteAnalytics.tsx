@@ -38,7 +38,7 @@ interface AnalyticsEvent {
 export default function QuoteAnalytics() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { user, organizationId, isAdmin, isBusinessTier, subscriptionTier } = useAuth();
+    const { user, organizationId, isAdmin, isBusinessTier, subscriptionTier, loading: authLoading } = useAuth();
     const { toast } = useToast();
 
     const [quote, setQuote] = useState<Quote | null>(null);
@@ -423,7 +423,28 @@ export default function QuoteAnalytics() {
                     </Card>
 
                     {/* Engagement Storyline */}
-                    <Card className="border-[#F1F5F9] dark:border-gray-800 shadow-xl">
+                    <Card className="border-[#F1F5F9] dark:border-gray-800 shadow-xl relative overflow-hidden">
+                        {(!isBusinessTier && !isAdmin && !authLoading) && (
+                            <div className="absolute inset-0 z-20 backdrop-blur-[6px] bg-white/10 flex flex-col items-center justify-center p-8 text-center">
+                                <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl shadow-2xl max-w-sm space-y-4">
+                                    <div className="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
+                                        <History className="w-6 h-6 text-indigo-400" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h3 className="text-white font-black uppercase tracking-tight text-lg">Detailed Client Journey</h3>
+                                        <p className="text-slate-400 text-xs leading-relaxed">
+                                            Track exactly when and how long your client views each section.
+                                        </p>
+                                    </div>
+                                    <Button
+                                        onClick={() => setShowUpgradeModal(true)}
+                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest text-[10px]"
+                                    >
+                                        Upgrade to Business
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                         <CardHeader className="bg-[#F8FAFC] dark:bg-gray-900/50">
                             <div className="flex items-center gap-3">
                                 <History className="h-5 w-5 text-primary" />
@@ -543,7 +564,28 @@ export default function QuoteAnalytics() {
 
                 {/* Right: AI Closer Toolbox */}
                 <div className="lg:col-span-1 space-y-6">
-                    <Card className="border-none shadow-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 overflow-hidden">
+                    <Card className="border-none shadow-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 overflow-hidden relative">
+                        {(!isBusinessTier && !isAdmin && !authLoading) && (
+                            <div className="absolute inset-0 z-20 backdrop-blur-[6px] bg-gray-900/10 flex flex-col items-center justify-center p-8 text-center">
+                                <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl shadow-2xl max-w-sm space-y-4">
+                                    <div className="w-12 h-12 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto">
+                                        <BrainCircuit className="w-6 h-6 text-indigo-400" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h3 className="text-white font-black uppercase tracking-tight text-lg">AI Closer Intelligence</h3>
+                                        <p className="text-slate-400 text-xs leading-relaxed">
+                                            Get real-time sentiment analysis and AI-drafted closing scripts.
+                                        </p>
+                                    </div>
+                                    <Button
+                                        onClick={() => setShowUpgradeModal(true)}
+                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase tracking-widest text-[10px]"
+                                    >
+                                        Upgrade to Business
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                         <CardHeader className="bg-[#1E293B] dark:bg-gray-100 pb-8">
                             <div className="flex items-center gap-2 mb-2">
                                 <BrainCircuit className="h-5 w-5 text-indigo-400 dark:text-indigo-600" />

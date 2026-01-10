@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Search, FileText, Calendar, Trash2, Bell, X, Bug, FileSpreadsheet, Sparkles, RefreshCw } from 'lucide-react';
+import { Plus, Search, FileText, Calendar, Trash2, Bell, X, Bug, FileSpreadsheet, Sparkles, RefreshCw, Lock } from 'lucide-react';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -28,7 +28,7 @@ export default function Quotes() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { dueFollowUpIds } = useNotifications();
-  const { user, isAdmin, isMaxAITier, organizationId } = useAuth();
+  const { user, isAdmin, isMaxAITier, organizationId, isProTier } = useAuth();
   const { queueChange, clearQueue } = useSyncManager();
 
   // Optimistic Options
@@ -350,13 +350,46 @@ export default function Quotes() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => setBatchDialogOpen(true)}
-              title="Generate multiple quotes from CSV"
+              onClick={() => {
+                if (!isProTier) {
+                  toast.error("Batch creation is a Pro feature", {
+                    description: "Upgrade to generate multiple quotes at once.",
+                    action: {
+                      label: "Upgrade",
+                      onClick: () => navigate('/settings?tab=subscription')
+                    }
+                  });
+                  return;
+                }
+                setBatchDialogOpen(true);
+              }}
+              title="Generate multiple quotes from CSV (Pro Feature)"
             >
+              {!isProTier && <Lock className="mr-2 h-3 w-3" />}
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               Batch Quotes
             </Button>
-            <Button size="lg" onClick={() => navigate('/quotes/new')}>
+            <Button size="lg" onClick={() => {
+              if (!isProTier) {
+                const now = new Date();
+                const quotesThisMonth = quotes.filter(q => {
+                  const d = new Date(q.createdAt);
+                  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                }).length;
+
+                if (quotesThisMonth >= 5) {
+                  toast.error("Monthly quote limit reached", {
+                    description: "You have reached the 5 quotes/month limit of the Free plan.",
+                    action: {
+                      label: "Upgrade for Unlimited",
+                      onClick: () => navigate('/settings?tab=subscription')
+                    }
+                  });
+                  return;
+                }
+              }
+              navigate('/quotes/new');
+            }}>
               <Plus className="mr-2 h-5 w-5" />
               Create Quote
             </Button>
@@ -564,11 +597,21 @@ export default function Quotes() {
                                 className="h-7 text-xs border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300"
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  if (!isProTier) {
+                                    toast.error("AI Follow-up is a Pro feature", {
+                                      description: "Upgrade to send intelligent follow-up messages.",
+                                      action: {
+                                        label: "Upgrade",
+                                        onClick: () => navigate('/settings?tab=subscription')
+                                      }
+                                    });
+                                    return;
+                                  }
                                   setFollowUpQuote(quote);
                                   setFollowUpDialogOpen(true);
                                 }}
                               >
-                                <Sparkles className="h-3 w-3 mr-1" />
+                                {isProTier ? <Sparkles className="h-3 w-3 mr-1" /> : <Lock className="h-3 w-3 mr-1" />}
                                 AI Follow-up
                               </Button>
                             )}
