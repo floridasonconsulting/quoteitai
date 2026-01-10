@@ -394,24 +394,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Run role check and subscription load in parallel
-        // This ensures both are ready before we lower the loading flag
+        // 1. CRITICAL: Check User Role First & Fast
+        // We await this because we need to know if the user is authorized/pro before rendering
         try {
-          const promises: Promise<any>[] = [checkUserRole(currentSession)];
-
-          if (currentSession.user?.id) {
-            promises.push(loadSubscription(currentSession.user.id));
-            // Run migration in background (don't await)
-            checkAndMigrateData(currentSession.user.id).catch(console.error);
-          }
-
-          await Promise.allSettled(promises);
+          await checkUserRole(currentSession);
         } catch (error) {
-          console.error('[AUTH DEBUG] Auth initialization failed:', error);
-        } finally {
-          console.log('[AUTH DEBUG] Setting loading to false after parallel init');
-          setLoading(false);
-          isInitializing.current = false;
+          console.error('[AUTH DEBUG] Critical role check failed:', error);
+        }
+
+        // 2. Clear loading screen immediately
+        // The user can now see the app. We will lazy-load the rest.
+        console.log('[AUTH DEBUG] Critical auth ready - clearing loading state');
+        setLoading(false);
+        isInitializing.current = false;
+
+        // 3. Background Tasks (Subscription & Migration)
+        // Delayed to prevent "Startup Storm" that was causing timeouts
+        if (currentSession.user?.id) {
+          setTimeout(() => {
+            console.log('[AuthContext] Starting background initialization...');
+
+            // A. Load subscription
+            loadSubscription(currentSession.user.id).catch(e =>
+              console.warn('[AuthContext] Background sub check failed', e)
+            );
+
+            // B. Run migration (lowest priority)
+            setTimeout(() => {
+              checkAndMigrateData(currentSession.user.id).catch(console.error);
+            }, 2000);
+
+          }, 500); // 500ms delay to let UI render and other critical requests (like dashboard) fire first
         }
       }
     );
