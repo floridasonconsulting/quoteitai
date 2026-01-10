@@ -25,21 +25,8 @@ function getStoredThemeMode(): ThemeMode {
   return "auto";
 }
 
-interface SolarData {
-  sunrise: Date;
-  sunset: Date;
-}
-
-let cachedSolarData: SolarData | null = null;
-
-function getAutoTheme(solarData: SolarData | null): Theme {
+function getAutoTheme(): Theme {
   const now = new Date();
-
-  if (solarData) {
-    return (now > solarData.sunrise && now < solarData.sunset) ? "light" : "dark";
-  }
-
-  // Fallback to time-based detection if solar data is missing
   const hour = now.getHours();
   // Dark mode from 7 PM (19:00) to 6 AM (6:00)
   return (hour >= 19 || hour < 6) ? "dark" : "light";
@@ -47,49 +34,14 @@ function getAutoTheme(solarData: SolarData | null): Theme {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [themeMode, setThemeModeState] = React.useState<ThemeMode>(getStoredThemeMode);
-  const [solarData, setSolarData] = React.useState<SolarData | null>(null);
 
   const [theme, setTheme] = React.useState<Theme>(() => {
     const mode = getStoredThemeMode();
     if (mode === "auto") {
-      return getAutoTheme(null);
+      return getAutoTheme();
     }
     return mode as Theme;
   });
-
-  // Solar Context Logic: Fetch sunrise/sunset based on Geolocation
-  React.useEffect(() => {
-    if (themeMode !== "auto") return;
-
-    const fetchSolarContext = async () => {
-      if (!navigator.geolocation) return;
-
-      navigator.geolocation.getCurrentPosition(async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          const response = await fetch(
-            `https://api.sunrise-sunset.org/json?lat=${latitude}&lng=${longitude}&formatted=0`
-          );
-          const data = await response.json();
-          if (data.results) {
-            const newSolarData = {
-              sunrise: new Date(data.results.sunrise),
-              sunset: new Date(data.results.sunset)
-            };
-            setSolarData(newSolarData);
-            setTheme(getAutoTheme(newSolarData));
-          }
-        } catch (error) {
-          console.error("Solar theme fetch failed:", error);
-        }
-      });
-    };
-
-    fetchSolarContext();
-    // Refresh every hour
-    const interval = setInterval(fetchSolarContext, 3600000);
-    return () => clearInterval(interval);
-  }, [themeMode]);
 
   React.useEffect(() => {
     const root = window.document.documentElement;
@@ -100,17 +52,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     // Update theme when mode changes or time passes
     if (themeMode === "auto") {
-      setTheme(getAutoTheme(solarData));
+      setTheme(getAutoTheme());
 
       const interval = setInterval(() => {
-        setTheme(getAutoTheme(solarData));
+        setTheme(getAutoTheme());
       }, 60000); // Check every minute
 
       return () => clearInterval(interval);
     } else {
       setTheme(themeMode as Theme);
     }
-  }, [themeMode, solarData]);
+  }, [themeMode]);
 
   const setThemeMode = (mode: ThemeMode) => {
     setThemeModeState(mode);
