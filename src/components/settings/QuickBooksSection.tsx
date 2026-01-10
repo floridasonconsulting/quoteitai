@@ -10,6 +10,7 @@ import { supabase as singletonSupabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "react-router-dom";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { CompanySettings } from "@/types";
 
 interface QuickBooksConnection {
   realm_id: string | null;
@@ -20,76 +21,62 @@ interface QuickBooksConnection {
 
 export function QuickBooksSection({
   supabaseClient,
-  isClientReady = true
+  isClientReady = true,
+  settings
 }: {
   supabaseClient?: SupabaseClient;
   isClientReady?: boolean;
+  settings?: CompanySettings;
 }) {
   const supabase = supabaseClient || singletonSupabase;
-  const { user, isProTier } = useAuth();
+  const { user, isProTier, loading: authLoading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [connection, setConnection] = useState<QuickBooksConnection | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [localConnection, setLocalConnection] = useState<QuickBooksConnection | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+
+  // Derived connection state from props or local (after callback)
+  const connection = localConnection || (settings ? {
+    realm_id: (settings as any)?.quickbooks_realm_id,
+    company_name: (settings as any)?.quickbooks_company_name,
+    connected_at: (settings as any)?.quickbooks_connected_at,
+    token_expires_at: (settings as any)?.quickbooks_token_expires_at,
+  } : null);
 
   // Check for OAuth callback results
   useEffect(() => {
     const qbConnected = searchParams.get("qb_connected");
     const qbError = searchParams.get("qb_error");
     const companyName = searchParams.get("company");
+    const realmId = searchParams.get("realm_id");
 
     if (qbConnected === "true") {
       toast.success(`Connected to QuickBooks: ${companyName || "Success"}`);
+
+      // Update local state immediately to reflect connection
+      if (realmId) {
+        setLocalConnection({
+          realm_id: realmId,
+          company_name: companyName,
+          connected_at: new Date().toISOString(),
+          token_expires_at: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString() // Approx 180 days
+        });
+      }
+
       // Clean up URL params
       searchParams.delete("qb_connected");
       searchParams.delete("company");
+      searchParams.delete("realm_id");
       setSearchParams(searchParams);
-      loadConnection();
+
+      // Force reload to sync everything if needed
+      setTimeout(() => window.location.reload(), 1500);
     } else if (qbError) {
       toast.error(`QuickBooks connection failed: ${qbError}`);
       searchParams.delete("qb_error");
       setSearchParams(searchParams);
     }
   }, [searchParams, setSearchParams]);
-
-  // Load existing connection on mount
-  useEffect(() => {
-    if (user?.id && isClientReady) {
-      loadConnection();
-    }
-  }, [user?.id, isClientReady]);
-
-  const loadConnection = async () => {
-    if (!user?.id) return;
-
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("company_settings")
-        .select("quickbooks_realm_id, quickbooks_company_name, quickbooks_connected_at, quickbooks_token_expires_at")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (data && (data as any).quickbooks_realm_id) {
-        const qbData = data as any;
-        setConnection({
-          realm_id: qbData.quickbooks_realm_id,
-          company_name: qbData.quickbooks_company_name,
-          connected_at: qbData.quickbooks_connected_at,
-          token_expires_at: qbData.quickbooks_token_expires_at,
-        });
-      } else {
-        setConnection(null);
-      }
-    } catch (error) {
-      console.error("Failed to load QuickBooks connection:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleConnect = () => {
     if (!user?.id) {
@@ -141,7 +128,10 @@ export function QuickBooksSection({
 
       if (error) throw error;
 
-      setConnection(null);
+      setLocalConnection(null);
+
+      // Force reload page to ensure robust state sync
+      window.location.reload();
       toast.success("Disconnected from QuickBooks");
     } catch (error) {
       console.error("Failed to disconnect:", error);
@@ -156,7 +146,6 @@ export function QuickBooksSection({
 
     setIsSyncing(true);
     try {
-      // Call sync function (to be implemented)
       const { error } = await supabase.functions.invoke("quickbooks-sync", {
         body: { userId: user.id },
       });
@@ -177,7 +166,9 @@ export function QuickBooksSection({
     ? new Date(connection.token_expires_at) < new Date()
     : false;
 
-  if (!isProTier) {
+  // Handles "Pro Tier" lock screen
+  // CRITICAL FIX: Only show lock if we are SURE user is not Pro AND Auth is done loading
+  if (!isProTier && !authLoading) {
     return (
       <Card>
         <CardHeader>
@@ -236,11 +227,7 @@ export function QuickBooksSection({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-4">
-            <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : !isConnected ? (
+        {!isConnected ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
               Connect your QuickBooks Online account to automatically sync customer data and create invoices from accepted quotes.

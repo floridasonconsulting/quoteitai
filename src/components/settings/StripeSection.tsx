@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase as singletonSupabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "react-router-dom";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { CompanySettings } from "@/types";
 
 interface StripeConnection {
   account_id: string | null;
@@ -18,18 +19,27 @@ interface StripeConnection {
 
 export function StripeSection({
   supabaseClient,
-  isClientReady = true
+  isClientReady = true,
+  settings
 }: {
   supabaseClient?: SupabaseClient;
   isClientReady?: boolean;
+  settings?: CompanySettings;
 }) {
   const supabase = supabaseClient || singletonSupabase;
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [connection, setConnection] = useState<StripeConnection | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [localConnection, setLocalConnection] = useState<StripeConnection | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+
+  // Derived connection state from props or local (after callback)
+  const connection = localConnection || (settings ? {
+    account_id: (settings as any).stripe_account_id,
+    connected_at: (settings as any).stripe_connected_at,
+    onboarding_complete: (settings as any).stripe_onboarding_complete || false,
+  } : null);
 
   // Check for OAuth callback results
   useEffect(() => {
@@ -40,7 +50,8 @@ export function StripeSection({
       toast.success("Stripe account connected successfully!");
       searchParams.delete("stripe_connected");
       setSearchParams(searchParams);
-      loadConnection();
+
+      // We can't easily update local state here without fetching, but we can rely on parent reload
       // Check onboarding status
       checkOnboardingStatus();
     } else if (stripeRefresh === "true") {
@@ -52,42 +63,6 @@ export function StripeSection({
     }
   }, [searchParams, setSearchParams]);
 
-  // Load existing connection on mount
-  useEffect(() => {
-    if (user?.id && isClientReady) {
-      loadConnection();
-    }
-  }, [user?.id, isClientReady]);
-
-  const loadConnection = async () => {
-    if (!user?.id) return;
-
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("company_settings")
-        .select("stripe_account_id, stripe_connected_at, stripe_onboarding_complete")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (data && (data as any).stripe_account_id) {
-        const stripeData = data as any;
-        setConnection({
-          account_id: stripeData.stripe_account_id,
-          connected_at: stripeData.stripe_connected_at,
-          onboarding_complete: stripeData.stripe_onboarding_complete || false,
-        });
-      } else {
-        setConnection(null);
-      }
-    } catch (error) {
-      console.error("Failed to load Stripe connection:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const checkOnboardingStatus = async () => {
     if (!connection?.account_id || !user?.id) return;
@@ -104,7 +79,9 @@ export function StripeSection({
       if (error) throw error;
 
       if (data.isComplete) {
-        setConnection(prev => prev ? { ...prev, onboarding_complete: true } : prev);
+        setLocalConnection(prev => prev ? { ...prev, onboarding_complete: true } : prev);
+        // Force refresh to update backend if needed
+        setTimeout(() => window.location.reload(), 500);
       }
     } catch (error) {
       console.error("Failed to check onboarding status:", error);
@@ -162,7 +139,9 @@ export function StripeSection({
 
       if (error) throw error;
 
-      setConnection(null);
+      setLocalConnection(null);
+      // Force reload to sync with settings
+      window.location.reload();
       toast.success("Disconnected from Stripe");
     } catch (error: any) {
       console.error("Failed to disconnect:", error);

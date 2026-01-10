@@ -481,7 +481,7 @@ export default function Settings() {
 
         {/* INTEGRATIONS TAB */}
         <TabsContent value="integrations" className="space-y-6">
-          <IntegrationsSection supabaseClient={settingsClient} isClientReady={isClientReady} />
+          <IntegrationsSection supabaseClient={settingsClient} isClientReady={isClientReady} settings={settings} />
         </TabsContent>
 
         {/* SYSTEM TAB */}
