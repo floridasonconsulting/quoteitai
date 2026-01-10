@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, createFreshSupabaseClient } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Quote, Customer, CompanySettings, QuoteItem } from '@/types';
 import { ProposalViewer } from '@/components/proposal/viewer/ProposalViewer';
@@ -15,14 +15,15 @@ import { ProposalVisuals, ProposalSection } from '@/types/proposal';
 import { VisualRule } from "@/types";
 import { isDemoModeActive } from '@/contexts/DemoContext';
 import { MOCK_QUOTES, MOCK_CUSTOMERS } from '@/lib/mockData';
-import { executeWithPool, dedupedRequest } from '@/lib/services/request-pool-service';
+import { executeWithPool, dedupedRequest, clearInFlightRequests } from '@/lib/services/request-pool-service';
+import { getItems } from '@/lib/services/item-service';
 
 // Helper to safely parse visual rules from JSON or object
 const parseVisualRules = (rules: any): VisualRule[] => {
   if (!rules) return [];
   if (Array.isArray(rules)) return rules; // Already an object (Supabase JSONB auto-parsing)
   try {
-    return JSON.parse(rules); // Stringified JSON
+    return typeof rules === 'string' ? JSON.parse(rules) : rules; // Safe handling
   } catch (e) {
     console.error("Failed to parse visual rules:", e);
     return [];
@@ -31,7 +32,7 @@ const parseVisualRules = (rules: any): VisualRule[] => {
 
 export default function PublicQuoteView() {
   const { id: shareToken } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   // CRITICAL: Decode the share token from URL (it was encoded with encodeURIComponent)
   const decodedShareToken = shareToken ? decodeURIComponent(shareToken) : undefined;
@@ -46,24 +47,24 @@ export default function PublicQuoteView() {
   const [isMaxAITier, setIsMaxAITier] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true);
   const [visuals, setVisuals] = useState<ProposalVisuals | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  // Track unmount to prevent state updates on aborted requests
+  const isUnmounted = useRef(false);
 
-  // Wait for auth to initialize before checking session
+  // 🚀 LIBRARY ISOLATION:  // Create a dedicated, isolated Supabase client for this view.
+  // We use decodedShareToken as a dependency to ensure each DIFFERENT quote gets a fresh client instance.
+  // This prevents library-level state poisoning or deadlocks from previous attempts.
+  const quoteClient = useMemo(() => {
+    console.log('[PublicQuoteView] Creating fresh isolated client instance for token:', shareToken);
+    return createFreshSupabaseClient();
+  }, [decodedShareToken]);
+
   useEffect(() => {
-    console.log('[PublicQuoteView] Auth state:', { user: user?.id, loading: authLoading });
-
-    // Give auth context a moment to initialize
-    const authTimeout = setTimeout(() => {
-      setAuthLoading(false);
-    }, 1000);
-
+    isUnmounted.current = false;
     return () => {
-      clearTimeout(authTimeout);
-      // Reset request pool on unmount to prevent lockups during rapid navigation
-      if (typeof window !== 'undefined' && (window as any).__resetRequestPool) {
-        (window as any).__resetRequestPool();
-      }
+      isUnmounted.current = true;
+      console.log('[PublicQuoteView] Unmounting, stopping state updates');
     };
   }, []);
 
@@ -155,7 +156,7 @@ export default function PublicQuoteView() {
 
       // Fetch quote to check ownership
       const { data: quoteData, error: quoteError } = await dedupedRequest(`check-ownership-${decodedShareToken}`, async (signal) => {
-        return await (supabase
+        return await (quoteClient
           .from('quotes')
           .select('user_id')
           .eq('share_token', decodedShareToken)
@@ -221,7 +222,7 @@ export default function PublicQuoteView() {
     if (!quote || !decodedShareToken) return;
 
     try {
-      const { error } = await supabase.functions.invoke('update-quote-status', {
+      const { error } = await quoteClient.functions.invoke('update-quote-status', {
         body: {
           shareToken: decodedShareToken,
           status: 'commented',
@@ -263,6 +264,80 @@ export default function PublicQuoteView() {
   };
 
   // Load quote data after authentication
+  /**
+   * HIGH RESILIENCE FALLBACK: Fetches data using ONLY raw browser fetch.
+   * This bypasses the Supabase-JS library entirely.
+   */
+  async function fetchDataNaked(table: string, queryParams: string, single: boolean = false): Promise<any> {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) throw new Error("Missing Supabase configuration");
+
+    const url = `${supabaseUrl}/rest/v1/${table}?${queryParams}`;
+    console.log(`[PublicQuoteView] 🌪️ NAKED FETCH for ${table}: ${url}`);
+
+    const response = await fetch(url, {
+      headers: {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json'
+        // RLS will depend on the anon key or public access policies
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Naked Fetch failed: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (!data || data.length === 0) return null;
+
+    return single ? data[0] : data;
+  }
+
+  /**
+   * WRAPPER: Executes a library request with a "soft timeout" and automatic fallback to naked fetch.
+   */
+  async function executeWithBypass<T>(
+    label: string,
+    libraryFn: (signal: AbortSignal) => Promise<T>,
+    fallbackFn: () => Promise<T>, // Fixed signature
+    timeoutOverride: number = 2500 // Allow explicit timeout override
+  ): Promise<{ data: T | null; usedBypass: boolean }> {
+    try {
+      // 1. Try Library with Soft Timeout
+      const softTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutOverride));
+
+      // Create a real promise for the library function using dedupedRequest logic or direct call
+      // We assume the caller passes a function that fits the pattern
+      const libraryPromise = dedupedRequest(label, libraryFn, 30000);
+
+      const raceResult = await Promise.race([libraryPromise, softTimeout]);
+
+      if (raceResult === null) {
+        console.warn(`[PublicQuoteView] ⚠️ Library fetch [${label}] timed out (>2.5s), triggering bypass...`);
+        throw new Error('Soft timeout'); // Trigger catch block
+      }
+
+      const { data, error } = raceResult as any;
+      if (error) throw error;
+
+      return { data, usedBypass: false };
+
+    } catch (err) {
+      console.warn(`[PublicQuoteView] ⚠️ Library [${label}] failed/hung, trying NAKED FALLBACK...`, err);
+      try {
+        const data = await fallbackFn();
+        console.log(`[PublicQuoteView] ✅ NAKED FALLBACK [${label}] succeeded`);
+        return { data, usedBypass: true };
+      } catch (nakedErr) {
+        console.error(`[PublicQuoteView] ❌ ALL methods failed for [${label}]:`, nakedErr);
+        throw nakedErr; // Re-throw to be handled by caller
+      }
+    }
+  }
+
   const loadQuote = async () => {
     if (!decodedShareToken) {
       console.error('[PublicQuoteView] No shareToken provided in URL');
@@ -273,268 +348,387 @@ export default function PublicQuoteView() {
     console.log('[PublicQuoteView] 🚀 Loading quote data...', { shareToken: decodedShareToken });
     const queryStartTime = Date.now();
     setLoading(true);
+
     try {
-      // Step 1: Fetch ONLY the quote first (Simplifying to isolate timeout issue)
-      console.log('[PublicQuoteView] 📡 Sending Supabase request (Quote only)...');
-      const { data: quoteData, error: quoteError } = await dedupedRequest(`quote-${decodedShareToken}`, async (signal) => {
-        return await (supabase
-          .from('quotes')
-          .select('*')
-          .eq('share_token', decodedShareToken)
-          .maybeSingle() as any).abortSignal(signal);
-      }, 30000);
-
-      const queryDuration = Date.now() - queryStartTime;
-      console.log(`[PublicQuoteView] 🏁 Supabase request finished in ${queryDuration}ms`);
-
-      if (quoteError) {
-        console.error('[PublicQuoteView] ❌ Supabase error:', quoteError);
-        throw quoteError;
-      }
-
-      if (!quoteData) {
-        console.error('[PublicQuoteView] ❌ No quote found for token:', decodedShareToken);
-        toast.error('Quote not found or link has expired');
-        setLoading(false);
-        return;
-      }
-
-      console.log('[PublicQuoteView] ✅ Quote data received:', {
-        id: quoteData.id,
-        customerId: quoteData.customer_id,
-        itemsCount: quoteData.items?.length
-      });
-
-      // Step 2: Fetch customer data separately if needed
-      if (quoteData.customer_id) {
-        console.log('[PublicQuoteView] 📡 Fetching customer data for:', quoteData.customer_id);
-        const { data: customerData } = await dedupedRequest(`customer-${quoteData.customer_id}`, async (signal) => {
-          return await (supabase
-            .from('customers')
-            .select('contact_first_name, contact_last_name')
-            .eq('id', quoteData.customer_id)
-            .maybeSingle() as any).abortSignal(signal);
-        }, 15000);
-
-        if (customerData) {
-          console.log('[PublicQuoteView] ✅ Customer data received');
-          // Merge customer data into quote for ProposalViewer
-          (quoteData as any).customers = customerData;
-        }
-      }
-
-      // Check if quote has expired
-      if (quoteData.expires_at && new Date(quoteData.expires_at) < new Date()) {
-        setExpired(true);
-        setLoading(false);
-        return;
-      }
-
-      console.log('[PublicQuoteView] ✅ Quote loaded successfully:', quoteData.id);
-      console.log('[PublicQuoteView] Quote user_id:', quoteData.user_id);
-
-      // Extract contact name from joined customer data
-      let contactName = '';
-      if (quoteData.customers) {
-        // Handle potential array or single object response from join
-        const cust = Array.isArray(quoteData.customers) ? quoteData.customers[0] : quoteData.customers;
-        if (cust) {
-          // Use type assertion to access joined fields if needed, or rely on loose typing
-          const c = cust as any;
-          contactName = `${c.contact_first_name || ''} ${c.contact_last_name || ''}`.trim();
-        }
-      }
-
-      console.log('[PublicQuoteView] 👤 Contact Name resolved:', contactName || 'None (Using Company Name)');
-
-      // 🚀 NEW: Fetch visuals from proposal_visuals table
-      console.log('[PublicQuoteView] 🖼️ Fetching visuals for quote:', quoteData.id);
+      // Step -1: Naked Fetch Ping (Bypassing Supabase Library)
+      console.log('[PublicQuoteView] 📡 Step -1: Sending NAKED FETCH ping (Bypassing Library)...');
+      let nakedSuccess = false;
+      const nakedFetchStart = Date.now();
       try {
-        const visualsData = await visualsService.getVisuals(quoteData.id);
-        if (visualsData) {
-          console.log('[PublicQuoteView] ✅ Visuals loaded:', visualsData);
-          setVisuals(visualsData);
-        }
-      } catch (visualsError) {
-        console.warn('[PublicQuoteView] ⚠️ Could not fetch visuals:', visualsError);
-      }
+        const sbUrl = (supabase as any).supabaseUrl;
+        const sbKey = (supabase as any).supabaseKey;
+        const pingUrl = `${sbUrl}/rest/v1/quotes?select=id&limit=1`;
 
-      // 🚀 NEW: Fetch current items table data to enrich quote JSONB
-      console.log('[PublicQuoteView] 🔄 Fetching fresh items table data for enrichment...');
-      const { data: itemsData, error: itemsError } = await dedupedRequest(`items-${quoteData.user_id}`, async (signal) => {
-        return await (supabase
-          .from('items')
-          .select('name, image_url, enhanced_description, category')
-          .eq('user_id', quoteData.user_id) as any).abortSignal(signal);
-      });
-
-      if (itemsError) {
-        console.warn('[PublicQuoteView] ⚠️ Could not fetch items table:', itemsError);
-      }
-
-      // Create lookup map for fast item enrichment
-      const itemsLookup = new Map();
-      if (itemsData) {
-        itemsData.forEach(item => {
-          itemsLookup.set(item.name, {
-            imageUrl: item.image_url,
-            enhancedDescription: item.enhanced_description
-          });
+        const response = await fetch(pingUrl, {
+          method: 'GET',
+          headers: {
+            'apikey': sbKey,
+            'Authorization': `Bearer ${sbKey}`,
+            'Range-Unit': 'items',
+            'Range': '0-0'
+          }
         });
-        console.log('[PublicQuoteView] ✅ Items lookup created:', itemsLookup.size, 'items');
+
+        if (response.ok) {
+          nakedSuccess = true;
+        }
+        console.log(`[PublicQuoteView] ✓ NAKED FETCH ping result: ${response.status} (${Date.now() - nakedFetchStart}ms)`);
+        if (!response.ok) {
+          const body = await response.text();
+          console.warn('[PublicQuoteView] Native fetch returned error status:', response.status, body);
+        }
+      } catch (fetchErr) {
+        console.warn('[PublicQuoteView] ❌ NAKED FETCH failed:', fetchErr);
       }
 
-      // Enrich quote items with fresh data from items table
-      const enrichedItems = (quoteData.items as unknown as QuoteItem[]).map(quoteItem => {
-        const freshData = itemsLookup.get(quoteItem.name);
-
-        // CRITICAL FIX: The quote JSONB uses snake_case (image_url, enhanced_description)
-        // but our TypeScript types expect camelCase (imageUrl, enhancedDescription)
-        // We need to transform BOTH the JSONB fields AND the fresh data
-
-        // Type-safe access to snake_case fields from JSONB
-        type QuoteItemWithSnakeCase = QuoteItem & {
-          image_url?: string;
-          enhanced_description?: string;
-        };
-        const itemWithSnakeCase = quoteItem as QuoteItemWithSnakeCase;
-
-        const jsonbImageUrl = itemWithSnakeCase.image_url || quoteItem.imageUrl;
-        const jsonbEnhancedDesc = itemWithSnakeCase.enhanced_description || quoteItem.enhancedDescription;
-
-        if (freshData) {
-          /* console.log(`[PublicQuoteView] ✅ Enriching "${quoteItem.name}"`); */
-
-          return {
-            ...quoteItem,
-            imageUrl: freshData.imageUrl || jsonbImageUrl || quoteItem.imageUrl,
-            enhancedDescription: freshData.enhancedDescription || jsonbEnhancedDesc || quoteItem.enhancedDescription
-          };
+      // Step 0: Diagnostic Ping (Verify library is responsive) -- ONLY IF NAKED FAILED
+      if (!nakedSuccess) {
+        console.log('[PublicQuoteView] 📡 Step 0: Sending LIBRARY ping (Naked fetch failed)...');
+        try {
+          const libPingStart = Date.now();
+          await executeWithPool(async (signal) => {
+            return await (quoteClient.from('quotes').select('*', { count: 'estimated', head: true }).limit(1).abortSignal(signal) as any);
+          },
+            3000, // Reduced from 10s to 3s
+            'ping-supabase'
+          );
+          console.log(`[PublicQuoteView] ✓ LIBRARY ping successful (${Date.now() - libPingStart}ms)`);
+        } catch (pingErr) {
+          console.warn('[PublicQuoteView] ⚠️ LIBRARY ping failed:', pingErr);
         }
+      } else {
+        console.log('[PublicQuoteView] ⏭️ Skipping LIBRARY ping (Naked fetch succeeded).');
+      }
 
-        // If no fresh data, still transform snake_case to camelCase
-        /* console.log(`[PublicQuoteView] ⚠️ No fresh data for "${quoteItem.name}", using JSONB`); */
+      // Step 1: Lightweight Metadata Fetch (Excludes 'items' JSONB)
+      // This isolates if the hang is caused by RLS / indexing OR by the payload size
+      // --- STEP 1: FETCH QUOTE METADATA ---
+      // --- STEP 1: FETCH QUOTE METADATA ---
+      console.log('[PublicQuoteView] 📡 Step 1: Fetching Quote Metadata (Excluding Items)...');
+      let quoteMetadata: any = null;
+      let usedBypassForMeta = false;
 
-        return {
-          ...quoteItem,
-          imageUrl: jsonbImageUrl || quoteItem.imageUrl,
-          enhancedDescription: jsonbEnhancedDesc || quoteItem.enhancedDescription
-        };
-      });
+      try {
+        const result = await executeWithBypass(
+          `quote-meta-${decodedShareToken}`,
+          (signal) => (quoteClient
+            .from('quotes')
+            .select('*')
+            .eq('share_token', decodedShareToken)
+            .maybeSingle() as any).abortSignal(signal),
+          () => fetchDataNaked('quotes', `share_token=eq.${encodeURIComponent(decodedShareToken)}&select=*`, true)
+        );
+        quoteMetadata = result.data;
+        usedBypassForMeta = result.usedBypass;
 
-      // Convert database format to app format with ENRICHED items
-      const formattedQuote: Quote = {
-        id: quoteData.id,
-        quoteNumber: quoteData.quote_number,
-        customerId: quoteData.customer_id,
-        customerName: quoteData.customer_name,
-        contactName: contactName, // Explicitly set contactName
-        title: quoteData.title,
-        items: enrichedItems, // 🚀 USE ENRICHED ITEMS
-        subtotal: Number(quoteData.subtotal),
-        tax: Number(quoteData.tax),
-        total: Number(quoteData.total),
-        status: quoteData.status as 'draft' | 'sent' | 'accepted' | 'declined',
-        notes: quoteData.notes,
-        sentDate: quoteData.sent_date,
-        followUpDate: quoteData.follow_up_date,
-        createdAt: quoteData.created_at,
-        updatedAt: quoteData.updated_at,
-        shareToken: quoteData.share_token,
-        sharedAt: quoteData.shared_at,
-        viewedAt: quoteData.viewed_at,
-        executiveSummary: quoteData.executive_summary,
-        userId: quoteData.user_id,
-        showPricing: quoteData.show_pricing ?? true,
-        pricingMode: (quoteData as any).pricing_mode || 'category_total', // Load pricing mode
-        scopeOfWork: (quoteData as any).scope_of_work, // NEW: Intelligent SOW for proposals
+      } catch (err) {
+        console.error("Critical failure loading metadata:", err);
+        setError("Unable to retrieve quote data. Please check your connection.");
+        setLoading(false);
+        return;
+      }
+
+      if (isUnmounted.current) return;
+
+      if (!quoteMetadata) {
+        console.error('[PublicQuoteView] ❌ Quote not found for token:', decodedShareToken);
+        setError('Proposal not found. It may have been deleted or the link is incorrect.');
+        setLoading(false);
+        return;
+      }
+
+      console.log(`[PublicQuoteView] ✅ Metadata retrieved (${usedBypassForMeta ? 'NAKED' : 'LIBRARY'}) in`, Date.now() - queryStartTime, 'ms');
+
+      // CRITICAL: Normalize items immediately (snake_case -> camelCase) in case we skip Step 3
+      const rawInitialItems = (quoteMetadata as any).items || [];
+      const normalizedInitialItems = Array.isArray(rawInitialItems) ? rawInitialItems.map((item: any) => ({
+        ...item,
+        imageUrl: item.image_url || item.imageUrl,
+        enhancedDescription: item.enhanced_description || item.enhancedDescription
+      })) : [];
+
+      const quoteData = {
+        ...(quoteMetadata as any),
+        items: normalizedInitialItems
       };
 
-      console.log('[PublicQuoteView] ✅ Quote formatted. Item count:', formattedQuote.items.length);
+      if (!isUnmounted.current) {
+        console.log('[PublicQuoteView] ✅ Committing Metadata to state (Items: ' + normalizedInitialItems.length + ')');
+        console.log('[PublicQuoteView] 🔍 Quote user_id:', quoteData.user_id, '| Current authenticated user:', user?.id || 'NONE');
+        setQuote(quoteData);
+      } else {
+        console.warn('[PublicQuoteView] Unmounted before metadata commit');
+        return;
+      }
 
-      // ENHANCED DEBUGGING: Check each item's image URL AFTER ENRICHMENT
-      console.log('[PublicQuoteView] 📸 ENRICHED Item image status:', formattedQuote.items.map((item, idx) => ({
-        index: idx,
-        name: item.name,
-        hasImageUrl: !!item.imageUrl,
-        imageUrl: item.imageUrl,
-        imageUrlType: typeof item.imageUrl,
-        isValidUrl: item.imageUrl && (item.imageUrl.startsWith('http://') || item.imageUrl.startsWith('https://')),
-        hasEnhancedDescription: !!item.enhancedDescription
-      })));
+      // Step 2: Fetch customer data separately if needed
 
-      setQuote(formattedQuote);
+      // 🚀 PARALLEL DATA LOADING: Fire secondary requests concurrently!
+      // This ensures that a single slow request (e.g. Customer) doesn't block critical visuals
+      console.log('[PublicQuoteView] 🚀 Firing parallel secondary data fetches...');
+
+      const fetchCustomer = async () => {
+        if (!quoteData.customer_id) return;
+        try {
+          console.log('[PublicQuoteView] 📡 Step 2: Fetching customer data for:', quoteData.customer_id);
+
+          const { data: customerData } = await executeWithBypass(
+            `customer-${quoteData.customer_id}`,
+            (signal) => (quoteClient
+              .from('customers')
+              .select('contact_first_name, contact_last_name')
+              .eq('id', quoteData.customer_id)
+              .maybeSingle() as any).abortSignal(signal),
+            () => fetchDataNaked('customers', `id=eq.${quoteData.customer_id}&select=contact_first_name,contact_last_name`, true)
+          );
+
+          if (customerData && !isUnmounted.current) {
+            console.log('[PublicQuoteView] ✅ Customer data received');
+            setQuote(prev => {
+              if (!prev) return null;
+              // Extract contact name
+              const c = customerData as any;
+              const contactName = `${c.contact_first_name || ''} ${c.contact_last_name || ''}`.trim();
+              return { ...prev, customers: customerData, contactName: contactName || prev.contactName };
+            });
+          }
+        } catch (err) {
+          console.warn('[PublicQuoteView] ⚠️ Step 2 (Customer) failed, continuing...', err);
+        }
+      };
+
+      const fetchHeavyItems = async () => {
+        // Optimization: If Step 1 already loaded items, skip!
+        if (quoteData.items && Array.isArray(quoteData.items) && quoteData.items.length > 0) {
+          console.log('[PublicQuoteView] ✅ Items already loaded in Step 1, skipping Step 3.');
+          return;
+        }
+
+        try {
+          console.log('[PublicQuoteView] 📡 Step 3: Fetching Heavy Line Items (JSONB)...');
+          const itemsFetchStart = Date.now();
+
+          const { data: heavyItemsData } = await executeWithBypass(
+            `quote-items-${decodedShareToken}`,
+            (signal) => (quoteClient
+              .from('quotes')
+              .select('items')
+              .eq('id', quoteData.id)
+              .single() as any).abortSignal(signal),
+            () => fetchDataNaked('quotes', `id=eq.${quoteData.id}&select=items`, true)
+          );
+
+          if (heavyItemsData && (heavyItemsData as any).items && !isUnmounted.current) {
+            console.log('[PublicQuoteView] ✅ Items payload received in', Date.now() - itemsFetchStart, 'ms');
+            const rawItems = (heavyItemsData as any).items as any[];
+            const normalizedItems = rawItems.map(item => ({
+              ...item,
+              imageUrl: item.image_url || item.imageUrl,
+              enhancedDescription: item.enhanced_description || item.enhancedDescription
+            }));
+
+            setQuote(prev => prev ? { ...prev, items: normalizedItems } : null);
+          }
+        } catch (err) {
+          console.error('[PublicQuoteView] ❌ Step 3 (Items) failed:', err);
+        }
+      };
+
+      const fetchVisuals = async () => {
+        console.log('[PublicQuoteView] 🖼️ Fetching visuals for quote:', quoteData.id);
+        try {
+          const { data: visualsData } = await executeWithBypass(
+            `visuals-${quoteData.id}`,
+            (signal) => (quoteClient.from('proposal_visuals').select('*').eq('quote_id', quoteData.id).maybeSingle() as any).abortSignal(signal),
+            () => fetchDataNaked('proposal_visuals', `quote_id=eq.${quoteData.id}&select=*`, true)
+          );
+
+          if (visualsData && !isUnmounted.current) {
+            console.log('[PublicQuoteView] ✅ Visuals loaded:', visualsData);
+            setVisuals(visualsData);
+          }
+        } catch (visualsError) {
+          console.warn('[PublicQuoteView] ⚠️ Could not fetch visuals, continuing...', visualsError);
+        }
+      };
+
+      const fetchEnrichment = async () => {
+        console.log('[PublicQuoteView] 🔄 Fetching fresh items table data for enrichment...');
+        console.log('[PublicQuoteView] 🔍 USER ID DIAGNOSTIC:');
+        console.log('  - Quote user_id:', quoteData.user_id);
+        console.log('  - Authenticated user:', user?.id || 'ANONYMOUS');
+        console.log('  - User ID match:', user?.id === quoteData.user_id ? 'YES ✓' : 'NO ✗ (MISMATCH!)');
+        console.log('  - Query URL will be:', `items?user_id=eq.${quoteData.user_id}`);
+
+        try {
+          const { data: itemsData } = await executeWithBypass(
+            `items-${quoteData.user_id}`,
+            (signal) => (quoteClient
+              .from('items')
+              .select('name, image_url, enhanced_description, category')
+              .eq('user_id', quoteData.user_id) as any).abortSignal(signal),
+            () => fetchDataNaked('items', `user_id=eq.${quoteData.user_id}&select=name,image_url,enhanced_description,category`, false)
+          );
+
+          console.log('[PublicQuoteView] 🔍 Enrichment result - itemsData type:', typeof itemsData, 'isArray:', Array.isArray(itemsData), 'value:', itemsData);
+
+          if (!itemsData || !Array.isArray(itemsData)) {
+            console.warn('[PublicQuoteView] ⚠️ No items found in database for enrichment. Items table may be empty for user:', quoteData.user_id);
+            console.warn('[PublicQuoteView] ℹ️ Item images will use fallback gradients. To fix: Import items via Items page or CSV upload.');
+            return; // Skip enrichment gracefully
+          }
+
+          const itemsLookup = new Map();
+          if (itemsData.length > 0) {
+            console.log('[PublicQuoteView] 📦 Enrichment Data Dump:', itemsData.length, 'items found from DB');
+            itemsData.forEach((item: any) => {
+              console.log('[PublicQuoteView] 🔍 Enrichment Item:', item.name, '-> image_url:', item.image_url);
+              if (item.name) {
+                itemsLookup.set(item.name.trim().toLowerCase(), {
+                  imageUrl: item.image_url,
+                  enhancedDescription: item.enhanced_description,
+                  originalName: item.name
+                });
+              }
+            });
+            console.log('[PublicQuoteView] ✅ Items lookup created:', itemsLookup.size, 'keys');
+
+            // DEBUG: Check match rate
+            const currentItemNames = quoteData.items?.map((i: any) => i.name) || [];
+            console.log('[PublicQuoteView] 🧐 Matching against Quote Items:', currentItemNames);
+
+            // Re-enrich items in state
+            setQuote(prev => {
+              if (!prev || !prev.items) return prev;
+              const enrichedItems = (prev.items as any[]).map(quoteItem => {
+                const lookupKey = (quoteItem.name || '').trim().toLowerCase();
+                const freshData = itemsLookup.get(lookupKey);
+                // Type-safe snake_case check
+                const jsonbImageUrl = (quoteItem as any).image_url || quoteItem.imageUrl;
+                const jsonbEnhancedDesc = (quoteItem as any).enhanced_description || quoteItem.enhancedDescription;
+
+                if (freshData) {
+                  // console.log(`[PublicQuoteView] MATCH: ${quoteItem.name}`);
+                  return {
+                    ...quoteItem,
+                    imageUrl: freshData.imageUrl || jsonbImageUrl || quoteItem.imageUrl,
+                    enhancedDescription: freshData.enhancedDescription || jsonbEnhancedDesc || quoteItem.enhancedDescription
+                  };
+                } else {
+                  console.warn(`[PublicQuoteView] ❌ NO MATCH for item: "${quoteItem.name}" (Key: "${lookupKey}")`);
+                }
+                return {
+                  ...quoteItem,
+                  imageUrl: jsonbImageUrl || quoteItem.imageUrl,
+                  enhancedDescription: jsonbEnhancedDesc || quoteItem.enhancedDescription
+                };
+              });
+              return { ...prev, items: enrichedItems };
+            });
+
+          }
+        } catch (itemsError) {
+          console.warn('[PublicQuoteView] ⚠️ Could not fetch items table (Bypass failed):', itemsError);
+        }
+      };
+
+      // Execute all secondary fetches in parallel
+      await Promise.allSettled([
+        fetchCustomer(),
+        fetchHeavyItems(),
+        fetchVisuals(),
+        fetchEnrichment()
+      ]);
+
+      const totalDuration = Date.now() - queryStartTime;
+      console.log(`[PublicQuoteView] 🏁 FULL LOAD COMPLETE in ${totalDuration}ms`);
+
+
 
       // Fetch company settings - CRITICAL for proposal display
-      console.log('[PublicQuoteView] 🔍 Fetching company settings for user:', quoteData.user_id);
+      try {
+        console.log('[PublicQuoteView] 🔍 Fetching company settings for user:', quoteData.user_id);
 
-      const { data: settingsData, error: settingsError } = await dedupedRequest(`settings-${quoteData.user_id}`, async (signal) => {
-        return await (supabase
-          .from('company_settings')
-          .select('*')
-          .eq('user_id', quoteData.user_id)
-          .maybeSingle() as any).abortSignal(signal);
-      });
+        const { data: settingsData } = await executeWithBypass(
+          `settings-${quoteData.user_id}`,
+          (signal) => (quoteClient
+            .from('company_settings')
+            .select('*')
+            .eq('user_id', quoteData.user_id)
+            .maybeSingle() as any).abortSignal(signal),
+          () => fetchDataNaked('company_settings', `user_id=eq.${quoteData.user_id}&select=*`, true)
+        );
 
-      if (settingsError) {
-        console.error('[PublicQuoteView] ⚠️ Settings fetch error:', settingsError);
-        console.log('[PublicQuoteView] Creating fallback settings');
-      } else if (settingsData) {
-        // Cast to any to access new columns until types are regenerated
-        const s = settingsData as any;
-        console.log('[PublicQuoteView] ✅ Settings loaded:', {
-          name: s.name,
-          hasLogo: !!s.logo,
-          email: s.email,
-          phone: s.phone
-        });
+        // Normalize potential error from bypass wrapper (wrapped in data structure or null)
+        const settingsError = !settingsData ? "No settings data returned" : null;
 
-        setSettings({
-          name: s.name || '',
-          address: s.address || '',
-          city: s.city || '',
-          state: s.state || '',
-          zip: s.zip || '',
-          phone: s.phone || '',
-          email: s.email || '',
-          website: s.website || '',
-          logo: s.logo || undefined,
-          logoDisplayOption: (s.logo_display_option as 'logo' | 'name' | 'both') || 'both',
-          license: s.license || '',
-          insurance: s.insurance || '',
-          terms: s.terms || '',
-          legalTerms: s.legal_terms || '',
-          proposalTemplate: (s.proposal_template as 'classic' | 'modern' | 'detailed') || 'classic',
-          proposalTheme: (s.proposal_theme as any) || 'modern-corporate',
-          showProposalImages: s.show_proposal_images ?? true,
-          defaultCoverImage: s.default_cover_image || undefined,
-          defaultHeaderImage: s.default_header_image || undefined,
-          visualRules: s.visual_rules ? parseVisualRules(s.visual_rules) : [],
-        });
-      } else {
-        console.warn('[PublicQuoteView] ⚠️ No settings found, using fallback');
-        setSettings({
-          name: '',
-          address: '',
-          city: '',
-          state: '',
-          zip: '',
-          phone: '',
-          email: '',
-          website: '',
-          terms: '',
-          proposalTemplate: 'classic',
-          proposalTheme: 'modern-corporate',
-        });
+        if (settingsError) {
+          console.error('[PublicQuoteView] ⚠️ Settings fetch error:', settingsError);
+          console.log('[PublicQuoteView] Creating fallback settings');
+        } else if (settingsData && !isUnmounted.current) {
+          // Cast to any to access new columns until types are regenerated
+          const s = settingsData as any;
+          console.log('[PublicQuoteView] ✅ Settings loaded:', {
+            name: s.name,
+            hasLogo: !!s.logo
+          });
+
+          setSettings({
+            name: s.name || '',
+            address: s.address || '',
+            city: s.city || '',
+            state: s.state || '',
+            zip: s.zip || '',
+            phone: s.phone || '',
+            email: s.email || '',
+            website: s.website || '',
+            logo: s.logo || undefined,
+            logoDisplayOption: (s.logo_display_option as 'logo' | 'name' | 'both') || 'both',
+            license: s.license || '',
+            insurance: s.insurance || '',
+            terms: s.terms || '',
+            legalTerms: s.legal_terms || '',
+            proposalTemplate: (s.proposal_template as 'classic' | 'modern' | 'detailed') || 'classic',
+            proposalTheme: (s.proposal_theme as any) || 'modern-corporate',
+            showProposalImages: s.show_proposal_images ?? true,
+            defaultCoverImage: s.default_cover_image || undefined,
+            defaultHeaderImage: s.default_header_image || undefined,
+            visualRules: s.visual_rules ? parseVisualRules(s.visual_rules) : [],
+          });
+        } else if (!isUnmounted.current) {
+          console.warn('[PublicQuoteView] ⚠️ No settings found, using fallback');
+          setSettings({
+            name: '',
+            address: '',
+            city: '',
+            state: '',
+            zip: '',
+            phone: '',
+            email: '',
+            website: '',
+            terms: '',
+            proposalTemplate: 'classic',
+            proposalTheme: 'modern-corporate',
+          });
+        }
+      } catch (err) {
+        console.error('[PublicQuoteView] ❌ Step 5 (Settings) failed:', err);
       }
 
       console.log('[PublicQuoteView] ✅ Data loading complete!');
 
     } catch (error) {
-      console.error('[PublicQuoteView] ❌ Fatal error:', error);
-      toast.error('Failed to load quote');
+      const isAbort = error instanceof Error && (error.message === 'Request timeout' || error.name === 'AbortError');
+      if (isAbort) {
+        console.log('[PublicQuoteView] Request cancelled or timed out (expected on unmount/reset)');
+      } else {
+        console.error('[PublicQuoteView] ❌ Fatal error:', error);
+        toast.error('Failed to load quote');
+      }
     } finally {
-      setLoading(false);
+      if (!isUnmounted.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -542,7 +736,7 @@ export default function PublicQuoteView() {
     if (!quote || !decodedShareToken) return;
 
     try {
-      const { error } = await supabase.functions.invoke('update-quote-status', {
+      const { error } = await quoteClient.functions.invoke('update-quote-status', {
         body: {
           shareToken: decodedShareToken,
           status: 'accepted',
@@ -564,7 +758,7 @@ export default function PublicQuoteView() {
     if (!quote || !decodedShareToken) return;
 
     try {
-      const { error } = await supabase.functions.invoke('update-quote-status', {
+      const { error } = await quoteClient.functions.invoke('update-quote-status', {
         body: {
           shareToken: decodedShareToken,
           status: 'declined',
@@ -582,8 +776,19 @@ export default function PublicQuoteView() {
   };
 
 
+  // Transform to proposal data for the viewer
+  const proposal = useMemo(() => {
+    if (!quote) return null;
+    console.log('[PublicQuoteView] 🔄 Transforming quote to proposal...', {
+      id: quote.id,
+      itemsCount: quote.items?.length || 0,
+      hasVisuals: !!visuals
+    });
+    return transformQuoteToProposal(quote, settings || undefined, visuals || undefined);
+  }, [quote, settings, visuals]);
+
   // Show loading state
-  if (loading || authLoading) {
+  if ((loading || authLoading) && !quote) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -616,6 +821,7 @@ export default function PublicQuoteView() {
         shareToken={decodedShareToken}
         onVerified={handleVerified}
         onExpired={handleExpired}
+        client={quoteClient}
       />
     );
   }
@@ -646,6 +852,7 @@ export default function PublicQuoteView() {
         onComment={handleComment}
         isReadOnly={isOwner}
         visuals={visuals || undefined}
+        proposal={proposal || undefined}
       />
 
       {/* Hidden Payment Dialog */}
