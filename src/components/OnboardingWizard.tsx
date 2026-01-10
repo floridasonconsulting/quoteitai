@@ -14,6 +14,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useLocation } from "react-router-dom";
 import { SUPPORTED_INDUSTRIES, Industry } from "@/lib/proposal-image-library";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { createFreshSupabaseClient } from "@/integrations/supabase/client";
+import { useMemo } from "react";
 
 interface CompanyData {
   name: string;
@@ -266,8 +268,22 @@ const CompletionStep = () => (
 );
 
 export function OnboardingWizard() {
-  const { user, organizationId } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState(1);
+  const { user, session, organizationId } = useAuth();
   const location = useLocation();
+
+  // 🚀 LIBRARY ISOLATION: Create a fresh client instance just for onboarding
+  const onboardingClient = useMemo(() => createFreshSupabaseClient(), []);
+
+  // Synchronize isolated client with current session
+  useEffect(() => {
+    if (session) {
+      onboardingClient.auth.setSession(session).catch(err =>
+        console.warn('[Onboarding] Failed to sync session to isolated client:', err)
+      );
+    }
+  }, [session, onboardingClient]);
   const [currentStep, setCurrentStep] = useState(0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isChecking, setIsChecking] = useState(true); // Add checking state
@@ -454,9 +470,9 @@ export function OnboardingWizard() {
       setIsDialogOpen(false);
       console.log("[OnboardingWizard] ✓ Wizard closed");
 
-      // Step 3: Get existing settings (non-blocking)
+      // Step 3: Get existing settings (using isolated client)
       console.log("[OnboardingWizard] Step 3: Fetching existing settings...");
-      const existingSettings = await getSettings(user.id, organizationId);
+      const existingSettings = await getSettings(user.id, organizationId, onboardingClient);
 
       // Step 4: Merge with new onboarding data
       const updatedSettings = {
@@ -473,13 +489,13 @@ export function OnboardingWizard() {
 
       console.log("[OnboardingWizard] Step 4: Saving settings...");
 
-      // Step 5: Save to storage
-      await saveSettings(user.id, organizationId, updatedSettings);
+      // Step 5: Save to storage using isolated client
+      await saveSettings(user.id, organizationId, updatedSettings, () => { }, onboardingClient);
       console.log("[OnboardingWizard] ✓ Settings saved successfully");
 
       // Step 6: Handle import option
       if (importOption === "sample") {
-        console.log("[OnboardingWizard] Step 5: Loading sample data...");
+        console.log("[OnboardingWizard] Step 6: Loading sample data...");
         try {
           const { generateSampleData } = await import("@/lib/sample-data");
           await generateSampleData(user.id, true);

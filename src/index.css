@@ -664,31 +664,55 @@ All colors MUST be HSL.
   }
 }
 
-/* Custom Scrollbar for Proposal Viewer */
+/* Custom Scrollbar for Proposal Viewer - FORCED VISIBILITY */
+.custom-scrollbar {
+  scrollbar-width: auto !important;
+  scrollbar-color: hsl(var(--primary) / 0.8) transparent !important;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
-  width: 10px;
+  width: 28px !important;
+  height: 28px !important;
+  display: block !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: hsl(var(--muted) / 0.2);
-  border-radius: 5px;
+  background: transparent !important;
+  border-radius: 14px !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: hsl(var(--primary) / 0.5);
-  border-radius: 5px;
-  border: 2px solid transparent;
-  background-clip: content-box;
+  background-color: hsl(var(--primary) / 0.8) !important;
+  border-radius: 14px !important;
+  border: 4px solid transparent !important;
+  background-clip: padding-box !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--primary) / 0.8);
-  background-clip: content-box;
+  background-color: hsl(var(--primary)) !important;
+}
+
+/* Dark mode overrides for scrollbar */
+.dark .custom-scrollbar {
+  scrollbar-color: hsl(var(--primary) / 0.8) transparent !important;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--primary) / 0.8) !important;
+  border: 4px solid transparent !important;
 }
 
 /* Swiper pagination active color */
 .proposal-swiper .swiper-pagination-bullet-active {
   background: hsl(var(--primary)) !important;
+}
+
+.proposal-swiper {
+  max-width: 100% !important;
 }
 
 .proposal-swiper .swiper-button-next,

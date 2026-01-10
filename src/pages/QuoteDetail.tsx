@@ -506,7 +506,7 @@ export default function QuoteDetail() {
           aria-label="Preview and Print"
         >
           <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
-          Preview / Print
+          Preview
         </Button>
 
         <Button

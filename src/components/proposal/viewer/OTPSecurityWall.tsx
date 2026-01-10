@@ -12,9 +12,11 @@ interface OTPSecurityWallProps {
   shareToken: string;
   onVerified: (sessionToken: string) => void;
   onExpired: () => void;
+  client?: any;
 }
 
-export function OTPSecurityWall({ shareToken, onVerified, onExpired }: OTPSecurityWallProps) {
+export function OTPSecurityWall({ shareToken, onVerified, onExpired, client }: OTPSecurityWallProps) {
+  const activeClient = client || supabase;
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -28,7 +30,7 @@ export function OTPSecurityWall({ shareToken, onVerified, onExpired }: OTPSecuri
     setLoading(true);
 
     try {
-      const { data, error: functionError } = await supabase.functions.invoke('generate-access-code', {
+      const { data, error: functionError } = await activeClient.functions.invoke('generate-access-code', {
         body: { shareToken, email }
       });
 
@@ -75,7 +77,7 @@ export function OTPSecurityWall({ shareToken, onVerified, onExpired }: OTPSecuri
     setLoading(true);
 
     try {
-      const { data, error: functionError } = await supabase.functions.invoke('verify-access-code', {
+      const { data, error: functionError } = await activeClient.functions.invoke('verify-access-code', {
         body: { shareToken, email, code }
       });
 

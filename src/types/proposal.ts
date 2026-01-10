@@ -103,11 +103,23 @@ export interface ProposalData {
 
 // NEW: Category display order constant
 export const CATEGORY_DISPLAY_ORDER = [
+  'Permits & Engineering',
+  'Site Preparation',
+  'Demolition',
   'Pool Structure',
+  'Interior Surface',
   'Coping & Tile',
   'Decking',
+  'Heating',
+  'Cooling',
+  'Landscaping',
+  'Hardscaping',
+  'Softscaping',
   'Equipment',
   'Accessories',
+  'Electrical & Plumbing',
+  'Labor',
+  'Materials',
   'Services',
   'Other' // Catch-all for uncategorized items
 ] as const;

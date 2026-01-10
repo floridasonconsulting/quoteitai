@@ -1,7 +1,7 @@
 # 📚 Master System Reference - Quote.it AI
 
 **Version:** 2.4
-**Last Updated:** December 22, 2025
+**Last Updated:** January 10, 2026
 **Status:** ✅ Production-Ready | 🎨 Theme Engine Active
 
 ---
@@ -598,6 +598,21 @@ VITE_STRIPE_PUBLIC_KEY=pk_xxx
 ```
 
 ---
+
+## 🚀 Recent Improvements (January 2026)
+
+### ⚡ Performance & Reliability
+- **Global Supabase Consolidation**: Switched `PublicQuoteView` and related services to use the global `supabase` client instead of isolated instances. This resolved session state conflicts and improved subsequent proposal load times from 15s+ down to <2s.
+- **Request Optimization**: Implemented a 2.0s "soft timeout" for initial layout data fetches, ensuring the viewer renders quickly even if secondary assets are still loading.
+
+### 🍱 Quote Editor Enhancements
+- **Manual Item Reordering**: Added "Move Up" and "Move Down" functionality within the quote editor. Users can now reorder items within their respective categories while maintaining logical grouping.
+- **Category Normalization**: Reordering logic uses `normalizeCategory` to ensure consistent grouping behavior across different entry methods (manual, database, or AI).
+
+### 📄 Proposal Viewer & PDF
+- **Browser Print Stability**: Hardened the desktop sidebar navigation with `flex-shrink-0` and stable width constraints to prevent UI collapse during heavy image loading.
+- **Forced Page Breaking**: Implemented `break-before: page` for Terms & Conditions and Scope of Work sections in both the web viewer's printable container and the PDF generator.
+- **Multi-page Terms Support**: Improved PDF rendering logic to handle long Terms & Conditions text by calculating page breaks per line, preventing content cutoff.
 
 ## ⚡ Performance & Optimization
 

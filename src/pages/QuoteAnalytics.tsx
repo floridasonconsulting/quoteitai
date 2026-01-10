@@ -18,7 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as supabaseSingleton } from '@/integrations/supabase/client';
+import { createClient } from '@supabase/supabase-js';
 import { Quote } from '@/types';
 import { getQuotes } from '@/lib/db-service';
 import { formatCurrency } from '@/lib/utils';
@@ -46,6 +47,14 @@ export default function QuoteAnalytics() {
     const [loading, setLoading] = useState(true);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
+    // Isolated client to prevent connection deadlocks in analytics views
+    const analyticsClient = useMemo(() => {
+        return createClient(
+            import.meta.env.VITE_SUPABASE_URL,
+            import.meta.env.VITE_SUPABASE_ANON_KEY
+        );
+    }, []);
+
     // Safety check for tier reporting
     const currentTierLabel = subscriptionTier || 'free';
 
@@ -58,7 +67,7 @@ export default function QuoteAnalytics() {
     const loadData = async () => {
         try {
             const [quotesData] = await Promise.all([
-                getQuotes(user?.id, organizationId, isAdmin || isBusinessTier)
+                getQuotes(user?.id, organizationId, isAdmin || isBusinessTier, { client: analyticsClient })
             ]);
 
             const foundQuote = quotesData.find(q => q.id === id);
@@ -69,7 +78,7 @@ export default function QuoteAnalytics() {
             setQuote(foundQuote);
 
             // Fetch telemetry
-            const { data: telemetry, error } = await supabase
+            const { data: telemetry, error } = await analyticsClient
                 .from('proposal_analytics' as any)
                 .select('*')
                 .eq('quote_id', id)
@@ -78,7 +87,7 @@ export default function QuoteAnalytics() {
             setEvents((telemetry as any) || []);
 
             // Fetch conversations
-            const { data: convData, error: convError } = await supabase
+            const { data: convData, error: convError } = await analyticsClient
                 .from('proposal_conversations' as any)
                 .select('*')
                 .eq('quote_id', id)
@@ -151,7 +160,7 @@ export default function QuoteAnalytics() {
         setSending(true);
         try {
             // 1. Generate the expert clarification via AI
-            const { data: aiData, error: aiError } = await supabase.functions.invoke('ai-assist', {
+            const { data: aiData, error: aiError } = await analyticsClient.functions.invoke('ai-assist', {
                 body: {
                     featureType: 'followup_message',
                     prompt: `Draft an Expert Clarification for ${quote?.customerName}. Interest Level: ${stats.stickerShock ? 'High on financials' : stats.mostViewedSection}.`,
@@ -166,7 +175,7 @@ export default function QuoteAnalytics() {
             if (aiError) throw aiError;
 
             // 2. Update the last_behavioral_followup_at timestamp
-            const { error: updateError } = await supabase
+            const { error: updateError } = await analyticsClient
                 .from('quotes')
                 .update({ last_behavioral_followup_at: new Date().toISOString() } as any)
                 .eq('id', id);
@@ -197,7 +206,7 @@ export default function QuoteAnalytics() {
 
     const handleSendResponse = async (convId: string, response: string) => {
         try {
-            const { error } = await supabase
+            const { error } = await analyticsClient
                 .from('proposal_conversations' as any)
                 .update({
                     contractor_response: response,

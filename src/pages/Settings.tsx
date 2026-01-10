@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, ChevronDown, RefreshCw, Shield, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -64,7 +64,7 @@ const parseVisualRules = (rules: any): VisualRule[] => {
 export default function Settings() {
   const navigate = useNavigate();
   const { themeMode } = useTheme();
-  const { user, userRole, isAdmin, isDevAccount, isMaxAITier, organizationId, updateUserRole, checkUserRole, subscription, refreshSubscription } = useAuth();
+  const { user, session, userRole, isAdmin, isDevAccount, isMaxAITier, organizationId, updateUserRole, checkUserRole, subscription, refreshSubscription } = useAuth();
   const { isDemoMode, setDemoMode } = useDemoMode();
   const { queueChange, pauseSync, resumeSync, isOnline, isSyncing, pendingCount, failedCount } = useSyncManager();
 
@@ -93,6 +93,34 @@ export default function Settings() {
     notifyEmailDeclined: true,
   });
 
+  // 🚀 LIBRARY ISOLATION: Create a fresh client instance just for settings
+  const settingsClient = useMemo(() => createFreshSupabaseClient(), []);
+  const [isClientReady, setIsClientReady] = useState(false);
+
+  // Synchronize isolated client with current session
+  useEffect(() => {
+    let mounted = true;
+
+    if (session) {
+      console.log('[Settings] Syncing session to isolated client...');
+      settingsClient.auth.setSession(session)
+        .then(() => {
+          if (mounted) {
+            console.log('[Settings] Isolated client synchronized');
+            setIsClientReady(true);
+          }
+        })
+        .catch(err => {
+          console.warn('[Settings] Failed to sync session to isolated client:', err);
+          if (mounted) setIsClientReady(true); // Proceed anyway to avoid permanent hang
+        });
+    } else {
+      setIsClientReady(true);
+    }
+
+    return () => { mounted = false; };
+  }, [session, settingsClient]);
+
   const loadSettings = useCallback(async () => {
     if (!user?.id) {
       console.log('[Settings] No user ID, skipping settings load');
@@ -105,20 +133,12 @@ export default function Settings() {
     setLoading(true);
 
     try {
-      // Step 1: Load from local cache FIRST for instant UI
-      console.log('[Settings] Checking local cache...');
-      const localSettings = await getSettings(user.id, organizationId);
-      if (localSettings && (localSettings.name || localSettings.primaryColor)) {
-        console.log('[Settings] ✓ Found settings in local cache');
-        setSettings(prev => ({ ...prev, ...localSettings }));
-      }
-
-      // Step 2: Authoritative load from db-service (which uses pool)
-      console.log('[Settings] Fetching from db-service...');
-      const loadedSettings = await getSettings(user.id, organizationId);
+      // Step 1: Load from authoritative source (isolated client)
+      console.log('[Settings] Fetching from db-service (isolated)...');
+      const loadedSettings = await getSettings(user.id, organizationId, settingsClient);
       if (loadedSettings) {
         setSettings(prev => ({ ...prev, ...loadedSettings }));
-        console.log('[Settings] ✓ Settings state updated with db-service data');
+        console.log('[Settings] ✓ Settings state updated with isolated client data');
       }
 
       console.log('[Settings] ========== SETTINGS LOAD COMPLETE ==========');
@@ -159,8 +179,9 @@ export default function Settings() {
         termsLength: updatedSettings.terms?.length || 0
       });
 
-      // Save settings with sync queue
-      await saveSettings(user.id, organizationId, updatedSettings, queueChange as any);
+      // Save settings with sync queue and isolated client
+      console.log('[Settings] Saving with isolated client...');
+      await saveSettings(user.id, organizationId, updatedSettings, queueChange as any, settingsClient);
 
       // Update local state
       setSettings(updatedSettings);
@@ -412,7 +433,7 @@ export default function Settings() {
 
           <AccountSection />
 
-          <TeamManagement />
+          <TeamManagement supabaseClient={settingsClient} />
         </TabsContent>
 
         {/* PROPOSALS TAB */}
@@ -460,7 +481,7 @@ export default function Settings() {
 
         {/* INTEGRATIONS TAB */}
         <TabsContent value="integrations" className="space-y-6">
-          <IntegrationsSection />
+          <IntegrationsSection supabaseClient={settingsClient} isClientReady={isClientReady} />
         </TabsContent>
 
         {/* SYSTEM TAB */}

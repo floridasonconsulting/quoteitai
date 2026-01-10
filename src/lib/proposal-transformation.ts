@@ -45,12 +45,12 @@ export function transformQuoteToProposal(
   });
 
   // CRITICAL: Log item data to debug image issues
-  console.log('[Transformation] Quote items (RAW):', quote.items.map(item => ({
+  console.log('[Transformation] Quote items (RAW):', (quote.items || []).map(item => ({
     name: item.name,
     category: item.category,
     imageUrl: item.imageUrl,
     imageUrlType: typeof item.imageUrl,
-    imageUrlValid: item.imageUrl && item.imageUrl.startsWith('http'),
+    imageUrlValid: item.imageUrl && typeof item.imageUrl === 'string' && item.imageUrl.startsWith('http'),
     enhancedDescription: item.enhancedDescription
   })));
 
@@ -71,10 +71,10 @@ export function transformQuoteToProposal(
   const showImages = activeSettings.showProposalImages !== false;
 
   // Extract unique categories for smart image selection
-  const uniqueCategories = Array.from(new Set(quote.items.map(item => normalizeCategory(item.category))));
+  const uniqueCategories = Array.from(new Set((quote.items || []).map(item => normalizeCategory(item.category))));
 
   // Extract item names for even smarter image selection
-  const itemNames = quote.items.map(item => item.name);
+  const itemNames = (quote.items || []).map(item => item.name);
 
   // Smart cover image selection (now uses quote title + categories + item names)
   // ONLY if images are enabled in settings
@@ -107,7 +107,12 @@ export function transformQuoteToProposal(
       financingLink: activeSettings.financingLink,
     },
     client: {
-      name: (quote as any).contactName || quote.customerName,
+      name: (() => {
+        const contactName = (quote as any).contactName;
+        const customerName = quote.customerName;
+        console.log('[Transformation] 👤 Client name resolution:', { contactName, customerName, final: contactName || customerName });
+        return contactName || customerName;
+      })(),
       email: '',
       company: (quote as any).contactName ? quote.customerName : '',
     },
@@ -150,7 +155,7 @@ export function transformQuoteToProposal(
 
   const groupedItems = new Map<string, ProposalItem[]>();
 
-  quote.items.forEach((item, index) => {
+  (quote.items || []).forEach((item, index) => {
     const originalCategory = item.category;
     const normalizedCat = normalizeCategory(item.category, item.name); // Pass item name for inference
     const currentGroup = groupedItems.get(normalizedCat) || [];
@@ -303,7 +308,7 @@ export function transformQuoteToProposal(
     id: 'financials',
     type: 'lineItems',
     title: 'Investment Summary',
-    items: quote.items.map(i => {
+    items: (quote.items || []).map(i => {
       const desc = i.enhancedDescription || i.description || '';
       return {
         ...i,
@@ -361,9 +366,9 @@ Liability: We maintain full insurance coverage for all work performed.`;
   console.log('[Transformation] ✅ COMPLETE - Image Resolution Summary:', {
     totalSections: sections.length,
     categoryCount: sortedCategories.length,
-    totalItems: quote.items.length,
-    itemsWithDatabaseImages: quote.items.filter(i => i.imageUrl && i.imageUrl.startsWith('http')).length,
-    itemsUsingFallbacks: quote.items.filter(i => !i.imageUrl || !i.imageUrl.startsWith('http')).length,
+    totalItems: (quote.items || []).length,
+    itemsWithDatabaseImages: (quote.items || []).filter(i => i.imageUrl && typeof i.imageUrl === 'string' && i.imageUrl.startsWith('http')).length,
+    itemsUsingFallbacks: (quote.items || []).filter(i => !i.imageUrl || typeof i.imageUrl !== 'string' || !i.imageUrl.startsWith('http')).length,
   });
 
   return proposalData;

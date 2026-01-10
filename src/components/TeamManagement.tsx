@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as singletonSupabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +20,8 @@ interface TeamMember {
     joined_at: string;
 }
 
-export function TeamManagement() {
+export function TeamManagement({ supabaseClient }: { supabaseClient?: SupabaseClient }) {
+    const supabase = supabaseClient || singletonSupabase;
     const { user, organizationId, userRole } = useAuth();
     const [members, setMembers] = useState<TeamMember[]>([]);
     const [inviteEmail, setInviteEmail] = useState('');

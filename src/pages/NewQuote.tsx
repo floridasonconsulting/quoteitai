@@ -27,6 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SOWGeneratorAI } from '@/components/SOWGeneratorAI';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { sortCategoriesByOrder, normalizeCategory } from '@/lib/proposal-categories';
 import { FollowUpSettings } from '@/components/quote-form/FollowUpSettings';
 import { FollowUpSchedule } from '@/types';
 import { getFollowUpSchedule, saveFollowUpSchedule } from '@/lib/services/follow-up-service';
@@ -275,6 +276,37 @@ export default function NewQuote() {
 
   const removeItem = (itemId: string) => {
     setQuoteItems(quoteItems.filter(item => item.itemId !== itemId));
+  };
+
+  const reorderItem = (itemId: string, direction: 'up' | 'down') => {
+    const targetIndex = quoteItems.findIndex(i => i.itemId === itemId);
+    if (targetIndex === -1) return;
+
+    const targetItem = quoteItems[targetIndex];
+    const category = normalizeCategory(targetItem.category, targetItem.name);
+
+    let swapIndex = -1;
+    if (direction === 'up') {
+      for (let i = targetIndex - 1; i >= 0; i--) {
+        if (normalizeCategory(quoteItems[i].category, quoteItems[i].name) === category) {
+          swapIndex = i;
+          break;
+        }
+      }
+    } else {
+      for (let i = targetIndex + 1; i < quoteItems.length; i++) {
+        if (normalizeCategory(quoteItems[i].category, quoteItems[i].name) === category) {
+          swapIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (swapIndex !== -1) {
+      const newItems = [...quoteItems];
+      [newItems[targetIndex], newItems[swapIndex]] = [newItems[swapIndex], newItems[targetIndex]];
+      setQuoteItems(newItems);
+    }
   };
 
   const subtotal = calculateQuoteTotal(quoteItems);
@@ -736,6 +768,7 @@ export default function NewQuote() {
                 onRemoveItem={removeItem}
                 onAddItem={addItemToQuote}
                 onOpenCustomItemDialog={() => setIsItemDialogOpen(true)}
+                onReorderItem={reorderItem}
               />
             </TabsContent>
 

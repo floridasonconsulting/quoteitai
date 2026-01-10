@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable, { UserOptions } from "jspdf-autotable";
-import { Quote, Customer, CompanySettings } from "@/types";
-import { normalizeCategory } from "./proposal-categories";
+import { Quote, Customer, CompanySettings, QuoteItem } from "@/types";
+import { normalizeCategory, sortCategoriesByOrder } from "./proposal-categories";
 import { formatTermsContent } from "./json-terms-formatter";
 import { getTheme, ProposalTheme } from "./proposal-themes";
 
@@ -189,7 +189,8 @@ export function renderTermsAndNotes(
 
   // Company Terms
   if (settings.terms) {
-    if (yPos > 240) {
+    // Force a page break at the start of terms if we're not already at the top of a page
+    if (yPos > MARGIN) {
       pdf.addPage();
       yPos = MARGIN;
     }
@@ -206,8 +207,15 @@ export function renderTermsAndNotes(
     const termsText = formatTermsContent(settings.terms);
 
     const termsLines = pdf.splitTextToSize(termsText, 170);
-    pdf.text(termsLines, MARGIN, yPos);
-    yPos += termsLines.length * 4 + 8;
+    termsLines.forEach((line: string) => {
+      if (yPos > 275) { // Leave some room at bottom
+        pdf.addPage();
+        yPos = MARGIN;
+      }
+      pdf.text(line, MARGIN, yPos);
+      yPos += 4;
+    });
+    yPos += 8;
   }
 
   // Quote-Specific Notes with page break handling
@@ -486,10 +494,19 @@ export function generateDetailedPDF(
       formatCurrency(item.quantity * item.price, settings.currency),
     ]);
   } else {
-    const categories = Array.from(new Set(quote.items.map(i => normalizeCategory(i.category, i.name))));
-    tableHeaders = [["Category", "Items", "TotalValue"]];
+    // 2. Items Table with proper grouping and sorting
+    const itemsByCategory = quote.items.reduce((acc, item) => {
+      const cat = normalizeCategory(item.category, item.name);
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(item);
+      return acc;
+    }, {} as Record<string, QuoteItem[]>);
+
+    const categories = sortCategoriesByOrder(Object.keys(itemsByCategory));
+
+    tableHeaders = [["Category", "Items", "Total"]];
     tableData = categories.map(cat => {
-      const catItems = quote.items.filter(i => normalizeCategory(i.category, i.name) === cat);
+      const catItems = itemsByCategory[cat];
       const catTotal = catItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
       return [
         cat,

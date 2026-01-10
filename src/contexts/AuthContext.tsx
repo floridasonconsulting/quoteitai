@@ -56,11 +56,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const roleCheckInProgress = useRef(false);
 
   const isAdmin = userRole === 'admin';
-  const isProTier = userRole === 'pro' || userRole === 'business' || userRole === 'enterprise' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
-  const isBusinessTier = userRole === 'business' || userRole === 'enterprise' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
-  const isEnterpriseTier = userRole === 'enterprise' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
-  const isMaxAITier = userRole === 'max_ai' || userRole === 'max' || userRole === 'admin';
   const isDevAccount = user?.email === 'hello@sellegance.com' || isAdmin;
+  const isProTier = userRole === 'pro' || userRole === 'business' || userRole === 'enterprise' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin' || subscription?.subscribed === true || isDevAccount;
+  const isBusinessTier = userRole === 'business' || userRole === 'enterprise' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin' || (subscription?.subscribed === true && subscription?.product_id?.includes('business')) || isDevAccount;
+  const isEnterpriseTier = userRole === 'enterprise' || userRole === 'max_ai' || userRole === 'max' || userRole === 'admin' || (subscription?.subscribed === true && subscription?.product_id?.includes('enterprise')) || isDevAccount;
+  const isMaxAITier = userRole === 'max_ai' || userRole === 'max' || userRole === 'admin' || (subscription?.subscribed === true && (subscription?.product_id?.includes('max') || subscription?.product_id?.includes('ai'))) || isDevAccount;
 
   const checkUserRole = async (sessionToUse?: Session | null) => {
     if (roleCheckInProgress.current) {
@@ -81,15 +81,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // 1. Fetch user role and organization from the profiles table
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role, organization_id')
-        .eq('id', activeSession.user.id)
-        .maybeSingle();
+      const { data: profile, error: profileError } = await executeWithPool(
+        (signal) => (supabase
+          .from('profiles')
+          .select('role, organization_id')
+          .eq('id', activeSession.user.id)
+          .maybeSingle() as any).abortSignal(signal),
+        10000,
+        'check-user-role'
+      ) as any;
 
       if (profileError) {
+        // 🚀 HARDENING: If we fail to fetch profile (e.g. connection drop), don't immediately revert to 'free'
+        // if we already had a role or if we have a valid Stripe subscription.
         console.error('[AuthContext] Error fetching profile:', profileError);
-        setUserRole('free');
+        if (!userRole && !subscription?.subscribed) {
+          setUserRole('free');
+        }
         return;
       }
 
@@ -100,14 +108,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         // Fallback for new users without profiles yet (trigger should create it, but just in case)
         console.log('[AuthContext] No profile found, using legacy role check or default');
-        const { data: legacyRole } = await supabase.rpc('get_user_role', {
-          _user_id: activeSession.user.id,
-        });
+        const { data: legacyRole } = await executeWithPool(
+          (signal) => (supabase.rpc('get_user_role', {
+            _user_id: activeSession.user.id,
+          }) as any).abortSignal(signal),
+          5000,
+          'get-legacy-role'
+        ) as any;
         setUserRole((legacyRole as UserRole) || 'free');
       }
     } catch (error) {
       console.error('[AuthContext] Error checking user role:', error);
-      setUserRole('free');
+      // 🚀 HARDENING: If we have a timeout or network error, don't revert to 'free' if we already have a role.
+      // This prevents "locking out" users from Pro features during transient issues.
+      if (!userRole && !subscription?.subscribed) {
+        setUserRole('free');
+      }
     } finally {
       roleCheckInProgress.current = false;
     }
@@ -162,7 +178,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Try to check subscription via Edge Function, but don't fail if it doesn't exist
+      // 🚀 CROSS-TAB CACHE: Check if another tab recently verified subscription
+      const cacheKey = `sb_subscription_${userId}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const { data, timestamp } = JSON.parse(cached);
+          // Cache valid for 5 minutes
+          if (Date.now() - timestamp < 300000) {
+            console.log('[AuthContext] ♻️ Using cross-tab subscription cache');
+            setSubscription(data);
+            return;
+          }
+        } catch (e) {
+          localStorage.removeItem(cacheKey);
+        }
+      }
+
       try {
         const { data, error } = await executeWithPool(
           (signal) => supabase.functions.invoke('check-subscription', { signal }),
@@ -173,24 +205,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) {
           // Log as warning only - this is non-critical for core app function
           console.warn('[AuthContext] Subscription check unavailable (Edge Function error):', error);
-          // Do not throw, just continue with null subscription (features might be limited but app works)
+          if (error.context) {
+            try {
+              // Try to get response body if available
+              const body = await error.context.text();
+              try {
+                const parsedBody = JSON.parse(body);
+                console.warn('[AuthContext] Function error details:', parsedBody);
+              } catch {
+                console.warn('[AuthContext] Function error response body:', body);
+              }
+            } catch (e) {
+              console.warn('[AuthContext] Could not read error response body');
+            }
+          }
         } else {
           setSubscription(data);
+          // Update cross-tab cache
+          localStorage.setItem(`sb_subscription_${userId}`, JSON.stringify({
+            data,
+            timestamp: Date.now()
+          }));
         }
       } catch (invokeError) {
         console.warn('[AuthContext] Exception calling check-subscription:', invokeError);
+        // Retain previous state if it was "pro" to avoid UI jitter
+        if (subscription?.subscribed) {
+          console.log('[AuthContext] Retaining previous subscription state after exception');
+        }
       }
 
       // Also fetch trial metadata directly from organizations table
-      const { data: orgData } = await supabase
-        .from('organizations' as any)
-        .select('subscription_status, trial_end_date, trial_ai_usage')
-        .eq('owner_id', userId)
-        .maybeSingle();
+      const { data: orgData } = await executeWithPool(
+        (signal) => (supabase
+          .from('organizations' as any)
+          .select('subscription_status, trial_end_date, trial_ai_usage')
+          .eq('owner_id', userId)
+          .maybeSingle() as any as Promise<any>),
+        5000,
+        'fetch-org-metadata'
+      ) as any;
 
       if (orgData) {
         setSubscription(prev => ({
-          ...prev!,
+          ...(prev || { subscribed: false, product_id: null, subscription_end: null }),
           trialStatus: (orgData as any).subscription_status,
           trialEnd: (orgData as any).trial_end_date,
           trialAIUsage: (orgData as any).trial_ai_usage
@@ -210,120 +268,172 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     isInitializing.current = true;
 
-    const initializeAuth = async () => {
+    const initializeAuth = async (signal: AbortSignal) => {
       try {
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        // 🚀 HARDENING: Wrap getSession in a short timeout race.
+        // If the library is deadlocked, we don't want to block the entire app initialization forever.
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) =>
+          setTimeout(() => resolve({ data: { session: null } }), 3000)
+        );
+
+        const { data: { session: existingSession } } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any;
+
+        if (signal.aborted) return;
 
         const timeoutDuration = existingSession ? 300 : 800;
 
         const maxLoadingTimeout: NodeJS.Timeout = setTimeout(() => {
-          console.warn('[AUTH DEBUG] Auth timeout reached - forcing loading to false');
-          setLoading(false);
-          isInitializing.current = false;
+          if (!signal.aborted) {
+            console.warn('[AUTH DEBUG] Auth timeout reached - forcing loading to false');
+            setLoading(false);
+            isInitializing.current = false;
+          }
         }, timeoutDuration);
 
-        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
-          async (event, currentSession) => {
-            clearTimeout(maxLoadingTimeout);
-            console.log('[AUTH DEBUG] Auth state change:', event, 'Session:', !!currentSession);
-
-            if (currentSession?.refresh_token) {
-              try {
-                if (currentSession.refresh_token.length < 10) {
-                  console.error('[AUTH DEBUG] Invalid refresh token detected');
-                  throw new Error('Invalid refresh token');
-                }
-              } catch (validationError) {
-                console.error('[AUTH DEBUG] Session validation failed:', validationError);
-                storageCache.clear();
-                toast.error('Your session expired. Please sign in again.');
-                setSession(null);
-                setUser(null);
-                setSubscription(null);
-                setUserRole(null);
-                setLoading(false);
-                return;
-              }
-            }
-
-            if (event === 'TOKEN_REFRESHED' && !currentSession) {
-              console.error('[AUTH DEBUG] Token refresh failed - clearing corrupted data');
-              try {
-                storageCache.clear();
-                if (navigator.serviceWorker.controller) {
-                  navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_AUTH_CACHE' });
-                }
-              } catch (e) {
-                console.error('[AUTH DEBUG] Error clearing storage:', e);
-              }
-              toast.error('Your session expired. Please sign in again.');
-              setSession(null);
-              setUser(null);
-              setSubscription(null);
-              setUserRole(null);
-              setLoading(false);
-              return;
-            }
-
-            if (event === 'SIGNED_OUT') {
-              console.log('[AUTH DEBUG] Signed out event');
-              try {
-                storageCache.clear();
-              } catch (e) {
-                console.error('[AUTH DEBUG] Error clearing storage on signout:', e);
-              }
-              setSession(null);
-              setUser(null);
-              setSubscription(null);
-              setUserRole(null);
-              setLoading(false);
-              return;
-            }
-
-            if (!currentSession) {
-              console.log('[AUTH DEBUG] No session');
-              setSession(null);
-              setUser(null);
-              setSubscription(null);
-              setUserRole(null);
-              setLoading(false);
-              return;
-            }
-
-            setSession(currentSession);
-            setUser(currentSession.user);
-
-            // Keep loading true until role check completes
-            try {
-              await checkUserRole(currentSession);
-            } catch (error) {
-              console.error('[AUTH DEBUG] Role check failed:', error);
-            } finally {
-              console.log('[AUTH DEBUG] Setting loading to false after role check');
-              setLoading(false);
-            }
-
-            // Load subscription and migrate data in background (non-blocking)
-            setTimeout(() => {
-              loadSubscription(currentSession.user.id).catch(console.error);
-              checkAndMigrateData(currentSession.user.id).catch(console.error);
-            }, 100);
-          }
-        );
-
-        return () => {
-          clearTimeout(maxLoadingTimeout);
-          authSubscription.unsubscribe();
-          isInitializing.current = false;
-        };
+        return maxLoadingTimeout;
       } catch (error) {
-        console.error('[AUTH DEBUG] Auth initialization error:', error);
-        setLoading(false);
-        isInitializing.current = false;
+        console.error('[AUTH DEBUG] Auth initializing error:', error);
+        if (!signal.aborted) {
+          setLoading(false);
+          isInitializing.current = false;
+        }
       }
     };
 
-    initializeAuth();
+    const abortController = new AbortController();
+    let maxLoadingTimeout: NodeJS.Timeout | undefined;
+
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        if (maxLoadingTimeout) clearTimeout(maxLoadingTimeout);
+        console.log('[AUTH DEBUG] Auth state change:', event, 'Session:', !!currentSession);
+
+        if (event === 'INITIAL_SESSION') {
+          isInitializing.current = false;
+        }
+
+        if (currentSession?.refresh_token) {
+          try {
+            if (currentSession.refresh_token.length < 10) {
+              console.error('[AUTH DEBUG] Invalid refresh token detected');
+              throw new Error('Invalid refresh token');
+            }
+          } catch (validationError) {
+            console.error('[AUTH DEBUG] Session validation failed:', validationError);
+            storageCache.clear();
+            toast.error('Your session expired. Please sign in again.');
+            setSession(null);
+            setUser(null);
+            setSubscription(null);
+            setUserRole(null);
+            setLoading(false);
+            isInitializing.current = false;
+            return;
+          }
+        }
+
+        if (event === 'TOKEN_REFRESHED' && !currentSession) {
+          console.error('[AUTH DEBUG] Token refresh failed - clearing corrupted data');
+          storageCache.clear();
+          toast.error('Your session expired. Please sign in again.');
+          setSession(null);
+          setUser(null);
+          setSubscription(null);
+          setUserRole(null);
+          setLoading(false);
+          isInitializing.current = false;
+          return;
+        }
+
+        if (event === 'SIGNED_OUT') {
+          console.log('[AUTH DEBUG] Signed out event');
+          storageCache.clear();
+          setSession(null);
+          setUser(null);
+          setSubscription(null);
+          setUserRole(null);
+          setLoading(false);
+          isInitializing.current = false;
+          return;
+        }
+
+        if (!currentSession) {
+          console.log('[AUTH DEBUG] No session');
+          setSession(null);
+          setUser(null);
+          setSubscription(null);
+          setUserRole(null);
+          setLoading(false);
+          isInitializing.current = false;
+          return;
+        }
+
+        setSession(currentSession);
+        setUser(currentSession.user);
+
+        // 🚀 INSTANT HYDRATION: Restore subscription from cache IMMEDIATELY
+        // This prevents "Upgrade to Pro" flash while waiting for network calls
+        if (currentSession.user?.id) {
+          const cacheKey = `sb_subscription_${currentSession.user.id}`;
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            try {
+              const { data, timestamp } = JSON.parse(cached);
+              // Cache valid for 30 minutes (extended for stability)
+              if (Date.now() - timestamp < 30 * 60 * 1000) {
+                console.log('[AuthContext] ⚡ Instant subscription hydration from cache');
+                setSubscription(data);
+              }
+            } catch (e) { console.warn('Cache parse error', e); }
+          }
+        }
+
+        // Keep loading true until role check completes
+        try {
+          await checkUserRole(currentSession);
+        } catch (error) {
+          console.error('[AUTH DEBUG] Role check failed:', error);
+        } finally {
+          console.log('[AUTH DEBUG] Setting loading to false after role check');
+          setLoading(false);
+          isInitializing.current = false;
+        }
+
+        // Load subscription and migrate data in background
+        setTimeout(() => {
+          if (currentSession?.user?.id) {
+            loadSubscription(currentSession.user.id).catch(console.error);
+            checkAndMigrateData(currentSession.user.id).catch(console.error);
+          }
+        }, 100);
+      }
+    );
+
+    // Safety timeout to prevent permanent hang during initialization
+    const initSafetyTimeout = setTimeout(() => {
+      if (isInitializing.current) {
+        console.warn('[AUTH DEBUG] Hub initialization timed out - clearing isInitializing');
+        isInitializing.current = false;
+        setLoading(false);
+      }
+    }, 10000);
+
+    initializeAuth(abortController.signal).then(timeout => {
+      maxLoadingTimeout = timeout;
+    });
+
+    return () => {
+      console.log('[AuthContext] Effect cleanup - cleaning up listeners');
+      abortController.abort();
+      if (maxLoadingTimeout) clearTimeout(maxLoadingTimeout);
+      clearTimeout(initSafetyTimeout);
+      authSubscription.unsubscribe();
+      isInitializing.current = false;
+    };
   }, []);
 
   const refreshSubscription = async () => {

@@ -6,9 +6,9 @@ export const visualsService = {
   /**
    * Get visuals for a specific quote
    */
-  async getVisuals(quoteId: string): Promise<ProposalVisuals | null> {
+  async getVisuals(quoteId: string, client = supabase): Promise<ProposalVisuals | null> {
     return dedupedRequest(`visuals-${quoteId}`, async (signal) => {
-      const { data, error } = await (supabase
+      const { data, error } = await (client
         .from('proposal_visuals' as any)
         .select('*')
         .eq('quote_id', quoteId)
@@ -55,8 +55,8 @@ export const visualsService = {
   /**
    * Helper to get current user ID
    */
-  async getUserId(): Promise<string> {
-    const { data: { user } } = await supabase.auth.getUser();
+  async getUserId(client = supabase): Promise<string> {
+    const { data: { user } } = await client.auth.getUser();
     if (!user) throw new Error("User not authenticated");
     return user.id;
   },
@@ -64,9 +64,9 @@ export const visualsService = {
   /**
    * Save or update visuals for a quote
    */
-  async saveVisuals(quoteId: string, visuals: ProposalVisuals): Promise<void> {
+  async saveVisuals(quoteId: string, visuals: ProposalVisuals, client = supabase): Promise<void> {
     return executeWithPool(async (signal) => {
-      const userId = await this.getUserId();
+      const userId = await this.getUserId(client);
       const dbData: any = {
         user_id: userId,
         quote_id: quoteId,

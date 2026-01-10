@@ -52,19 +52,17 @@ export default function PublicQuoteView() {
   // Track unmount to prevent state updates on aborted requests
   const isUnmounted = useRef(false);
 
-  // 🚀 LIBRARY ISOLATION:  // Create a dedicated, isolated Supabase client for this view.
-  // We use decodedShareToken as a dependency to ensure each DIFFERENT quote gets a fresh client instance.
-  // This prevents library-level state poisoning or deadlocks from previous attempts.
-  const quoteClient = useMemo(() => {
-    console.log('[PublicQuoteView] Creating fresh isolated client instance for token:', shareToken);
-    return createFreshSupabaseClient();
-  }, [decodedShareToken]);
+  // 🚀 PERFORMANCE OPTIMIZATION: Use the global shared Supabase client.
+  // We previously created fresh instances to bypass potential deadlocks, 
+  // but this caused 15s load times due to session state fighting in the browser.
+  const quoteClient = supabase;
 
   useEffect(() => {
     isUnmounted.current = false;
     return () => {
       isUnmounted.current = true;
-      console.log('[PublicQuoteView] Unmounting, stopping state updates');
+      console.log('[PublicQuoteView] Unmounting, stopping state updates and clearing requests');
+      clearInFlightRequests();
     };
   }, []);
 
@@ -350,59 +348,6 @@ export default function PublicQuoteView() {
     setLoading(true);
 
     try {
-      // Step -1: Naked Fetch Ping (Bypassing Supabase Library)
-      console.log('[PublicQuoteView] 📡 Step -1: Sending NAKED FETCH ping (Bypassing Library)...');
-      let nakedSuccess = false;
-      const nakedFetchStart = Date.now();
-      try {
-        const sbUrl = (supabase as any).supabaseUrl;
-        const sbKey = (supabase as any).supabaseKey;
-        const pingUrl = `${sbUrl}/rest/v1/quotes?select=id&limit=1`;
-
-        const response = await fetch(pingUrl, {
-          method: 'GET',
-          headers: {
-            'apikey': sbKey,
-            'Authorization': `Bearer ${sbKey}`,
-            'Range-Unit': 'items',
-            'Range': '0-0'
-          }
-        });
-
-        if (response.ok) {
-          nakedSuccess = true;
-        }
-        console.log(`[PublicQuoteView] ✓ NAKED FETCH ping result: ${response.status} (${Date.now() - nakedFetchStart}ms)`);
-        if (!response.ok) {
-          const body = await response.text();
-          console.warn('[PublicQuoteView] Native fetch returned error status:', response.status, body);
-        }
-      } catch (fetchErr) {
-        console.warn('[PublicQuoteView] ❌ NAKED FETCH failed:', fetchErr);
-      }
-
-      // Step 0: Diagnostic Ping (Verify library is responsive) -- ONLY IF NAKED FAILED
-      if (!nakedSuccess) {
-        console.log('[PublicQuoteView] 📡 Step 0: Sending LIBRARY ping (Naked fetch failed)...');
-        try {
-          const libPingStart = Date.now();
-          await executeWithPool(async (signal) => {
-            return await (quoteClient.from('quotes').select('*', { count: 'estimated', head: true }).limit(1).abortSignal(signal) as any);
-          },
-            3000, // Reduced from 10s to 3s
-            'ping-supabase'
-          );
-          console.log(`[PublicQuoteView] ✓ LIBRARY ping successful (${Date.now() - libPingStart}ms)`);
-        } catch (pingErr) {
-          console.warn('[PublicQuoteView] ⚠️ LIBRARY ping failed:', pingErr);
-        }
-      } else {
-        console.log('[PublicQuoteView] ⏭️ Skipping LIBRARY ping (Naked fetch succeeded).');
-      }
-
-      // Step 1: Lightweight Metadata Fetch (Excludes 'items' JSONB)
-      // This isolates if the hang is caused by RLS / indexing OR by the payload size
-      // --- STEP 1: FETCH QUOTE METADATA ---
       // --- STEP 1: FETCH QUOTE METADATA ---
       console.log('[PublicQuoteView] 📡 Step 1: Fetching Quote Metadata (Excluding Items)...');
       let quoteMetadata: any = null;
@@ -447,6 +392,7 @@ export default function PublicQuoteView() {
         enhancedDescription: item.enhanced_description || item.enhancedDescription
       })) : [];
 
+      const SOFT_TIMEOUT = 2000; // ⚡ Optimize to 2s for snappy first load
       const quoteData = {
         ...(quoteMetadata as any),
         items: normalizedInitialItems
@@ -482,14 +428,32 @@ export default function PublicQuoteView() {
             () => fetchDataNaked('customers', `id=eq.${quoteData.customer_id}&select=contact_first_name,contact_last_name`, true)
           );
 
-          if (customerData && !isUnmounted.current) {
-            console.log('[PublicQuoteView] ✅ Customer data received');
+          console.log('[PublicQuoteView] 🔍 RAW customerData:', customerData, 'isArray:', Array.isArray(customerData));
+
+          // ✅ Handle both array (naked fetch) and object (library) responses
+          const customer = Array.isArray(customerData) ? customerData[0] : customerData;
+
+          console.log('[PublicQuoteView] 🔍 EXTRACTED customer:', customer, 'isUnmounted:', isUnmounted.current);
+
+          if (customer && !isUnmounted.current) {
+            console.log('[PublicQuoteView] ✅ Customer data received:', customer);
             setQuote(prev => {
               if (!prev) return null;
               // Extract contact name
-              const c = customerData as any;
+              const c = customer as any;
               const contactName = `${c.contact_first_name || ''} ${c.contact_last_name || ''}`.trim();
-              return { ...prev, customers: customerData, contactName: contactName || prev.contactName };
+              console.log('[PublicQuoteView] 📝 Setting contactName on quote:', contactName);
+              return { ...prev, customers: customer, contactName: contactName || prev.contactName };
+            });
+          } else {
+            console.warn('[PublicQuoteView] ⚠️ Skipping customer data - using fallback customerName from quote:', { hasCustomer: !!customer, isUnmounted: isUnmounted.current });
+            // ✅ FALLBACK: Use customerName from quote if customer fetch fails
+            setQuote(prev => {
+              if (!prev) return null;
+              // Try multiple possible customer name fields on the quote
+              const fallbackName = (prev as any).customer_name || prev.customerName || 'Valued Customer';
+              console.log('[PublicQuoteView] 📝 Using fallback contactName:', fallbackName, 'Available fields:', Object.keys(prev));
+              return { ...prev, contactName: fallbackName };
             });
           }
         } catch (err) {
@@ -561,14 +525,8 @@ export default function PublicQuoteView() {
         console.log('  - Query URL will be:', `items?user_id=eq.${quoteData.user_id}`);
 
         try {
-          const { data: itemsData } = await executeWithBypass(
-            `items-${quoteData.user_id}`,
-            (signal) => (quoteClient
-              .from('items')
-              .select('name, image_url, enhanced_description, category')
-              .eq('user_id', quoteData.user_id) as any).abortSignal(signal),
-            () => fetchDataNaked('items', `user_id=eq.${quoteData.user_id}&select=name,image_url,enhanced_description,category`, false)
-          );
+          // ✅ Use cache for faster consecutive loads (enrichment data doesn't change frequently)
+          const itemsData = await getItems(quoteData.user_id, null, { forceRefresh: false });
 
           console.log('[PublicQuoteView] 🔍 Enrichment result - itemsData type:', typeof itemsData, 'isArray:', Array.isArray(itemsData), 'value:', itemsData);
 
@@ -582,11 +540,11 @@ export default function PublicQuoteView() {
           if (itemsData.length > 0) {
             console.log('[PublicQuoteView] 📦 Enrichment Data Dump:', itemsData.length, 'items found from DB');
             itemsData.forEach((item: any) => {
-              console.log('[PublicQuoteView] 🔍 Enrichment Item:', item.name, '-> image_url:', item.image_url);
+              console.log('[PublicQuoteView] 🔍 Enrichment Item:', item.name, '-> imageUrl (camelCase):', item.imageUrl, '| image_url (snake):', (item as any).image_url, '| ALL KEYS:', Object.keys(item));
               if (item.name) {
                 itemsLookup.set(item.name.trim().toLowerCase(), {
-                  imageUrl: item.image_url,
-                  enhancedDescription: item.enhanced_description,
+                  imageUrl: item.imageUrl, // ✅ FIX: Use camelCase field name
+                  enhancedDescription: item.enhancedDescription, // ✅ FIX: Use camelCase field name
                   originalName: item.name
                 });
               }
@@ -852,7 +810,7 @@ export default function PublicQuoteView() {
         onComment={handleComment}
         isReadOnly={isOwner}
         visuals={visuals || undefined}
-        proposal={proposal || undefined}
+        proposal={undefined}
       />
 
       {/* Hidden Payment Dialog */}

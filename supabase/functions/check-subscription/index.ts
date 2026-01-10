@@ -21,8 +21,16 @@ serve(async (req) => {
     logStep("Function started");
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+    logStep("Environment check", {
+      hasStripeKey: !!stripeKey,
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseAnonKey
+    });
+
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-    logStep("Stripe key verified");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header provided");
@@ -42,13 +50,20 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
     if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
-
     const stripe = new Stripe(stripeKey, { apiVersion: "2024-06-20" });
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+
+    if (!user.email) {
+      logStep("CRITICAL: User has no email in auth metadata");
+      throw new Error("User metadata is missing required email address. Please contact support.");
+    }
+
+    const normalizedEmail = user.email.toLowerCase();
+    logStep("Searching for Stripe customer", { email: normalizedEmail });
+    const customers = await stripe.customers.list({ email: normalizedEmail, limit: 1 });
+    logStep("Stripe search result", { count: customers.data.length });
 
     if (customers.data.length === 0) {
-      logStep("No customer found, updating unsubscribed state");
+      logStep("No customer found in Stripe, returning unsubscribed state");
       return new Response(JSON.stringify({ subscribed: false, product_id: null, subscription_end: null }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -58,6 +73,7 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Found Stripe customer", { customerId });
 
+    logStep("Fetching active subscriptions for customer");
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
       status: "active",
@@ -71,10 +87,15 @@ serve(async (req) => {
       const subscription = subscriptions.data[0];
       subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
       logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
-      productId = subscription.items.data[0].price.product as string;
-      logStep("Determined subscription tier", { productId });
+
+      if (subscription.items.data.length > 0) {
+        productId = subscription.items.data[0].price.product as string;
+        logStep("Determined subscription tier", { productId });
+      } else {
+        logStep("Subscription found but has no items/products");
+      }
     } else {
-      logStep("No active subscription found");
+      logStep("No active subscription found for this customer");
     }
 
     return new Response(JSON.stringify({
@@ -87,26 +108,25 @@ serve(async (req) => {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR in check-subscription", { message: errorMessage });
+    logStep("CRITICAL ERROR in check-subscription", { message: errorMessage, stack: error instanceof Error ? error.stack : undefined });
 
     // Detect session invalidation and return special error code
-    if (errorMessage.includes("session missing") || errorMessage.includes("session not found")) {
+    if (errorMessage.includes("session missing") || errorMessage.includes("session not found") || errorMessage.includes("JWT expired")) {
       return new Response(JSON.stringify({
-        error: "Session expired. Please sign in again.",
-        code: "SESSION_EXPIRED"
+        error: "Session expired or invalid. Please sign in again.",
+        code: "SESSION_EXPIRED",
+        details: errorMessage
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 401, // Unauthorized instead of 500
+        status: 401,
       });
     }
 
-    // Return sanitized error to client
-    const isDevelopment = Deno.env.get('ENVIRONMENT') === 'development';
-    const clientError = isDevelopment
-      ? errorMessage
-      : 'Unable to check subscription status. Please try again.';
-
-    return new Response(JSON.stringify({ error: clientError }), {
+    // Return detailed error for debugging (will revert after fix)
+    return new Response(JSON.stringify({
+      error: 'Subscription check failed internally',
+      details: errorMessage
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

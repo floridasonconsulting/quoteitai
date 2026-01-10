@@ -46,8 +46,12 @@ interface SyncChange {
 }
 
 // Wrap getSettings to check IndexedDB first (async for proper data retrieval)
-export const getSettings = async (userId: string, organizationId: string | null = null): Promise<CompanySettings> => {
-  console.log('[db-service] getSettings called with userId:', userId);
+export const getSettings = async (
+  userId: string,
+  organizationId: string | null = null,
+  client = supabase
+): Promise<CompanySettings> => {
+  console.log('[db-service] getSettings called with userId:', userId, client === supabase ? '(Main Client)' : '(Isolated Client)');
 
   // 1. Try CacheManager first (now with stale-while-revalidate)
   const cached = await cacheManager.get<CompanySettings>('settings', userId);
@@ -82,7 +86,7 @@ export const getSettings = async (userId: string, organizationId: string | null 
     const { data: dbSettings, error } = await dedupedRequest(
       sessionKey,
       async (signal) => {
-        return await (supabase
+        return await (client
           .from('company_settings' as any)
           .select('*')
           .eq('user_id', userId)
@@ -144,12 +148,14 @@ export const getSettings = async (userId: string, organizationId: string | null 
   return localStorageSettings;
 };
 
-export async function saveSettings(
+export const saveSettings = async (
   userId: string,
   organizationId: string | null,
   settings: CompanySettings,
-  queueChange?: (change: SyncChange) => void
-): Promise<void> {
+  queueChange: (change: SyncChange) => void = () => { },
+  client = supabase
+): Promise<void> => {
+  console.log('[db-service] saveSettings called:', client === supabase ? '(Main Client)' : '(Isolated Client)');
   try {
     // Step 1: Store in storage/cache immediately for UI responsiveness
     const cacheKey = `settings-${userId}`;
@@ -229,7 +235,7 @@ export async function saveSettings(
 
       try {
         const { error } = await executeWithPool(async (signal) => {
-          return await (supabase
+          return await (client
             .from('company_settings' as any)
             .upsert(dbSettings, { onConflict: 'user_id' }) as any).abortSignal(signal);
         }, 30000, `save-settings-${userId}`);

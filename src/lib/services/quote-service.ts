@@ -42,8 +42,9 @@ export async function getQuotes(
   userId: string | undefined,
   organizationId: string | null = null,
   isAdminOrOwner: boolean = false,
-  options?: { forceRefresh?: boolean }
+  options?: { forceRefresh?: boolean; client?: any }
 ): Promise<Quote[]> {
+  const customClient = options?.client || supabase;
   if (isDemoModeActive()) {
     console.log('[quote-service] (Demo Mode) Returning mock quotes');
     return Promise.resolve(MOCK_QUOTES);
@@ -94,7 +95,7 @@ export async function getQuotes(
   return dedupedRequest(dedupKey, async () => {
     return cacheManager.coalesce(`quotes-${userId}`, async () => {
       try {
-        let query = supabase.from('quotes' as any).select('*, customers(contact_first_name, contact_last_name)');
+        let query = customClient.from('quotes' as any).select('*, customers(contact_first_name, contact_last_name)');
 
         if (organizationId) {
           // Fetch quotes belonging to the organization OR created by the user
@@ -131,7 +132,7 @@ export async function getQuotes(
         }) : [];
 
         // PROTECT LOCAL STATE: Merge with pending changes before updating IndexedDB/Cache
-        const protectedResult = syncStorage.applyPendingChanges(result, 'quotes');
+        const protectedResult = syncStorage.applyPendingChanges(result, 'quotes') as Quote[];
         const dedupedResult = deduplicateQuotes(protectedResult);
 
         console.log(`[QuoteService] Fetched ${result.length} from Supabase, protected to ${dedupedResult.length}`);
@@ -170,7 +171,7 @@ export async function getQuotes(
 /**
  * Fetch a single quote by its ID
  */
-export async function getQuote(userId: string, id: string): Promise<Quote | null> {
+export async function getQuote(userId: string, id: string, client = supabase): Promise<Quote | null> {
   const cacheKey = `quote-${id}`;
 
   // 1. Check memory cache
@@ -195,7 +196,7 @@ export async function getQuote(userId: string, id: string): Promise<Quote | null
   // 3. Fetch from Supabase
   try {
     const { data, error } = await dedupedRequest(cacheKey, async () => {
-      return await supabase
+      return await client
         .from("quotes")
         .select("*, customers(contact_first_name, contact_last_name)")
         .eq("user_id", userId)

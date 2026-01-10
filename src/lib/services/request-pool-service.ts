@@ -78,6 +78,9 @@ export async function executeWithPool<T>(
     // Log failures, but be less noisy for intentional abortions
     if (error instanceof Error && (error.message === 'Request timeout' || error.name === 'AbortError')) {
       console.warn(`[Pool] ⏱️ Request [${label}] ${error.message === 'Request timeout' ? 'timed out' : 'aborted'} after ${duration}ms. Slot released. Active: ${activeRequests - 1}`);
+      // Add more context if available
+      if (label.includes('save-settings')) console.warn('[Pool] ⚠️ This was a SETTINGS mutation failure.');
+      if (label.includes('quote-meta')) console.warn('[Pool] ⚠️ This was a QUOTE LOAD failure.');
     } else {
       console.error(`[Pool] ❌ Request [${label}] failed after ${duration}ms. Slot released. Active: ${activeRequests - 1}:`, error);
     }
@@ -109,11 +112,58 @@ declare global {
 // Expose for debugging in Diagnostics page
 if (typeof window !== 'undefined') {
   window.__inFlightRequests = inFlightRequests;
-  (window as any).__resetRequestPool = () => {
-    console.debug('[Pool] Manual reset triggered');
+  (window as any).__resetRequestPool = async () => {
+    console.log('[Pool] ⚠️ ☢️ NUCLEAR RESET TRIGGERED ☢️ ⚠️');
+
+    // 1. Reset active count
     activeRequests = 0;
+
+    // 2. Clear in-flight dedup map
     clearInFlightRequests();
-    return "Pool reset successfully";
+
+    // 3. Force unregister Service Workers
+    if ('serviceWorker' in navigator) {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          console.log('[Pool] Unregistering Service Worker:', registration.scope);
+          await registration.unregister();
+        }
+        console.log('[Pool] ✓ Service Workers removed');
+      } catch (swError) {
+        console.error('[Pool] SW Unregistration failed:', swError);
+      }
+    }
+
+    // 4. Clear caches
+    if ('caches' in window) {
+      try {
+        const cacheKeys = await caches.keys();
+        for (const key of cacheKeys) {
+          await caches.delete(key);
+        }
+        console.log('[Pool] ✓ Browser caches cleared');
+      } catch (cacheError) {
+        console.error('[Pool] Cache clear failed:', cacheError);
+      }
+    }
+
+    // ☢️ 5. Wipe Local & Session Storage (SUPABASE SESSION DATA)
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      console.log('[Pool] ✓ Local and Session storage WIPED CLEAN');
+    } catch (storageError) {
+      console.error('[Pool] Storage wipe failed:', storageError);
+    }
+
+    // ☢️ 6. Hard Reload to re-initialize all libraries
+    console.log('[Pool] 🚀 RESTARTING APPLICATION...');
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
+
+    return "Reset complete. Restarting application...";
   };
 
   // Auto-cleanup stale requests every 30 seconds to prevent pool exhaustion

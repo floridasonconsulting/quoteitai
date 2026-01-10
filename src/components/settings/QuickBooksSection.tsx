@@ -6,9 +6,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle, RefreshCw, ExternalLink, Unlink, Crown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as singletonSupabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "react-router-dom";
 import { UpgradePrompt } from "@/components/UpgradePrompt";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 interface QuickBooksConnection {
   realm_id: string | null;
@@ -17,7 +18,14 @@ interface QuickBooksConnection {
   token_expires_at: string | null;
 }
 
-export function QuickBooksSection() {
+export function QuickBooksSection({
+  supabaseClient,
+  isClientReady = true
+}: {
+  supabaseClient?: SupabaseClient;
+  isClientReady?: boolean;
+}) {
+  const supabase = supabaseClient || singletonSupabase;
   const { user, isProTier } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [connection, setConnection] = useState<QuickBooksConnection | null>(null);
@@ -47,10 +55,10 @@ export function QuickBooksSection() {
 
   // Load existing connection on mount
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && isClientReady) {
       loadConnection();
     }
-  }, [user?.id]);
+  }, [user?.id, isClientReady]);
 
   const loadConnection = async () => {
     if (!user?.id) return;

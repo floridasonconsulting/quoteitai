@@ -32,11 +32,12 @@ function ItemImage({ item, isOwner, onEdit }: { item: ProposalItem, isOwner?: bo
         />
       ) : (
         <div
-          className="w-full h-full rounded-lg shadow-sm flex items-center justify-center bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700"
+          className="w-full h-full rounded-lg shadow-sm flex items-center justify-center bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
           style={{
             background: item.imageUrl && (item.imageUrl.includes('gradient') || item.imageUrl.startsWith('#'))
               ? item.imageUrl
-              : `linear-gradient(135deg, ${stringToColor(item.name || '')}20 0%, ${stringToColor(item.name || '')}05 100%)`
+              : `linear-gradient(135deg, ${stringToColor(item.name || '')}20 0%, ${stringToColor(item.name || '')}05 100%)`,
+            backgroundSize: 'cover'
           }}
         >
           {(!item.imageUrl || (!item.imageUrl.includes('gradient') && !item.imageUrl.startsWith('#'))) && (
@@ -123,6 +124,16 @@ export function CategoryGroupSection({
     showPricing,
     itemsWithImages: categoryGroup.items.filter(i => i.imageUrl).length,
   });
+
+  // DEBUG: Log first item to see structure
+  if (categoryGroup.items.length > 0) {
+    console.log('[CategoryGroupSection] First item structure:', {
+      name: categoryGroup.items[0].name,
+      hasImageUrl: !!categoryGroup.items[0].imageUrl,
+      imageUrl: categoryGroup.items[0].imageUrl,
+      keys: Object.keys(categoryGroup.items[0])
+    });
+  }
 
   const touchStartY = useRef<number | null>(null);
 
@@ -213,12 +224,12 @@ export function CategoryGroupSection({
 
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto custom-scrollbar touch-pan-y"
+        className="flex-1 overflow-y-auto w-full custom-scrollbar touch-pan-y"
         onWheel={handleWheel}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
       >
-        <div className="max-w-5xl mx-auto p-4 md:p-8 pb-32 md:pb-16">
+        <div className="max-w-5xl mx-auto p-4 md:p-8 pb-12">
           {/* Items Grid - TIGHTER SPACING */}
           <div className="space-y-4 mb-6">
             {categoryGroup.items.map((item, idx) => (

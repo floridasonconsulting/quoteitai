@@ -5,10 +5,12 @@
 
 // Standard category display order (enforced in proposals)
 export const CATEGORY_DISPLAY_ORDER = [
+  'Permits & Engineering',
+  'Site Preparation',
+  'Demolition',
   'Pool Structure',
   'Interior Surface',
-  'Coping',
-  'Tile',
+  'Coping & Tile',
   'Decking',
   'Heating',
   'Cooling',
@@ -17,6 +19,7 @@ export const CATEGORY_DISPLAY_ORDER = [
   'Softscaping',
   'Equipment',
   'Accessories',
+  'Electrical & Plumbing',
   'Labor',
   'Materials',
   'Services',
@@ -42,15 +45,10 @@ export const CATEGORY_METADATA: Record<string, {
     description: 'Pool finish materials and surface treatments',
     heroImage: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1920&q=80'
   },
-  'Coping': {
-    displayName: 'Coping',
-    description: 'Premium coping materials and installation',
+  'Coping & Tile': {
+    displayName: 'Coping & Tile',
+    description: 'Premium coping materials and decorative tile work',
     heroImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1920&q=80'
-  },
-  'Tile': {
-    displayName: 'Tile',
-    description: 'Decorative tile work and finishes',
-    heroImage: 'https://images.unsplash.com/photo-1556912167-f556f1f39faa?w=1920&q=80'
   },
   'Decking': {
     displayName: 'Decking',
@@ -109,6 +107,21 @@ export const CATEGORY_METADATA: Record<string, {
     displayName: 'Professional Labor',
     description: 'Skilled craftsmanship and expert installation',
     heroImage: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=1920&q=80'
+  },
+  'Permits & Engineering': {
+    displayName: 'Permits & Engineering',
+    description: 'Plans, engineering, and city permitting process',
+    heroImage: 'https://images.unsplash.com/photo-1503387762-592dee58c460?w=1920&q=80'
+  },
+  'Site Preparation': {
+    displayName: 'Site Preparation',
+    description: 'Access, protection, and site setup',
+    heroImage: 'https://images.unsplash.com/photo-1541888946425-d81bb19480c5?w=1920&q=80'
+  },
+  'Demolition': {
+    displayName: 'Demolition',
+    description: 'Existing structure removal and site clearance',
+    heroImage: 'https://images.unsplash.com/photo-1565008480202-c94605968d48?w=1920&q=80'
   }
 };
 
@@ -176,13 +189,12 @@ export const normalizeCategory = (category?: string, itemName?: string): string 
   // Fuzzy matching for standard categories (POOL SPECIFIC)
   const lowerCategory = normalized.toLowerCase();
 
+  if (lowerCategory.includes('permit') || lowerCategory.includes('engineering') || lowerCategory.includes('plan')) return 'Permits & Engineering';
+  if (lowerCategory.includes('site prep') || lowerCategory.includes('access') || lowerCategory.includes('grading')) return 'Site Preparation';
+  if (lowerCategory.includes('demo') || lowerCategory.includes('removal') || lowerCategory.includes('rip out')) return 'Demolition';
   if (lowerCategory.includes('pool') && lowerCategory.includes('structure')) return 'Pool Structure';
-  if (lowerCategory.includes('interior') || lowerCategory.includes('finish') || lowerCategory.includes('plaster')) return 'Interior Surface';
-  if (lowerCategory.includes('coping') && !lowerCategory.includes('tile')) return 'Coping';
-  if (lowerCategory.includes('tile') && !lowerCategory.includes('coping')) return 'Tile';
-  if (lowerCategory.includes('coping') && lowerCategory.includes('tile')) {
-    return lowerCategory.indexOf('coping') < lowerCategory.indexOf('tile') ? 'Coping' : 'Tile';
-  }
+  if (lowerCategory.includes('interior') || lowerCategory.includes('finish') || lowerCategory.includes('plaster') || lowerCategory.includes('surface')) return 'Interior Surface';
+  if (lowerCategory.includes('coping') || lowerCategory.includes('tile')) return 'Coping & Tile';
   if (lowerCategory.includes('deck')) return 'Decking';
   if (lowerCategory.includes('equipment') || lowerCategory.includes('pump') || lowerCategory.includes('filter')) return 'Equipment';
   if (lowerCategory.includes('accessory') || lowerCategory.includes('accessories')) return 'Accessories';

@@ -50,7 +50,7 @@ export function ProposalViewer({
 }: ProposalViewerProps) {
   // Determine if this is a quote-based or direct proposal-based view
   const quote = directProposal ? null : initialQuote;
-  const settings = directProposal ? directProposal.settings as any : initialSettings;
+  const settings = (directProposal ? directProposal.settings as any : initialSettings) || initialSettings;
 
   // Note: isReadOnly=true usually means "the visitor" is viewing.
   // But wait! PublicQuoteView passes isOwner as isReadOnly.
@@ -125,15 +125,10 @@ export function ProposalViewer({
     // Enforce light mode for proposal viewer by default unless specified
     setTheme('light');
 
-    // Cleanup on unmount to prevent memory leaks and request pool exhaustion
+    // Cleanup on unmount
     return () => {
-      console.debug('[ProposalViewer] Unmounting, cleaning up requests...');
-      // If we're closing a proposal, we should probably clear any pending visuals fetches
-      // but let's be careful not to break global state.
-      // For now, just ensure the pool counter doesn't get stuck.
-      if (typeof window !== 'undefined' && (window as any).__resetRequestPool) {
-        (window as any).__resetRequestPool();
-      }
+      console.debug('[ProposalViewer] Unmounting - Clearing in-flight requests');
+      clearInFlightRequests();
     };
   }, [setTheme]);
 
@@ -156,6 +151,7 @@ export function ProposalViewer({
 
   // Navigation Items Generation
   const navigationItems = useMemo(() => {
+    if (!proposalData) return [];
     return proposalData.sections.map((section, index) => {
       let type: 'summary' | 'category' | 'terms' = 'category';
 
@@ -169,7 +165,7 @@ export function ProposalViewer({
         type
       };
     });
-  }, [proposalData.sections]);
+  }, [proposalData]);
 
   // Handlers
   const handleAccept = async () => {
@@ -377,7 +373,7 @@ export function ProposalViewer({
             </div>
 
             {/* Desktop Navigation (Sidebar) */}
-            <div className="hidden md:block w-64 h-full border-r border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 overflow-y-auto">
+            <div className="hidden md:block w-64 flex-shrink-0 h-full border-r border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 overflow-y-auto custom-scrollbar">
               {/* Company Info Header */}
               <div className="p-6 border-b border-gray-200 dark:border-gray-800">
                 {settings?.logo ? (
@@ -417,40 +413,42 @@ export function ProposalViewer({
               />
             </div>
 
-            {/* Main Content Slider */}
-            <div className="flex-1 h-full relative">
-              <ProposalContentSlider
-                sections={proposalData.sections}
-                activeIndex={activeSlideIndex}
-                onSlideChange={setActiveSlideIndex}
-                isOwner={isOwner}
-                onEditSectionImage={(id, url) => setEditImageConfig({
-                  isOpen: true,
-                  type: 'section',
-                  id,
-                  currentImage: url
-                })}
-                onEditItemImage={(name, url) => setEditImageConfig({
-                  isOpen: true,
-                  type: 'item',
-                  id: name,
-                  currentImage: url
-                })}
-                settings={proposalData.settings}
-              />
-            </div>
+            {/* Main Content Area */}
+            <div className="flex-1 min-w-0 h-full flex flex-col relative overflow-hidden">
+              <div className="flex-1 relative overflow-hidden">
+                <ProposalContentSlider
+                  sections={proposalData.sections}
+                  activeIndex={activeSlideIndex}
+                  onSlideChange={setActiveSlideIndex}
+                  isOwner={isOwner}
+                  onEditSectionImage={(id, url) => setEditImageConfig({
+                    isOpen: true,
+                    type: 'section',
+                    id,
+                    currentImage: url
+                  })}
+                  onEditItemImage={(name, url) => setEditImageConfig({
+                    isOpen: true,
+                    type: 'item',
+                    id: name,
+                    currentImage: url
+                  })}
+                  settings={proposalData.settings}
+                />
+              </div>
 
-            {/* Sticky Action Bar */}
-            {(onAccept || onDecline || onComment || true) && (
-              <ProposalActionBar
-                totalAmount={(initialQuote?.total || directProposal?.total || 0)}
-                currency={settings?.currency || 'USD'}
-                onAccept={handleAccept}
-                onDecline={handleDecline}
-                onComment={handleCommentInternal}
-                isProcessing={isProcessing}
-              />
-            )}
+              {/* Sticky Action Bar */}
+              {(onAccept || onDecline || onComment || true) && (
+                <ProposalActionBar
+                  totalAmount={(initialQuote?.total || directProposal?.total || 0)}
+                  currency={settings?.currency || 'USD'}
+                  onAccept={handleAccept}
+                  onDecline={handleDecline}
+                  onComment={handleCommentInternal}
+                  isProcessing={isProcessing}
+                />
+              )}
+            </div>
           </motion.div>
         )}
 
@@ -538,8 +536,8 @@ export function ProposalViewer({
                   ref={legalTermsScrollRef}
                   onScroll={handleLegalTermsScroll}
                   className={`
-                    border rounded-lg p-4 bg-muted/30 
-                    max-h-[250px] overflow-y-auto 
+                    border rounded-lg p-4 bg-muted/30
+                    max-h-[250px] overflow-y-auto custom-scrollbar
                     text-sm whitespace-pre-wrap
                     ${!acceptDialog.hasScrolledToBottom ? 'ring-2 ring-amber-200' : 'ring-1 ring-green-200'}
                   `}
@@ -621,6 +619,55 @@ export function ProposalViewer({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 🖨️ Printable Version (Hidden on screen, shown in browser print) */}
+      <div className="printable-only hidden print:block">
+        {proposalData.sections.map((section, idx) => (
+          <div
+            key={section.id}
+            id={section.id}
+            className="print-section w-full border-b border-gray-100 dark:border-gray-800 last:border-0 p-8"
+          >
+            <h2 className="text-3xl font-bold mb-4">{section.title}</h2>
+            {section.type === 'hero' && (
+              <div className="whitespace-pre-wrap text-lg">{section.content}</div>
+            )}
+            {section.type === 'categoryGroup' && (
+              <div className="space-y-4">
+                {section.categoryGroups?.[0]?.items.map((item, i) => (
+                  <div key={i} className="flex justify-between items-start border-b border-gray-50 pb-2">
+                    <div>
+                      <p className="font-bold">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">{item.description}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono text-sm">{item.quantity} x {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.price)}</p>
+                      <p className="font-bold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.total)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {section.type === 'lineItems' && (
+              <div className="space-y-2">
+                {section.items?.map((item, i) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <span>{item.name}</span>
+                    <span>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.total)}</span>
+                  </div>
+                ))}
+                <div className="border-t pt-4 mt-4 flex justify-between font-bold text-xl">
+                  <span>Total</span>
+                  <span>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(section.total || 0)}</span>
+                </div>
+              </div>
+            )}
+            {(section.type === 'legal' || section.type === 'scopeOfWork') && (
+              <div className="whitespace-pre-wrap text-sm leading-relaxed">{formatTermsContent(section.content || '')}</div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

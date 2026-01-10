@@ -3,7 +3,8 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Keyboard, Mousewheel } from "swiper/modules";
 import { motion } from "framer-motion";
 import type { Swiper as SwiperType } from "swiper";
-import type { ProposalSection } from "@/types/proposal";
+import { sortCategoriesByOrder } from "@/lib/proposal-categories";
+import { ProposalSection, ProposalItem, CategoryGroup } from "@/types/proposal";
 import { CategoryGroupSection } from "./CategoryGroupSection";
 import { ScopeOfWorkSlide } from "./ScopeOfWorkSlide";
 import { Button } from "@/components/ui/button";
@@ -80,7 +81,7 @@ export function ProposalContentSlider({
         modules={[Navigation, Pagination, Keyboard, Mousewheel]}
         direction={isDesktop ? "horizontal" : "vertical"}
         slidesPerView={1}
-        centeredSlides={true}
+        centeredSlides={false}
         spaceBetween={0}
         autoHeight={false}
         mousewheel={{
@@ -308,7 +309,7 @@ function HeroSlide({
           </Button>
         </div>
       )}
-      <div className="max-w-4xl pb-24 md:pb-0">
+      <div className="max-w-4xl pb-12 md:pb-0">
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -439,9 +440,9 @@ function TextSlide({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onWheel={handleWheel}
-        className="flex-1 p-8 md:p-16 overflow-y-auto touch-pan-y"
+        className="flex-1 p-8 md:p-16 overflow-y-auto touch-pan-y custom-scrollbar"
       >
-        <div className="max-w-4xl mx-auto pb-24">
+        <div className="max-w-4xl mx-auto pb-12">
           {section.subtitle && (
             <p className="text-lg text-muted-foreground mb-8">{section.subtitle}</p>
           )}
@@ -571,17 +572,8 @@ function InvestmentSummarySlide({
     return acc;
   }, {} as Record<string, any[]>);
 
-  // Helper to ensure consistent category order
-  const sortedCategories = Object.keys(itemsByCategory || {}).sort((a, b) => {
-    // Prioritize specific categories if needed, otherwise alphabetical
-    const priority = ['Pool', 'Spa', 'Decking', 'Equipment', 'Screen Enclosure'];
-    const idxA = priority.indexOf(a);
-    const idxB = priority.indexOf(b);
-    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-    if (idxA !== -1) return -1;
-    if (idxB !== -1) return 1;
-    return a.localeCompare(b);
-  });
+  // Helper to ensure consistent category order using the shared utility
+  const sortedCategories = sortCategoriesByOrder(Object.keys(itemsByCategory || {}));
 
   const categorySubtotals = sortedCategories.map(category => ({
     category,
@@ -637,9 +629,9 @@ function InvestmentSummarySlide({
         onWheel={handleWheel}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
-        className="flex-1 overflow-y-auto w-full custom-scrollbar touch-pan-y"
+        className="flex-1 h-full overflow-y-auto custom-scrollbar pt-2 pb-12"
       >
-        <div className="max-w-6xl mx-auto p-4 md:p-8 pb-40 md:pb-32">
+        <div className="max-w-6xl mx-auto p-4 md:p-8 pb-16 md:pb-12">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
 
             {/* Left: Detailed Scope (Table Style) */}

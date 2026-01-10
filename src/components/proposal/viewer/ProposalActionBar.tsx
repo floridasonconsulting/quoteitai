@@ -36,7 +36,7 @@ export function ProposalActionBar({
       initial={{ y: 100 }}
       animate={{ y: 0 }}
       transition={{ type: "spring", stiffness: 100, damping: 20 }}
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/20 dark:border-gray-800"
+      className="relative w-full flex-shrink-0 z-50 border-t border-white/20 dark:border-gray-800"
       style={{
         backdropFilter: "blur(20px)",
         backgroundColor: "rgba(255, 255, 255, 0.7)",

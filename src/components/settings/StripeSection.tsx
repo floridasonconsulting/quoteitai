@@ -6,8 +6,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle, CreditCard, ExternalLink, Unlink, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as singletonSupabase } from "@/integrations/supabase/client";
 import { useSearchParams } from "react-router-dom";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 interface StripeConnection {
   account_id: string | null;
@@ -15,7 +16,14 @@ interface StripeConnection {
   onboarding_complete: boolean;
 }
 
-export function StripeSection() {
+export function StripeSection({
+  supabaseClient,
+  isClientReady = true
+}: {
+  supabaseClient?: SupabaseClient;
+  isClientReady?: boolean;
+}) {
+  const supabase = supabaseClient || singletonSupabase;
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [connection, setConnection] = useState<StripeConnection | null>(null);
@@ -46,10 +54,10 @@ export function StripeSection() {
 
   // Load existing connection on mount
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && isClientReady) {
       loadConnection();
     }
-  }, [user?.id]);
+  }, [user?.id, isClientReady]);
 
   const loadConnection = async () => {
     if (!user?.id) return;

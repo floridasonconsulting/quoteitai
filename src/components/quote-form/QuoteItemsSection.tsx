@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ItemRecommendationsAI } from "@/components/ItemRecommendationsAI";
 import { QuoteItem, Item } from "@/types";
-import { Plus, X } from "lucide-react";
+import { Plus, X, ArrowUp, ArrowDown } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { sortCategoriesByOrder, normalizeCategory } from "@/lib/proposal-categories";
 
@@ -14,6 +14,7 @@ interface QuoteItemsSectionProps {
   onRemoveItem: (itemId: string) => void;
   onAddItem: (item: Item) => void;
   onOpenCustomItemDialog: () => void;
+  onReorderItem?: (itemId: string, direction: 'up' | 'down') => void;
 }
 
 export function QuoteItemsSection({
@@ -23,6 +24,7 @@ export function QuoteItemsSection({
   onRemoveItem,
   onAddItem,
   onOpenCustomItemDialog,
+  onReorderItem,
 }: QuoteItemsSectionProps) {
   return (
     <Card>
@@ -61,13 +63,36 @@ export function QuoteItemsSection({
 
                 {quoteItems
                   .filter(item => normalizeCategory(item.category, item.name) === category)
-                  .map(item => (
+                  .map((item, idx, filteredItems) => (
                     <div
                       key={item.itemId}
                       className="flex flex-col gap-3 p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors"
                     >
                       {/* Item Info Row - Always full width */}
                       <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2 mr-2">
+                          <div className="flex flex-col gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              disabled={idx === 0}
+                              onClick={() => onReorderItem?.(item.itemId, 'up')}
+                            >
+                              <ArrowUp className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              disabled={idx === filteredItems.length - 1}
+                              onClick={() => onReorderItem?.(item.itemId, 'down')}
+                            >
+                              <ArrowDown className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-base break-words">{item.name}</p>
                           {item.description && (

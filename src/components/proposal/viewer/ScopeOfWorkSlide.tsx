@@ -354,9 +354,9 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage, settings }: Sc
             )}
 
             {/* Content Container */}
-            <div className="relative z-10 h-full overflow-hidden">
+            <div className="relative z-10 h-full flex flex-col overflow-hidden">
                 {/* Header */}
-                <div className="text-center py-6 border-b border-white/20">
+                <div className="text-center py-6 border-b border-white/20 flex-shrink-0">
                     <div className="flex justify-center mb-3">
                         <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl">
                             {section.type === 'legal' ? (
@@ -382,8 +382,8 @@ export function ScopeOfWorkSlide({ section, isOwner, onEditImage, settings }: Sc
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onWheel={handleWheel}
-                    className="h-[calc(100%-120px)] overflow-y-auto px-6 py-4 pb-40 md:pb-36 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent touch-pan-y"
-                    data-swiper-parallax="-100" // Add parallax effect back if appropriate, or keep it standard
+                    className="flex-1 overflow-y-auto px-6 py-4 pb-12 custom-scrollbar touch-pan-y"
+                    data-swiper-parallax="-100"
                 >
                     <div className="max-w-3xl mx-auto space-y-6">
                         {sowSections.length > 0 ? (
