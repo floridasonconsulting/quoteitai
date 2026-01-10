@@ -256,7 +256,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.warn('[AuthContext] Subscription check error (non-critical):', error);
-      setSubscription(null);
+      // HARDENING: Do NOT clear existing subscription on transient errors
+      // Only clear if we really have no data yet
+      setSubscription(prev => prev ? prev : null);
     }
   };
 
@@ -392,24 +394,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Keep loading true until role check completes
+        // Run role check and subscription load in parallel
+        // This ensures both are ready before we lower the loading flag
         try {
-          await checkUserRole(currentSession);
+          const promises: Promise<any>[] = [checkUserRole(currentSession)];
+
+          if (currentSession.user?.id) {
+            promises.push(loadSubscription(currentSession.user.id));
+            // Run migration in background (don't await)
+            checkAndMigrateData(currentSession.user.id).catch(console.error);
+          }
+
+          await Promise.allSettled(promises);
         } catch (error) {
-          console.error('[AUTH DEBUG] Role check failed:', error);
+          console.error('[AUTH DEBUG] Auth initialization failed:', error);
         } finally {
-          console.log('[AUTH DEBUG] Setting loading to false after role check');
+          console.log('[AUTH DEBUG] Setting loading to false after parallel init');
           setLoading(false);
           isInitializing.current = false;
         }
-
-        // Load subscription and migrate data in background
-        setTimeout(() => {
-          if (currentSession?.user?.id) {
-            loadSubscription(currentSession.user.id).catch(console.error);
-            checkAndMigrateData(currentSession.user.id).catch(console.error);
-          }
-        }, 100);
       }
     );
 
