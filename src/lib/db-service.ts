@@ -46,6 +46,7 @@ interface SyncChange {
 }
 
 // Wrap getSettings to check IndexedDB first (async for proper data retrieval)
+// Wrap getSettings to check IndexedDB first but ALWAYS refresh from Supabase (Stale-While-Revalidate)
 export const getSettings = async (
   userId: string,
   organizationId: string | null = null,
@@ -53,99 +54,144 @@ export const getSettings = async (
 ): Promise<CompanySettings> => {
   console.log('[db-service] getSettings called with userId:', userId, client === supabase ? '(Main Client)' : '(Isolated Client)');
 
-  // 1. Try CacheManager first (now with stale-while-revalidate)
-  const cached = await cacheManager.get<CompanySettings>('settings', userId);
-  if (cached && (cached.name || cached.email)) {
-    console.log('[db-service] ✓ Retrieved settings from CacheManager');
-    return cached;
-  }
+  // 1. Try Cache/IDB first for immediate return (Optimistic UI)
+  let cachedSettings: CompanySettings | null = null;
 
-  // 2. Try IndexedDB 
-  if (isIndexedDBSupported()) {
+  // Try Memory Cache
+  cachedSettings = await cacheManager.get<CompanySettings>('settings', userId);
+
+  // Try IndexedDB if memory miss
+  if (!cachedSettings && isIndexedDBSupported()) {
     try {
-      // Wrap IDB access in a short timeout (2s) to prevent hangs
       const indexedDBSettings = await withTimeout(
         SettingsDB.get(userId),
-        2000
+        1500
       ) as CompanySettings | undefined;
 
       if (indexedDBSettings && (indexedDBSettings.name || indexedDBSettings.email)) {
-        console.log('[db-service] ✓ Retrieved settings from IndexedDB');
+        cachedSettings = indexedDBSettings;
+        // Populate memory cache for next time
         await cacheManager.set('settings', indexedDBSettings, userId);
-        return indexedDBSettings;
       }
     } catch (error) {
-      console.warn('[db-service] IndexedDB read failed or timed out:', error);
+      console.warn('[db-service] IndexedDB read failed:', error);
     }
   }
 
-  // 3. Fall back to Supabase
-  console.log('[db-service] 🔍 Local settings missing or stale, attempting Supabase fetch...');
-  try {
-    const sessionKey = `settings-${userId}-${organizationId || 'personal'}`;
-    const { data: dbSettings, error } = await dedupedRequest(
-      sessionKey,
-      async (signal) => {
-        return await (client
-          .from('company_settings' as any)
-          .select('*')
-          .eq('user_id', userId)
-          .maybeSingle() as any).abortSignal(signal);
-      },
-      45000
-    ) as any;
+  // If we have cached settings, we can return them immediately to unblock UI
+  // BUT we must continue to fetch fresh data if online
+  // Note: This pattern assumes the caller handles the promise resolving fast.
+  // Ideally, SWR typically returns data AND revalidates. Here we simulate it by returning early 
+  // ONLY if offline. If online, we await the fetch but timeout quickly to fallback to cache.
+  // Actually, better pattern for this codebase: 
+  // If cached, return it. AND trigger a background update.
 
-    if (error) {
-      console.error('[db-service] Supabase settings fetch failed:', error);
-    } else if (dbSettings) {
-      console.log('[db-service] ✓ Retrieved settings from Supabase');
+  const performBackgroundFetch = async () => {
+    if (!navigator.onLine) return; // Can't fetch if offline
 
-      const mappedSettings: CompanySettings = {
-        name: (dbSettings as any).name || '',
-        address: (dbSettings as any).address || '',
-        city: (dbSettings as any).city || '',
-        state: (dbSettings as any).state || '',
-        zip: (dbSettings as any).zip || '',
-        phone: (dbSettings as any).phone || '',
-        email: (dbSettings as any).email || '',
-        website: (dbSettings as any).website || '',
-        logo: (dbSettings as any).logo || undefined,
-        logoDisplayOption: (dbSettings as any).logo_display_option as any || 'both',
-        license: (dbSettings as any).license || '',
-        insurance: (dbSettings as any).insurance || '',
-        terms: (dbSettings as any).terms || '',
-        legalTerms: (dbSettings as any).legal_terms || undefined,
-        proposalTemplate: (dbSettings as any).proposal_template as any || 'classic',
-        proposalTheme: (dbSettings as any).proposal_theme as any || 'modern-corporate',
-        industry: (dbSettings as any).industry as any || 'other',
-        notifyEmailAccepted: (dbSettings as any).notify_email_accepted ?? true,
-        notifyEmailDeclined: (dbSettings as any).notify_email_declined ?? true,
-        showProposalImages: (dbSettings as any).show_proposal_images ?? true,
-        onboardingCompleted: (dbSettings as any).onboarding_completed ?? false,
-        defaultCoverImage: (dbSettings as any).default_cover_image || undefined,
-        defaultHeaderImage: (dbSettings as any).default_header_image || undefined,
-        visualRules: (dbSettings as any).visual_rules || undefined,
-        showFinancing: (dbSettings as any).show_financing ?? false,
-        financingText: (dbSettings as any).financing_text || "",
-        financingLink: (dbSettings as any).financing_link || "",
-        primaryColor: (dbSettings as any).primary_color || undefined,
-        accentColor: (dbSettings as any).accent_color || undefined,
-      };
+    console.log('[db-service] 🔄 SWR: Revalidating settings in background...');
+    try {
+      const sessionKey = `settings-${userId}-${organizationId || 'personal'}`;
 
-      // Restore to local storage to avoid future overhead
-      if (isIndexedDBSupported()) {
-        SettingsDB.set(userId, mappedSettings).catch(e => console.error('Failed to update IDB during fallback:', e));
+      const { data: dbSettings, error } = await dedupedRequest(
+        sessionKey,
+        async (signal) => {
+          let query = client.from('company_settings' as any).select('*');
+
+          if (organizationId) {
+            query = query.eq('organization_id', organizationId);
+          } else {
+            query = query.eq('user_id', userId);
+          }
+
+          return await (query.maybeSingle() as any).abortSignal(signal);
+        },
+        30000
+      ) as any;
+
+      if (error) {
+        console.error('[db-service] SWR: Supabase fetch failed:', error);
+        return;
       }
-      setStorageItem(`settings_${userId}`, mappedSettings);
 
-      return mappedSettings;
+      if (dbSettings) {
+        const mappedSettings: CompanySettings = {
+          name: (dbSettings as any).name || '',
+          address: (dbSettings as any).address || '',
+          city: (dbSettings as any).city || '',
+          state: (dbSettings as any).state || '',
+          zip: (dbSettings as any).zip || '',
+          phone: (dbSettings as any).phone || '',
+          email: (dbSettings as any).email || '',
+          website: (dbSettings as any).website || '',
+          logo: (dbSettings as any).logo || undefined,
+          logoDisplayOption: (dbSettings as any).logo_display_option as any || 'both',
+          license: (dbSettings as any).license || '',
+          insurance: (dbSettings as any).insurance || '',
+          terms: (dbSettings as any).terms || '',
+          legalTerms: (dbSettings as any).legal_terms || undefined,
+          proposalTemplate: (dbSettings as any).proposal_template as any || 'classic',
+          proposalTheme: (dbSettings as any).proposal_theme as any || 'modern-corporate',
+          industry: (dbSettings as any).industry as any || 'other',
+          notifyEmailAccepted: (dbSettings as any).notify_email_accepted ?? true,
+          notifyEmailDeclined: (dbSettings as any).notify_email_declined ?? true,
+          showProposalImages: (dbSettings as any).show_proposal_images ?? true,
+          onboardingCompleted: (dbSettings as any).onboarding_completed ?? false,
+          defaultCoverImage: (dbSettings as any).default_cover_image || undefined,
+          defaultHeaderImage: (dbSettings as any).default_header_image || undefined,
+          visualRules: (dbSettings as any).visual_rules || undefined,
+          showFinancing: (dbSettings as any).show_financing ?? false,
+          financingText: (dbSettings as any).financing_text || "",
+          financingLink: (dbSettings as any).financing_link || "",
+          primaryColor: (dbSettings as any).primary_color || undefined,
+          accentColor: (dbSettings as any).accent_color || undefined,
+        };
+
+        // Compare with cache to see if we need a refresh
+        const cacheStr = JSON.stringify(cachedSettings);
+        const newStr = JSON.stringify(mappedSettings);
+
+        if (cacheStr !== newStr) {
+          console.log('[db-service] 🔄 SWR: Data changed, updating cache and notifying UI');
+
+          // Update Persistence
+          if (isIndexedDBSupported()) {
+            await SettingsDB.set(userId, mappedSettings).catch(e => console.error('IDB update failed:', e));
+          }
+          setStorageItem(`settings_${userId}`, mappedSettings);
+          await cacheManager.set('settings', mappedSettings, userId);
+
+          // Notify UI to re-render
+          dispatchDataRefresh('settings-changed'); // Using generic event or specific
+          dispatchDataRefresh('quotes-changed'); // Usually triggers settings reload
+        } else {
+          console.log('[db-service] ✓ SWR: Data identical, no update needed');
+        }
+
+        // If we didn't have cache initially, return this now (handled by await below if we didn't return early)
+        return mappedSettings;
+      }
+    } catch (err) {
+      console.error('[db-service] SWR: Unexpected error', err);
     }
-  } catch (error) {
-    console.error('[db-service] Unexpected error in getSettings fallback:', error);
+  };
+
+  // HYBRID STRATEGY:
+  // 1. If we have cache, return it IMMEDIATELY but trigger background fetch.
+  // 2. If no cache, AWAIT the fetch.
+
+  if (cachedSettings) {
+    // Fire and forget background update
+    performBackgroundFetch();
+    console.log('[db-service] ⚡ Swift Return: Using cached settings');
+    return cachedSettings;
   }
 
-  const localStorageSettings = storageGetSettings(userId);
-  return localStorageSettings;
+  // No cache? We must wait.
+  console.log('[db-service] ⏳ No cache, awaiting server fetch...');
+  const freshSettings = await performBackgroundFetch();
+
+  return freshSettings || storageGetSettings(userId);
 };
 
 export const saveSettings = async (

@@ -22,6 +22,8 @@ const firstLoadMap = new Map<string, boolean>();
  * Fetch all customers for a user
  * Priority: Cache > IndexedDB > Supabase > Empty
  */
+// Fetch all customers for a user
+// Priority: Cache/IDB (Immediate) -> Supabase (Background Refresh)
 export async function getCustomers(
   userId: string | undefined,
   organizationId: string | null = null,
@@ -39,172 +41,128 @@ export async function getCustomers(
   }
 
   const forceRefresh = options?.forceRefresh;
-
-  console.log(`[CustomerService] getCustomers called for user: ${userId} ${forceRefresh ? '(FORCE REFRESH)' : ''}`);
-
-  // Check if this is the first load for this user
+  const dedupKey = `fetch-customers-${userId}`;
+  let cached: Customer[] | null = null;
   const isFirstLoad = !firstLoadMap.has(userId);
+
   if (isFirstLoad || forceRefresh) {
-    console.log(`[CustomerService] First load or force refresh for user ${userId} - bypassing cache`);
-    // Clear any stale cache on first load
-    await cacheManager.invalidate('customers');
+    console.log(`[CustomerService] First load or force refresh for user ${userId}`);
   }
 
-  // On first load or force refresh, skip cache and go straight to IndexedDB/Supabase
-  if (!isFirstLoad && !forceRefresh) {
-    const cached = await cacheManager.get<Customer[]>('customers');
-    const hasCache = cached && Array.isArray(cached);
+  // 1. Try Memory Cache
+  cached = await cacheManager.get<Customer[]>('customers');
 
-    if (hasCache && cached.length > 0) {
-      console.log(`[CustomerService] ✓ Retrieved ${cached.length} customers from cache`);
-      return cached;
-    }
-  }
-
-  // Try IndexedDB
-  if (isIndexedDBSupported()) {
+  // 2. Try IndexedDB if memory miss
+  if (!cached && isIndexedDBSupported()) {
     try {
       const indexedDBData = await CustomerDB.getAll(userId);
-      console.log(`[CustomerService] IndexedDB check: found ${indexedDBData?.length || 0} customers`);
-
       if (indexedDBData && indexedDBData.length > 0) {
-        if (!forceRefresh) {
-          console.log(`[CustomerService] ✓ Retrieved ${indexedDBData.length} customers from IndexedDB`);
-          // Update cache for future reads
-          await cacheManager.set('customers', indexedDBData);
-
-          // Mark first load as complete
-          if (isFirstLoad) {
-            firstLoadMap.set(userId, true);
-            console.log(`[CustomerService] First load complete - found ${indexedDBData.length} customers in IndexedDB`);
-          }
-
-          // Return IndexedDB data (will sync with Supabase in background if online)
-          return indexedDBData;
-        } else {
-          console.log(`[CustomerService] IndexedDB has data but FORCE REFRESH is on - proceeding to Supabase`);
-        }
+        cached = indexedDBData;
+        await cacheManager.set('customers', indexedDBData);
       }
-    } catch (error) {
-      console.warn('[CustomerService] IndexedDB read failed:', error);
+    } catch (e) {
+      console.warn('[CustomerService] IDB read failed:', e);
     }
   }
 
-  // If we're offline and have no local data, return empty
-  if (!navigator.onLine) {
-    if (isIndexedDBSupported()) {
-      try {
-        const indexedDBData = await CustomerDB.getAll(userId);
-        if (indexedDBData && indexedDBData.length > 0) {
-          console.log('[CustomerService] Offline with Force Refresh - returning IndexedDB fallback');
-          return indexedDBData;
-        }
-      } catch (e) { /* ignore */ }
+  // Define Background Fetch Function
+  const fetchFromSupabase = async () => {
+    if (!navigator.onLine) {
+      console.log('[CustomerService] Offline - skipping background fetch');
+      return null;
     }
 
-    console.log('[CustomerService] Offline and no local data - returning empty array');
-    if (isFirstLoad) {
-      firstLoadMap.set(userId, true);
-    }
-    return [];
-  }
-
-  const dedupKey = `fetch-customers-${userId}`;
-
-  return dedupedRequest(dedupKey, async () => {
+    console.log('[CustomerService] 🔄 SWR: Fetching customers from Supabase...');
     try {
-      // Fetch from Supabase
-      return cacheManager.coalesce(`customers-${userId}`, async () => {
-        console.log(`[CustomerService] Fetching from Supabase for user ${userId}`);
-        try {
-          let query = supabase.from('customers' as any).select('*');
+      return await dedupedRequest(dedupKey, async () => {
+        return cacheManager.coalesce(`customers-${userId}`, async () => {
+          console.log(`[CustomerService] Fetching from Supabase for user ${userId}`);
+          try {
+            let query = supabase.from('customers' as any).select('*');
 
-          if (organizationId) {
-            // Fetch customers belonging to the organization OR created by the user
-            // This prevents "lost" customers during the migration to organization IDs
-            query = query.or(`organization_id.eq.${organizationId},user_id.eq.${userId}`);
-          } else {
-            query = query.eq('user_id', userId);
-          }
+            if (organizationId) {
+              query = query.or(`organization_id.eq.${organizationId},user_id.eq.${userId}`);
+            } else {
+              query = query.eq('user_id', userId);
+            }
 
-          const { data, error } = await executeWithPool(async (signal) => {
-            return await (query as any).abortSignal(signal);
-          }, 15000, `fetch-customers-${userId}`);
+            const { data, error } = await executeWithPool(async (signal) => {
+              return await (query as any).abortSignal(signal);
+            }, 15000, `fetch-customers-${userId}`);
 
-          if (error) {
-            console.error('[CustomerService] Supabase error:', error);
-            // Return IndexedDB data as fallback
+            if (error) {
+              console.error('[CustomerService] Supabase error:', error);
+              throw error;
+            }
+
+            const result = data ? data.map(item => toCamelCase(item)) as Customer[] : [];
+
+            // PROTECT LOCAL STATE
+            const dedupedResult = syncStorage.applyPendingChanges(result, 'customers');
+
+            // Sync to IndexedDB
             if (isIndexedDBSupported()) {
-              const indexedDBData = await CustomerDB.getAll(userId);
-              if (indexedDBData && indexedDBData.length > 0) {
-                console.log(`[CustomerService] Returning ${indexedDBData.length} customers from IndexedDB (fallback)`);
-                if (isFirstLoad) {
-                  firstLoadMap.set(userId, true);
-                  console.log('[CustomerService] First load complete - Supabase error, using IndexedDB');
+              try {
+                if (dedupedResult.length > 0) {
+                  await CustomerDB.clear(userId);
+                  for (const customer of dedupedResult) {
+                    await CustomerDB.update({ ...customer, user_id: userId } as never);
+                  }
+                  console.log(`[CustomerService] ✓ Synced ${dedupedResult.length} customers to IndexedDB`);
                 }
-                return indexedDBData;
+              } catch (syncError) {
+                console.warn('[CustomerService] IndexedDB sync failed:', syncError);
               }
             }
-            // Mark first load complete even on error
-            if (isFirstLoad) {
-              firstLoadMap.set(userId, true);
-              console.log('[CustomerService] First load complete - Supabase error, no fallback data');
+
+            // Update cache
+            await cacheManager.set('customers', dedupedResult);
+
+            // Notify if changed
+            if (!cached || JSON.stringify(cached.map(c => c.id).sort()) !== JSON.stringify(dedupedResult.map(c => c.id).sort())) {
+              console.log('[CustomerService] 🔄 Data changed, dispatching refresh');
+              dispatchDataRefresh('customers-changed');
             }
-            throw error;
+
+            // Mark first load complete
+            if (isFirstLoad) firstLoadMap.set(userId, true);
+
+            return dedupedResult;
+          } catch (error) {
+            console.error('[CustomerService] Error:', error);
+            // First load fallback logic
+            if (isFirstLoad) firstLoadMap.set(userId, true);
+            return null;
           }
-
-          const result = data ? data.map(item => toCamelCase(item)) as Customer[] : [];
-
-          // PROTECT LOCAL STATE: Merge with pending changes before updating IndexedDB/Cache
-          const dedupedResult = syncStorage.applyPendingChanges(result, 'customers');
-
-          console.log(`[CustomerService] ✓ Supabase returned ${result.length}, protected to ${dedupedResult.length}`);
-
-          // Sync to IndexedDB
-          if (isIndexedDBSupported()) {
-            try {
-              if (dedupedResult.length > 0) {
-                // To ensure truly matching state, we can clear and re-add or just upsert.
-                // Given the risk of clearing, upserting the PROTECTED list is safer.
-                // But to remove items deleted on other devices, we need a full sync.
-                // For now, let's stick to protecting local deletions.
-
-                await CustomerDB.clear(userId);
-                for (const customer of dedupedResult) {
-                  await CustomerDB.update({ ...customer, user_id: userId } as never);
-                }
-                console.log(`[CustomerService] ✓ Synced to IndexedDB`);
-              }
-            } catch (syncError) {
-              console.warn('[CustomerService] IndexedDB sync failed:', syncError);
-            }
-          }
-
-          // Update cache and return
-          await cacheManager.set('customers', dedupedResult);
-          return dedupedResult;
-        } catch (error) {
-          console.error('[CustomerService] Error:', error);
-          // Try IndexedDB as final fallback
-          if (isIndexedDBSupported()) {
-            const indexedDBData = await CustomerDB.getAll(userId);
-            if (indexedDBData && indexedDBData.length > 0) {
-              console.log(`[CustomerService] Returning ${indexedDBData.length} customers from IndexedDB (error fallback)`);
-              return indexedDBData;
-            }
-          }
-
-          return [];
-        }
+        });
       });
-    } finally {
-      // Ensure first load is always marked complete, even if an exception occurs
-      if (isFirstLoad && !firstLoadMap.has(userId)) {
-        firstLoadMap.set(userId, true);
-        console.log('[CustomerService] First load marked complete in finally block');
-      }
+    } catch (err) {
+      console.error('[CustomerService] Background fetch failed:', err);
+      return null;
     }
-  });
+  };
+
+  // STRATEGY:
+  // 1. If Forced Refresh: Await Sync.
+  // 2. If Cached: Return Cache + Trigger Background Sync.
+  // 3. If No Cache: Await Sync.
+
+  if (forceRefresh) {
+    console.log('[CustomerService] Force refresh requested - awaiting fetch');
+    const fresh = await fetchFromSupabase();
+    return fresh || cached || [];
+  }
+
+  if (cached) {
+    console.log(`[CustomerService] ⚡ Using ${cached.length} cached customers (background sync triggered)`);
+    // Fire and forget background fetch
+    fetchFromSupabase().catch(e => console.error('Background sync error:', e));
+    return cached;
+  }
+
+  console.log('[CustomerService] ⏳ No cache, awaiting customers...');
+  const initialFetch = await fetchFromSupabase();
+  return initialFetch || [];
 }
 
 /**

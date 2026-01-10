@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-export type DataRefreshEvent = 'customers-changed' | 'items-changed' | 'quotes-changed';
+export type DataRefreshEvent = 'customers-changed' | 'items-changed' | 'quotes-changed' | 'settings-changed';
 
 // Dispatch a data refresh event
 export const dispatchDataRefresh = (eventType: DataRefreshEvent) => {

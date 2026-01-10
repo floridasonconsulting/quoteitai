@@ -19,6 +19,8 @@ import { MOCK_ITEMS } from '../mockData';
  * Fetch all items for a user
  * Priority: Cache > IndexedDB > Supabase > Empty
  */
+// Fetch all items for a user
+// Priority: Cache/IDB (Immediate) -> Supabase (Background Refresh)
 export async function getItems(
   userId: string | undefined,
   organizationId: string | null = null,
@@ -39,138 +41,122 @@ export async function getItems(
   const dedupKey = `fetch-items-${userId}`;
   let cached: Item[] | null = null;
 
-  // Check cache first (CacheManager handles memory cache)
-  if (!forceRefresh) {
-    cached = await cacheManager.get<Item[]>('items');
-    if (cached && cached.length > 0) {
-      console.log(`[ItemService] Retrieved ${cached.length} items from cache`);
-      return cached;
-    }
-  }
+  // 1. Try Memory Cache
+  cached = await cacheManager.get<Item[]>('items');
 
-  // Try IndexedDB if cache miss or forceRefresh is enabled (but we won't return early if forceRefresh)
-  if (isIndexedDBSupported()) {
+  // 2. Try IndexedDB if memory miss
+  if (!cached && isIndexedDBSupported()) {
     try {
       const indexedDBData = await ItemDB.getAll(userId);
       if (indexedDBData && indexedDBData.length > 0) {
-        if (!forceRefresh) {
-          console.log(`[ItemService] Retrieved ${indexedDBData.length} items from IndexedDB`);
-          // Update cache
-          await cacheManager.set('items', indexedDBData);
-          // If offline, return IndexedDB data immediately
-          return indexedDBData;
-        } else {
-          console.log(`[ItemService] IndexedDB has ${indexedDBData.length} items but FORCE REFRESH is on - proceeding to Supabase`);
-        }
+        cached = indexedDBData;
+        await cacheManager.set('items', indexedDBData);
       }
-    } catch (error) {
-      console.warn('[ItemService] IndexedDB read failed, falling back to Supabase:', error);
+    } catch (e) {
+      console.warn('[ItemService] IDB read failed:', e);
     }
   }
 
-  if (!navigator.onLine) {
-    if (isIndexedDBSupported()) {
-      try {
-        const indexedDBData = await ItemDB.getAll(userId);
-        if (indexedDBData && indexedDBData.length > 0) return indexedDBData;
-      } catch (e) { /* ignore */ }
+  // Define Background Fetch Function
+  const fetchFromSupabase = async () => {
+    if (!navigator.onLine) {
+      console.log('[ItemService] Offline - skipping background fetch');
+      return null;
     }
-    const oldCached = await cacheManager.get<Item[]>('items');
-    return oldCached || [];
-  }
 
-  return dedupedRequest(dedupKey, async () => {
-    // Use cache manager's request coalescing for network requests
-    return cacheManager.coalesce(`items-${userId}`, async () => {
-      try {
-        const startTime = performance.now();
-        let query = supabase.from('items' as any).select('*');
+    console.log('[ItemService] 🔄 SWR: Fetching items from Supabase...');
+    try {
+      return await dedupedRequest(dedupKey, async () => {
+        // Use cache manager's request coalescing for network requests
+        return cacheManager.coalesce(`items-${userId}`, async () => {
+          const startTime = performance.now();
+          let query = supabase.from('items' as any).select('*');
 
-        if (organizationId) {
-          // Fetch items belonging to the organization OR created by the user
-          // This prevents "lost" items during the migration to organization IDs
-          query = query.or(`organization_id.eq.${organizationId},user_id.eq.${userId}`);
-        } else {
-          query = query.eq('user_id', userId);
-        }
+          if (organizationId) {
+            // Fetch items belonging to the organization OR created by the user
+            // This prevents "lost" items during the migration to organization IDs
+            query = query.or(`organization_id.eq.${organizationId},user_id.eq.${userId}`);
+          } else {
+            query = query.eq('user_id', userId);
+          }
 
-        const { data, error } = await executeWithPool(async (signal) => {
-          return await (query.order('created_at', { ascending: false }) as any).abortSignal(signal);
-        }, 15000, `fetch-items-${userId}`);
+          const { data, error } = await executeWithPool(async (signal) => {
+            return await (query.order('created_at', { ascending: false }) as any).abortSignal(signal);
+          }, 15000, `fetch-items-${userId}`);
 
-        apiTracker.track(
-          'items.select',
-          'GET',
-          performance.now() - startTime,
-          error ? 'error' : 'success'
-        );
+          apiTracker.track(
+            'items.select',
+            'GET',
+            performance.now() - startTime,
+            error ? 'error' : 'success'
+          );
 
-        if (error) {
-          console.error('Error fetching items:', error);
-          // Try IndexedDB as fallback
+          if (error) {
+            console.error('[ItemService] SWR fetch error:', error);
+            throw error;
+          }
+
+          const result = data ? data.map(item => toCamelCase(item)) as Item[] : [];
+
+          // PROTECT LOCAL STATE: Merge with pending changes before updating IndexedDB/Cache
+          const dedupedResult = syncStorage.applyPendingChanges(result, 'items');
+
+          // Only update IndexedDB if we received data from Supabase
           if (isIndexedDBSupported()) {
-            const indexedDBData = await ItemDB.getAll(userId);
-            if (indexedDBData && indexedDBData.length > 0) {
-              return indexedDBData;
+            try {
+              if (dedupedResult.length > 0) {
+                // Clear and sync Supabase data to IndexedDB
+                await ItemDB.clear(userId);
+                for (const item of dedupedResult) {
+                  await ItemDB.add({ ...item, user_id: userId } as never);
+                }
+                console.log(`[ItemService] Saved ${dedupedResult.length} items to IndexedDB`);
+              }
+            } catch (error) {
+              console.warn('[ItemService] Failed to save to IndexedDB:', error);
             }
           }
-          if (cached) {
-            console.log('[Cache] Using cached items after error');
-            return cached;
+
+          // Update cache - Detect Change?
+          // For items, array comparison is expensive. We just update it.
+          await cacheManager.set('items', dedupedResult);
+
+          // Notify if data changed (simple length check or just always dispatch for safety)
+          if (!cached || JSON.stringify(cached.map(i => i.id).sort()) !== JSON.stringify(dedupedResult.map(i => i.id).sort())) {
+            console.log('[ItemService] 🔄 Data changed, dispatching refresh');
+            dispatchDataRefresh('items-changed');
           }
-          throw error;
-        }
 
-        const result = data ? data.map(item => toCamelCase(item)) as Item[] : [];
+          return dedupedResult;
+        });
+      });
+    } catch (err) {
+      console.error('[ItemService] Background fetch failed:', err);
+      return null;
+    }
+  };
 
-        // PROTECT LOCAL STATE: Merge with pending changes before updating IndexedDB/Cache
-        const dedupedResult = syncStorage.applyPendingChanges(result, 'items');
+  // STRATEGY:
+  // 1. If Forced Refresh: Await Sync.
+  // 2. If Cached: Return Cache + Trigger Background Sync.
+  // 3. If No Cache: Await Sync.
 
-        // Only update IndexedDB if we received data from Supabase
-        if (isIndexedDBSupported()) {
-          try {
-            if (dedupedResult.length > 0) {
-              // Clear and sync Supabase data to IndexedDB
-              await ItemDB.clear(userId);
-              for (const item of dedupedResult) {
-                await ItemDB.add({ ...item, user_id: userId } as never);
-              }
-              console.log(`[ItemService] Saved ${dedupedResult.length} items to IndexedDB`);
-            } else {
-              // Supabase returned empty - check if IndexedDB has data
-              // This part should be handled by applyPendingChanges above if it included 'create'
-              // but we'll keep the safety check
-              const indexedDBData = await ItemDB.getAll(userId);
-              if (indexedDBData && indexedDBData.length > 0) {
-                return indexedDBData;
-              }
-            }
-          } catch (error) {
-            console.warn('[ItemService] Failed to save to IndexedDB:', error);
-          }
-        }
+  if (forceRefresh) {
+    console.log('[ItemService] Force refresh requested - awaiting fetch');
+    const fresh = await fetchFromSupabase();
+    return fresh || cached || [];
+  }
 
-        // Update cache
-        await cacheManager.set('items', dedupedResult);
+  if (cached) {
+    console.log(`[ItemService] ⚡ Using ${cached.length} cached items (background sync triggered)`);
+    // Fire and forget background fetch
+    fetchFromSupabase().catch(e => console.error('Background sync error:', e));
+    return cached;
+  }
 
-        return dedupedResult;
-      } catch (error) {
-        console.error('Error fetching items:', error);
-        // Try IndexedDB as fallback
-        if (isIndexedDBSupported()) {
-          const indexedDBData = await ItemDB.getAll(userId);
-          if (indexedDBData && indexedDBData.length > 0) {
-            return indexedDBData;
-          }
-        }
-        if (cached) {
-          console.log('[Cache] Returning cached items after timeout');
-          return cached;
-        }
-        return [];
-      }
-    });
-  });
+  console.log('[ItemService] ⏳ No cache, awaiting items...');
+  const initialFetch = await fetchFromSupabase();
+  return initialFetch || [];
 }
 
 /**
