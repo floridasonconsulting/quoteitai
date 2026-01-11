@@ -176,7 +176,115 @@ export function renderCustomerInfo(
   return yPos;
 }
 
-// Common terms rendering with page break handling
+/**
+ * Render basic markdown text (headings, bold, lists) to PDF
+ */
+function renderMarkdownText(
+  pdf: jsPDF,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  maxXHeight: number
+): number {
+  const lines = text.split('\n');
+  let currentY = y;
+
+  // Basic config
+  const lineHeight = 4;
+  const paragraphGap = 4;
+  const indentSize = 6;
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i].trim();
+    if (!line) {
+      currentY += paragraphGap;
+      continue;
+    }
+
+    // Check Page Break
+    if (currentY > maxXHeight) {
+      pdf.addPage();
+      currentY = MARGIN;
+    }
+
+    // 1. Headers (##, ###)
+    if (line.startsWith('#')) {
+      const level = line.match(/^#+/)?.[0].length || 0;
+      const cleanText = line.replace(/^#+\s*/, '');
+
+      pdf.setFont(undefined, 'bold');
+      pdf.setFontSize(level === 1 ? 12 : 11); // Larger for top level
+      pdf.text(cleanText, x, currentY);
+
+      currentY += (lineHeight * 1.5); // More space after header
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(9); // Reset
+      continue;
+    }
+
+    // 2. List Items (•, -)
+    if (line.startsWith('•') || line.startsWith('- ')) {
+      const cleanText = line.replace(/^[•-]\s*/, '');
+
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(9);
+
+      // Draw Bullet
+      pdf.text('•', x + 2, currentY);
+
+      // Wrap content
+      const wrappedLines = pdf.splitTextToSize(cleanText, maxWidth - indentSize);
+      pdf.text(wrappedLines, x + indentSize, currentY);
+
+      currentY += (wrappedLines.length * lineHeight) + 2; // Slight extra gap between items
+      continue;
+    }
+
+    // 3. Bold Keys (**Key:** Value)
+    // Common pattern in our formatter: "**Field:** Value" or "**Header**"
+    if (line.startsWith('**')) {
+      const boldMatch = line.match(/^\*\*(.*?)\*\*(.*)/);
+      if (boldMatch) {
+        const boldPart = boldMatch[1];
+        const restPart = boldMatch[2];
+
+        pdf.setFont(undefined, 'bold');
+        pdf.text(boldPart, x, currentY);
+
+        const boldWidth = pdf.getTextWidth(boldPart);
+
+        if (restPart) {
+          pdf.setFont(undefined, 'normal');
+          // Simple handling: just print next to it. 
+          // If restPart is long, this simple calculation might fail wrapping correctly relative to X.
+          // For robust wrapping mixed with bold, we'd need more complex logic. 
+          // Given our formatter output is usually short values or descriptions, we'll Try splitTextToSize on the rest.
+          const wrappedRest = pdf.splitTextToSize(restPart, maxWidth - boldWidth);
+          pdf.text(wrappedRest, x + boldWidth, currentY);
+          currentY += (wrappedRest.length * lineHeight);
+        } else {
+          currentY += lineHeight;
+        }
+
+        // Add small gap
+        currentY += 1;
+        continue;
+      }
+    }
+
+    // 4. Standard Text
+    pdf.setFont(undefined, 'normal');
+    pdf.setFontSize(9);
+    const wrapped = pdf.splitTextToSize(line, maxWidth);
+    pdf.text(wrapped, x, currentY);
+    currentY += (wrapped.length * lineHeight);
+  }
+
+  return currentY;
+}
+
+// Common terms rendering with formatted markdown support
 export function renderTermsAndNotes(
   pdf: jsPDF,
   quote: Quote,
@@ -196,25 +304,19 @@ export function renderTermsAndNotes(
     }
 
     pdf.setFont(undefined, "bold");
-    pdf.setFontSize(9);
+    pdf.setFontSize(11);
     pdf.text("Terms & Conditions:", MARGIN, yPos);
-    yPos += 6;
+    yPos += 8;
 
     pdf.setFont(undefined, "normal");
-    pdf.setFontSize(8);
+    pdf.setFontSize(9);
 
     // Use shared formatter to convert JSON to readable text
     const termsText = formatTermsContent(settings.terms);
 
-    const termsLines = pdf.splitTextToSize(termsText, 170);
-    termsLines.forEach((line: string) => {
-      if (yPos > 275) { // Leave some room at bottom
-        pdf.addPage();
-        yPos = MARGIN;
-      }
-      pdf.text(line, MARGIN, yPos);
-      yPos += 4;
-    });
+    // NEW: Use Markdown Renderer
+    yPos = renderMarkdownText(pdf, termsText, MARGIN, yPos, 170, 275);
+
     yPos += 8;
   }
 
@@ -226,22 +328,15 @@ export function renderTermsAndNotes(
     }
 
     pdf.setFont(undefined, "bold");
-    pdf.setFontSize(9);
+    pdf.setFontSize(11);
     pdf.text("Additional Terms & Notes:", MARGIN, yPos);
-    yPos += 6;
+    yPos += 8;
 
     pdf.setFont(undefined, "normal");
-    pdf.setFontSize(8);
-    const notesLines = pdf.splitTextToSize(quote.notes, 170);
+    pdf.setFontSize(9);
 
-    notesLines.forEach((line: string) => {
-      if (yPos > 270) {
-        pdf.addPage();
-        yPos = MARGIN;
-      }
-      pdf.text(line, MARGIN, yPos);
-      yPos += 4;
-    });
+    // Use Markdown Renderer for notes too (consistently)
+    yPos = renderMarkdownText(pdf, quote.notes, MARGIN, yPos, 170, 275);
   }
 
   return yPos;
